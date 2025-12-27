@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Check, Copy, Sparkles, Lightbulb, ListChecks } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
+import { PromptCompare } from "./PromptCompare";
 
 interface ResultSectionProps {
   result: OptimizeResponse;
@@ -79,6 +80,11 @@ export function ResultSection({ result }: ResultSectionProps) {
             </Button>
           </div>
         </Card>
+      </motion.div>
+
+      {/* Section: Compare Prompts */}
+      <motion.div variants={item}>
+        <PromptCompare original={result.originalPrompt} improved={result.improvedPrompt} />
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
