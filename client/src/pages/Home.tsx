@@ -1,20 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PromptForm } from "@/components/PromptForm";
 import { ResultSection } from "@/components/ResultSection";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
+import { useStripeCheckout } from "@/hooks/use-stripe";
 import { type OptimizeResponse } from "@shared/schema";
-import { Zap, Crown, AlertCircle } from "lucide-react";
+import { Zap, Crown, AlertCircle, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus, isLoading: statusLoading } = useUserStatus();
+  const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
+  const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") {
+      toast({
+        title: "Betalning genomf\u00f6rd!",
+        description: "Du har nu tillg\u00e5ng till Pro-planen. Tack f\u00f6r ditt st\u00f6d!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+      window.history.replaceState({}, "", "/");
+    } else if (params.get("canceled") === "true") {
+      toast({
+        title: "Betalning avbruten",
+        description: "Du avbr\u00f6t betalningen. Prova igen n\u00e4r du vill.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/");
+    }
+  }, [toast]);
+
+  const handleUpgrade = () => {
+    startCheckout();
+  };
 
   const handleSubmit = (data: { prompt: string; type: any }) => {
     setLimitError(null);
@@ -83,8 +110,18 @@ export default function Home() {
                 </span>
               </div>
               {userStatus.plan === "free" && (
-                <Button size="sm" className="gap-1" data-testid="button-upgrade-header">
-                  <Crown className="w-4 h-4" />
+                <Button 
+                  size="sm" 
+                  className="gap-1" 
+                  data-testid="button-upgrade-header"
+                  onClick={handleUpgrade}
+                  disabled={isCheckoutPending}
+                >
+                  {isCheckoutPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Crown className="w-4 h-4" />
+                  )}
                   Uppgradera till Pro
                 </Button>
               )}
@@ -109,8 +146,18 @@ export default function Home() {
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-red-800 dark:text-red-300 font-medium">{limitError}</p>
-                <Button size="sm" className="mt-3 gap-1" data-testid="button-upgrade-limit">
-                  <Crown className="w-4 h-4" />
+                <Button 
+                  size="sm" 
+                  className="mt-3 gap-1" 
+                  data-testid="button-upgrade-limit"
+                  onClick={handleUpgrade}
+                  disabled={isCheckoutPending}
+                >
+                  {isCheckoutPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Crown className="w-4 h-4" />
+                  )}
                   Uppgradera till Pro
                 </Button>
               </div>
@@ -219,8 +266,17 @@ export default function Home() {
                 <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" /> Avancerade förslag</li>
                 <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-green-500" /> Prioriterad AI-modell</li>
               </ul>
-              <Button className="w-full" data-testid="button-pro-plan">
-                <Crown className="w-4 h-4 mr-2" />
+              <Button 
+                className="w-full" 
+                data-testid="button-pro-plan"
+                onClick={handleUpgrade}
+                disabled={isCheckoutPending}
+              >
+                {isCheckoutPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Crown className="w-4 h-4 mr-2" />
+                )}
                 Uppgradera nu
               </Button>
             </Card>

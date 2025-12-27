@@ -4,8 +4,13 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
+import Stripe from "stripe";
 import { PLAN_LIMITS, type User } from "@shared/schema";
 import { randomUUID } from "crypto";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+
+const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
 
 declare module 'express-session' {
   interface SessionData {
@@ -158,6 +163,105 @@ Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på
       console.error("Error:", err);
       res.status(500).json({ message: "Internt serverfel" });
     }
+  });
+
+  // Create Stripe Checkout session
+  app.post("/api/stripe/create-checkout", async (req, res) => {
+    try {
+      if (!req.session.visitorId) {
+        req.session.visitorId = randomUUID();
+      }
+
+      const user = await storage.getOrCreateUser(req.session.visitorId);
+
+      if (user.plan === "pro") {
+        return res.status(400).json({ message: "Du har redan Pro-planen!" });
+      }
+
+      if (!STRIPE_PRICE_ID) {
+        return res.status(500).json({ message: "Stripe är inte konfigurerat korrekt." });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: STRIPE_PRICE_ID,
+            quantity: 1,
+          },
+        ],
+        success_url: `${req.headers.origin || 'http://localhost:5000'}/?success=true`,
+        cancel_url: `${req.headers.origin || 'http://localhost:5000'}/?canceled=true`,
+        metadata: {
+          userId: user.id.toString(),
+          sessionId: req.session.visitorId,
+        },
+      });
+
+      res.json({ url: session.url });
+    } catch (err) {
+      console.error("Stripe checkout error:", err);
+      res.status(500).json({ message: "Kunde inte starta betalning." });
+    }
+  });
+
+  // Stripe webhook handler
+  app.post("/api/stripe/webhook", async (req, res) => {
+    const sig = req.headers["stripe-signature"] as string;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      console.error("Missing STRIPE_WEBHOOK_SECRET");
+      return res.status(500).send("Webhook secret not configured");
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      const rawBody = (req as any).rawBody;
+      if (!rawBody) {
+        return res.status(400).send("No raw body available");
+      }
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    } catch (err: any) {
+      console.error("Webhook signature verification failed:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+        const customerId = session.customer as string;
+        const subscriptionId = session.subscription as string;
+
+        if (userId) {
+          await storage.upgradeUserToPro(
+            parseInt(userId),
+            customerId,
+            subscriptionId
+          );
+          console.log(`User ${userId} upgraded to Pro`);
+        }
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        await storage.downgradeUserToFree(subscription.id);
+        console.log(`Subscription ${subscription.id} canceled, user downgraded`);
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        console.log(`Payment failed for invoice: ${invoice.id}`);
+        break;
+      }
+    }
+
+    res.json({ received: true });
   });
 
   return httpServer;
