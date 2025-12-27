@@ -165,6 +165,47 @@ Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på
     }
   });
 
+  // Helper to get or create the PromptForge Pro price
+  async function getOrCreatePrice(): Promise<string> {
+    // First try to use existing price from env
+    if (STRIPE_PRICE_ID) {
+      try {
+        await stripe.prices.retrieve(STRIPE_PRICE_ID);
+        return STRIPE_PRICE_ID;
+      } catch {
+        // Price doesn't exist, create new one
+      }
+    }
+
+    // Look for existing product
+    const products = await stripe.products.list({ limit: 100 });
+    let product = products.data.find(p => p.name === "PromptForge Pro" && p.active);
+
+    if (!product) {
+      product = await stripe.products.create({
+        name: "PromptForge Pro",
+        description: "100 optimeringar per dag",
+      });
+      console.log("Created Stripe product:", product.id);
+    }
+
+    // Look for existing price
+    const prices = await stripe.prices.list({ product: product.id, active: true, limit: 10 });
+    let price = prices.data.find(p => p.unit_amount === 9900 && p.currency === "sek" && p.recurring?.interval === "month");
+
+    if (!price) {
+      price = await stripe.prices.create({
+        product: product.id,
+        unit_amount: 9900, // 99 SEK
+        currency: "sek",
+        recurring: { interval: "month" },
+      });
+      console.log("Created Stripe price:", price.id);
+    }
+
+    return price.id;
+  }
+
   // Create Stripe Checkout session
   app.post("/api/stripe/create-checkout", async (req, res) => {
     try {
@@ -178,16 +219,14 @@ Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på
         return res.status(400).json({ message: "Du har redan Pro-planen!" });
       }
 
-      if (!STRIPE_PRICE_ID) {
-        return res.status(500).json({ message: "Stripe är inte konfigurerat korrekt." });
-      }
+      const priceId = await getOrCreatePrice();
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
         payment_method_types: ["card"],
         line_items: [
           {
-            price: STRIPE_PRICE_ID,
+            price: priceId,
             quantity: 1,
           },
         ],
