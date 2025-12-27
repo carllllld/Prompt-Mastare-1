@@ -1,8 +1,8 @@
-# PromptOptimera
+# PromptForge
 
 ## Overview
 
-PromptOptimera is a Swedish-language AI-powered prompt optimization tool. Users submit prompts along with a category (General, Business, Programming, etc.), and the application uses OpenAI's GPT-4o to improve the prompt, explain what was changed, and provide additional suggestions. The goal is to help users get better, more precise responses from AI models like ChatGPT.
+PromptForge is a Swedish-language AI-powered prompt optimization tool. Users submit prompts along with a category (General, Business, Programming, etc.), and the application uses OpenAI's GPT-4o to improve the prompt, explain what was changed, and provide additional suggestions. The goal is to help users get better, more precise responses from AI models like ChatGPT.
 
 ## User Preferences
 
