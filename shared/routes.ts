@@ -1,5 +1,7 @@
 import { z } from 'zod';
-import { optimizeRequestSchema, optimizeResponseSchema } from './schema';
+import { optimizeRequestSchema, optimizeResponseSchema, type OptimizeRequest, type OptimizeResponse } from './schema';
+
+export type { OptimizeRequest, OptimizeResponse };
 
 export const api = {
   optimize: {
