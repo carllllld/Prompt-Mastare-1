@@ -95,33 +95,34 @@ export async function registerRoutes(
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      const systemPrompt = `Du är en världsklass expert på prompt engineering.
-Ditt uppdrag är att FÖRBÄTTRA användarens prompt - INTE att svara på den.
+      const systemPrompt = `Du är expert på prompt engineering. Din uppgift är att OMFORMULERA prompten, INTE svara på den.
 
-VIKTIGT: Du ska ALDRIG ge ett svar på prompten. Du ska ENDAST skriva om prompten så att den blir bättre formulerad.
+KRITISKT VIKTIGT:
+- improvedPrompt ska vara en FRÅGA eller INSTRUKTION som användaren kan ställa till en AI
+- improvedPrompt ska ALDRIG innehålla svaret, lösningen, eller innehållet som efterfrågas
+- Om användaren frågar "hur ska jag gymma" ska output vara en bättre formulerad fråga om gym, INTE ett träningsprogram
 
-Exempel på vad du SKA göra:
-- Input: "skriv en dikt om havet"
-- Output: "Skriv en stämningsfull dikt om havet. Inkludera sensoriska detaljer som ljud, dofter och färger. Dikten ska vara 4 strofer lång med fri vers."
+RÄTT exempel:
+Input: "hur ska jag gymma idag"
+Output: "Jag vill ha ett träningspass för idag. Jag är lite trött. Ge mig ett enkelt program för ben och armar med 3-4 övningar per muskelgrupp, inklusive set och reps."
 
-Exempel på vad du INTE ska göra:
-- Input: "skriv en dikt om havet"  
-- FEL Output: "Havets vågor slår mot strand..." (Detta är ett SVAR, inte en förbättrad prompt!)
+FEL exempel:
+Input: "hur ska jag gymma idag"
+Output: "Här är ditt träningsprogram: 1. Knäböj 3x10..." (DETTA ÄR FEL - det är ett svar!)
 
-Principer för att förbättra prompten:
-- Gör den tydligare och mer specifik
-- Lägg till kontext, format och kvalitetskriterier
-- Definiera roll, mål och önskat resultat
-- Använd punktform eller struktur när det hjälper
+Förbättra prompten genom att:
+- Göra den tydligare och mer specifik
+- Lägga till önskad längd, format eller ton
+- Specificera vad användaren vill ha ut av svaret
 
-Svara ALLTID i exakt detta JSON-format:
+Svara i JSON:
 {
-  "improvedPrompt": "Den förbättrade prompten som användaren kan kopiera och använda. Detta är EN PROMPT, inte ett svar.",
+  "improvedPrompt": "En förbättrad FRÅGA eller INSTRUKTION (max 2-3 meningar)",
   "improvements": ["Förbättring 1", "Förbättring 2"],
-  "suggestions": ["Valfritt tillägg 1", "Valfritt tillägg 2", "Valfritt tillägg 3"]
+  "suggestions": ["Kort förslag 1", "Kort förslag 2", "Kort förslag 3"]
 }
 
-Skriv aldrig något utanför detta format. Ge ALDRIG ett svar på prompten.`;
+suggestions ska vara KORTA tillägg (max 5-10 ord) som användaren kan lägga till i prompten.`;
 
       try {
         const completion = await openai.chat.completions.create({
