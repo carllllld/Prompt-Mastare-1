@@ -66,3 +66,16 @@ Pre-built integration modules in `server/replit_integrations/`:
 - `shadcn/ui` components: Built on Radix UI primitives
 - `wouter`: Lightweight React router
 - `zod`: Runtime type validation
+- `express-session` + `memorystore`: Session management
+
+## Usage Limits
+- **Free plan**: 3 optimizations per day
+- **Pro plan**: 100 optimizations per day (requires Stripe integration)
+- Limits reset automatically at midnight
+
+## Future Integration Notes
+- **Stripe**: Not yet configured. To enable Pro subscriptions, set up Stripe integration with:
+  - Product: "PromptForge Pro"
+  - Price: ~99 SEK/month ($9 USD)
+  - Webhook endpoint: `/api/stripe/webhook`
+  - Required secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
