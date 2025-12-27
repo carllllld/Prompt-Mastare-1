@@ -182,7 +182,7 @@ Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på
         return res.status(500).json({ message: "Stripe är inte konfigurerat korrekt." });
       }
 
-      const session = await stripe.checkout.sessions.create({
+      const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
         payment_method_types: ["card"],
         line_items: [
@@ -197,7 +197,13 @@ Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på
           userId: user.id.toString(),
           sessionId: req.session.visitorId,
         },
-      });
+      };
+
+      if (user.stripeCustomerId) {
+        sessionParams.customer = user.stripeCustomerId;
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionParams);
 
       res.json({ url: session.url });
     } catch (err) {

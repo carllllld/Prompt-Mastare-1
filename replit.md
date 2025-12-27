@@ -73,9 +73,18 @@ Pre-built integration modules in `server/replit_integrations/`:
 - **Pro plan**: 100 optimizations per day (requires Stripe integration)
 - Limits reset automatically at midnight
 
-## Future Integration Notes
-- **Stripe**: Not yet configured. To enable Pro subscriptions, set up Stripe integration with:
-  - Product: "PromptForge Pro"
-  - Price: ~99 SEK/month ($9 USD)
-  - Webhook endpoint: `/api/stripe/webhook`
-  - Required secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+## Stripe Integration (Configured)
+- **Product**: PromptForge Pro
+- **Price**: 99 SEK/month
+- **Checkout endpoint**: `POST /api/stripe/create-checkout`
+- **Webhook endpoint**: `POST /api/stripe/webhook`
+- **Configured secrets**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+- **Webhook events handled**:
+  - `checkout.session.completed` - Upgrades user to Pro
+  - `customer.subscription.deleted` - Downgrades user to Free
+  - `invoice.payment_failed` - Logs payment failure
+
+## Session Storage
+- Sessions are stored in PostgreSQL using `connect-pg-simple`
+- Table: `user_sessions` (auto-created)
+- Sessions persist across server restarts
