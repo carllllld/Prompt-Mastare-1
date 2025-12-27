@@ -1,0 +1,160 @@
+Bygg en komplett, enkel SaaS-webbapp för att optimera AI-prompter med följande krav. Appen ska vara billig i drift, säker mot missbruk och redo att ta betalt.
+
+🎯 APPENS SYFTE
+
+Användaren klistrar in en prompt de tänker skicka till t.ex. ChatGPT.
+Appen förbättrar prompten, förklarar vad som förbättrats och ger extra förslag.
+
+🧠 AI & KOSTNAD (VIKTIGT)
+
+Använd OpenAI API – modellen gpt-4o-mini (billigast & tillräckligt bra)
+
+System-prompten ska vara dold och användas för prompt-optimering
+
+Temperatur runt 0.4 för stabila resultat
+
+System-prompt (ska användas internt):
+
+Du är expert på prompt engineering.
+Förbättra användarens prompt så att den blir tydlig, specifik och effektiv.
+
+Svara ALLTID i exakt detta format:
+
+Förbättrad prompt:
+(optimerad prompt)
+
+Vad som förbättrades:
+– punktlista
+
+Extra tilläggsförslag:
+– 3–5 förslag
+
+Anpassa efter prompt-typ om sådan anges.
+
+🧱 TECH STACK
+
+Backend: Node.js + Express
+
+Frontend: HTML, CSS, Vanilla JS
+
+Databas: SQLite eller Supabase
+
+Hosting: Replit
+
+Payments: Stripe
+
+👤 USERS & AUTH
+
+Använd enkel e-postbaserad inloggning (eller session-baserad användar-ID)
+
+Varje user ska sparas i databasen med:
+
+{
+  "id": "string",
+  "email": "string",
+  "plan": "free | pro",
+  "promptsUsedToday": number,
+  "lastResetDate": "YYYY-MM-DD"
+}
+
+🚦 USAGE LIMITS (KRITISKT)
+
+Implementera dagliga limits:
+
+Free-plan
+
+3 prompt-optimeringar per dag
+
+Pro-plan
+
+100 prompt-optimeringar per dag
+
+Reset sker automatiskt varje ny dag
+
+Blockera requests om limit är nådd
+
+Returnera tydligt felmeddelande vid blockering
+
+💳 BETALNING (STRIPE)
+
+Skapa Stripe subscription:
+
+Produkt: “Prompt Optimizer Pro”
+
+Pris: $9/månad
+
+Använd Stripe Checkout
+
+Implementera webhook:
+
+När betalning lyckas → uppgradera user till plan = "pro"
+
+Ingen betalning = user är free
+
+🖥️ UI / UX
+
+Textarea för prompt
+
+Dropdown för prompt-typ:
+
+General
+
+Coding
+
+Business / Marketing
+
+Writing
+
+Study
+
+Knapp: Optimera prompt
+
+Visa resultat i tre tydliga sektioner:
+
+Förbättrad prompt
+
+Vad som förbättrades
+
+Extra tilläggsförslag
+
+Kopiera-knapp för förbättrad prompt
+
+Visa tydligt:
+
+Hur många prompts användaren har kvar idag
+
+CTA för uppgradering till Pro när limit nås
+
+🔐 SÄKERHET & KOSTNADSSKYDD
+
+Rate limit: max 5 requests per minut per user
+
+Kontrollera alltid usage-limit innan API-anrop
+
+Använd environment variables för:
+
+OPENAI_API_KEY
+
+STRIPE_SECRET_KEY
+
+STRIPE_WEBHOOK_SECRET
+
+📁 LEVERANS
+
+Skapa komplett fungerande kod
+
+Kommentera viktiga delar
+
+Appen ska gå att köra direkt i Replit
+
+Fokus på enkelhet, låg kostnad och snabb MVP
+
+🧠 EXTRA VIKTIGT
+
+Bygg detta som en lean micro-SaaS:
+
+inget överarbete
+
+allt ska vara lätt att vidareutveckla
+
+målet är att kunna ta betalt tidigt utan höga API-kostnader
