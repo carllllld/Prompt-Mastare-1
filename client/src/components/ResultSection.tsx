@@ -2,10 +2,11 @@ import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Copy, Sparkles, Lightbulb, ListChecks } from "lucide-react";
+import { Check, Copy, Sparkles, Lightbulb, ListChecks, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { PromptCompare } from "./PromptCompare";
+import { useToast } from "@/hooks/use-toast";
 
 interface ResultSectionProps {
   result: OptimizeResponse;
@@ -13,9 +14,27 @@ interface ResultSectionProps {
 
 export function ResultSection({ result }: ResultSectionProps) {
   const [copied, setCopied] = useState(false);
+  const [currentPrompt, setCurrentPrompt] = useState(result.improvedPrompt);
+  const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set());
+  const { toast } = useToast();
+
+  const applySuggestion = (suggestion: string, index: number) => {
+    if (appliedSuggestions.has(index)) return;
+    
+    setCurrentPrompt(prev => `${prev}\n\n${suggestion}`);
+    setAppliedSuggestions(prev => {
+      const newSet = new Set(Array.from(prev));
+      newSet.add(index);
+      return newSet;
+    });
+    toast({
+      title: "Förslag tillagt",
+      description: "Förslaget har lagts till i din prompt.",
+    });
+  };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(result.improvedPrompt);
+    await navigator.clipboard.writeText(currentPrompt);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -53,9 +72,16 @@ export function ResultSection({ result }: ResultSectionProps) {
         
         <Card className="relative overflow-hidden border-indigo-100 bg-white shadow-lg shadow-indigo-500/5">
           <div className="p-6 md:p-8 bg-gradient-to-br from-white to-indigo-50/50">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-lg font-medium">
-              {result.improvedPrompt}
+            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-lg font-medium" data-testid="text-current-prompt">
+              {currentPrompt}
             </p>
+            {appliedSuggestions.size > 0 && (
+              <div className="mt-4 pt-4 border-t border-indigo-100">
+                <span className="text-sm text-indigo-600 font-medium">
+                  {appliedSuggestions.size} förslag tillagt
+                </span>
+              </div>
+            )}
           </div>
           <div className="bg-gray-50/80 p-4 flex justify-end border-t border-gray-100">
             <Button
@@ -122,18 +148,34 @@ export function ResultSection({ result }: ResultSectionProps) {
 
           <Card className="h-full border-amber-100 bg-amber-50/30 p-6 shadow-sm">
              <div className="flex flex-wrap gap-2">
-              {result.suggestions.map((suggestion, index) => (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
-                  className="px-3 py-1.5 bg-white border-amber-200 text-amber-800 hover:bg-amber-50 transition-colors text-sm font-medium"
-                >
-                  + {suggestion}
-                </Badge>
-              ))}
+              {result.suggestions.map((suggestion, index) => {
+                const isApplied = appliedSuggestions.has(index);
+                return (
+                  <button
+                    key={index}
+                    onClick={() => applySuggestion(suggestion, index)}
+                    disabled={isApplied}
+                    className={`
+                      inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all
+                      ${isApplied 
+                        ? "bg-green-100 border border-green-300 text-green-700 cursor-default" 
+                        : "bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 hover:border-amber-300 cursor-pointer"
+                      }
+                    `}
+                    data-testid={`button-apply-suggestion-${index}`}
+                  >
+                    {isApplied ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    {suggestion}
+                  </button>
+                );
+              })}
              </div>
              <p className="mt-4 text-sm text-gray-500 italic">
-               Tips: Lägg till dessa detaljer i din prompt för att få ännu mer precisa svar.
+               Klicka på ett förslag för att lägga till det i din prompt.
              </p>
           </Card>
         </motion.div>
