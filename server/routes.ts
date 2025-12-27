@@ -130,6 +130,7 @@ Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på
         const result = JSON.parse(content);
         
         const responseData = {
+          originalPrompt: prompt,
           improvedPrompt: result.improvedPrompt || "Kunde inte generera prompt.",
           improvements: Array.isArray(result.improvements) ? result.improvements : [],
           suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],

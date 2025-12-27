@@ -39,6 +39,7 @@ export const optimizeRequestSchema = z.object({
 });
 
 export const optimizeResponseSchema = z.object({
+  originalPrompt: z.string(),
   improvedPrompt: z.string(),
   improvements: z.array(z.string()),
   suggestions: z.array(z.string()),
