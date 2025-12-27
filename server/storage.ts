@@ -70,7 +70,10 @@ export class DatabaseStorage implements IStorage {
 
   async downgradeUserToFree(stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
-      .set({ plan: "free" })
+      .set({ 
+        plan: "free",
+        stripeSubscriptionId: null,
+      })
       .where(eq(users.stripeSubscriptionId, stripeSubscriptionId));
   }
 
