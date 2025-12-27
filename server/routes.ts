@@ -1,39 +1,107 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
+import { PLAN_LIMITS, type User } from "@shared/schema";
+import { randomUUID } from "crypto";
 
-// Initialize OpenAI client - Replit AI integration handles the key automatically
-// if configured, otherwise falls back to environment variable
+declare module 'express-session' {
+  interface SessionData {
+    visitorId?: string;
+  }
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-mock-if-needed",
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60000;
+const RATE_LIMIT_MAX = 5;
+
+function rateLimit(req: Request, res: Response, next: NextFunction) {
+  const sessionId = req.session?.visitorId || 'anonymous';
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(sessionId);
+
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitMap.set(sessionId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+
+  if (userLimit.count >= RATE_LIMIT_MAX) {
+    return res.status(429).json({ 
+      message: "För många förfrågningar. Vänta en minut och försök igen." 
+    });
+  }
+
+  userLimit.count++;
+  next();
+}
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  app.post(api.optimize.path, async (req, res) => {
+
+  app.get("/api/user/status", async (req, res) => {
     try {
+      if (!req.session.visitorId) {
+        req.session.visitorId = randomUUID();
+      }
+      
+      const user = await storage.getOrCreateUser(req.session.visitorId);
+      const plan = user.plan as "free" | "pro";
+      const dailyLimit = PLAN_LIMITS[plan];
+      
+      res.json({
+        plan,
+        promptsUsedToday: user.promptsUsedToday,
+        promptsRemaining: Math.max(0, dailyLimit - user.promptsUsedToday),
+        dailyLimit,
+      });
+    } catch (err) {
+      console.error("Error getting user status:", err);
+      res.status(500).json({ message: "Kunde inte hämta användarstatus" });
+    }
+  });
+
+  app.post(api.optimize.path, rateLimit, async (req, res) => {
+    try {
+      if (!req.session.visitorId) {
+        req.session.visitorId = randomUUID();
+      }
+
+      const user = await storage.getOrCreateUser(req.session.visitorId);
+      const plan = user.plan as "free" | "pro";
+      const dailyLimit = PLAN_LIMITS[plan];
+
+      if (user.promptsUsedToday >= dailyLimit) {
+        return res.status(403).json({
+          message: plan === "free" 
+            ? "Du har använt alla dina 3 gratis optimeringar idag. Uppgradera till Pro för fler!"
+            : "Du har nått din dagliga gräns på 100 optimeringar.",
+          limitReached: true,
+          plan,
+        });
+      }
+
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      // System prompt baserat på användarens önskemål
-      const systemPrompt = `Du är en expert på prompt engineering och AI-kommunikation.
-Ditt mål är att förbättra användarens prompt enligt bästa praxis.
+      const systemPrompt = `Du är expert på prompt engineering.
+Förbättra användarens prompt så att den blir tydlig, specifik och effektiv.
 
-Svara ALLTID i detta format (JSON):
+Svara ALLTID i exakt detta JSON-format:
 {
-  "improvedPrompt": "Den förbättrade prompten här...",
-  "improvements": ["Punkt 1", "Punkt 2"],
-  "suggestions": ["Förslag 1", "Förslag 2"]
+  "improvedPrompt": "Den optimerade prompten här",
+  "improvements": ["Punkt 1 om vad som förbättrades", "Punkt 2"],
+  "suggestions": ["Förslag 1", "Förslag 2", "Förslag 3"]
 }
 
-Regler:
-1. Den förbättrade prompten ska vara tydlig, strukturerad och effektiv.
-2. 'improvements' ska förklara vad du ändrade (Svenska).
-3. 'suggestions' ska vara konkreta tips (Svenska).`;
+Anpassa efter prompt-typ om sådan anges. Skriv förbättringar och förslag på svenska.`;
 
       try {
         const completion = await openai.chat.completions.create({
@@ -44,27 +112,28 @@ Regler:
               content: `Prompt-typ: ${type}\n\nAnvändarens prompt:\n${prompt}`
             },
           ],
-          model: "gpt-4o",
+          model: "gpt-4o-mini",
           response_format: { type: "json_object" },
           temperature: 0.4,
         });
 
         const content = completion.choices[0].message.content;
         if (!content) {
-          throw new Error("No content received from OpenAI");
+          throw new Error("Inget svar från AI");
         }
 
         const result = JSON.parse(content);
         
-        // Validate result structure roughly
         const responseData = {
           improvedPrompt: result.improvedPrompt || "Kunde inte generera prompt.",
           improvements: Array.isArray(result.improvements) ? result.improvements : [],
           suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
         };
 
-        // Save to history (fire and forget)
+        await storage.incrementUserPrompts(user.id);
+
         storage.createOptimization({
+          userId: user.id,
           originalPrompt: prompt,
           improvedPrompt: responseData.improvedPrompt,
           category: type,
@@ -75,14 +144,9 @@ Regler:
         res.json(responseData);
       } catch (openaiError: any) {
         console.error("OpenAI Error:", openaiError);
-        
-        // Fallback mock response if API fails (e.g. no credits/key)
-        const mockResponse = {
-          improvedPrompt: `[MOCK - AI API Error: ${openaiError.message}]\n\nHär är en förbättrad version av din prompt:\n\n"Agera som en expert inom ${type}. ${prompt}..."`,
-          improvements: ["Simulerad förbättring 1", "Simulerad förbättring 2"],
-          suggestions: ["Kontrollera API-nyckeln", "Prova igen senare"],
-        };
-        res.json(mockResponse);
+        res.status(500).json({ 
+          message: "Ett fel uppstod vid optimering. Försök igen." 
+        });
       }
 
     } catch (err) {
@@ -91,7 +155,8 @@ Regler:
           message: err.errors[0].message,
         });
       }
-      res.status(500).json({ message: "Internal server error" });
+      console.error("Error:", err);
+      res.status(500).json({ message: "Internt serverfel" });
     }
   });
 

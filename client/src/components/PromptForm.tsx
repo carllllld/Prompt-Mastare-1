@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 interface PromptFormProps {
   onSubmit: (data: OptimizeRequest) => void;
   isPending: boolean;
+  disabled?: boolean;
 }
 
 const categories = [
@@ -27,7 +28,7 @@ const categories = [
   "Marketing",
 ] as const;
 
-export function PromptForm({ onSubmit, isPending }: PromptFormProps) {
+export function PromptForm({ onSubmit, isPending, disabled = false }: PromptFormProps) {
   const [prompt, setPrompt] = useState("");
   const [type, setType] = useState<OptimizeRequest["type"]>("General");
 
@@ -81,8 +82,9 @@ export function PromptForm({ onSubmit, isPending }: PromptFormProps) {
 
         <Button
           type="submit"
-          disabled={!prompt.trim() || isPending}
+          disabled={!prompt.trim() || isPending || disabled}
           className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:to-indigo-700 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
+          data-testid="button-optimize"
         >
           {isPending ? (
             <>
