@@ -19,31 +19,34 @@ export async function registerRoutes(
     try {
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      // System prompt to guide the AI
-      const systemPrompt = `Du är en expert på prompt engineering. Din uppgift är att optimera användarens prompt för en AI-modell.
-      Användarens prompt-kategori är: ${type}.
-      
-      Du ska returnera svaret EXAKT i JSON-format med följande struktur:
-      {
-        "improvedPrompt": "Den förbättrade, kompletta prompten",
-        "improvements": ["Punkt 1 om vad som förbättrades", "Punkt 2...", "Punkt 3..."],
-        "suggestions": ["Förslag 1 för att göra den ännu bättre", "Förslag 2...", "Förslag 3..."]
-      }
-      
-      Regler:
-      1. Den förbättrade prompten ska vara tydlig, strukturerad och effektiv.
-      2. 'improvements' ska förklara vad du ändrade (t.ex. "Lade till kontext", "Tydliggjorde målet").
-      3. 'suggestions' ska vara konkreta tips (t.ex. "Be om utdata i tabellform", "Lägg till exempel").
-      4. Håll språket i 'improvements' och 'suggestions' på Svenska. Den förbättrade prompten ska vara på samma språk som originalprompten (eller engelska om det är kodning/tekniskt och lämpligare).`;
+      // System prompt baserat på användarens önskemål
+      const systemPrompt = `Du är en expert på prompt engineering och AI-kommunikation.
+Ditt mål är att förbättra användarens prompt enligt bästa praxis.
+
+Svara ALLTID i detta format (JSON):
+{
+  "improvedPrompt": "Den förbättrade prompten här...",
+  "improvements": ["Punkt 1", "Punkt 2"],
+  "suggestions": ["Förslag 1", "Förslag 2"]
+}
+
+Regler:
+1. Den förbättrade prompten ska vara tydlig, strukturerad och effektiv.
+2. 'improvements' ska förklara vad du ändrade (Svenska).
+3. 'suggestions' ska vara konkreta tips (Svenska).`;
 
       try {
         const completion = await openai.chat.completions.create({
           messages: [
             { role: "system", content: systemPrompt },
-            { role: "user", content: prompt },
+            {
+              role: "user",
+              content: `Prompt-typ: ${type}\n\nAnvändarens prompt:\n${prompt}`
+            },
           ],
-          model: "gpt-4o", // Or a suitable model available in Replit AI
+          model: "gpt-4o",
           response_format: { type: "json_object" },
+          temperature: 0.4,
         });
 
         const content = completion.choices[0].message.content;

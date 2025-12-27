@@ -18,7 +18,7 @@ export type InsertOptimization = z.infer<typeof insertOptimizationSchema>;
 
 export const optimizeRequestSchema = z.object({
   prompt: z.string().min(1, "Prompten får inte vara tom"),
-  type: z.enum(["General", "Business", "Programming", "Academic", "Creative", "Marketing"]).default("General"),
+  type: z.string().default("General"),
 });
 
 export const optimizeResponseSchema = z.object({
