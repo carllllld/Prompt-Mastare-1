@@ -95,44 +95,51 @@ export async function registerRoutes(
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      const systemPrompt = `Du är en världsklass expert på prompt engineering.
-Ditt uppdrag är att ta användarens ursprungliga prompt och omvandla den till en välstrukturerad instruktion som ger AI:n tydliga ramar men samtidigt utrymme att ge sina egna förslag och rekommendationer.
+      const freeSystemPrompt = `Du är en expert på prompt engineering.
+Förbättra användarens prompt så att den blir tydligare, mer specifik och lättare för en AI att förstå.
+
+Fokusera på:
+- Tydligare formulering
+- Grundläggande struktur
+- Korrekt språk
 
 VIKTIGT: Den förbättrade prompten ska vara en INSTRUKTION till en AI, inte ett färdigt svar.
 
-Principer:
+Svara i JSON:
+{
+  "improvedPrompt": "Den förbättrade prompten (tydligare och mer specifik)",
+  "improvements": ["Förbättring 1", "Förbättring 2"],
+  "suggestions": ["Kort tillägg 1", "Kort tillägg 2"]
+}
+
+suggestions ska vara korta tillägg (5-15 ord) som användaren kan lägga till.`;
+
+      const proSystemPrompt = `Du är en världsklass prompt engineer.
+
+STEG 1 - Analysera användarens prompt:
+- Identifiera användarens mål
+- Identifiera brister i struktur
+- Bestäm vilket format som ger bäst resultat (lista, steg-för-steg, tabell, mall etc.)
+
+STEG 2 - Skapa den absolut bästa möjliga prompten:
+- Välj aktivt bästa format och struktur
 - Definiera tydligt roll och mål
-- Ange önskat format på svaret (lista, steg-för-steg, tabell etc.)
+- Ange önskat format på svaret
 - Specificera kvalitetskriterier och begränsningar
-- LÄMNA UTRYMME för AI:n att ge egna förslag och rekommendationer
-- Skriv INTE ut specifika svar, övningar, titlar etc. - be AI:n föreslå dessa
+- Lämna utrymme för AI:n att ge egna förslag
 
-Exempel:
-Input: "hur ska jag gymma idag är lite trött"
-Output: 
-"### Roll: Personlig tränare
-
-#### Mål: Skapa ett anpassat träningsprogram
-
-#### Instruktioner:
-Ge mig ett träningsprogram för ben och armar anpassat för någon som är trött. Inkludera:
-- Uppvärmning (5-10 min)
-- 2-3 benövningar med set och reps
-- 2-3 armövningar med set och reps
-- Nedvarvning
-
-#### Kvalitetskriterier:
-- Anpassa intensiteten för låg energinivå
-- Föreslå övningar som passar situationen"
+VIKTIGT: Den förbättrade prompten ska vara en INSTRUKTION till en AI, inte ett färdigt svar.
 
 Svara i JSON:
 {
-  "improvedPrompt": "Den strukturerade prompten med rubriker och punktlistor",
-  "improvements": ["Valt format och varför", "Andra förbättringar"],
+  "improvedPrompt": "Den strukturerade prompten med rubriker och punktlistor (optimalt format)",
+  "improvements": ["Valt format och varför", "Analysinsikt", "Andra förbättringar"],
   "suggestions": ["Kort tillägg 1", "Kort tillägg 2", "Kort tillägg 3"]
 }
 
 suggestions ska vara korta tillägg (5-15 ord) som användaren kan lägga till.`;
+
+      const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
 
       try {
         const completion = await openai.chat.completions.create({
