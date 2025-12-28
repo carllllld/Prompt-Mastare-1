@@ -101,10 +101,10 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
     >
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
+          <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400 border border-purple-500/20">
             <GitCompare className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Jämför Prompts</h2>
+          <h2 className="text-xl font-bold text-white">Jämför Prompts</h2>
         </div>
         
         <div className="flex items-center gap-2">
@@ -112,6 +112,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             variant={view === "side-by-side" ? "default" : "outline"}
             size="sm"
             onClick={() => setView("side-by-side")}
+            className={view === "side-by-side" ? "bg-violet-600 hover:bg-violet-500" : "border-white/10 text-white/70 hover:bg-white/5"}
             data-testid="button-view-side-by-side"
           >
             <Eye className="w-4 h-4 mr-1" />
@@ -121,6 +122,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             variant={view === "unified" ? "default" : "outline"}
             size="sm"
             onClick={() => setView("unified")}
+            className={view === "unified" ? "bg-violet-600 hover:bg-violet-500" : "border-white/10 text-white/70 hover:bg-white/5"}
             data-testid="button-view-unified"
           >
             <FileText className="w-4 h-4 mr-1" />
@@ -129,21 +131,20 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
         </div>
       </div>
 
-      <Card className="border-purple-100 dark:border-purple-900/50 overflow-hidden">
-        <div className="bg-purple-50/50 dark:bg-purple-900/20 p-4 border-b border-purple-100 dark:border-purple-900/50">
+      <Card className="bg-white/[0.02] border-white/[0.08] overflow-hidden">
+        <div className="bg-purple-500/5 p-4 border-b border-white/[0.06]">
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400">Original:</span>
-              <Badge variant="secondary">{stats.originalWords} ord</Badge>
+              <span className="text-white/50">Original:</span>
+              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.originalWords} ord</Badge>
             </div>
-            <ArrowRight className="w-4 h-4 text-gray-400" />
+            <ArrowRight className="w-4 h-4 text-white/30" />
             <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400">Förbättrad:</span>
-              <Badge variant="secondary">{stats.improvedWords} ord</Badge>
+              <span className="text-white/50">Förbättrad:</span>
+              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.improvedWords} ord</Badge>
             </div>
             <Badge 
-              variant={stats.wordDiff > 0 ? "default" : "outline"}
-              className={stats.wordDiff > 0 ? "bg-green-600" : ""}
+              className={stats.wordDiff > 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white/70"}
             >
               {stats.wordDiff > 0 ? "+" : ""}{stats.wordDiff} ord ({stats.percentChange > 0 ? "+" : ""}{stats.percentChange}%)
             </Badge>
@@ -151,63 +152,63 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
         </div>
 
         {view === "side-by-side" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-purple-100 dark:divide-purple-900/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/[0.06]">
             <div className="p-6">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-3 h-3 rounded-full bg-red-400" />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Original</span>
+                <span className="text-sm font-medium text-white/60">Original</span>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed" data-testid="text-original-prompt">
-                {highlightText(original, diffWords.removed, "bg-red-200 dark:bg-red-900/50 px-0.5 rounded")}
+              <p className="text-white/70 whitespace-pre-wrap leading-relaxed" data-testid="text-original-prompt">
+                {highlightText(original, diffWords.removed, "bg-red-500/30 px-0.5 rounded text-red-300")}
               </p>
             </div>
-            <div className="p-6 bg-green-50/30 dark:bg-green-900/10">
+            <div className="p-6 bg-emerald-500/5">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Förbättrad</span>
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <span className="text-sm font-medium text-white/60">Förbättrad</span>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed" data-testid="text-improved-prompt">
-                {highlightText(improved, diffWords.added, "bg-green-200 dark:bg-green-900/50 px-0.5 rounded")}
+              <p className="text-white/70 whitespace-pre-wrap leading-relaxed" data-testid="text-improved-prompt">
+                {highlightText(improved, diffWords.added, "bg-emerald-500/30 px-0.5 rounded text-emerald-300")}
               </p>
             </div>
           </div>
         ) : (
           <div className="p-6 space-y-6">
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/50">
+            <div className="p-4 bg-red-500/10 rounded-lg border border-red-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-red-400" />
-                <span className="text-sm font-medium text-red-700 dark:text-red-300">Original prompt</span>
+                <span className="text-sm font-medium text-red-300">Original prompt</span>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap" data-testid="text-original-unified">
-                {highlightText(original, diffWords.removed, "bg-red-200 dark:bg-red-800/50 px-0.5 rounded")}
+              <p className="text-white/70 whitespace-pre-wrap" data-testid="text-original-unified">
+                {highlightText(original, diffWords.removed, "bg-red-500/30 px-0.5 rounded text-red-300")}
               </p>
             </div>
             <div className="flex justify-center">
-              <ArrowRight className="w-6 h-6 text-gray-400 rotate-90" />
+              <ArrowRight className="w-6 h-6 text-white/30 rotate-90" />
             </div>
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-900/50">
+            <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">Förbättrad prompt</span>
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                <span className="text-sm font-medium text-emerald-300">Förbättrad prompt</span>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap" data-testid="text-improved-unified">
-                {highlightText(improved, diffWords.added, "bg-green-200 dark:bg-green-800/50 px-0.5 rounded")}
+              <p className="text-white/70 whitespace-pre-wrap" data-testid="text-improved-unified">
+                {highlightText(improved, diffWords.added, "bg-emerald-500/30 px-0.5 rounded text-emerald-300")}
               </p>
             </div>
           </div>
         )}
 
         {(added.length > 0 || removed.length > 0) && (
-          <div className="bg-gray-50 dark:bg-gray-800/50 p-4 border-t border-purple-100 dark:border-purple-900/50">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-3">Nyckelförändringar:</p>
+          <div className="bg-white/[0.02] p-4 border-t border-white/[0.06]">
+            <p className="text-sm font-medium text-white/60 mb-3">Nyckelförändringar:</p>
             <div className="flex flex-wrap gap-2">
               {added.map((word, i) => (
-                <Badge key={`add-${i}`} className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800">
+                <Badge key={`add-${i}`} className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                   + {word}
                 </Badge>
               ))}
               {removed.map((word, i) => (
-                <Badge key={`rem-${i}`} variant="outline" className="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-300 border-red-200 dark:border-red-800 line-through">
+                <Badge key={`rem-${i}`} className="bg-red-500/20 text-red-400 border-red-500/30 line-through">
                   {word}
                 </Badge>
               ))}
