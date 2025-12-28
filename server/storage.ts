@@ -1,6 +1,6 @@
 import { optimizations, users, type InsertOptimization, type User, type Optimization, PLAN_LIMITS } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getOrCreateUser(sessionId: string): Promise<User>;
@@ -11,6 +11,8 @@ export interface IStorage {
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
   createOptimization(optimization: InsertOptimization): Promise<void>;
   getOptimizationHistory(userId: number, limit?: number): Promise<Optimization[]>;
+  deleteOptimization(userId: number, optimizationId: number): Promise<void>;
+  deleteAllOptimizations(userId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -89,6 +91,21 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(optimizations.createdAt))
       .limit(limit);
     return result;
+  }
+
+  async deleteOptimization(userId: number, optimizationId: number): Promise<void> {
+    await db.delete(optimizations)
+      .where(
+        and(
+          eq(optimizations.id, optimizationId),
+          eq(optimizations.userId, userId)
+        )
+      );
+  }
+
+  async deleteAllOptimizations(userId: number): Promise<void> {
+    await db.delete(optimizations)
+      .where(eq(optimizations.userId, userId));
   }
 }
 

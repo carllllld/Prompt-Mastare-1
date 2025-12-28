@@ -99,6 +99,57 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/history/:id", async (req, res) => {
+    try {
+      if (!req.session.visitorId) {
+        return res.status(401).json({ message: "Ingen session hittades" });
+      }
+      
+      const user = await storage.getUserBySessionId(req.session.visitorId);
+      if (!user) {
+        return res.status(401).json({ message: "Användare hittades inte" });
+      }
+      
+      if (user.plan !== "pro") {
+        return res.status(403).json({ message: "Endast Pro-användare kan radera historik" });
+      }
+      
+      const optimizationId = parseInt(req.params.id);
+      if (isNaN(optimizationId)) {
+        return res.status(400).json({ message: "Ogiltigt ID" });
+      }
+      
+      await storage.deleteOptimization(user.id, optimizationId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting optimization:", err);
+      res.status(500).json({ message: "Kunde inte radera prompt" });
+    }
+  });
+
+  app.delete("/api/history", async (req, res) => {
+    try {
+      if (!req.session.visitorId) {
+        return res.status(401).json({ message: "Ingen session hittades" });
+      }
+      
+      const user = await storage.getUserBySessionId(req.session.visitorId);
+      if (!user) {
+        return res.status(401).json({ message: "Användare hittades inte" });
+      }
+      
+      if (user.plan !== "pro") {
+        return res.status(403).json({ message: "Endast Pro-användare kan radera historik" });
+      }
+      
+      await storage.deleteAllOptimizations(user.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting all optimizations:", err);
+      res.status(500).json({ message: "Kunde inte radera historik" });
+    }
+  });
+
   app.post(api.optimize.path, rateLimit, async (req, res) => {
     try {
       if (!req.session.visitorId) {
