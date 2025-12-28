@@ -1,68 +1,114 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-sans: 'Inter', sans-serif;
-  --font-display: 'Outfit', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
 
-  /* Professional SaaS Palette - Blue/Indigo centered */
-  --background: 210 40% 98%;
-  --foreground: 222 47% 11%;
+  /* Premium Dark Theme with Violet/Indigo accent */
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
 
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
+  --card: 240 10% 6%;
+  --card-foreground: 0 0% 98%;
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  --primary: 263 70% 58%;
+  --primary-foreground: 0 0% 100%;
 
-  --muted: 214 32% 91%;
-  --muted-foreground: 215 16% 47%;
+  --secondary: 240 5% 12%;
+  --secondary-foreground: 0 0% 98%;
 
-  --accent: 262 83% 58%;
-  --accent-foreground: 210 40% 98%;
+  --muted: 240 5% 15%;
+  --muted-foreground: 240 5% 55%;
 
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --accent: 263 70% 58%;
+  --accent-foreground: 0 0% 100%;
 
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
 
-  --radius: 0.75rem;
+  --border: 240 5% 15%;
+  --input: 240 5% 15%;
+  --ring: 263 70% 58%;
+
+  --radius: 0.625rem;
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
+    @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
+    background: 
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 80, 200, 0.15), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(100, 60, 180, 0.08), transparent),
+      hsl(var(--background));
+    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     @apply font-bold tracking-tight text-foreground;
   }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.3);
+    color: hsl(var(--primary-foreground));
+  }
 }
 
 @layer utilities {
-  .glass-card {
-    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl shadow-black/5;
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-400;
+  }
+  
+  .glow-primary {
+    box-shadow: 0 0 40px -10px hsl(var(--primary) / 0.5);
+  }
+  
+  .glow-card {
+    box-shadow: 
+      0 0 0 1px hsl(var(--border)),
+      0 2px 4px hsl(0 0% 0% / 0.1),
+      0 8px 16px hsl(0 0% 0% / 0.1);
+  }
+  
+  .premium-border {
+    @apply border border-white/[0.08];
   }
   
   .animate-in {
-    animation: animateIn 0.5s ease-out forwards;
+    animation: animateIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }
 
 @keyframes animateIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
 }

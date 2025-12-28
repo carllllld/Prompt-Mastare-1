@@ -64,32 +64,34 @@ export function ResultSection({ result }: ResultSectionProps) {
       {/* Section A: Improved Prompt */}
       <motion.div variants={item}>
         <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 bg-primary/10 rounded-lg text-primary">
+          <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400 border border-violet-500/20">
             <Sparkles className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Förbättrad Prompt</h2>
+          <h2 className="text-xl font-bold text-white">Förbättrad Prompt</h2>
         </div>
         
-        <Card className="relative overflow-hidden border-indigo-100 bg-white shadow-lg shadow-indigo-500/5">
-          <div className="p-6 md:p-8 bg-gradient-to-br from-white to-indigo-50/50">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-lg font-medium" data-testid="text-current-prompt">
+        <Card className="relative overflow-hidden bg-white/[0.03] border-white/[0.08] backdrop-blur-sm">
+          <div className="p-6 md:p-8">
+            <p className="text-white/90 whitespace-pre-wrap leading-relaxed text-lg" data-testid="text-current-prompt">
               {currentPrompt}
             </p>
             {appliedSuggestions.size > 0 && (
-              <div className="mt-4 pt-4 border-t border-indigo-100">
-                <span className="text-sm text-indigo-600 font-medium">
+              <div className="mt-4 pt-4 border-t border-white/[0.06]">
+                <span className="text-sm text-violet-400 font-medium">
                   {appliedSuggestions.size} förslag tillagt
                 </span>
               </div>
             )}
           </div>
-          <div className="bg-gray-50/80 p-4 flex justify-end border-t border-gray-100">
+          <div className="bg-white/[0.02] p-4 flex justify-end border-t border-white/[0.06]">
             <Button
-              variant={copied ? "default" : "secondary"}
               onClick={handleCopy}
               className={`
                 font-semibold transition-all duration-300
-                ${copied ? "bg-green-600 hover:bg-green-700 text-white shadow-green-600/20" : "hover:bg-white hover:shadow-md"}
+                ${copied 
+                  ? "bg-emerald-600 hover:bg-emerald-500 text-white" 
+                  : "bg-white/10 hover:bg-white/15 text-white border-0"
+                }
               `}
             >
               {copied ? (
@@ -113,24 +115,24 @@ export function ResultSection({ result }: ResultSectionProps) {
         <PromptCompare original={result.originalPrompt} improved={result.improvedPrompt} />
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Section B: Improvements */}
         <motion.div variants={item} className="h-full">
           <div className="flex items-center gap-2 mb-4">
-             <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+             <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20">
                <ListChecks className="w-5 h-5" />
              </div>
-            <h3 className="text-lg font-bold text-gray-900">Vad som förbättrades</h3>
+            <h3 className="text-lg font-bold text-white">Vad som förbättrades</h3>
           </div>
           
-          <Card className="h-full border-blue-100 bg-blue-50/30 p-6 shadow-sm">
+          <Card className="h-full bg-blue-500/5 border-blue-500/10 p-6">
             <ul className="space-y-3">
               {result.improvements.map((improvement, index) => (
                 <li key={index} className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold mt-0.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold mt-0.5">
                     {index + 1}
                   </span>
-                  <span className="text-gray-700">{improvement}</span>
+                  <span className="text-white/70">{improvement}</span>
                 </li>
               ))}
             </ul>
@@ -140,13 +142,13 @@ export function ResultSection({ result }: ResultSectionProps) {
         {/* Section C: Suggestions */}
         <motion.div variants={item} className="h-full">
            <div className="flex items-center gap-2 mb-4">
-             <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+             <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400 border border-amber-500/20">
                <Lightbulb className="w-5 h-5" />
              </div>
-            <h3 className="text-lg font-bold text-gray-900">Extra förslag</h3>
+            <h3 className="text-lg font-bold text-white">Extra förslag</h3>
           </div>
 
-          <Card className="h-full border-amber-100 bg-amber-50/30 p-6 shadow-sm">
+          <Card className="h-full bg-amber-500/5 border-amber-500/10 p-6">
              <div className="flex flex-wrap gap-2">
               {result.suggestions.map((suggestion, index) => {
                 const isApplied = appliedSuggestions.has(index);
@@ -158,8 +160,8 @@ export function ResultSection({ result }: ResultSectionProps) {
                     className={`
                       inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all
                       ${isApplied 
-                        ? "bg-green-100 border border-green-300 text-green-700 cursor-default" 
-                        : "bg-white border border-amber-200 text-amber-800 hover:bg-amber-100 hover:border-amber-300 cursor-pointer"
+                        ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 cursor-default" 
+                        : "bg-white/5 border border-amber-500/20 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/30 cursor-pointer"
                       }
                     `}
                     data-testid={`button-apply-suggestion-${index}`}
@@ -174,7 +176,7 @@ export function ResultSection({ result }: ResultSectionProps) {
                 );
               })}
              </div>
-             <p className="mt-4 text-sm text-gray-500 italic">
+             <p className="mt-4 text-sm text-white/40 italic">
                Klicka på ett förslag för att lägga till det i din prompt.
              </p>
           </Card>

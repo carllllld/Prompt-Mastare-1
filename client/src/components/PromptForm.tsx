@@ -43,23 +43,23 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-white rounded-2xl shadow-xl shadow-indigo-500/5 border border-indigo-100 p-6 md:p-8"
+      className="bg-white/[0.03] backdrop-blur-sm rounded-2xl border border-white/[0.08] p-6 md:p-8"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="type" className="text-base font-semibold text-gray-700">
+          <Label htmlFor="type" className="text-sm font-medium text-white/70">
             Kategori
           </Label>
           <Select
             value={type}
             onValueChange={(val) => setType(val as OptimizeRequest["type"])}
           >
-            <SelectTrigger id="type" className="h-12 text-base rounded-xl border-gray-200 focus:ring-primary/20">
+            <SelectTrigger id="type" className="h-12 text-base rounded-xl bg-white/[0.03] border-white/[0.08] text-white focus:ring-violet-500/30">
               <SelectValue placeholder="Välj kategori" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-[#1a1a2e] border-white/10">
               {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
+                <SelectItem key={cat} value={cat} className="text-white/90 focus:bg-white/10 focus:text-white">
                   {cat}
                 </SelectItem>
               ))}
@@ -68,7 +68,7 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="prompt" className="text-base font-semibold text-gray-700">
+          <Label htmlFor="prompt" className="text-sm font-medium text-white/70">
             Din prompt
           </Label>
           <Textarea
@@ -76,14 +76,14 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
             placeholder="Skriv eller klistra in din prompt här..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="min-h-[160px] resize-none text-base p-4 rounded-xl border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+            className="min-h-[160px] resize-none text-base p-4 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
           />
         </div>
 
         <Button
           type="submit"
           disabled={!prompt.trim() || isPending || disabled}
-          className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-primary to-indigo-600 hover:to-indigo-700 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
+          className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-300"
           data-testid="button-optimize"
         >
           {isPending ? (
