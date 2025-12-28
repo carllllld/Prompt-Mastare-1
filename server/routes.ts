@@ -178,7 +178,7 @@ suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förb�
               content: `Prompt-typ: ${type}\n\nAnvändarens prompt:\n${prompt}`
             },
           ],
-          model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
+          model: "gpt-4o-mini",
           response_format: { type: "json_object" },
           temperature: 0.4,
         });
