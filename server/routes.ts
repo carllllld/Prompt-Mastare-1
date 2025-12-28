@@ -73,6 +73,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/history", async (req, res) => {
+    try {
+      if (!req.session.visitorId) {
+        return res.status(401).json({ message: "Ingen session hittades" });
+      }
+      
+      const user = await storage.getUserBySessionId(req.session.visitorId);
+      if (!user) {
+        return res.status(401).json({ message: "Användare hittades inte" });
+      }
+      
+      if (user.plan !== "pro") {
+        return res.status(403).json({ 
+          message: "Prompthistorik är endast tillgängligt för Pro-användare",
+          requiresPro: true
+        });
+      }
+      
+      const history = await storage.getOptimizationHistory(user.id, 20);
+      res.json(history);
+    } catch (err) {
+      console.error("Error getting history:", err);
+      res.status(500).json({ message: "Kunde inte hämta historik" });
+    }
+  });
+
   app.post(api.optimize.path, rateLimit, async (req, res) => {
     try {
       if (!req.session.visitorId) {
@@ -114,30 +140,32 @@ Svara i JSON:
 
 suggestions ska vara korta tillägg (5-15 ord) som användaren kan lägga till.`;
 
-      const proSystemPrompt = `Du är en världsklass prompt engineer.
+      const proSystemPrompt = `Du är en världsklass prompt engineer med expertis inom avancerad AI-kommunikation.
 
-STEG 1 - Analysera användarens prompt:
-- Identifiera användarens mål
-- Identifiera brister i struktur
-- Bestäm vilket format som ger bäst resultat (lista, steg-för-steg, tabell, mall etc.)
+STEG 1 - DJUPANALYS av användarens prompt:
+- Identifiera användarens explicita och implicita mål
+- Analysera brister i struktur, kontext och specificitet
+- Bestäm optimalt format (lista, steg-för-steg, tabell, mall, hybrid etc.)
+- Identifiera domänspecifika best practices
 
-STEG 2 - Skapa den absolut bästa möjliga prompten:
-- Välj aktivt bästa format och struktur
-- Definiera tydligt roll och mål
-- Ange önskat format på svaret
-- Specificera kvalitetskriterier och begränsningar
+STEG 2 - SKAPA OPTIMERAD PROMPT:
+- Implementera bästa format och struktur för användningsfallet
+- Definiera tydlig roll med expertområde
+- Specificera exakt output-format med exempel om relevant
+- Inkludera kvalitetskriterier, begränsningar och edge cases
+- Optimera för precision och reproducerbarhet
 - Lämna utrymme för AI:n att ge egna förslag
 
 VIKTIGT: Den förbättrade prompten ska vara en INSTRUKTION till en AI, inte ett färdigt svar.
 
 Svara i JSON:
 {
-  "improvedPrompt": "Den strukturerade prompten med rubriker och punktlistor (optimalt format)",
-  "improvements": ["Valt format och varför", "Analysinsikt", "Andra förbättringar"],
-  "suggestions": ["Kort tillägg 1", "Kort tillägg 2", "Kort tillägg 3"]
+  "improvedPrompt": "Professionellt strukturerad prompt med rubriker, punktlistor och optimalt format",
+  "improvements": ["Analys: [insikt om ursprunglig prompt]", "Format: [valt format och varför]", "Struktur: [strukturförbättringar]", "Kontext: [tillagd kontext]"],
+  "suggestions": ["Avancerat tillägg 1", "Avancerat tillägg 2", "Avancerat tillägg 3", "Avancerat tillägg 4", "Avancerat tillägg 5"]
 }
 
-suggestions ska vara korta tillägg (5-15 ord) som användaren kan lägga till.`;
+suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förbättra prompten ytterligare.`;
 
       const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
 
@@ -150,7 +178,7 @@ suggestions ska vara korta tillägg (5-15 ord) som användaren kan lägga till.`
               content: `Prompt-typ: ${type}\n\nAnvändarens prompt:\n${prompt}`
             },
           ],
-          model: "gpt-4o-mini",
+          model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
           response_format: { type: "json_object" },
           temperature: 0.4,
         });

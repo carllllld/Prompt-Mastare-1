@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PromptForm } from "@/components/PromptForm";
 import { ResultSection } from "@/components/ResultSection";
+import { PromptHistory } from "@/components/PromptHistory";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
@@ -49,6 +50,7 @@ export default function Home() {
       onSuccess: (data) => {
         setResult(data);
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/history"] });
         setTimeout(() => {
           const resultElement = document.getElementById("results");
           if (resultElement) {
@@ -182,6 +184,11 @@ export default function Home() {
             <ResultSection result={result} />
           </div>
         )}
+
+        {/* History Section for Pro users */}
+        <div className="mt-12">
+          <PromptHistory />
+        </div>
 
         {/* How it works */}
         <section className="mt-24 space-y-12">
