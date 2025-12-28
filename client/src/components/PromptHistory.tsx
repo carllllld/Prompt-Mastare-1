@@ -189,20 +189,15 @@ export function PromptHistory() {
               key={item.id}
               className="p-4 bg-white/[0.02] rounded-lg border border-white/[0.06] hover:bg-white/[0.04] transition-colors"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-xs bg-white/5 text-white/60 border-white/10">
-                      {item.category}
-                    </Badge>
-                    <span className="text-xs text-white/40 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {formatDate(item.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-white/70 text-sm truncate" data-testid={`text-history-original-${item.id}`}>
-                    {item.originalPrompt}
-                  </p>
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-xs bg-white/5 text-white/60 border-white/10">
+                    {item.category}
+                  </Badge>
+                  <span className="text-xs text-white/40 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatDate(item.createdAt)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -216,19 +211,6 @@ export function PromptHistory() {
                       <Check className="w-4 h-4 text-emerald-400" />
                     ) : (
                       <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/10"
-                    onClick={() => setExpanded(expanded === item.id ? null : item.id)}
-                    data-testid={`button-expand-history-${item.id}`}
-                  >
-                    {expanded === item.id ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
                     )}
                   </Button>
                   <AlertDialog>
@@ -266,27 +248,36 @@ export function PromptHistory() {
                 </div>
               </div>
 
+              <p className="text-white/80 text-sm whitespace-pre-wrap line-clamp-3" data-testid={`text-history-improved-${item.id}`}>
+                {item.improvedPrompt}
+              </p>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-3 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 gap-1 px-2"
+                onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+                data-testid={`button-expand-history-${item.id}`}
+              >
+                {expanded === item.id ? (
+                  <>
+                    <ChevronUp className="w-3 h-3" />
+                    Dölj original
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3 h-3" />
+                    Visa original
+                  </>
+                )}
+              </Button>
+
               {expanded === item.id && (
-                <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-4">
-                  <div>
-                    <span className="text-xs font-medium text-white/40 uppercase tracking-wider">Förbättrad prompt</span>
-                    <p className="mt-2 text-white/80 text-sm whitespace-pre-wrap bg-white/[0.03] p-3 rounded-lg" data-testid={`text-history-improved-${item.id}`}>
-                      {item.improvedPrompt}
-                    </p>
-                  </div>
-                  {item.improvements && item.improvements.length > 0 && (
-                    <div>
-                      <span className="text-xs font-medium text-white/40 uppercase tracking-wider">Förbättringar</span>
-                      <ul className="mt-2 space-y-1">
-                        {item.improvements.map((improvement, idx) => (
-                          <li key={idx} className="text-white/60 text-sm flex items-start gap-2">
-                            <span className="text-violet-400">•</span>
-                            {improvement}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                  <span className="text-xs font-medium text-white/40 uppercase tracking-wider">Original prompt</span>
+                  <p className="mt-2 text-white/50 text-sm whitespace-pre-wrap bg-white/[0.02] p-3 rounded-lg" data-testid={`text-history-original-${item.id}`}>
+                    {item.originalPrompt}
+                  </p>
                 </div>
               )}
             </div>
