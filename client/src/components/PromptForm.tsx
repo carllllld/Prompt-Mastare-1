@@ -48,14 +48,14 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="type" className="text-sm font-medium text-white/70">
-            Kategori
+            Category
           </Label>
           <Select
             value={type}
             onValueChange={(val) => setType(val as OptimizeRequest["type"])}
           >
             <SelectTrigger id="type" className="h-12 text-base rounded-xl bg-white/[0.03] border-white/[0.08] text-white focus:ring-violet-500/30">
-              <SelectValue placeholder="Välj kategori" />
+              <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent className="bg-[#1a1a2e] border-white/10">
               {categories.map((cat) => (
@@ -69,11 +69,11 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
 
         <div className="space-y-2">
           <Label htmlFor="prompt" className="text-sm font-medium text-white/70">
-            Din prompt
+            Your prompt
           </Label>
           <Textarea
             id="prompt"
-            placeholder="Skriv eller klistra in din prompt här..."
+            placeholder="Write or paste your prompt here (any language supported)..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             className="min-h-[160px] resize-none text-base p-4 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
@@ -89,12 +89,12 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Optimerar...
+              Optimizing...
             </>
           ) : (
             <>
               <Sparkles className="mr-2 h-5 w-5" />
-              Optimera Prompt
+              Optimize Prompt
             </>
           )}
         </Button>

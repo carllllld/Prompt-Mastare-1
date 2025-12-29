@@ -63,7 +63,7 @@ export function PromptHistory() {
   const formatDate = (dateStr: string | Date | null) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
-    return date.toLocaleDateString("sv-SE", {
+    return date.toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       hour: "2-digit",
@@ -80,7 +80,7 @@ export function PromptHistory() {
       <Card className="p-6 bg-red-500/10 border-red-500/20">
         <div className="flex items-center gap-2 text-red-400">
           <AlertCircle className="w-5 h-5" />
-          <span>Kunde inte ladda historik. Försök igen senare.</span>
+          <span>Could not load history. Please try again later.</span>
         </div>
       </Card>
     );
@@ -91,7 +91,7 @@ export function PromptHistory() {
       <Card className="p-6 bg-white/[0.02] border-white/[0.08]">
         <div className="flex items-center gap-2 text-white/50">
           <History className="w-5 h-5 animate-spin" />
-          <span>Laddar historik...</span>
+          <span>Loading history...</span>
         </div>
       </Card>
     );
@@ -104,9 +104,9 @@ export function PromptHistory() {
           <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400 border border-violet-500/20">
             <History className="w-5 h-5" />
           </div>
-          <h3 className="text-lg font-bold text-white">Prompthistorik</h3>
+          <h3 className="text-lg font-bold text-white">Prompt History</h3>
         </div>
-        <p className="text-white/50 text-sm">Inga optimeringar än. Börja optimera prompts för att bygga din historik.</p>
+        <p className="text-white/50 text-sm">No optimizations yet. Start optimizing prompts to build your history.</p>
       </Card>
     );
   }
@@ -118,7 +118,7 @@ export function PromptHistory() {
           <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400 border border-violet-500/20">
             <History className="w-5 h-5" />
           </div>
-          <h3 className="text-lg font-bold text-white">Prompthistorik</h3>
+          <h3 className="text-lg font-bold text-white">Prompt History</h3>
           <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30">Pro</Badge>
         </div>
         <Button
@@ -136,13 +136,13 @@ export function PromptHistory() {
         <div className="mb-4 p-4 bg-white/[0.03] rounded-lg border border-white/[0.08] space-y-4">
           <h4 className="text-sm font-semibold text-white flex items-center gap-2">
             <Settings className="w-4 h-4" />
-            Inställningar
+            Settings
           </h4>
           
           <div className="flex items-start gap-2 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
             <Info className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
             <p className="text-xs text-amber-200/80">
-              Din prompthistorik är kopplad till ditt konto. Om du raderar ditt konto försvinner all historik permanent.
+              Your prompt history is linked to your account. If you delete your account, all history will be permanently lost.
             </p>
           </div>
 
@@ -155,26 +155,26 @@ export function PromptHistory() {
                 data-testid="button-delete-all-history"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Radera all historik
+                Delete all history
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-zinc-900 border-white/10">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white">Är du säker?</AlertDialogTitle>
+                <AlertDialogTitle className="text-white">Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription className="text-white/60">
-                  Detta kommer permanent radera alla {history.length} sparade prompts. Denna åtgärd kan inte ångras.
+                  This will permanently delete all {history.length} saved prompts. This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
-                  Avbryt
+                  Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   className="bg-red-600 hover:bg-red-700 text-white"
                   onClick={() => deleteAllMutation.mutate()}
                   data-testid="button-confirm-delete-all"
                 >
-                  {deleteAllMutation.isPending ? "Raderar..." : "Ja, radera allt"}
+                  {deleteAllMutation.isPending ? "Deleting..." : "Yes, delete all"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -226,21 +226,21 @@ export function PromptHistory() {
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-zinc-900 border-white/10">
                       <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">Radera prompt?</AlertDialogTitle>
+                        <AlertDialogTitle className="text-white">Delete prompt?</AlertDialogTitle>
                         <AlertDialogDescription className="text-white/60">
-                          Denna prompt kommer raderas permanent och kan inte återställas.
+                          This prompt will be permanently deleted and cannot be restored.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
-                          Avbryt
+                          Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction
                           className="bg-red-600 hover:bg-red-700 text-white"
                           onClick={() => deleteMutation.mutate(item.id)}
                           data-testid={`button-confirm-delete-${item.id}`}
                         >
-                          Radera
+                          Delete
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -262,12 +262,12 @@ export function PromptHistory() {
                 {expanded === item.id ? (
                   <>
                     <ChevronUp className="w-3 h-3" />
-                    Dölj original
+                    Hide original
                   </>
                 ) : (
                   <>
                     <ChevronDown className="w-3 h-3" />
-                    Visa original
+                    Show original
                   </>
                 )}
               </Button>
