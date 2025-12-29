@@ -307,20 +307,20 @@ suggestions should be 5 advanced, specific additions (10-20 words) that can furt
     if (!product) {
       product = await stripe.products.create({
         name: "PromptForge Pro",
-        description: "100 optimeringar per dag",
+        description: "100 optimizations per day",
       });
       console.log("Created Stripe product:", product.id);
     }
 
     // Look for existing price
     const prices = await stripe.prices.list({ product: product.id, active: true, limit: 10 });
-    let price = prices.data.find(p => p.unit_amount === 9900 && p.currency === "sek" && p.recurring?.interval === "month");
+    let price = prices.data.find(p => p.unit_amount === 999 && p.currency === "usd" && p.recurring?.interval === "month");
 
     if (!price) {
       price = await stripe.prices.create({
         product: product.id,
-        unit_amount: 9900, // 99 SEK
-        currency: "sek",
+        unit_amount: 999, // $9.99 USD
+        currency: "usd",
         recurring: { interval: "month" },
       });
       console.log("Created Stripe price:", price.id);

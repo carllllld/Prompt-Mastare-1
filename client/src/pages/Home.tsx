@@ -279,7 +279,7 @@ export default function Home() {
             <Card className="p-8 bg-gradient-to-br from-violet-600/20 to-indigo-600/20 border-violet-500/30 relative overflow-visible glow-primary">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-lg">POPULAR</div>
               <h3 className="text-xl font-bold mb-2 text-white mt-2">Pro</h3>
-              <p className="text-4xl font-extrabold mb-6 text-white">$9<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-4xl font-extrabold mb-6 text-white">$9.99<span className="text-base font-normal text-white/40">/mo</span></p>
               <ul className="space-y-4 text-white/80 mb-8">
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 100 optimizations per day</li>
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Prompt history</li>
