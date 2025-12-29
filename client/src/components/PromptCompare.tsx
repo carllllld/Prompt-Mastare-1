@@ -104,7 +104,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
           <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400 border border-purple-500/20">
             <GitCompare className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold text-white">Jämför Prompts</h2>
+          <h2 className="text-xl font-bold text-white">Compare Prompts</h2>
         </div>
         
         <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             data-testid="button-view-side-by-side"
           >
             <Eye className="w-4 h-4 mr-1" />
-            Sida vid sida
+            Side by side
           </Button>
           <Button
             variant={view === "unified" ? "default" : "outline"}
@@ -126,7 +126,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             data-testid="button-view-unified"
           >
             <FileText className="w-4 h-4 mr-1" />
-            Enhetlig
+            Unified
           </Button>
         </div>
       </div>
@@ -136,17 +136,17 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-white/50">Original:</span>
-              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.originalWords} ord</Badge>
+              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.originalWords} words</Badge>
             </div>
             <ArrowRight className="w-4 h-4 text-white/30" />
             <div className="flex items-center gap-2">
-              <span className="text-white/50">Förbättrad:</span>
-              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.improvedWords} ord</Badge>
+              <span className="text-white/50">Improved:</span>
+              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.improvedWords} words</Badge>
             </div>
             <Badge 
               className={stats.wordDiff > 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white/70"}
             >
-              {stats.wordDiff > 0 ? "+" : ""}{stats.wordDiff} ord ({stats.percentChange > 0 ? "+" : ""}{stats.percentChange}%)
+              {stats.wordDiff > 0 ? "+" : ""}{stats.wordDiff} words ({stats.percentChange > 0 ? "+" : ""}{stats.percentChange}%)
             </Badge>
           </div>
         </div>
@@ -165,7 +165,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             <div className="p-6 bg-emerald-500/5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span className="text-sm font-medium text-white/60">Förbättrad</span>
+                <span className="text-sm font-medium text-white/60">Improved</span>
               </div>
               <p className="text-white/70 whitespace-pre-wrap leading-relaxed" data-testid="text-improved-prompt">
                 {highlightText(improved, diffWords.added, "bg-emerald-500/30 px-0.5 rounded text-emerald-300")}
@@ -189,7 +189,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             <div className="p-4 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span className="text-sm font-medium text-emerald-300">Förbättrad prompt</span>
+                <span className="text-sm font-medium text-emerald-300">Improved prompt</span>
               </div>
               <p className="text-white/70 whitespace-pre-wrap" data-testid="text-improved-unified">
                 {highlightText(improved, diffWords.added, "bg-emerald-500/30 px-0.5 rounded text-emerald-300")}
@@ -200,7 +200,7 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
 
         {(added.length > 0 || removed.length > 0) && (
           <div className="bg-white/[0.02] p-4 border-t border-white/[0.06]">
-            <p className="text-sm font-medium text-white/60 mb-3">Nyckelförändringar:</p>
+            <p className="text-sm font-medium text-white/60 mb-3">Key changes:</p>
             <div className="flex flex-wrap gap-2">
               {added.map((word, i) => (
                 <Badge key={`add-${i}`} className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">

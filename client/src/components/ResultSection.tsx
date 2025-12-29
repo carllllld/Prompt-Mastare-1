@@ -28,8 +28,8 @@ export function ResultSection({ result }: ResultSectionProps) {
       return newSet;
     });
     toast({
-      title: "Förslag tillagt",
-      description: "Förslaget har lagts till i din prompt.",
+      title: "Suggestion added",
+      description: "The suggestion has been added to your prompt.",
     });
   };
 
@@ -67,7 +67,7 @@ export function ResultSection({ result }: ResultSectionProps) {
           <div className="p-2 bg-violet-500/10 rounded-lg text-violet-400 border border-violet-500/20">
             <Sparkles className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-bold text-white">Förbättrad Prompt</h2>
+          <h2 className="text-xl font-bold text-white">Improved Prompt</h2>
         </div>
         
         <Card className="relative overflow-hidden bg-white/[0.03] border-white/[0.08] backdrop-blur-sm">
@@ -78,7 +78,7 @@ export function ResultSection({ result }: ResultSectionProps) {
             {appliedSuggestions.size > 0 && (
               <div className="mt-4 pt-4 border-t border-white/[0.06]">
                 <span className="text-sm text-violet-400 font-medium">
-                  {appliedSuggestions.size} förslag tillagt
+                  {appliedSuggestions.size} suggestion{appliedSuggestions.size > 1 ? "s" : ""} added
                 </span>
               </div>
             )}
@@ -97,12 +97,12 @@ export function ResultSection({ result }: ResultSectionProps) {
               {copied ? (
                 <>
                   <Check className="w-4 h-4 mr-2" />
-                  Kopierad!
+                  Copied!
                 </>
               ) : (
                 <>
                   <Copy className="w-4 h-4 mr-2" />
-                  Kopiera Prompt
+                  Copy Prompt
                 </>
               )}
             </Button>
@@ -122,7 +122,7 @@ export function ResultSection({ result }: ResultSectionProps) {
              <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 border border-blue-500/20">
                <ListChecks className="w-5 h-5" />
              </div>
-            <h3 className="text-lg font-bold text-white">Vad som förbättrades</h3>
+            <h3 className="text-lg font-bold text-white">What was improved</h3>
           </div>
           
           <Card className="h-full bg-blue-500/5 border-blue-500/10 p-6">
@@ -145,7 +145,7 @@ export function ResultSection({ result }: ResultSectionProps) {
              <div className="p-2 bg-amber-500/10 rounded-lg text-amber-400 border border-amber-500/20">
                <Lightbulb className="w-5 h-5" />
              </div>
-            <h3 className="text-lg font-bold text-white">Extra förslag</h3>
+            <h3 className="text-lg font-bold text-white">Extra suggestions</h3>
           </div>
 
           <Card className="h-full bg-amber-500/5 border-amber-500/10 p-6">
@@ -177,7 +177,7 @@ export function ResultSection({ result }: ResultSectionProps) {
               })}
              </div>
              <p className="mt-4 text-sm text-white/40 italic">
-               Klicka på ett förslag för att lägga till det i din prompt.
+               Click on a suggestion to add it to your prompt.
              </p>
           </Card>
         </motion.div>

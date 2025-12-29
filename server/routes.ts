@@ -38,7 +38,7 @@ function rateLimit(req: Request, res: Response, next: NextFunction) {
 
   if (userLimit.count >= RATE_LIMIT_MAX) {
     return res.status(429).json({ 
-      message: "För många förfrågningar. Vänta en minut och försök igen." 
+      message: "Too many requests. Please wait a minute and try again." 
     });
   }
 
@@ -69,24 +69,24 @@ export async function registerRoutes(
       });
     } catch (err) {
       console.error("Error getting user status:", err);
-      res.status(500).json({ message: "Kunde inte hämta användarstatus" });
+      res.status(500).json({ message: "Could not fetch user status" });
     }
   });
 
   app.get("/api/history", async (req, res) => {
     try {
       if (!req.session.visitorId) {
-        return res.status(401).json({ message: "Ingen session hittades" });
+        return res.status(401).json({ message: "No session found" });
       }
       
       const user = await storage.getUserBySessionId(req.session.visitorId);
       if (!user) {
-        return res.status(401).json({ message: "Användare hittades inte" });
+        return res.status(401).json({ message: "User not found" });
       }
       
       if (user.plan !== "pro") {
         return res.status(403).json({ 
-          message: "Prompthistorik är endast tillgängligt för Pro-användare",
+          message: "Prompt history is only available for Pro users",
           requiresPro: true
         });
       }
@@ -95,58 +95,58 @@ export async function registerRoutes(
       res.json(history);
     } catch (err) {
       console.error("Error getting history:", err);
-      res.status(500).json({ message: "Kunde inte hämta historik" });
+      res.status(500).json({ message: "Could not fetch history" });
     }
   });
 
   app.delete("/api/history/:id", async (req, res) => {
     try {
       if (!req.session.visitorId) {
-        return res.status(401).json({ message: "Ingen session hittades" });
+        return res.status(401).json({ message: "No session found" });
       }
       
       const user = await storage.getUserBySessionId(req.session.visitorId);
       if (!user) {
-        return res.status(401).json({ message: "Användare hittades inte" });
+        return res.status(401).json({ message: "User not found" });
       }
       
       if (user.plan !== "pro") {
-        return res.status(403).json({ message: "Endast Pro-användare kan radera historik" });
+        return res.status(403).json({ message: "Only Pro users can delete history" });
       }
       
       const optimizationId = parseInt(req.params.id);
       if (isNaN(optimizationId)) {
-        return res.status(400).json({ message: "Ogiltigt ID" });
+        return res.status(400).json({ message: "Invalid ID" });
       }
       
       await storage.deleteOptimization(user.id, optimizationId);
       res.json({ success: true });
     } catch (err) {
       console.error("Error deleting optimization:", err);
-      res.status(500).json({ message: "Kunde inte radera prompt" });
+      res.status(500).json({ message: "Could not delete prompt" });
     }
   });
 
   app.delete("/api/history", async (req, res) => {
     try {
       if (!req.session.visitorId) {
-        return res.status(401).json({ message: "Ingen session hittades" });
+        return res.status(401).json({ message: "No session found" });
       }
       
       const user = await storage.getUserBySessionId(req.session.visitorId);
       if (!user) {
-        return res.status(401).json({ message: "Användare hittades inte" });
+        return res.status(401).json({ message: "User not found" });
       }
       
       if (user.plan !== "pro") {
-        return res.status(403).json({ message: "Endast Pro-användare kan radera historik" });
+        return res.status(403).json({ message: "Only Pro users can delete history" });
       }
       
       await storage.deleteAllOptimizations(user.id);
       res.json({ success: true });
     } catch (err) {
       console.error("Error deleting all optimizations:", err);
-      res.status(500).json({ message: "Kunde inte radera historik" });
+      res.status(500).json({ message: "Could not delete history" });
     }
   });
 
@@ -163,8 +163,8 @@ export async function registerRoutes(
       if (user.promptsUsedToday >= dailyLimit) {
         return res.status(403).json({
           message: plan === "free" 
-            ? "Du har använt alla dina 3 gratis optimeringar idag. Uppgradera till Pro för fler!"
-            : "Du har nått din dagliga gräns på 100 optimeringar.",
+            ? "You've used all 3 free optimizations today. Upgrade to Pro for more!"
+            : "You've reached your daily limit of 100 optimizations.",
           limitReached: true,
           plan,
         });
@@ -172,51 +172,61 @@ export async function registerRoutes(
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      const freeSystemPrompt = `Du är en expert på prompt engineering.
-Förbättra användarens prompt så att den blir tydligare, mer specifik och lättare för en AI att förstå.
+      const freeSystemPrompt = `You are an expert in prompt engineering.
+Improve the user's prompt to make it clearer, more specific, and easier for an AI to understand.
 
-Fokusera på:
-- Tydligare formulering
-- Grundläggande struktur
-- Korrekt språk
+LANGUAGE RULES:
+- Automatically detect the language of the user's prompt
+- Always respond in the SAME language as the user wrote in
+- Never translate the prompt to another language unless the user explicitly asks for it
 
-VIKTIGT: Den förbättrade prompten ska vara en INSTRUKTION till en AI, inte ett färdigt svar.
+Focus on:
+- Clearer wording
+- Basic structure
+- Correct language usage
 
-Svara i JSON:
+IMPORTANT: The improved prompt should be an INSTRUCTION to an AI, not a finished answer.
+
+Respond in JSON:
 {
-  "improvedPrompt": "Den förbättrade prompten (tydligare och mer specifik)",
-  "improvements": ["Förbättring 1", "Förbättring 2"],
-  "suggestions": ["Kort tillägg 1", "Kort tillägg 2"]
+  "improvedPrompt": "The improved prompt (clearer and more specific)",
+  "improvements": ["Improvement 1", "Improvement 2"],
+  "suggestions": ["Short addition 1", "Short addition 2"]
 }
 
-suggestions ska vara korta tillägg (5-15 ord) som användaren kan lägga till.`;
+suggestions should be short additions (5-15 words) that the user can add.`;
 
-      const proSystemPrompt = `Du är en världsklass prompt engineer med expertis inom avancerad AI-kommunikation.
+      const proSystemPrompt = `You are a world-class prompt engineer with expertise in advanced AI communication.
 
-STEG 1 - DJUPANALYS av användarens prompt:
-- Identifiera användarens explicita och implicita mål
-- Analysera brister i struktur, kontext och specificitet
-- Bestäm optimalt format (lista, steg-för-steg, tabell, mall, hybrid etc.)
-- Identifiera domänspecifika best practices
+LANGUAGE RULES:
+- Automatically detect the language of the user's prompt
+- Always respond in the SAME language as the user wrote in
+- Never translate the prompt to another language unless the user explicitly asks for it
 
-STEG 2 - SKAPA OPTIMERAD PROMPT:
-- Implementera bästa format och struktur för användningsfallet
-- Definiera tydlig roll med expertområde
-- Specificera exakt output-format med exempel om relevant
-- Inkludera kvalitetskriterier, begränsningar och edge cases
-- Optimera för precision och reproducerbarhet
-- Lämna utrymme för AI:n att ge egna förslag
+STEP 1 - DEEP ANALYSIS of the user's prompt:
+- Identify the user's explicit and implicit goals
+- Analyze gaps in structure, context, and specificity
+- Determine optimal format (list, step-by-step, table, template, hybrid, etc.)
+- Identify domain-specific best practices
 
-VIKTIGT: Den förbättrade prompten ska vara en INSTRUKTION till en AI, inte ett färdigt svar.
+STEP 2 - CREATE OPTIMIZED PROMPT:
+- Implement best format and structure for the use case
+- Define clear role with area of expertise
+- Specify exact output format with examples if relevant
+- Include quality criteria, constraints, and edge cases
+- Optimize for precision and reproducibility
+- Leave room for the AI to provide its own suggestions
 
-Svara i JSON:
+IMPORTANT: The improved prompt should be an INSTRUCTION to an AI, not a finished answer.
+
+Respond in JSON:
 {
-  "improvedPrompt": "Professionellt strukturerad prompt med rubriker, punktlistor och optimalt format",
-  "improvements": ["Analys: [insikt om ursprunglig prompt]", "Format: [valt format och varför]", "Struktur: [strukturförbättringar]", "Kontext: [tillagd kontext]"],
-  "suggestions": ["Avancerat tillägg 1", "Avancerat tillägg 2", "Avancerat tillägg 3", "Avancerat tillägg 4", "Avancerat tillägg 5"]
+  "improvedPrompt": "Professionally structured prompt with headings, bullet points, and optimal format",
+  "improvements": ["Analysis: [insight about original prompt]", "Format: [chosen format and why]", "Structure: [structural improvements]", "Context: [added context]"],
+  "suggestions": ["Advanced addition 1", "Advanced addition 2", "Advanced addition 3", "Advanced addition 4", "Advanced addition 5"]
 }
 
-suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förbättra prompten ytterligare.`;
+suggestions should be 5 advanced, specific additions (10-20 words) that can further improve the prompt.`;
 
       const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
 
@@ -236,14 +246,14 @@ suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förb�
 
         const content = completion.choices[0].message.content;
         if (!content) {
-          throw new Error("Inget svar från AI");
+          throw new Error("No response from AI");
         }
 
         const result = JSON.parse(content);
         
         const responseData = {
           originalPrompt: prompt,
-          improvedPrompt: result.improvedPrompt || "Kunde inte generera prompt.",
+          improvedPrompt: result.improvedPrompt || "Could not generate prompt.",
           improvements: Array.isArray(result.improvements) ? result.improvements : [],
           suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
         };
@@ -263,7 +273,7 @@ suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förb�
       } catch (openaiError: any) {
         console.error("OpenAI Error:", openaiError);
         res.status(500).json({ 
-          message: "Ett fel uppstod vid optimering. Försök igen." 
+          message: "An error occurred during optimization. Please try again." 
         });
       }
 
@@ -274,7 +284,7 @@ suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förb�
         });
       }
       console.error("Error:", err);
-      res.status(500).json({ message: "Internt serverfel" });
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -329,7 +339,7 @@ suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förb�
       const user = await storage.getOrCreateUser(req.session.visitorId);
 
       if (user.plan === "pro") {
-        return res.status(400).json({ message: "Du har redan Pro-planen!" });
+        return res.status(400).json({ message: "You already have the Pro plan!" });
       }
 
       const priceId = await getOrCreatePrice();
@@ -360,7 +370,7 @@ suggestions ska vara 5 avancerade, specifika tillägg (10-20 ord) som kan förb�
       res.json({ url: session.url });
     } catch (err) {
       console.error("Stripe checkout error:", err);
-      res.status(500).json({ message: "Kunde inte starta betalning." });
+      res.status(500).json({ message: "Could not start payment." });
     }
   });
 
