@@ -20,7 +20,7 @@ export function useOptimize() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "Ett oväntat fel uppstod." }));
+        const errorData = await res.json().catch(() => ({ message: "An unexpected error occurred." }));
         
         if (res.status === 403 && errorData.limitReached) {
           const error: LimitError = new Error(errorData.message);
@@ -29,10 +29,10 @@ export function useOptimize() {
         }
         
         if (res.status === 429) {
-          throw new Error(errorData.message || "För många förfrågningar. Vänta lite.");
+          throw new Error(errorData.message || "Too many requests. Please wait a moment.");
         }
         
-        throw new Error(errorData.message || "Kunde inte optimera prompten. Försök igen.");
+        throw new Error(errorData.message || "Could not optimize the prompt. Please try again.");
       }
 
       return api.optimize.responses[200].parse(await res.json());
@@ -40,7 +40,7 @@ export function useOptimize() {
     onError: (error: LimitError) => {
       if (!error.limitReached) {
         toast({
-          title: "Fel vid optimering",
+          title: "Optimization failed",
           description: error.message,
           variant: "destructive",
         });

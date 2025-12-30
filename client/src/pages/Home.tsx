@@ -190,6 +190,7 @@ export default function Home() {
             onSubmit={handleSubmit} 
             isPending={isPending} 
             disabled={isLimitReached || false}
+            clearOnSuccess={true}
           />
         </div>
 
