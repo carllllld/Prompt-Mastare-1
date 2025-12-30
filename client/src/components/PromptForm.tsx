@@ -78,7 +78,7 @@ export function PromptForm({ onSubmit, isPending, disabled = false, clearOnSucce
             value={type}
             onValueChange={(val) => setType(val as OptimizeRequest["type"])}
           >
-            <SelectTrigger id="type" className="h-12 text-base rounded-xl bg-white/[0.03] border-white/[0.08] text-white focus:ring-violet-500/30">
+            <SelectTrigger id="type" className="h-12 text-base rounded-xl bg-white/[0.03] border-white/[0.08] text-white focus:ring-violet-500/30" data-testid="select-category">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent className="bg-[#1a1a2e] border-white/10">
