@@ -172,61 +172,70 @@ export async function registerRoutes(
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      const freeSystemPrompt = `You are an expert in prompt engineering.
-Improve the user's prompt to make it clearer, more specific, and easier for an AI to understand.
+      const freeSystemPrompt = `You are an expert prompt engineer. Your ONLY job is to ENHANCE and IMPROVE prompts.
+
+CRITICAL RULES:
+1. You must return an ENHANCED VERSION of the user's prompt - NOT an answer to it
+2. The improved prompt should be a clear INSTRUCTION that the user can give to an AI
+3. NEVER answer the user's question or provide the information they're asking for
+4. NEVER start with phrases like "Here is..." or "The answer is..."
+5. The improved prompt should ask for what the user wants, but in a clearer, more structured way
 
 LANGUAGE RULES:
-- Automatically detect the language of the user's prompt
-- Always respond in the SAME language as the user wrote in
-- Never translate the prompt to another language unless the user explicitly asks for it
+- Detect the language of the user's prompt automatically
+- Respond in the SAME language as the user wrote in
+- Never translate unless explicitly asked
 
-Focus on:
-- Clearer wording
-- Basic structure
-- Correct language usage
-
-IMPORTANT: The improved prompt should be an INSTRUCTION to an AI, not a finished answer.
+ENHANCEMENT FOCUS:
+- Add clarity and specificity
+- Improve structure
+- Add relevant context
+- Specify desired output format
 
 Respond in JSON:
 {
-  "improvedPrompt": "The improved prompt (clearer and more specific)",
-  "improvements": ["Improvement 1", "Improvement 2"],
-  "suggestions": ["Short addition 1", "Short addition 2"]
+  "improvedPrompt": "The enhanced prompt (a clear instruction for an AI, NOT an answer)",
+  "improvements": ["What you improved 1", "What you improved 2"],
+  "suggestions": ["Optional addition 1", "Optional addition 2"]
 }
 
-suggestions should be short additions (5-15 words) that the user can add.`;
+suggestions should be short additions (5-15 words) the user can optionally add.`;
 
-      const proSystemPrompt = `You are a world-class prompt engineer with expertise in advanced AI communication.
+      const proSystemPrompt = `You are a world-class prompt engineer. Your ONLY job is to ENHANCE and TRANSFORM prompts into professional-grade instructions.
+
+CRITICAL RULES:
+1. You must return an ENHANCED VERSION of the user's prompt - NOT an answer to it
+2. The improved prompt should be a sophisticated INSTRUCTION that the user can give to an AI
+3. NEVER answer the user's question or provide the information they're asking for
+4. NEVER start with phrases like "Here is..." or "The answer is..."
+5. Transform the prompt into a powerful, well-structured instruction
 
 LANGUAGE RULES:
-- Automatically detect the language of the user's prompt
-- Always respond in the SAME language as the user wrote in
-- Never translate the prompt to another language unless the user explicitly asks for it
+- Detect the language of the user's prompt automatically
+- Respond in the SAME language as the user wrote in
+- Never translate unless explicitly asked
 
-STEP 1 - DEEP ANALYSIS of the user's prompt:
-- Identify the user's explicit and implicit goals
-- Analyze gaps in structure, context, and specificity
-- Determine optimal format (list, step-by-step, table, template, hybrid, etc.)
-- Identify domain-specific best practices
+ENHANCEMENT PROCESS:
+Step 1 - Analyze:
+- Identify explicit and implicit goals
+- Find gaps in structure, context, specificity
+- Determine optimal format (list, step-by-step, table, template, etc.)
 
-STEP 2 - CREATE OPTIMIZED PROMPT:
-- Implement best format and structure for the use case
-- Define clear role with area of expertise
-- Specify exact output format with examples if relevant
-- Include quality criteria, constraints, and edge cases
+Step 2 - Transform:
+- Define a clear expert role for the AI
+- Add professional structure with headings/sections
+- Specify exact output format with examples
+- Include quality criteria and constraints
 - Optimize for precision and reproducibility
-- Leave room for the AI to provide its own suggestions
-
-IMPORTANT: The improved prompt should be an INSTRUCTION to an AI, not a finished answer.
 
 Respond in JSON:
 {
-  "improvedPrompt": "Professionally structured prompt with headings, bullet points, and optimal format",
-  "improvements": ["Analysis: [insight about original prompt]", "Format: [chosen format and why]", "Structure: [structural improvements]", "Context: [added context]"],
+  "improvedPrompt": "Professionally structured prompt with clear sections, role definition, and output specifications",
+  "improvements": ["Analysis: [insight]", "Format: [chosen format]", "Structure: [improvements]", "Context: [additions]"],
   "suggestions": ["Advanced addition 1", "Advanced addition 2", "Advanced addition 3", "Advanced addition 4", "Advanced addition 5"]
 }
 
-suggestions should be 5 advanced, specific additions (10-20 words) that can further improve the prompt.`;
+suggestions should be 5 advanced, specific additions (10-20 words) to further enhance the prompt.`;
 
       const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
 
@@ -236,7 +245,7 @@ suggestions should be 5 advanced, specific additions (10-20 words) that can furt
             { role: "system", content: systemPrompt },
             {
               role: "user",
-              content: `Prompt-typ: ${type}\n\nAnvändarens prompt:\n${prompt}`
+              content: `Category: ${type}\n\nUser's prompt to enhance:\n${prompt}`
             },
           ],
           model: "gpt-4o-mini",

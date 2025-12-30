@@ -2,7 +2,7 @@ import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Copy, Sparkles, Lightbulb, ListChecks, Plus } from "lucide-react";
+import { Check, Copy, Sparkles, Lightbulb, ListChecks, Plus, ArrowUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { PromptCompare } from "./PromptCompare";
@@ -10,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ResultSectionProps {
   result: OptimizeResponse;
+  onNewPrompt?: () => void;
 }
 
-export function ResultSection({ result }: ResultSectionProps) {
+export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
   const [copied, setCopied] = useState(false);
   const [currentPrompt, setCurrentPrompt] = useState(result.improvedPrompt);
   const [appliedSuggestions, setAppliedSuggestions] = useState<Set<number>>(new Set());
@@ -83,7 +84,16 @@ export function ResultSection({ result }: ResultSectionProps) {
               </div>
             )}
           </div>
-          <div className="bg-white/[0.02] p-4 flex justify-end border-t border-white/[0.06]">
+          <div className="bg-white/[0.02] p-4 flex justify-between gap-3 border-t border-white/[0.06]">
+            <Button
+              onClick={onNewPrompt}
+              variant="outline"
+              className="border-white/10 text-white/70 hover:bg-white/5"
+              data-testid="button-new-prompt"
+            >
+              <ArrowUp className="w-4 h-4 mr-2" />
+              New Prompt
+            </Button>
             <Button
               onClick={handleCopy}
               className={`
@@ -93,6 +103,7 @@ export function ResultSection({ result }: ResultSectionProps) {
                   : "bg-white/10 hover:bg-white/15 text-white border-0"
                 }
               `}
+              data-testid="button-copy-prompt"
             >
               {copied ? (
                 <>
