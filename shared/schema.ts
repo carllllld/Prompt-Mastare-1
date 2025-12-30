@@ -34,7 +34,7 @@ export type Optimization = typeof optimizations.$inferSelect;
 export type InsertOptimization = z.infer<typeof insertOptimizationSchema>;
 
 export const optimizeRequestSchema = z.object({
-  prompt: z.string().min(1, "Prompten får inte vara tom"),
+  prompt: z.string().min(1, "Please enter a prompt to optimize"),
   type: z.string().default("General"),
 });
 
