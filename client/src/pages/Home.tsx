@@ -179,15 +179,28 @@ export default function Home() {
           </div>
         )}
 
-        <PromptForm 
-          onSubmit={handleSubmit} 
-          isPending={isPending} 
-          disabled={isLimitReached || false}
-        />
+        <div id="prompt-form">
+          <PromptForm 
+            onSubmit={handleSubmit} 
+            isPending={isPending} 
+            disabled={isLimitReached || false}
+          />
+        </div>
 
         {result && (
           <div id="results">
-            <ResultSection result={result} />
+            <ResultSection 
+              result={result} 
+              onNewPrompt={() => {
+                setResult(null);
+                setTimeout(() => {
+                  const formElement = document.getElementById("prompt-form");
+                  if (formElement) {
+                    formElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }, 100);
+              }}
+            />
           </div>
         )}
 

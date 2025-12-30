@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -17,6 +17,7 @@ interface PromptFormProps {
   onSubmit: (data: OptimizeRequest) => void;
   isPending: boolean;
   disabled?: boolean;
+  clearOnSuccess?: boolean;
 }
 
 const categories = [
@@ -28,14 +29,37 @@ const categories = [
   "Marketing",
 ] as const;
 
-export function PromptForm({ onSubmit, isPending, disabled = false }: PromptFormProps) {
+export function PromptForm({ onSubmit, isPending, disabled = false, clearOnSuccess = false }: PromptFormProps) {
   const [prompt, setPrompt] = useState("");
   const [type, setType] = useState<OptimizeRequest["type"]>("General");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const wasSubmitting = useRef(false);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (wasSubmitting.current && !isPending && clearOnSuccess) {
+      setPrompt("");
+      textareaRef.current?.focus();
+    }
+    wasSubmitting.current = isPending;
+  }, [isPending, clearOnSuccess]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
+    if (!prompt.trim() || isPending) return;
     onSubmit({ prompt, type });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      if (prompt.trim() && !isPending && !disabled) {
+        onSubmit({ prompt, type });
+      }
+    }
   };
 
   return (
@@ -72,12 +96,16 @@ export function PromptForm({ onSubmit, isPending, disabled = false }: PromptForm
             Your prompt
           </Label>
           <Textarea
+            ref={textareaRef}
             id="prompt"
             placeholder="Write or paste your prompt here (any language supported)..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="min-h-[160px] resize-none text-base p-4 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
+            data-testid="input-prompt"
           />
+          <p className="text-xs text-white/30 mt-1">Press Ctrl+Enter to optimize quickly</p>
         </div>
 
         <Button
