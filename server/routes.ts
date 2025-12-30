@@ -215,26 +215,39 @@ LANGUAGE RULES:
 - Respond in the SAME language as the user wrote in
 - Never translate unless explicitly asked
 
-ENHANCEMENT PROCESS:
-Step 1 - Analyze:
-- Identify explicit and implicit goals
-- Find gaps in structure, context, specificity
-- Determine optimal format (list, step-by-step, table, template, etc.)
+MANDATORY PRO FORMAT - The improvedPrompt MUST include:
+1. **Role Definition**: Start with "### Role: [Expert Title]" - define what expert the AI should act as
+2. **Goal Section**: "#### Goal: [Clear objective]" - state the main objective
+3. **Structured Sections**: Use markdown headings (###, ####) to organize the prompt
+4. **Numbered Steps or Bullet Points**: Break down the task into clear steps
+5. **Output Format Specification**: Define exactly how the AI should structure its response
+6. **Quality Criteria**: Include specific requirements for the output quality
 
-Step 2 - Transform:
-- Define a clear expert role for the AI
-- Add professional structure with headings/sections
-- Specify exact output format with examples
-- Include quality criteria and constraints
-- Optimize for precision and reproducibility
+EXAMPLE FORMAT:
+### Role: [Expert type]
+
+#### Goal: [Main objective]
+
+#### Instructions:
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+#### Output Format:
+[Specify the expected format]
+
+#### Quality Criteria:
+- [Criterion 1]
+- [Criterion 2]
 
 Respond in JSON:
 {
-  "improvedPrompt": "Professionally structured prompt with clear sections, role definition, and output specifications",
+  "improvedPrompt": "The FULLY STRUCTURED prompt with Role, Goal, Instructions, Output Format, and Quality Criteria sections",
   "improvements": ["Analysis: [insight]", "Format: [chosen format]", "Structure: [improvements]", "Context: [additions]"],
   "suggestions": ["Advanced addition 1", "Advanced addition 2", "Advanced addition 3", "Advanced addition 4", "Advanced addition 5"]
 }
 
+IMPORTANT: The improvedPrompt MUST use markdown headings and the structured format shown above. This is a PRO feature.
 suggestions should be 5 advanced, specific additions (10-20 words) to further enhance the prompt.`;
 
       const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
