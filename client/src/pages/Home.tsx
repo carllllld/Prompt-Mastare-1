@@ -61,6 +61,12 @@ export default function Home() {
       onError: (error: any) => {
         if (error?.limitReached) {
           setLimitError(error.message);
+        } else {
+          toast({
+            title: "Optimization failed",
+            description: error?.message || "Something went wrong. Please try again.",
+            variant: "destructive",
+          });
         }
       },
     });
