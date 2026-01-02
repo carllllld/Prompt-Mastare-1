@@ -12,8 +12,12 @@ export function useStripeCheckout() {
         credentials: "include",
       });
 
+      if (res.status === 401) {
+        throw new Error("LOGIN_REQUIRED");
+      }
+
       if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Kunde inte starta betalning." }));
+        const error = await res.json().catch(() => ({ message: "Could not start payment." }));
         throw new Error(error.message);
       }
 
@@ -26,8 +30,18 @@ export function useStripeCheckout() {
       }
     },
     onError: (error: Error) => {
+      if (error.message === "LOGIN_REQUIRED") {
+        toast({
+          title: "Login required",
+          description: "Please log in to upgrade to Pro.",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 1000);
+        return;
+      }
       toast({
-        title: "Betalningsfel",
+        title: "Payment error",
         description: error.message,
         variant: "destructive",
       });
