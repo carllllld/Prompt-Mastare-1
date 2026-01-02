@@ -1,10 +1,20 @@
-import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, date, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export * from "./models/auth";
 
 import { users } from "./models/auth";
+
+// Session usage tracking for anonymous users
+export const sessionUsage = pgTable("session_usage", {
+  sessionId: varchar("session_id").primaryKey(),
+  promptsUsedToday: integer("prompts_used_today").notNull().default(0),
+  lastResetDate: date("last_reset_date").defaultNow(),
+});
+
+export type SessionUsage = typeof sessionUsage.$inferSelect;
+export type InsertSessionUsage = typeof sessionUsage.$inferInsert;
 
 export const optimizations = pgTable("optimizations", {
   id: serial("id").primaryKey(),
