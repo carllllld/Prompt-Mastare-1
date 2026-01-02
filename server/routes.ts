@@ -78,10 +78,13 @@ export async function registerRoutes(
       const tzOffset = req.query.tz ? parseInt(req.query.tz as string, 10) : undefined;
       const resetTime = getNextResetTime(tzOffset);
       
+      console.log(`[Status] sessionId: ${sessionId}, userId: ${userId}`);
+      
       if (!userId) {
         // Anonymous user - use session-based tracking
         const sessionData = await storage.getSessionUsage(sessionId);
         const promptsUsedToday = sessionData.promptsUsedToday;
+        console.log(`[Status] Anonymous user, promptsUsedToday: ${promptsUsedToday}`);
         
         return res.json({
           plan: "free",
@@ -320,7 +323,10 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
           }).catch(err => console.error("Failed to save history:", err));
         } else {
           // Anonymous user - increment session usage
+          console.log(`[Usage] Incrementing session prompts for sessionId: ${sessionId}`);
           await storage.incrementSessionPrompts(sessionId);
+          const updated = await storage.getSessionUsage(sessionId);
+          console.log(`[Usage] After increment, usage: ${updated.promptsUsedToday}`);
         }
 
         res.json(responseData);
