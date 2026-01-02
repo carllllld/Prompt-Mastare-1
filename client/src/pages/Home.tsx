@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PromptForm } from "@/components/PromptForm";
 import { ResultSection } from "@/components/ResultSection";
 import { PromptHistory } from "@/components/PromptHistory";
+import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
@@ -11,7 +12,7 @@ import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User } from "lu
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,10 +20,11 @@ export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus, isLoading: statusLoading } = useUserStatus();
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
-  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -32,7 +34,7 @@ export default function Home() {
         description: "You now have access to the Pro plan. Thank you for your support!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/auth/me"] });
       window.history.replaceState({}, "", "/");
     } else if (params.get("canceled") === "true") {
       toast({
@@ -45,11 +47,11 @@ export default function Home() {
   }, [toast]);
 
   const handleLogin = () => {
-    window.location.href = "/api/login";
+    setAuthModalOpen(true);
   };
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logout();
   };
 
   const handleUpgrade = () => {
@@ -58,9 +60,7 @@ export default function Home() {
         title: "Login required",
         description: "Please log in to upgrade to Pro.",
       });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 1000);
+      setAuthModalOpen(true);
       return;
     }
     startCheckout();
@@ -123,15 +123,12 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Avatar className="w-8 h-8">
-                    {user.profileImageUrl ? (
-                      <AvatarImage src={user.profileImageUrl} alt={user.firstName || "User"} />
-                    ) : null}
                     <AvatarFallback className="bg-violet-600/20 text-violet-300 text-xs">
-                      {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || <User className="w-4 h-4" />}
+                      {user.email?.[0]?.toUpperCase() || <User className="w-4 h-4" />}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm text-white/70 hidden sm:inline">
-                    {user.firstName || user.email?.split("@")[0] || "User"}
+                    {user.email?.split("@")[0] || "User"}
                   </span>
                 </div>
                 <Button
@@ -429,6 +426,9 @@ export default function Home() {
           <p>&copy; {new Date().getFullYear()} PromptForge. Built for better AI interactions.</p>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }
