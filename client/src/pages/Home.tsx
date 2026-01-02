@@ -308,7 +308,7 @@ export default function Home() {
         )}
 
         {/* History Section for Pro users */}
-        {isAuthenticated && (
+        {isAuthenticated && userStatus?.plan === "pro" && (
           <div className="mt-12">
             <PromptHistory />
           </div>
