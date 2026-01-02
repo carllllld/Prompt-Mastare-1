@@ -1,0 +1,136 @@
+You are working inside an existing production Node.js + Express + TypeScript app
+that is deployed on Render.
+
+CRITICAL:
+- REMOVE all Replit-specific authentication ("Secured by Replit")
+- DO NOT rely on any platform-specific auth
+- DO NOT refactor unrelated code
+
+GOAL:
+Implement a complete, production-ready authentication and subscription system
+that works on Render and any standard Node hosting.
+
+TECH REQUIREMENTS:
+- Email + password authentication
+- PostgreSQL database (already configured)
+- Drizzle ORM
+- Stripe subscriptions
+- Session-based auth using httpOnly cookies
+- Persistent login across refreshes
+- Automatic Pro downgrade when payment stops
+
+---
+
+1. DATABASE (Drizzle)
+Add tables ONLY if they do not already exist.
+
+users:
+- id (uuid, primary key)
+- email (unique, indexed)
+- password_hash
+- created_at
+
+subscriptions:
+- user_id (fk users.id)
+- stripe_customer_id
+- stripe_subscription_id
+- status ('free' | 'pro')
+
+---
+
+2. AUTHENTICATION
+- Use bcrypt for password hashing
+- Use express-session (or existing session middleware)
+- Store ONLY userId in session
+- Cookies must be:
+  - httpOnly
+  - secure in production
+  - sameSite=lax
+
+---
+
+3. AUTH ROUTES
+Add routes without breaking existing ones:
+
+POST /auth/register
+POST /auth/login
+POST /auth/logout
+GET  /auth/me
+
+/auth/me must return:
+{
+  id,
+  email,
+  subscriptionStatus
+}
+
+---
+
+4. AUTH MIDDLEWARE
+Implement:
+- requireAuth → blocks unauthenticated users (401)
+- requirePro → blocks non-Pro users (403)
+
+All Pro features MUST be protected by requirePro.
+
+---
+
+5. STRIPE INTEGRATION
+Reuse existing Stripe client.
+
+- Create Stripe Checkout Session for Pro plan
+- Attach userId in Stripe metadata
+
+Implement Stripe webhook that:
+- Verifies signature
+- Is idempotent
+- Handles these events:
+
+checkout.session.completed
+→ create or update subscription, status = 'pro'
+
+customer.subscription.deleted
+invoice.payment_failed
+→ set subscription status = 'free'
+
+Never trust frontend input for subscription state.
+
+---
+
+6. SUBSCRIPTION LOGIC
+- Pro status MUST come from database only
+- Session should not store subscription info
+- Every protected request checks DB
+
+---
+
+7. SECURITY
+- Validate inputs
+- Prevent duplicate emails
+- Do not expose secrets
+- Use environment variables only
+
+Required env vars:
+DATABASE_URL
+SESSION_SECRET
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+
+---
+
+8. FRONTEND (MINIMAL CHANGES ONLY)
+- Remove all Replit-auth UI and logic
+- Add simple login & register forms
+- Do NOT use localStorage for auth
+- Use /auth/me to detect user state
+- Show "Upgrade to Pro" only if subscriptionStatus !== 'pro'
+
+---
+
+OUTPUT RULES:
+- Modify only necessary files
+- Follow existing project structure
+- Add comments to critical logic
+- Result must work on Render without config changes
+
+Implement now.
