@@ -3,11 +3,17 @@ import { db } from "./db";
 import { eq, sql, desc, and } from "drizzle-orm";
 
 export interface IStorage {
+  // Auth methods
+  createUser(email: string, passwordHash: string): Promise<User>;
+  getUserByEmail(email: string): Promise<User | null>;
   getUserById(userId: string): Promise<User | null>;
+  // Usage methods
   incrementUserPrompts(userId: string): Promise<void>;
   resetUserPromptsIfNewDay(user: User): Promise<User>;
+  // Subscription methods
   upgradeUserToPro(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
+  // Optimization history methods
   createOptimization(optimization: InsertOptimization): Promise<void>;
   getOptimizationHistory(userId: string, limit?: number): Promise<Optimization[]>;
   deleteOptimization(userId: string, optimizationId: number): Promise<void>;
@@ -15,6 +21,18 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  async createUser(email: string, passwordHash: string): Promise<User> {
+    const [user] = await db.insert(users)
+      .values({ email, passwordHash })
+      .returning();
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | null> {
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0] || null;
+  }
+
   async getUserById(userId: string): Promise<User | null> {
     const result = await db.select().from(users).where(eq(users.id, userId));
     if (!result[0]) return null;
