@@ -121,7 +121,12 @@ export class DatabaseStorage implements IStorage {
       return { promptsUsedToday: 0 };
     }
     
-    const lastReset = result[0].lastResetDate ? String(result[0].lastResetDate) : '';
+    // Handle date comparison properly - PostgreSQL dates come as strings in YYYY-MM-DD format
+    let lastReset = '';
+    if (result[0].lastResetDate) {
+      lastReset = String(result[0].lastResetDate).split('T')[0];
+    }
+    
     if (lastReset !== today) {
       // Reset for new day
       await db.update(sessionUsage)
