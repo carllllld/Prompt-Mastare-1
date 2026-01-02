@@ -20,7 +20,7 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "promptforge-secret-key-2024",
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     store: new PgStore({
       pool,
       tableName: "user_sessions",
