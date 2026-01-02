@@ -49,20 +49,34 @@ export async function registerRoutes(
   // Setup email/password authentication
   setupAuth(app);
 
-  // Helper to calculate next midnight UTC reset time
-  function getNextResetTime(): string {
+  // Helper to calculate next midnight in user's local timezone
+  function getNextResetTime(timezoneOffset?: number): string {
     const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    tomorrow.setUTCHours(0, 0, 0, 0);
-    return tomorrow.toISOString();
+    
+    // If no offset provided, use UTC
+    if (timezoneOffset === undefined) {
+      const tomorrow = new Date(now);
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      tomorrow.setUTCHours(0, 0, 0, 0);
+      return tomorrow.toISOString();
+    }
+    
+    // Calculate local time by applying offset (offset is in minutes, negative = ahead of UTC)
+    const localNow = new Date(now.getTime() - timezoneOffset * 60000);
+    const localMidnight = new Date(localNow);
+    localMidnight.setUTCHours(24, 0, 0, 0); // Next midnight in "local" time
+    
+    // Convert back to real UTC
+    const realMidnight = new Date(localMidnight.getTime() + timezoneOffset * 60000);
+    return realMidnight.toISOString();
   }
 
   app.get("/api/user/status", async (req, res) => {
     try {
       const userId = req.session?.userId;
       const sessionId = req.sessionID;
-      const resetTime = getNextResetTime();
+      const tzOffset = req.query.tz ? parseInt(req.query.tz as string, 10) : undefined;
+      const resetTime = getNextResetTime(tzOffset);
       
       if (!userId) {
         // Anonymous user - use session-based tracking
