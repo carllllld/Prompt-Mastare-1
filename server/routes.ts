@@ -49,28 +49,48 @@ export async function registerRoutes(
   // Setup email/password authentication
   setupAuth(app);
 
+  // Helper to calculate next midnight UTC reset time
+  function getNextResetTime(): string {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    tomorrow.setUTCHours(0, 0, 0, 0);
+    return tomorrow.toISOString();
+  }
+
   app.get("/api/user/status", async (req, res) => {
     try {
       const userId = req.session?.userId;
+      const sessionId = req.sessionID;
+      const resetTime = getNextResetTime();
       
       if (!userId) {
+        // Anonymous user - use session-based tracking
+        const sessionData = await storage.getSessionUsage(sessionId);
+        const promptsUsedToday = sessionData.promptsUsedToday;
+        
         return res.json({
           plan: "free",
-          promptsUsedToday: 0,
-          promptsRemaining: PLAN_LIMITS.free,
+          promptsUsedToday,
+          promptsRemaining: Math.max(0, PLAN_LIMITS.free - promptsUsedToday),
           dailyLimit: PLAN_LIMITS.free,
           isLoggedIn: false,
+          resetTime,
         });
       }
       
       const user = await storage.getUserById(userId);
       if (!user) {
+        const sessionData = await storage.getSessionUsage(sessionId);
+        const promptsUsedToday = sessionData.promptsUsedToday;
+        
         return res.json({
           plan: "free",
-          promptsUsedToday: 0,
-          promptsRemaining: PLAN_LIMITS.free,
+          promptsUsedToday,
+          promptsRemaining: Math.max(0, PLAN_LIMITS.free - promptsUsedToday),
           dailyLimit: PLAN_LIMITS.free,
           isLoggedIn: false,
+          resetTime,
         });
       }
       
@@ -83,6 +103,7 @@ export async function registerRoutes(
         promptsRemaining: Math.max(0, dailyLimit - user.promptsUsedToday),
         dailyLimit,
         isLoggedIn: true,
+        resetTime,
       });
     } catch (err) {
       console.error("Error getting user status:", err);
@@ -132,6 +153,7 @@ export async function registerRoutes(
   app.post(api.optimize.path, rateLimit, async (req, res) => {
     try {
       const userId = req.session?.userId;
+      const sessionId = req.sessionID;
       
       let user: User | null = null;
       if (userId) {
@@ -140,7 +162,15 @@ export async function registerRoutes(
       
       const plan = (user?.plan as "free" | "pro") || "free";
       const dailyLimit = PLAN_LIMITS[plan];
-      const promptsUsedToday = user?.promptsUsedToday || 0;
+      
+      // Get prompts used today - from user or session
+      let promptsUsedToday: number;
+      if (user) {
+        promptsUsedToday = user.promptsUsedToday;
+      } else {
+        const sessionData = await storage.getSessionUsage(sessionId);
+        promptsUsedToday = sessionData.promptsUsedToday;
+      }
 
       if (promptsUsedToday >= dailyLimit) {
         return res.status(403).json({
@@ -262,6 +292,7 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
           suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
         };
 
+        // Increment usage count
         if (userId && user) {
           await storage.incrementUserPrompts(userId);
 
@@ -273,6 +304,9 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
             improvements: responseData.improvements,
             suggestions: responseData.suggestions,
           }).catch(err => console.error("Failed to save history:", err));
+        } else {
+          // Anonymous user - increment session usage
+          await storage.incrementSessionPrompts(sessionId);
         }
 
         res.json(responseData);

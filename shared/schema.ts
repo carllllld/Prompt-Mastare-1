@@ -39,6 +39,7 @@ export const userStatusSchema = z.object({
   promptsRemaining: z.number(),
   dailyLimit: z.number(),
   isLoggedIn: z.boolean(),
+  resetTime: z.string(), // ISO timestamp of next reset
 });
 
 export type OptimizeRequest = z.infer<typeof optimizeRequestSchema>;
