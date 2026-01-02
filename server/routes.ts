@@ -417,8 +417,10 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription as string;
+        const invoice = event.data.object as any;
+        const subscriptionId = typeof invoice.subscription === 'string' 
+          ? invoice.subscription 
+          : invoice.subscription?.id;
         if (subscriptionId) {
           await storage.downgradeUserToFree(subscriptionId);
           console.log(`Payment failed for subscription ${subscriptionId}, user downgraded`);
