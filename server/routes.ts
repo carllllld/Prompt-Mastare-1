@@ -6,17 +6,11 @@ import { z } from "zod";
 import OpenAI from "openai";
 import Stripe from "stripe";
 import { PLAN_LIMITS, type User } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
-
-declare module 'express-session' {
-  interface SessionData {
-    visitorId?: string;
-  }
-}
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -25,15 +19,15 @@ const openai = new OpenAI({
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW = 60000;
-const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_MAX = 10;
 
 function rateLimit(req: Request, res: Response, next: NextFunction) {
-  const sessionId = req.session?.visitorId || 'anonymous';
+  const userId = (req.user as any)?.claims?.sub || 'anonymous';
   const now = Date.now();
-  const userLimit = rateLimitMap.get(sessionId);
+  const userLimit = rateLimitMap.get(userId);
 
   if (!userLimit || now > userLimit.resetTime) {
-    rateLimitMap.set(sessionId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     return next();
   }
 
@@ -52,13 +46,34 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
   app.get("/api/user/status", async (req, res) => {
     try {
-      if (!req.session.visitorId) {
-        req.session.visitorId = randomUUID();
+      const userClaims = (req.user as any)?.claims;
+      
+      if (!userClaims?.sub) {
+        return res.json({
+          plan: "free",
+          promptsUsedToday: 0,
+          promptsRemaining: PLAN_LIMITS.free,
+          dailyLimit: PLAN_LIMITS.free,
+          isLoggedIn: false,
+        });
       }
       
-      const user = await storage.getOrCreateUser(req.session.visitorId);
+      const user = await storage.getUserById(userClaims.sub);
+      if (!user) {
+        return res.json({
+          plan: "free",
+          promptsUsedToday: 0,
+          promptsRemaining: PLAN_LIMITS.free,
+          dailyLimit: PLAN_LIMITS.free,
+          isLoggedIn: true,
+        });
+      }
+      
       const plan = user.plan as "free" | "pro";
       const dailyLimit = PLAN_LIMITS[plan];
       
@@ -67,6 +82,7 @@ export async function registerRoutes(
         promptsUsedToday: user.promptsUsedToday,
         promptsRemaining: Math.max(0, dailyLimit - user.promptsUsedToday),
         dailyLimit,
+        isLoggedIn: true,
       });
     } catch (err) {
       console.error("Error getting user status:", err);
@@ -74,13 +90,14 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/history", async (req, res) => {
+  app.get("/api/history", isAuthenticated, async (req, res) => {
     try {
-      if (!req.session.visitorId) {
-        return res.status(401).json({ message: "No session found" });
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
       }
       
-      const user = await storage.getUserBySessionId(req.session.visitorId);
+      const user = await storage.getUserById(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -92,7 +109,7 @@ export async function registerRoutes(
         });
       }
       
-      const history = await storage.getOptimizationHistory(user.id, 20);
+      const history = await storage.getOptimizationHistory(userId, 20);
       res.json(history);
     } catch (err) {
       console.error("Error getting history:", err);
@@ -100,13 +117,14 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/history/:id", async (req, res) => {
+  app.delete("/api/history/:id", isAuthenticated, async (req, res) => {
     try {
-      if (!req.session.visitorId) {
-        return res.status(401).json({ message: "No session found" });
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
       }
       
-      const user = await storage.getUserBySessionId(req.session.visitorId);
+      const user = await storage.getUserById(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -120,7 +138,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid ID" });
       }
       
-      await storage.deleteOptimization(user.id, optimizationId);
+      await storage.deleteOptimization(userId, optimizationId);
       res.json({ success: true });
     } catch (err) {
       console.error("Error deleting optimization:", err);
@@ -128,13 +146,14 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/history", async (req, res) => {
+  app.delete("/api/history", isAuthenticated, async (req, res) => {
     try {
-      if (!req.session.visitorId) {
-        return res.status(401).json({ message: "No session found" });
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
       }
       
-      const user = await storage.getUserBySessionId(req.session.visitorId);
+      const user = await storage.getUserById(userId);
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
@@ -143,7 +162,7 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Only Pro users can delete history" });
       }
       
-      await storage.deleteAllOptimizations(user.id);
+      await storage.deleteAllOptimizations(userId);
       res.json({ success: true });
     } catch (err) {
       console.error("Error deleting all optimizations:", err);
@@ -153,15 +172,18 @@ export async function registerRoutes(
 
   app.post(api.optimize.path, rateLimit, async (req, res) => {
     try {
-      if (!req.session.visitorId) {
-        req.session.visitorId = randomUUID();
+      const userId = (req.user as any)?.claims?.sub;
+      
+      let user: User | null = null;
+      if (userId) {
+        user = await storage.getUserById(userId);
       }
-
-      const user = await storage.getOrCreateUser(req.session.visitorId);
-      const plan = user.plan as "free" | "pro";
+      
+      const plan = (user?.plan as "free" | "pro") || "free";
       const dailyLimit = PLAN_LIMITS[plan];
+      const promptsUsedToday = user?.promptsUsedToday || 0;
 
-      if (user.promptsUsedToday >= dailyLimit) {
+      if (promptsUsedToday >= dailyLimit) {
         return res.status(403).json({
           message: plan === "free" 
             ? "You've used all 3 free optimizations today. Upgrade to Pro for more!"
@@ -281,16 +303,18 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
           suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
         };
 
-        await storage.incrementUserPrompts(user.id);
+        if (userId && user) {
+          await storage.incrementUserPrompts(userId);
 
-        storage.createOptimization({
-          userId: user.id,
-          originalPrompt: prompt,
-          improvedPrompt: responseData.improvedPrompt,
-          category: type,
-          improvements: responseData.improvements,
-          suggestions: responseData.suggestions,
-        }).catch(err => console.error("Failed to save history:", err));
+          storage.createOptimization({
+            userId: userId,
+            originalPrompt: prompt,
+            improvedPrompt: responseData.improvedPrompt,
+            category: type,
+            improvements: responseData.improvements,
+            suggestions: responseData.suggestions,
+          }).catch(err => console.error("Failed to save history:", err));
+        }
 
         res.json(responseData);
       } catch (openaiError: any) {
@@ -311,19 +335,15 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     }
   });
 
-  // Helper to get or create the PromptForge Pro price
   async function getOrCreatePrice(): Promise<string> {
-    // First try to use existing price from env
     if (STRIPE_PRICE_ID) {
       try {
         await stripe.prices.retrieve(STRIPE_PRICE_ID);
         return STRIPE_PRICE_ID;
       } catch {
-        // Price doesn't exist, create new one
       }
     }
 
-    // Look for existing product
     const products = await stripe.products.list({ limit: 100 });
     let product = products.data.find(p => p.name === "PromptForge Pro" && p.active);
 
@@ -335,14 +355,13 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
       console.log("Created Stripe product:", product.id);
     }
 
-    // Look for existing price
     const prices = await stripe.prices.list({ product: product.id, active: true, limit: 10 });
     let price = prices.data.find(p => p.unit_amount === 999 && p.currency === "usd" && p.recurring?.interval === "month");
 
     if (!price) {
       price = await stripe.prices.create({
         product: product.id,
-        unit_amount: 999, // $9.99 USD
+        unit_amount: 999,
         currency: "usd",
         recurring: { interval: "month" },
       });
@@ -352,16 +371,16 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     return price.id;
   }
 
-  // Create Stripe Checkout session
-  app.post("/api/stripe/create-checkout", async (req, res) => {
+  app.post("/api/stripe/create-checkout", isAuthenticated, async (req, res) => {
     try {
-      if (!req.session.visitorId) {
-        req.session.visitorId = randomUUID();
+      const userId = (req.user as any)?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "You must be logged in to upgrade to Pro" });
       }
 
-      const user = await storage.getOrCreateUser(req.session.visitorId);
+      const user = await storage.getUserById(userId);
 
-      if (user.plan === "pro") {
+      if (user?.plan === "pro") {
         return res.status(400).json({ message: "You already have the Pro plan!" });
       }
 
@@ -379,12 +398,11 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
         success_url: `${req.headers.origin || 'http://localhost:5000'}/?success=true`,
         cancel_url: `${req.headers.origin || 'http://localhost:5000'}/?canceled=true`,
         metadata: {
-          userId: user.id.toString(),
-          sessionId: req.session.visitorId,
+          userId: userId,
         },
       };
 
-      if (user.stripeCustomerId) {
+      if (user?.stripeCustomerId) {
         sessionParams.customer = user.stripeCustomerId;
       }
 
@@ -397,7 +415,6 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     }
   });
 
-  // Stripe webhook handler
   app.post("/api/stripe/webhook", async (req, res) => {
     const sig = req.headers["stripe-signature"] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -429,7 +446,7 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
 
         if (userId) {
           await storage.upgradeUserToPro(
-            parseInt(userId),
+            userId,
             customerId,
             subscriptionId
           );
@@ -447,7 +464,11 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
 
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        console.log(`Payment failed for invoice: ${invoice.id}`);
+        const subscriptionId = invoice.subscription as string;
+        if (subscriptionId) {
+          await storage.downgradeUserToFree(subscriptionId);
+          console.log(`Payment failed for subscription ${subscriptionId}, user downgraded`);
+        }
         break;
       }
     }
