@@ -1,4 +1,4 @@
-import { optimizations, type InsertOptimization, type Optimization, PLAN_LIMITS, users, type User } from "@shared/schema";
+import { optimizations, type InsertOptimization, type Optimization, PLAN_LIMITS, users, type User, sessionUsage, type SessionUsage } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and } from "drizzle-orm";
 
@@ -10,6 +10,9 @@ export interface IStorage {
   // Usage methods
   incrementUserPrompts(userId: string): Promise<void>;
   resetUserPromptsIfNewDay(user: User): Promise<User>;
+  // Session usage methods (for anonymous users)
+  getSessionUsage(sessionId: string): Promise<{ promptsUsedToday: number }>;
+  incrementSessionPrompts(sessionId: string): Promise<void>;
   // Subscription methods
   upgradeUserToPro(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
@@ -108,6 +111,45 @@ export class DatabaseStorage implements IStorage {
   async deleteAllOptimizations(userId: string): Promise<void> {
     await db.delete(optimizations)
       .where(eq(optimizations.userId, userId));
+  }
+
+  async getSessionUsage(sessionId: string): Promise<{ promptsUsedToday: number }> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db.select().from(sessionUsage).where(eq(sessionUsage.sessionId, sessionId));
+    
+    if (!result[0]) {
+      return { promptsUsedToday: 0 };
+    }
+    
+    const lastReset = result[0].lastResetDate ? String(result[0].lastResetDate) : '';
+    if (lastReset !== today) {
+      // Reset for new day
+      await db.update(sessionUsage)
+        .set({ promptsUsedToday: 0, lastResetDate: today })
+        .where(eq(sessionUsage.sessionId, sessionId));
+      return { promptsUsedToday: 0 };
+    }
+    
+    return { promptsUsedToday: result[0].promptsUsedToday };
+  }
+
+  async incrementSessionPrompts(sessionId: string): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db.select().from(sessionUsage).where(eq(sessionUsage.sessionId, sessionId));
+    
+    if (!result[0]) {
+      // Create new record
+      await db.insert(sessionUsage).values({
+        sessionId,
+        promptsUsedToday: 1,
+        lastResetDate: today,
+      });
+    } else {
+      // Increment existing
+      await db.update(sessionUsage)
+        .set({ promptsUsedToday: sql`${sessionUsage.promptsUsedToday} + 1` })
+        .where(eq(sessionUsage.sessionId, sessionId));
+    }
   }
 }
 

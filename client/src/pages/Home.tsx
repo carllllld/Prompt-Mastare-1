@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PromptForm } from "@/components/PromptForm";
 import { ResultSection } from "@/components/ResultSection";
 import { PromptHistory } from "@/components/PromptHistory";
@@ -8,7 +8,7 @@ import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
-import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User } from "lucide-react";
+import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,46 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+function useCountdown(resetTime: string | undefined) {
+  const [timeLeft, setTimeLeft] = useState<string>("");
+  
+  useEffect(() => {
+    if (!resetTime) return;
+    
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const reset = new Date(resetTime);
+      const diff = reset.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        return "Resets now";
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+      }
+      return `${minutes}m`;
+    };
+    
+    setTimeLeft(calculateTimeLeft());
+    
+    const interval = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, [resetTime]);
+  
+  return timeLeft;
+}
+
 export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus, isLoading: statusLoading } = useUserStatus();
+  const resetTimeLeft = useCountdown(userStatus?.resetTime);
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
@@ -213,14 +250,20 @@ export default function Home() {
         {userStatus && (
           <div className="mb-8 p-4 bg-white/[0.03] backdrop-blur-sm rounded-xl border border-white/[0.06]">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <Badge variant={userStatus.plan === "pro" ? "default" : "secondary"} className="gap-1">
                   {userStatus.plan === "pro" && <Crown className="w-3 h-3" />}
                   {userStatus.plan === "pro" ? "Pro" : "Free"}
                 </Badge>
                 <span className="text-sm text-white/60">
-                  <span className="font-semibold text-white">{userStatus.promptsRemaining}</span> of {userStatus.dailyLimit} optimizations left today
+                  <span className="font-semibold text-white">{userStatus.promptsRemaining}</span> of {userStatus.dailyLimit} optimizations left
                 </span>
+                {resetTimeLeft && (
+                  <span className="text-sm text-white/40 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Resets in {resetTimeLeft}
+                  </span>
+                )}
               </div>
               {userStatus.plan === "free" && (
                 <Button 
@@ -244,8 +287,8 @@ export default function Home() {
                 <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-200">
                   {userStatus.promptsRemaining === 0 
-                    ? "You've used all your free optimizations today. Upgrade to Pro for unlimited access!"
-                    : "Only 1 optimization left! Upgrade to Pro for unlimited access."}
+                    ? `You've used all your free optimizations today. ${resetTimeLeft ? `Resets in ${resetTimeLeft}.` : ""} Upgrade to Pro for more!`
+                    : "Only 1 optimization left! Upgrade to Pro for more."}
                 </p>
               </div>
             )}

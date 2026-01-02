@@ -22,5 +22,13 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Anonymous session usage tracking
+export const sessionUsage = pgTable("session_usage", {
+  sessionId: varchar("session_id").primaryKey(),
+  promptsUsedToday: integer("prompts_used_today").notNull().default(0),
+  lastResetDate: date("last_reset_date").defaultNow(),
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type SessionUsage = typeof sessionUsage.$inferSelect;
