@@ -1,26 +1,14 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  sessionId: text("session_id").notNull().unique(),
-  email: text("email"),
-  plan: text("plan").notNull().default("free"),
-  promptsUsedToday: integer("prompts_used_today").notNull().default(0),
-  lastResetDate: date("last_reset_date").notNull().defaultNow(),
-  stripeCustomerId: text("stripe_customer_id"),
-  stripeSubscriptionId: text("stripe_subscription_id"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
+export * from "./models/auth";
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+import { users } from "./models/auth";
 
 export const optimizations = pgTable("optimizations", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
+  userId: text("user_id").references(() => users.id),
   originalPrompt: text("original_prompt").notNull(),
   improvedPrompt: text("improved_prompt").notNull(),
   category: text("category").notNull(),
@@ -50,6 +38,7 @@ export const userStatusSchema = z.object({
   promptsUsedToday: z.number(),
   promptsRemaining: z.number(),
   dailyLimit: z.number(),
+  isLoggedIn: z.boolean(),
 });
 
 export type OptimizeRequest = z.infer<typeof optimizeRequestSchema>;
