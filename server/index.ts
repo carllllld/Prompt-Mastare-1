@@ -24,7 +24,7 @@ app.use(
     store: new PgStore({
       pool,
       tableName: "user_sessions",
-      createTableIfMissing: true,
+      createTableIfMissing: false,
     }),
     cookie: {
       httpOnly: true,
