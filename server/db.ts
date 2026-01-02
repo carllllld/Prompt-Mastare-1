@@ -16,6 +16,19 @@ export const db = drizzle(pool, { schema });
 // Initialize database tables that may not exist
 export async function initializeDatabase() {
   try {
+    // Create user_sessions table for connect-pg-simple (needed in production)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        sid VARCHAR NOT NULL COLLATE "default",
+        sess JSON NOT NULL,
+        expire TIMESTAMP(6) NOT NULL,
+        CONSTRAINT user_sessions_pkey PRIMARY KEY (sid)
+      )
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS IDX_user_sessions_expire ON user_sessions (expire)
+    `);
+    
     // Create session_usage table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS session_usage (
