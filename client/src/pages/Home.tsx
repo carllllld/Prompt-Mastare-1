@@ -5,11 +5,13 @@ import { PromptHistory } from "@/components/PromptHistory";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
+import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
-import { Zap, Crown, AlertCircle, Loader2, Globe } from "lucide-react";
+import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +19,7 @@ export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus, isLoading: statusLoading } = useUserStatus();
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [limitError, setLimitError] = useState<string | null>(null);
@@ -29,6 +32,7 @@ export default function Home() {
         description: "You now have access to the Pro plan. Thank you for your support!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       window.history.replaceState({}, "", "/");
     } else if (params.get("canceled") === "true") {
       toast({
@@ -40,7 +44,25 @@ export default function Home() {
     }
   }, [toast]);
 
+  const handleLogin = () => {
+    window.location.href = "/api/login";
+  };
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
   const handleUpgrade = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Login required",
+        description: "Please log in to upgrade to Pro.",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 1000);
+      return;
+    }
     startCheckout();
   };
 
@@ -88,7 +110,57 @@ export default function Home() {
         {/* Grid pattern overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none" />
         
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-16 md:py-24 text-center relative z-10">
+        {/* Top nav bar */}
+        <div className="relative z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-4 max-w-5xl mx-auto">
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-violet-400" />
+            <span className="font-bold text-white">PromptForge</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {authLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin text-white/50" />
+            ) : isAuthenticated && user ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Avatar className="w-8 h-8">
+                    {user.profileImageUrl ? (
+                      <AvatarImage src={user.profileImageUrl} alt={user.firstName || "User"} />
+                    ) : null}
+                    <AvatarFallback className="bg-violet-600/20 text-violet-300 text-xs">
+                      {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || <User className="w-4 h-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-white/70 hidden sm:inline">
+                    {user.firstName || user.email?.split("@")[0] || "User"}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-white/70 hover:text-white gap-1.5"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Log out</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogin}
+                className="border-white/10 text-white gap-1.5"
+                data-testid="button-login"
+              >
+                <LogIn className="w-4 h-4" />
+                Log in
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 md:py-20 text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-violet-300 text-sm font-medium mb-8 backdrop-blur-sm">
             <Zap className="w-3.5 h-3.5" />
             <span>Intelligent prompts. Superior results.</span>
@@ -116,6 +188,30 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12 md:py-16">
+        {/* Login prompt for non-authenticated users */}
+        {!authLoading && !isAuthenticated && (
+          <div className="mb-8 p-4 bg-violet-500/10 backdrop-blur-sm rounded-xl border border-violet-500/20">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <LogIn className="w-5 h-5 text-violet-400" />
+                <span className="text-sm text-white/80">
+                  <span className="font-medium text-white">Log in</span> to save your prompts and access Pro features
+                </span>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="border-violet-500/30 text-violet-300 hover:bg-violet-500/10" 
+                data-testid="button-login-prompt"
+                onClick={handleLogin}
+              >
+                <LogIn className="w-4 h-4 mr-1.5" />
+                Log in
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Usage Status Bar */}
         {userStatus && (
           <div className="mb-8 p-4 bg-white/[0.03] backdrop-blur-sm rounded-xl border border-white/[0.06]">
@@ -212,9 +308,11 @@ export default function Home() {
         )}
 
         {/* History Section for Pro users */}
-        <div className="mt-12">
-          <PromptHistory />
-        </div>
+        {isAuthenticated && (
+          <div className="mt-12">
+            <PromptHistory />
+          </div>
+        )}
 
         {/* How it works */}
         <section className="mt-24 space-y-12">
@@ -317,7 +415,7 @@ export default function Home() {
                 ) : (
                   <Crown className="w-4 h-4 mr-2" />
                 )}
-                Upgrade now
+                {isAuthenticated ? "Upgrade now" : "Log in to upgrade"}
               </Button>
             </Card>
           </div>
