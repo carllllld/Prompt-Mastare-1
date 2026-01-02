@@ -15,14 +15,16 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "promptforge-secret-key-2024",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     store: new PgStore({
       pool,
       tableName: "user_sessions",
       createTableIfMissing: true,
     }),
     cookie: {
+      httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     },
   })
