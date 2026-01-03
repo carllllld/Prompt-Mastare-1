@@ -5,7 +5,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import Stripe from "stripe";
-import { PLAN_LIMITS, type User } from "@shared/schema";
+import { PLAN_LIMITS, CHARACTER_LIMITS, type User } from "@shared/schema";
 import { setupAuth, requireAuth, requirePro } from "./auth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
@@ -192,14 +192,23 @@ export async function registerRoutes(
       if (promptsUsedToday >= dailyLimit) {
         return res.status(403).json({
           message: plan === "free" 
-            ? "You've used all 3 free optimizations today. Upgrade to Pro for more!"
-            : "You've reached your daily limit of 100 optimizations.",
+            ? "You've used all 2 free optimizations today. Upgrade to Pro for more!"
+            : "You've reached your daily limit of 50 optimizations.",
           limitReached: true,
           plan,
         });
       }
 
       const { prompt, type } = api.optimize.input.parse(req.body);
+
+      // Check character limit
+      const charLimit = CHARACTER_LIMITS[plan];
+      if (prompt.length > charLimit) {
+        return res.status(400).json({
+          message: `Your prompt exceeds the ${charLimit} character limit for the ${plan} plan. ${plan === "free" ? "Upgrade to Pro for 2000 characters!" : "Please shorten your prompt."}`,
+          limitReached: false,
+        });
+      }
 
       const freeSystemPrompt = `You are an expert prompt engineer. Your ONLY job is to ENHANCE and IMPROVE prompts.
 

@@ -57,6 +57,11 @@ export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
 export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
-  free: 3,
-  pro: 100,
+  free: 2,
+  pro: 50,
+} as const;
+
+export const CHARACTER_LIMITS = {
+  free: 500,
+  pro: 2000,
 } as const;

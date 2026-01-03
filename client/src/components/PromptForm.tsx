@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Loader2 } from "lucide-react";
-import { type OptimizeRequest } from "@shared/schema";
+import { type OptimizeRequest, CHARACTER_LIMITS } from "@shared/schema";
+import { useUserStatus } from "@/hooks/use-user-status";
 import { motion } from "framer-motion";
 
 interface PromptFormProps {
@@ -34,6 +35,10 @@ export function PromptForm({ onSubmit, isPending, disabled = false, clearOnSucce
   const [type, setType] = useState<OptimizeRequest["type"]>("General");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const wasSubmitting = useRef(false);
+  const { data: userStatus } = useUserStatus();
+  const plan = userStatus?.plan || "free";
+  const charLimit = CHARACTER_LIMITS[plan as keyof typeof CHARACTER_LIMITS];
+  const isOverLimit = prompt.length > charLimit;
 
   useEffect(() => {
     textareaRef.current?.focus();
@@ -102,15 +107,20 @@ export function PromptForm({ onSubmit, isPending, disabled = false, clearOnSucce
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="min-h-[160px] resize-none text-base p-4 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
+            className={`min-h-[160px] resize-none text-base p-4 rounded-xl bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all ${isOverLimit ? 'border-red-500/50' : ''}`}
             data-testid="input-prompt"
           />
-          <p className="text-xs text-white/30 mt-1">Press Ctrl+Enter to optimize quickly</p>
+          <div className="flex justify-between items-center mt-1">
+            <p className="text-xs text-white/30">Press Ctrl+Enter to optimize quickly</p>
+            <p className={`text-xs ${isOverLimit ? 'text-red-400' : 'text-white/30'}`}>
+              {prompt.length} / {charLimit} characters
+            </p>
+          </div>
         </div>
 
         <Button
           type="submit"
-          disabled={!prompt.trim() || isPending || disabled}
+          disabled={!prompt.trim() || isPending || disabled || isOverLimit}
           className="w-full h-14 text-lg font-semibold rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-300"
           data-testid="button-optimize"
         >

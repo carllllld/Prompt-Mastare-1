@@ -151,7 +151,7 @@ export default function Home() {
         <div className="relative z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-4 max-w-5xl mx-auto">
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-violet-400" />
-            <span className="font-bold text-white">PromptForge</span>
+            <span className="font-bold text-white">OptiPrompt</span>
           </div>
           <div className="flex items-center gap-3">
             {authLoading ? (
@@ -201,8 +201,8 @@ export default function Home() {
           </div>
           
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
-            <span className="text-white">Prompt</span>
-            <span className="text-gradient">Forge</span>
+            <span className="text-white">Opti</span>
+            <span className="text-gradient">Prompt</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-white/80 max-w-2xl mx-auto leading-relaxed font-medium">
@@ -222,29 +222,6 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12 md:py-16">
-        {/* Login prompt for non-authenticated users */}
-        {!authLoading && !isAuthenticated && (
-          <div className="mb-8 p-4 bg-violet-500/10 backdrop-blur-sm rounded-xl border border-violet-500/20">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <LogIn className="w-5 h-5 text-violet-400" />
-                <span className="text-sm text-white/80">
-                  <span className="font-medium text-white">Log in</span> to save your prompts and access Pro features
-                </span>
-              </div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="border-violet-500/30 text-violet-300 hover:bg-violet-500/10" 
-                data-testid="button-login-prompt"
-                onClick={handleLogin}
-              >
-                <LogIn className="w-4 h-4 mr-1.5" />
-                Log in
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Usage Status Bar */}
         {userStatus && (
@@ -376,9 +353,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Why PromptForge */}
+        {/* Why OptiPrompt */}
         <section className="mt-32 p-8 md:p-12 bg-white/[0.02] backdrop-blur-sm rounded-2xl border border-white/[0.06]">
-          <h2 className="text-3xl font-bold text-center text-white mb-12">Why PromptForge?</h2>
+          <h2 className="text-3xl font-bold text-center text-white mb-12">Why OptiPrompt?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="flex items-start gap-4">
               <div className="p-2.5 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
@@ -426,23 +403,23 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <Card className="p-8 bg-white/[0.03] border-white/[0.08] backdrop-blur-sm">
               <h3 className="text-xl font-bold mb-2 text-white">Free</h3>
-              <p className="text-4xl font-extrabold mb-6 text-white">$0<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-4xl font-extrabold mb-6 text-white">0 kr<span className="text-base font-normal text-white/40">/mo</span></p>
               <ul className="space-y-4 text-white/70 mb-8">
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 3 optimizations per day</li>
-                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> Unlimited prompts</li>
-                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> Pro support</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 2 optimizations per day</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 500 characters per prompt</li>
+                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> Prompt history</li>
               </ul>
               <Button variant="outline" className="w-full border-white/10 text-white/70 hover:bg-white/5" data-testid="button-free-plan">Current plan</Button>
             </Card>
             <Card className="p-8 bg-gradient-to-br from-violet-600/20 to-indigo-600/20 border-violet-500/30 relative overflow-visible glow-primary">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-lg">POPULAR</div>
               <h3 className="text-xl font-bold mb-2 text-white mt-2">Pro</h3>
-              <p className="text-4xl font-extrabold mb-6 text-white">$9.99<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-4xl font-extrabold mb-6 text-white">69 kr<span className="text-base font-normal text-white/40">/mo</span></p>
               <ul className="space-y-4 text-white/80 mb-8">
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 100 optimizations per day</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 50 optimizations per day</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 2000 characters per prompt</li>
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Prompt history</li>
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Advanced suggestions</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Priority AI model</li>
               </ul>
               <Button 
                 className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-lg shadow-violet-500/25" 
@@ -466,7 +443,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-white/[0.06] py-8 mt-auto">
         <div className="max-w-5xl mx-auto px-4 text-center text-white/40 text-sm">
-          <p>&copy; {new Date().getFullYear()} PromptForge. Built for better AI interactions.</p>
+          <p>&copy; {new Date().getFullYear()} OptiPrompt. Built for better AI interactions.</p>
         </div>
       </footer>
 

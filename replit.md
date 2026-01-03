@@ -1,8 +1,8 @@
-# PromptForge
+# OptiPrompt
 
 ## Overview
 
-PromptForge is an English-language AI-powered prompt optimization tool with multilingual prompt support. Users submit prompts in any language along with a category (General, Business, Programming, etc.), and the application uses OpenAI's GPT-4o-mini to improve the prompt, explain what was changed, and provide additional suggestions. The goal is to help users get better, more precise responses from AI models like ChatGPT.
+OptiPrompt is an AI-powered prompt optimization tool with multilingual prompt support. Users submit prompts in any language along with a category (General, Business, Programming, etc.), and the application uses OpenAI's GPT-4o-mini to improve the prompt, explain what was changed, and provide additional suggestions. The goal is to help users get better, more precise responses from AI models like ChatGPT.
 
 ## User Preferences
 
@@ -69,13 +69,13 @@ Pre-built integration modules in `server/replit_integrations/`:
 - `express-session` + `memorystore`: Session management
 
 ## Usage Limits
-- **Free plan**: 3 optimizations per day
-- **Pro plan**: 100 optimizations per day (requires Stripe integration)
+- **Free plan**: 2 optimizations per day, 500 characters per prompt
+- **Pro plan**: 50 optimizations per day, 2000 characters per prompt (69 kr/month)
 - Limits reset automatically at midnight
 
 ## Stripe Integration (Configured)
-- **Product**: PromptForge Pro
-- **Price**: $9.99 USD/month
+- **Product**: OptiPrompt Pro
+- **Price**: 69 kr/month
 - **Checkout endpoint**: `POST /api/stripe/create-checkout`
 - **Webhook endpoint**: `POST /api/stripe/webhook`
 - **Configured secrets**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
