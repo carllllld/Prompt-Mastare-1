@@ -77,7 +77,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle data-testid="text-auth-title">
             {mode === "login" ? "Sign In" : "Create Account"}
@@ -103,6 +103,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       <Input 
                         type="email" 
                         placeholder="you@example.com" 
+                        autoComplete="email"
                         data-testid="input-login-email"
                         {...field} 
                       />
@@ -121,6 +122,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       <Input 
                         type="password" 
                         placeholder="Enter your password" 
+                        autoComplete="current-password"
                         data-testid="input-login-password"
                         {...field} 
                       />
@@ -159,6 +161,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       <Input 
                         type="email" 
                         placeholder="you@example.com" 
+                        autoComplete="email"
                         data-testid="input-register-email"
                         {...field} 
                       />
@@ -177,6 +180,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       <Input 
                         type="password" 
                         placeholder="At least 8 characters" 
+                        autoComplete="new-password"
                         data-testid="input-register-password"
                         {...field} 
                       />
@@ -195,6 +199,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       <Input 
                         type="password" 
                         placeholder="Confirm your password" 
+                        autoComplete="new-password"
                         data-testid="input-register-confirm-password"
                         {...field} 
                       />

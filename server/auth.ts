@@ -42,11 +42,19 @@ export function setupAuth(app: Express) {
 
       // Set session
       req.session.userId = user.id;
-
-      res.status(201).json({
-        id: user.id,
-        email: user.email,
-        subscriptionStatus: user.plan,
+      
+      // Explicitly save session to ensure it persists
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Registration failed" });
+        }
+        
+        res.status(201).json({
+          id: user.id,
+          email: user.email,
+          subscriptionStatus: user.plan,
+        });
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -74,11 +82,19 @@ export function setupAuth(app: Express) {
 
       // Set session
       req.session.userId = user.id;
-
-      res.json({
-        id: user.id,
-        email: user.email,
-        subscriptionStatus: user.plan,
+      
+      // Explicitly save session to ensure it persists
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        
+        res.json({
+          id: user.id,
+          email: user.email,
+          subscriptionStatus: user.plan,
+        });
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
