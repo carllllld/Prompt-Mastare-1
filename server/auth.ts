@@ -23,32 +23,39 @@ const loginSchema = z.object({
 
 // Setup auth routes (session middleware is configured in server/index.ts)
 export function setupAuth(app: Express) {
-  app.set("trust proxy", 1);
-
   // Register new user
   app.post("/auth/register", async (req: Request, res: Response) => {
+    console.log("[Register] Starting registration for:", req.body?.email);
     try {
       const { email, password } = registerSchema.parse(req.body);
+      console.log("[Register] Validation passed");
 
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
+        console.log("[Register] Email already exists:", email);
         return res.status(400).json({ message: "Email already registered" });
       }
+      console.log("[Register] Email available");
 
       // Hash password and create user
       const passwordHash = await bcrypt.hash(password, 12);
+      console.log("[Register] Password hashed");
+      
       const user = await storage.createUser(email, passwordHash);
+      console.log("[Register] User created:", user.id);
 
       // Set session
       req.session.userId = user.id;
+      console.log("[Register] Session userId set, saving session...");
       
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
         if (err) {
-          console.error("Session save error:", err);
+          console.error("[Register] Session save error:", err);
           return res.status(500).json({ message: "Registration failed" });
         }
+        console.log("[Register] Session saved successfully");
         
         res.status(201).json({
           id: user.id,
@@ -56,39 +63,48 @@ export function setupAuth(app: Express) {
           subscriptionStatus: user.plan,
         });
       });
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof z.ZodError) {
+        console.log("[Register] Validation error:", err.errors[0].message);
         return res.status(400).json({ message: err.errors[0].message });
       }
-      console.error("Registration error:", err);
+      console.error("[Register] Error:", err.message || err);
       res.status(500).json({ message: "Registration failed" });
     }
   });
 
   // Login
   app.post("/auth/login", async (req: Request, res: Response) => {
+    console.log("[Login] Starting login for:", req.body?.email);
     try {
       const { email, password } = loginSchema.parse(req.body);
+      console.log("[Login] Validation passed");
 
       const user = await storage.getUserByEmail(email);
       if (!user) {
+        console.log("[Login] User not found:", email);
         return res.status(401).json({ message: "Invalid email or password" });
       }
+      console.log("[Login] User found:", user.id);
 
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
+        console.log("[Login] Invalid password for:", email);
         return res.status(401).json({ message: "Invalid email or password" });
       }
+      console.log("[Login] Password valid");
 
       // Set session
       req.session.userId = user.id;
+      console.log("[Login] Session userId set, saving session...");
       
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
         if (err) {
-          console.error("Session save error:", err);
+          console.error("[Login] Session save error:", err);
           return res.status(500).json({ message: "Login failed" });
         }
+        console.log("[Login] Session saved successfully");
         
         res.json({
           id: user.id,
@@ -96,11 +112,12 @@ export function setupAuth(app: Express) {
           subscriptionStatus: user.plan,
         });
       });
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof z.ZodError) {
+        console.log("[Login] Validation error:", err.errors[0].message);
         return res.status(400).json({ message: err.errors[0].message });
       }
-      console.error("Login error:", err);
+      console.error("[Login] Error:", err.message || err);
       res.status(500).json({ message: "Login failed" });
     }
   });

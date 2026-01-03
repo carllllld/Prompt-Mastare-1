@@ -9,12 +9,13 @@ import { pool, initializeDatabase } from "./db";
 const app = express();
 const httpServer = createServer(app);
 
-// Trust proxy for production (Render, Heroku, etc.)
-if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-}
+// Trust proxy for production (Render, Heroku, etc.) - must be set before session
+app.set("trust proxy", 1);
 
 const PgStore = connectPgSimple(session);
+
+const isProduction = process.env.NODE_ENV === "production";
+console.log(`[Session] Environment: ${process.env.NODE_ENV}, isProduction: ${isProduction}`);
 
 app.use(
   session({
@@ -24,11 +25,12 @@ app.use(
     store: new PgStore({
       pool,
       tableName: "user_sessions",
-      createTableIfMissing: false,
+      createTableIfMissing: true,
+      errorLog: (err) => console.error("[PgStore Error]:", err),
     }),
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60 * 1000,
     },
