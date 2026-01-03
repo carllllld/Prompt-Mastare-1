@@ -18,7 +18,7 @@ const PgStore = connectPgSimple(session);
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "promptforge-secret-key-2024",
+    secret: process.env.SESSION_SECRET || "optiprompt-secret-key-2024",
     resave: false,
     saveUninitialized: true,
     store: new PgStore({
