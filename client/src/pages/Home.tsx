@@ -398,28 +398,32 @@ export default function Home() {
 
         {/* Pricing */}
         <section className="mt-32 mb-20">
-          <h2 className="text-3xl font-bold text-center text-white mb-4">Pricing</h2>
-          <p className="text-center text-white/50 mb-12">Choose the plan that suits you</p>
+          <h2 className="text-3xl font-bold text-center text-white mb-4">Simple, Transparent Pricing</h2>
+          <p className="text-center text-white/50 mb-12">Start free. Upgrade when you need more power.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <Card className="p-8 bg-white/[0.03] border-white/[0.08] backdrop-blur-sm">
-              <h3 className="text-xl font-bold mb-2 text-white">Free</h3>
+              <h3 className="text-xl font-bold mb-1 text-white">Free</h3>
+              <p className="text-sm text-white/50 mb-4">Perfect for trying it out</p>
               <p className="text-4xl font-extrabold mb-6 text-white">0 kr<span className="text-base font-normal text-white/40">/mo</span></p>
               <ul className="space-y-4 text-white/70 mb-8">
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 2 optimizations per day</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 500 characters per prompt</li>
-                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> Prompt history</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Up to 500 characters</li>
+                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> No saved history</li>
+                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> Basic suggestions</li>
               </ul>
-              <Button variant="outline" className="w-full border-white/10 text-white/70 hover:bg-white/5" data-testid="button-free-plan">Current plan</Button>
+              <Button variant="outline" className="w-full border-white/10 text-white/70 hover:bg-white/5" data-testid="button-free-plan">Get started free</Button>
             </Card>
             <Card className="p-8 bg-gradient-to-br from-violet-600/20 to-indigo-600/20 border-violet-500/30 relative overflow-visible glow-primary">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-lg">POPULAR</div>
-              <h3 className="text-xl font-bold mb-2 text-white mt-2">Pro</h3>
-              <p className="text-4xl font-extrabold mb-6 text-white">69 kr<span className="text-base font-normal text-white/40">/mo</span></p>
-              <ul className="space-y-4 text-white/80 mb-8">
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 50 optimizations per day</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 2000 characters per prompt</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Prompt history</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Advanced suggestions</li>
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-lg">BEST VALUE</div>
+              <h3 className="text-xl font-bold mb-1 text-white mt-2">Pro</h3>
+              <p className="text-sm text-violet-300 mb-4">For daily AI users</p>
+              <p className="text-4xl font-extrabold mb-2 text-white">69 kr<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-xs text-white/40 mb-6">Less than 3 kr per day</p>
+              <ul className="space-y-4 text-white/80 mb-6">
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> <span><strong className="text-white">50 optimizations</strong> per day</span></li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> <span><strong className="text-white">2000 characters</strong> - 4x more space</span></li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Full prompt history saved</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Advanced AI suggestions</li>
               </ul>
               <Button 
                 className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-lg shadow-violet-500/25" 
@@ -432,8 +436,9 @@ export default function Home() {
                 ) : (
                   <Crown className="w-4 h-4 mr-2" />
                 )}
-                {isAuthenticated ? "Upgrade now" : "Log in to upgrade"}
+                {isAuthenticated ? "Upgrade to Pro" : "Log in to upgrade"}
               </Button>
+              <p className="text-center text-xs text-white/40 mt-3">Cancel anytime. No commitments.</p>
             </Card>
           </div>
         </section>
