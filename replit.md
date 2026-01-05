@@ -70,19 +70,20 @@ Pre-built integration modules in `server/replit_integrations/`:
 
 ## Usage Limits
 - **Free plan**: 2 optimizations per day, 500 characters per prompt
-- **Pro plan**: 50 optimizations per day, 2000 characters per prompt (69 kr/month)
-- Limits reset automatically at midnight
+- **Basic plan**: 20 optimizations per day, 1000 characters per prompt ($3.99/month)
+- **Pro plan**: 50 optimizations per day, 2000 characters per prompt ($6.99/month)
+- Limits reset automatically at midnight (user's local timezone)
 
 ## Stripe Integration (Configured)
-- **Product**: OptiPrompt Pro
-- **Price**: 69 kr/month
-- **Checkout endpoint**: `POST /api/stripe/create-checkout`
+- **Products**: OptiPrompt Basic, OptiPrompt Pro
+- **Prices**: Basic $3.99/month, Pro $6.99/month
+- **Checkout endpoint**: `POST /api/stripe/create-checkout` (accepts `tier` in body: "basic" or "pro")
 - **Webhook endpoint**: `POST /api/stripe/webhook`
-- **Configured secrets**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+- **Configured secrets**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_BASIC_PRICE_ID`, `STRIPE_PRO_PRICE_ID`
 - **Webhook events handled**:
-  - `checkout.session.completed` - Upgrades user to Pro
+  - `checkout.session.completed` - Upgrades user to Basic or Pro based on targetPlan metadata
   - `customer.subscription.deleted` - Downgrades user to Free
-  - `invoice.payment_failed` - Logs payment failure
+  - `invoice.payment_failed` - Downgrades user to Free
 
 ## Session Storage
 - Sessions are stored in PostgreSQL using `connect-pg-simple`
