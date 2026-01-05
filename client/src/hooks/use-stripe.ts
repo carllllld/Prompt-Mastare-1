@@ -5,11 +5,12 @@ export function useStripeCheckout() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (tier: "basic" | "pro" = "pro") => {
       const res = await fetch("/api/stripe/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({ tier }),
       });
 
       if (res.status === 401) {
@@ -33,11 +34,8 @@ export function useStripeCheckout() {
       if (error.message === "LOGIN_REQUIRED") {
         toast({
           title: "Login required",
-          description: "Please log in to upgrade to Pro.",
+          description: "Please log in to upgrade.",
         });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 1000);
         return;
       }
       toast({
