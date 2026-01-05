@@ -14,7 +14,10 @@ app.set("trust proxy", 1);
 
 const PgStore = connectPgSimple(session);
 
-const isProduction = process.env.NODE_ENV === "production";
+// Detect production by checking for Render or explicit flag (since NODE_ENV may not be set during build)
+const isProduction = process.env.NODE_ENV === "production" || 
+                     process.env.RENDER === "true" || 
+                     !!process.env.RENDER_EXTERNAL_URL;
 console.log(`[Session] Environment: ${process.env.NODE_ENV}, isProduction: ${isProduction}`);
 
 app.use(
