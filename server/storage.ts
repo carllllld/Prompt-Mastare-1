@@ -14,7 +14,7 @@ export interface IStorage {
   getSessionUsage(sessionId: string): Promise<{ promptsUsedToday: number }>;
   incrementSessionPrompts(sessionId: string): Promise<void>;
   // Subscription methods
-  upgradeUserToPro(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
+  upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
   // Optimization history methods
   createOptimization(optimization: InsertOptimization): Promise<void>;
@@ -66,10 +66,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upgradeUserToPro(userId: string, stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
+  async upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
       .set({ 
-        plan: "pro",
+        plan,
         stripeCustomerId,
         stripeSubscriptionId,
       })

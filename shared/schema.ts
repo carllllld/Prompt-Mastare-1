@@ -44,7 +44,7 @@ export const optimizeResponseSchema = z.object({
 });
 
 export const userStatusSchema = z.object({
-  plan: z.enum(["free", "pro"]),
+  plan: z.enum(["free", "basic", "pro"]),
   promptsUsedToday: z.number(),
   promptsRemaining: z.number(),
   dailyLimit: z.number(),
@@ -58,10 +58,19 @@ export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
   free: 2,
+  basic: 20,
   pro: 50,
 } as const;
 
 export const CHARACTER_LIMITS = {
   free: 500,
+  basic: 1000,
   pro: 2000,
 } as const;
+
+export const PLAN_PRICES = {
+  basic: { amount: 399, currency: "usd", display: "$3.99" },
+  pro: { amount: 699, currency: "usd", display: "$6.99" },
+} as const;
+
+export type PlanType = "free" | "basic" | "pro";

@@ -5,12 +5,13 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import OpenAI from "openai";
 import Stripe from "stripe";
-import { PLAN_LIMITS, CHARACTER_LIMITS, type User } from "@shared/schema";
+import { PLAN_LIMITS, CHARACTER_LIMITS, PLAN_PRICES, type User, type PlanType } from "@shared/schema";
 import { setupAuth, requireAuth, requirePro } from "./auth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
-const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
+const STRIPE_BASIC_PRICE_ID = process.env.STRIPE_BASIC_PRICE_ID;
+const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
@@ -111,7 +112,7 @@ export async function registerRoutes(
         });
       }
       
-      const plan = user.plan as "free" | "pro";
+      const plan = user.plan as PlanType;
       const dailyLimit = PLAN_LIMITS[plan];
       
       res.json({
@@ -177,7 +178,7 @@ export async function registerRoutes(
         user = await storage.getUserById(userId);
       }
       
-      const plan = (user?.plan as "free" | "pro") || "free";
+      const plan = (user?.plan as PlanType) || "free";
       const dailyLimit = PLAN_LIMITS[plan];
       
       // Get prompts used today - from user or session
@@ -190,10 +191,16 @@ export async function registerRoutes(
       }
 
       if (promptsUsedToday >= dailyLimit) {
+        let message = "You've reached your daily limit.";
+        if (plan === "free") {
+          message = "You've used all 2 free optimizations today. Upgrade for more!";
+        } else if (plan === "basic") {
+          message = "You've used all 20 Basic optimizations today. Upgrade to Pro for 50/day!";
+        } else {
+          message = "You've reached your daily limit of 50 optimizations.";
+        }
         return res.status(403).json({
-          message: plan === "free" 
-            ? "You've used all 2 free optimizations today. Upgrade to Pro for more!"
-            : "You've reached your daily limit of 50 optimizations.",
+          message,
           limitReached: true,
           plan,
         });
@@ -204,8 +211,14 @@ export async function registerRoutes(
       // Check character limit
       const charLimit = CHARACTER_LIMITS[plan];
       if (prompt.length > charLimit) {
+        let upgradeMsg = "Please shorten your prompt.";
+        if (plan === "free") {
+          upgradeMsg = "Upgrade to Basic for 1000 chars or Pro for 2000!";
+        } else if (plan === "basic") {
+          upgradeMsg = "Upgrade to Pro for 2000 characters!";
+        }
         return res.status(400).json({
-          message: `Your prompt exceeds the ${charLimit} character limit for the ${plan} plan. ${plan === "free" ? "Upgrade to Pro for 2000 characters!" : "Please shorten your prompt."}`,
+          message: `Your prompt exceeds the ${charLimit} character limit for the ${plan} plan. ${upgradeMsg}`,
           limitReached: false,
         });
       }
@@ -357,37 +370,42 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     }
   });
 
-  async function getOrCreatePrice(): Promise<string> {
-    if (STRIPE_PRICE_ID) {
+  async function getOrCreatePrice(tier: "basic" | "pro"): Promise<string> {
+    const existingPriceId = tier === "basic" ? STRIPE_BASIC_PRICE_ID : STRIPE_PRO_PRICE_ID;
+    if (existingPriceId) {
       try {
-        await stripe.prices.retrieve(STRIPE_PRICE_ID);
-        return STRIPE_PRICE_ID;
+        await stripe.prices.retrieve(existingPriceId);
+        return existingPriceId;
       } catch {
       }
     }
 
+    const productName = tier === "basic" ? "OptiPrompt Basic" : "OptiPrompt Pro";
+    const productDesc = tier === "basic" ? "20 optimizations per day, 1000 characters" : "50 optimizations per day, 2000 characters";
+    const priceAmount = PLAN_PRICES[tier].amount;
+
     const products = await stripe.products.list({ limit: 100 });
-    let product = products.data.find(p => p.name === "PromptForge Pro" && p.active);
+    let product = products.data.find(p => p.name === productName && p.active);
 
     if (!product) {
       product = await stripe.products.create({
-        name: "PromptForge Pro",
-        description: "100 optimizations per day",
+        name: productName,
+        description: productDesc,
       });
-      console.log("Created Stripe product:", product.id);
+      console.log(`Created Stripe product ${tier}:`, product.id);
     }
 
     const prices = await stripe.prices.list({ product: product.id, active: true, limit: 10 });
-    let price = prices.data.find(p => p.unit_amount === 999 && p.currency === "usd" && p.recurring?.interval === "month");
+    let price = prices.data.find(p => p.unit_amount === priceAmount && p.currency === "usd" && p.recurring?.interval === "month");
 
     if (!price) {
       price = await stripe.prices.create({
         product: product.id,
-        unit_amount: 999,
+        unit_amount: priceAmount,
         currency: "usd",
         recurring: { interval: "month" },
       });
-      console.log("Created Stripe price:", price.id);
+      console.log(`Created Stripe price ${tier}:`, price.id);
     }
 
     return price.id;
@@ -396,12 +414,17 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
   app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user as User;
+      const targetTier = (req.body?.tier || "pro") as "basic" | "pro";
 
       if (user.plan === "pro") {
         return res.status(400).json({ message: "You already have the Pro plan!" });
       }
+      
+      if (user.plan === "basic" && targetTier === "basic") {
+        return res.status(400).json({ message: "You already have the Basic plan!" });
+      }
 
-      const priceId = await getOrCreatePrice();
+      const priceId = await getOrCreatePrice(targetTier);
 
       const sessionParams: Stripe.Checkout.SessionCreateParams = {
         mode: "subscription",
@@ -416,6 +439,7 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
         cancel_url: `${req.headers.origin || 'http://localhost:5000'}/?canceled=true`,
         metadata: {
           userId: user.id,
+          targetPlan: targetTier,
         },
       };
 
@@ -458,16 +482,18 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
+        const targetPlan = (session.metadata?.targetPlan || "pro") as "basic" | "pro";
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
 
         if (userId) {
-          await storage.upgradeUserToPro(
+          await storage.upgradeUser(
             userId,
+            targetPlan,
             customerId,
             subscriptionId
           );
-          console.log(`User ${userId} upgraded to Pro`);
+          console.log(`User ${userId} upgraded to ${targetPlan}`);
         }
         break;
       }
