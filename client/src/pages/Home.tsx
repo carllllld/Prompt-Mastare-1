@@ -68,7 +68,7 @@ export default function Home() {
     if (params.get("success") === "true") {
       toast({
         title: "Payment successful!",
-        description: "You now have access to the Pro plan. Thank you for your support!",
+        description: "Your plan has been upgraded. Thank you for your support!",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
       queryClient.invalidateQueries({ queryKey: ["/auth/me"] });
@@ -91,16 +91,16 @@ export default function Home() {
     logout();
   };
 
-  const handleUpgrade = () => {
+  const handleUpgrade = (tier: "basic" | "pro" = "pro") => {
     if (!isAuthenticated) {
       toast({
         title: "Login required",
-        description: "Please log in to upgrade to Pro.",
+        description: "Please log in to upgrade.",
       });
       setAuthModalOpen(true);
       return;
     }
-    startCheckout();
+    startCheckout(tier);
   };
 
   const handleSubmit = (data: { prompt: string; type: any }) => {
@@ -230,7 +230,7 @@ export default function Home() {
               <div className="flex items-center gap-3 flex-wrap">
                 <Badge variant={userStatus.plan === "pro" ? "default" : "secondary"} className="gap-1">
                   {userStatus.plan === "pro" && <Crown className="w-3 h-3" />}
-                  {userStatus.plan === "pro" ? "Pro" : "Free"}
+                  {userStatus.plan === "pro" ? "Pro" : userStatus.plan === "basic" ? "Basic" : "Free"}
                 </Badge>
                 <span className="text-sm text-white/60">
                   <span className="font-semibold text-white">{userStatus.promptsRemaining}</span> of {userStatus.dailyLimit} optimizations left
@@ -242,12 +242,12 @@ export default function Home() {
                   </span>
                 )}
               </div>
-              {userStatus.plan === "free" && (
+              {userStatus.plan !== "pro" && (
                 <Button 
                   size="sm" 
-                  className="gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-lg shadow-violet-500/25" 
+                  className="gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 border-0 shadow-lg shadow-violet-500/25" 
                   data-testid="button-upgrade-header"
-                  onClick={handleUpgrade}
+                  onClick={() => handleUpgrade("pro")}
                   disabled={isCheckoutPending}
                 >
                   {isCheckoutPending ? (
@@ -255,17 +255,17 @@ export default function Home() {
                   ) : (
                     <Crown className="w-4 h-4" />
                   )}
-                  Upgrade to Pro
+                  {userStatus.plan === "basic" ? "Upgrade to Pro" : "Upgrade"}
                 </Button>
               )}
             </div>
-            {userStatus.promptsRemaining <= 1 && userStatus.plan === "free" && (
+            {userStatus.promptsRemaining <= 1 && userStatus.plan !== "pro" && (
               <div className="mt-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-amber-200">
                   {userStatus.promptsRemaining === 0 
-                    ? `You've used all your free optimizations today. ${resetTimeLeft ? `Resets in ${resetTimeLeft}.` : ""} Upgrade to Pro for more!`
-                    : "Only 1 optimization left! Upgrade to Pro for more."}
+                    ? `You've used all your optimizations today. ${resetTimeLeft ? `Resets in ${resetTimeLeft}.` : ""} Upgrade for more!`
+                    : "Only 1 optimization left! Upgrade for more."}
                 </p>
               </div>
             )}
@@ -281,9 +281,9 @@ export default function Home() {
                 <p className="text-red-200 font-medium">{limitError}</p>
                 <Button 
                   size="sm" 
-                  className="mt-3 gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0" 
+                  className="mt-3 gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 border-0" 
                   data-testid="button-upgrade-limit"
-                  onClick={handleUpgrade}
+                  onClick={() => handleUpgrade("pro")}
                   disabled={isCheckoutPending}
                 >
                   {isCheckoutPending ? (
@@ -291,7 +291,7 @@ export default function Home() {
                   ) : (
                     <Crown className="w-4 h-4" />
                   )}
-                  Upgrade to Pro
+                  Upgrade
                 </Button>
               </div>
             </div>
@@ -400,35 +400,59 @@ export default function Home() {
         <section className="mt-32 mb-20">
           <h2 className="text-3xl font-bold text-center text-white mb-4">Simple, Transparent Pricing</h2>
           <p className="text-center text-white/50 mb-12">Start free. Upgrade when you need more power.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <Card className="p-8 bg-white/[0.03] border-white/[0.08] backdrop-blur-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <Card className="p-6 bg-white/[0.03] border-white/[0.08] backdrop-blur-sm">
               <h3 className="text-xl font-bold mb-1 text-white">Free</h3>
-              <p className="text-sm text-white/50 mb-4">Perfect for trying it out</p>
-              <p className="text-4xl font-extrabold mb-6 text-white">0 kr<span className="text-base font-normal text-white/40">/mo</span></p>
-              <ul className="space-y-4 text-white/70 mb-8">
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 2 optimizations per day</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Up to 500 characters</li>
-                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> No saved history</li>
-                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4" /> Basic suggestions</li>
+              <p className="text-sm text-white/50 mb-4">Try it out</p>
+              <p className="text-3xl font-extrabold mb-6 text-white">$0<span className="text-base font-normal text-white/40">/mo</span></p>
+              <ul className="space-y-3 text-white/70 mb-8 text-sm">
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> 2 optimizations/day</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> 500 characters</li>
+                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4 flex-shrink-0" /> No history</li>
+                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4 flex-shrink-0" /> Basic suggestions</li>
               </ul>
-              <Button variant="outline" className="w-full border-white/10 text-white/70 hover:bg-white/5" data-testid="button-free-plan">Get started free</Button>
+              <Button variant="outline" className="w-full border-white/10 text-white/70" data-testid="button-free-plan">Get started</Button>
             </Card>
-            <Card className="p-8 bg-gradient-to-br from-violet-600/20 to-indigo-600/20 border-violet-500/30 relative overflow-visible glow-primary">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-lg">BEST VALUE</div>
-              <h3 className="text-xl font-bold mb-1 text-white mt-2">Pro</h3>
-              <p className="text-sm text-violet-300 mb-4">For daily AI users</p>
-              <p className="text-4xl font-extrabold mb-2 text-white">69 kr<span className="text-base font-normal text-white/40">/mo</span></p>
-              <p className="text-xs text-white/40 mb-6">Less than 3 kr per day</p>
-              <ul className="space-y-4 text-white/80 mb-6">
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> <span><strong className="text-white">50 optimizations</strong> per day</span></li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> <span><strong className="text-white">2000 characters</strong> - 4x more space</span></li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Full prompt history saved</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Advanced AI suggestions</li>
+            <Card className="p-6 bg-white/[0.04] border-white/[0.12] backdrop-blur-sm">
+              <h3 className="text-xl font-bold mb-1 text-white">Basic</h3>
+              <p className="text-sm text-white/50 mb-4">For regular users</p>
+              <p className="text-3xl font-extrabold mb-2 text-white">$3.99<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-xs text-white/40 mb-6">About $0.13 per day</p>
+              <ul className="space-y-3 text-white/70 mb-6 text-sm">
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> <span><strong className="text-white">20</strong> optimizations/day</span></li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> <span><strong className="text-white">1000</strong> characters</span></li>
+                <li className="flex items-center gap-3 text-white/30"><AlertCircle className="w-4 h-4 flex-shrink-0" /> No history</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> Basic suggestions</li>
               </ul>
               <Button 
-                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 border-0 shadow-lg shadow-violet-500/25" 
+                variant="outline"
+                className="w-full border-white/20 text-white" 
+                data-testid="button-basic-plan"
+                onClick={() => handleUpgrade("basic")}
+                disabled={isCheckoutPending}
+              >
+                {isCheckoutPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                {isAuthenticated ? "Get Basic" : "Log in to upgrade"}
+              </Button>
+            </Card>
+            <Card className="p-6 bg-gradient-to-br from-violet-600/20 to-indigo-600/20 border-violet-500/30 relative overflow-visible glow-primary">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-violet-500 to-indigo-500 text-white text-xs font-bold rounded-full shadow-lg">BEST VALUE</div>
+              <h3 className="text-xl font-bold mb-1 text-white mt-2">Pro</h3>
+              <p className="text-sm text-violet-300 mb-4">For power users</p>
+              <p className="text-3xl font-extrabold mb-2 text-white">$6.99<span className="text-base font-normal text-white/40">/mo</span></p>
+              <p className="text-xs text-white/40 mb-6">About $0.23 per day</p>
+              <ul className="space-y-3 text-white/80 mb-6 text-sm">
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> <span><strong className="text-white">50</strong> optimizations/day</span></li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> <span><strong className="text-white">2000</strong> characters</span></li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> Full prompt history</li>
+                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400 flex-shrink-0" /> Advanced suggestions</li>
+              </ul>
+              <Button 
+                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 border-0 shadow-lg shadow-violet-500/25" 
                 data-testid="button-pro-plan"
-                onClick={handleUpgrade}
+                onClick={() => handleUpgrade("pro")}
                 disabled={isCheckoutPending}
               >
                 {isCheckoutPending ? (
@@ -436,9 +460,9 @@ export default function Home() {
                 ) : (
                   <Crown className="w-4 h-4 mr-2" />
                 )}
-                {isAuthenticated ? "Upgrade to Pro" : "Log in to upgrade"}
+                {isAuthenticated ? "Get Pro" : "Log in to upgrade"}
               </Button>
-              <p className="text-center text-xs text-white/40 mt-3">Cancel anytime. No commitments.</p>
+              <p className="text-center text-xs text-white/40 mt-3">Cancel anytime</p>
             </Card>
           </div>
         </section>
