@@ -491,15 +491,33 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
         const targetPlan = (session.metadata?.targetPlan || "pro") as "basic" | "pro";
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
+        const customerEmail = session.customer_details?.email || session.customer_email;
 
+        console.log(`[Webhook] checkout.session.completed - userId: ${userId}, email: ${customerEmail}, plan: ${targetPlan}`);
+
+        let upgraded = false;
+
+        // Try to upgrade by userId first
         if (userId) {
-          await storage.upgradeUser(
-            userId,
-            targetPlan,
-            customerId,
-            subscriptionId
-          );
-          console.log(`User ${userId} upgraded to ${targetPlan}`);
+          await storage.upgradeUser(userId, targetPlan, customerId, subscriptionId);
+          console.log(`[Webhook] User ${userId} upgraded to ${targetPlan} via userId`);
+          upgraded = true;
+        }
+
+        // Fallback: upgrade by email if userId didn't work
+        if (!upgraded && customerEmail) {
+          const userByEmail = await storage.getUserByEmail(customerEmail);
+          if (userByEmail) {
+            await storage.upgradeUser(userByEmail.id, targetPlan, customerId, subscriptionId);
+            console.log(`[Webhook] User ${userByEmail.id} upgraded to ${targetPlan} via email: ${customerEmail}`);
+            upgraded = true;
+          } else {
+            console.log(`[Webhook] No user found with email: ${customerEmail}`);
+          }
+        }
+
+        if (!upgraded) {
+          console.error(`[Webhook] FAILED to upgrade - no userId and no matching email. customerId: ${customerId}`);
         }
         break;
       }
