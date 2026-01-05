@@ -10,11 +10,17 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-const isProduction = process.env.NODE_ENV === "production";
+// Use SSL for external databases (Render, etc.) - detect by checking if DATABASE_URL contains common cloud hosts
+const databaseUrl = process.env.DATABASE_URL;
+const needsSSL = databaseUrl.includes('render.com') || 
+                 databaseUrl.includes('neon.tech') || 
+                 databaseUrl.includes('supabase.co') ||
+                 databaseUrl.includes('railway.app') ||
+                 process.env.DATABASE_SSL === 'true';
 
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+  connectionString: databaseUrl,
+  ssl: needsSSL ? { rejectUnauthorized: false } : undefined,
 });
 export const db = drizzle(pool, { schema });
 
