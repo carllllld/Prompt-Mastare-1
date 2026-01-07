@@ -59,22 +59,9 @@ export default function Home() {
   const { data: userStatus, isLoading: statusLoading } = useUserStatus();
   const resetTimeLeft = useCountdown(userStatus?.resetTime);
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
-  const { mutate: startPortal, isPending: isPortalPending } = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/stripe/create-portal");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      window.location.href = data.url;
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Could not open billing portal.",
-        variant: "destructive",
-      });
-    },
-  });
+  const handleManagePlan = () => {
+    window.location.href = "https://billing.stripe.com/p/login/14A3cv72d5Os7vlgck1sQ00";
+  };
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
@@ -200,12 +187,11 @@ export default function Home() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => startPortal()}
-                    disabled={isPortalPending}
+                    onClick={handleManagePlan}
                     className="text-white/70 hover:text-white gap-1.5"
                     data-testid="button-manage-plan"
                   >
-                    {isPortalPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
+                    <User className="w-4 h-4" />
                     <span className="hidden sm:inline">Manage Plan</span>
                   </Button>
                 )}
