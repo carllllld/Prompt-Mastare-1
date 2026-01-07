@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { PromptForm } from "@/components/PromptForm";
 import { ResultSection } from "@/components/ResultSection";
 import { PromptHistory } from "@/components/PromptHistory";
@@ -57,6 +59,22 @@ export default function Home() {
   const { data: userStatus, isLoading: statusLoading } = useUserStatus();
   const resetTimeLeft = useCountdown(userStatus?.resetTime);
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
+  const { mutate: startPortal, isPending: isPortalPending } = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/stripe/create-portal");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Could not open billing portal.",
+        variant: "destructive",
+      });
+    },
+  });
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
@@ -178,6 +196,18 @@ export default function Home() {
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Log out</span>
                 </Button>
+                {userStatus?.stripeCustomerId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startPortal()}
+                    disabled={isPortalPending}
+                    className="text-white/70 hover:text-white gap-1.5"
+                  >
+                    {isPortalPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
+                    <span className="hidden sm:inline">Manage Plan</span>
+                  </Button>
+                )}
               </div>
             ) : (
               <Button
@@ -213,21 +243,21 @@ export default function Home() {
           </p>
 
           {/* Hero Demo Section */}
-          <div className="mt-12 max-w-4xl mx-auto">
+          <div className="mt-12 max-w-4xl mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
               <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
                 <div className="text-xs font-bold text-white/30 uppercase tracking-wider mb-2">Before</div>
                 <div className="text-sm text-white/70 italic">"Write a blog post about coffee."</div>
               </div>
-              <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm relative overflow-hidden group min-h-[140px] flex flex-col">
+              <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
                   <Zap className="w-4 h-4 text-violet-400" />
                 </div>
                 <div className="text-xs font-bold text-violet-400/50 uppercase tracking-wider mb-2">After OptiPrompt</div>
-                <div className="text-sm text-white/90 font-medium overflow-y-auto max-h-[180px] pr-2 custom-scrollbar">
-                  "### Role: Barista & Coffee Expert<br/>
-                  #### Goal: Write an engaging 500-word blog post about the history of espresso...<br/>
-                  #### Instructions: Focus on the Italian origins, the roasting process, and brewing techniques. Include sensory details and tips for home brewing."
+                <div className="text-sm text-white/90 font-medium overflow-y-auto max-h-[200px] pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  <div className="whitespace-pre-wrap leading-relaxed">
+                    {"### Role: Barista & Coffee Expert\n\n#### Goal: Write an engaging 500-word blog post about the history of espresso...\n\n#### Instructions:\n1. Focus on the Italian origins.\n2. Explain the roasting process.\n3. Detail brewing techniques.\n4. Include sensory details and tips for home brewing.\n5. Optimize for coffee enthusiasts."}
+                  </div>
                 </div>
               </div>
             </div>
