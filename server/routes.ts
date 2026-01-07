@@ -481,21 +481,26 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
         return res.status(400).json({ message: "No active subscription found." });
       }
 
+      const portalConfigId = process.env.STRIPE_PORTAL_CONFIG_ID;
+      console.log(`[Portal] Creating portal session for customer: ${user.stripeCustomerId}`);
+      console.log(`[Portal] Using configuration ID: ${portalConfigId || 'default (none set)'}`);
+
       const portalParams: any = {
         customer: user.stripeCustomerId,
         return_url: `${req.headers.origin || 'http://localhost:5000'}/`,
       };
 
       // Use custom portal configuration if set
-      if (process.env.STRIPE_PORTAL_CONFIG_ID) {
-        portalParams.configuration = process.env.STRIPE_PORTAL_CONFIG_ID;
+      if (portalConfigId) {
+        portalParams.configuration = portalConfigId;
       }
 
       const session = await stripe.billingPortal.sessions.create(portalParams);
+      console.log(`[Portal] Session created successfully: ${session.url}`);
 
       res.json({ url: session.url });
-    } catch (err) {
-      console.error("Stripe portal error:", err);
+    } catch (err: any) {
+      console.error("Stripe portal error:", err?.message || err);
       res.status(500).json({ message: "Could not open billing portal." });
     }
   });
