@@ -203,6 +203,7 @@ export default function Home() {
                     onClick={() => startPortal()}
                     disabled={isPortalPending}
                     className="text-white/70 hover:text-white gap-1.5"
+                    data-testid="button-manage-plan"
                   >
                     {isPortalPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <User className="w-4 h-4" />}
                     <span className="hidden sm:inline">Manage Plan</span>

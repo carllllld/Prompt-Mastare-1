@@ -122,6 +122,7 @@ export async function registerRoutes(
         dailyLimit,
         isLoggedIn: true,
         resetTime,
+        stripeCustomerId: user.stripeCustomerId,
       });
     } catch (err) {
       console.error("Error getting user status:", err);
