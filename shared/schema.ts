@@ -50,6 +50,7 @@ export const userStatusSchema = z.object({
   dailyLimit: z.number(),
   isLoggedIn: z.boolean(),
   resetTime: z.string(), // ISO timestamp of next reset
+  stripeCustomerId: z.string().optional().nullable(),
 });
 
 export type OptimizeRequest = z.infer<typeof optimizeRequestSchema>;
