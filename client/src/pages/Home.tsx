@@ -211,9 +211,30 @@ export default function Home() {
           <p className="mt-4 text-white/50 max-w-xl mx-auto text-base">
             Stop guessing. Get better responses from ChatGPT, Claude, and other AI models with optimized prompts.
           </p>
+
+          {/* Hero Demo Section */}
+          <div className="mt-12 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
+                <div className="text-xs font-bold text-white/30 uppercase tracking-wider mb-2">Before</div>
+                <div className="text-sm text-white/70 italic">"Write a blog post about coffee."</div>
+              </div>
+              <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                  <Zap className="w-4 h-4 text-violet-400" />
+                </div>
+                <div className="text-xs font-bold text-violet-400/50 uppercase tracking-wider mb-2">After OptiPrompt</div>
+                <div className="text-sm text-white/90 font-medium">
+                  "### Role: Barista & Coffee Expert<br/>
+                  #### Goal: Write an engaging 500-word blog post about the history of espresso...<br/>
+                  #### Instructions: Focus on the Italian origins..."
+                </div>
+              </div>
+            </div>
+          </div>
           
           {/* Language support badge */}
-          <div className="mt-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
+          <div className="mt-10 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
             <Globe className="w-3.5 h-3.5" />
             <span>Write prompts in any language</span>
           </div>
