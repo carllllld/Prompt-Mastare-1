@@ -423,7 +423,7 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
         currency: "usd",
         recurring: { interval: "month" },
       });
-      console.log(`Created Stripe price ${tier}:`, price.id);
+      console.log(`Created Stripe subscription price for ${tier}:`, price.id);
     }
 
     return price.id;
