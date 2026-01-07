@@ -481,10 +481,17 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
         return res.status(400).json({ message: "No active subscription found." });
       }
 
-      const session = await stripe.billingPortal.sessions.create({
+      const portalParams: any = {
         customer: user.stripeCustomerId,
         return_url: `${req.headers.origin || 'http://localhost:5000'}/`,
-      });
+      };
+
+      // Use custom portal configuration if set
+      if (process.env.STRIPE_PORTAL_CONFIG_ID) {
+        portalParams.configuration = process.env.STRIPE_PORTAL_CONFIG_ID;
+      }
+
+      const session = await stripe.billingPortal.sessions.create(portalParams);
 
       res.json({ url: session.url });
     } catch (err) {
