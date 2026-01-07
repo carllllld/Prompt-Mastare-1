@@ -473,6 +473,25 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     }
   });
 
+  app.post("/api/stripe/create-portal", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      if (!user.stripeCustomerId) {
+        return res.status(400).json({ message: "No active subscription found." });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.headers.origin || 'http://localhost:5000'}/`,
+      });
+
+      res.json({ url: session.url });
+    } catch (err) {
+      console.error("Stripe portal error:", err);
+      res.status(500).json({ message: "Could not open billing portal." });
+    }
+  });
+
   app.post("/api/stripe/webhook", async (req, res) => {
     const sig = req.headers["stripe-signature"] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
