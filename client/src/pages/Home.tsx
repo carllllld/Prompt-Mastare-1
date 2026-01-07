@@ -219,15 +219,15 @@ export default function Home() {
                 <div className="text-xs font-bold text-white/30 uppercase tracking-wider mb-2">Before</div>
                 <div className="text-sm text-white/70 italic">"Write a blog post about coffee."</div>
               </div>
-              <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm relative overflow-hidden group">
+              <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm relative overflow-hidden group min-h-[140px] flex flex-col">
                 <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
                   <Zap className="w-4 h-4 text-violet-400" />
                 </div>
                 <div className="text-xs font-bold text-violet-400/50 uppercase tracking-wider mb-2">After OptiPrompt</div>
-                <div className="text-sm text-white/90 font-medium">
+                <div className="text-sm text-white/90 font-medium overflow-y-auto max-h-[180px] pr-2 custom-scrollbar">
                   "### Role: Barista & Coffee Expert<br/>
                   #### Goal: Write an engaging 500-word blog post about the history of espresso...<br/>
-                  #### Instructions: Focus on the Italian origins..."
+                  #### Instructions: Focus on the Italian origins, the roasting process, and brewing techniques. Include sensory details and tips for home brewing."
                 </div>
               </div>
             </div>
