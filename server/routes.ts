@@ -474,6 +474,19 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     }
   });
 
+  // Debug endpoint to check Stripe configuration
+  app.get("/api/stripe/debug-config", async (req, res) => {
+    const config = {
+      hasStripeSecretKey: !!process.env.STRIPE_SECRET_KEY,
+      hasPortalConfigId: !!process.env.STRIPE_PORTAL_CONFIG_ID,
+      portalConfigIdPreview: process.env.STRIPE_PORTAL_CONFIG_ID 
+        ? `${process.env.STRIPE_PORTAL_CONFIG_ID.substring(0, 8)}...` 
+        : null,
+      hasWebhookSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+    };
+    res.json(config);
+  });
+
   app.post("/api/stripe/create-portal", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user as User;
