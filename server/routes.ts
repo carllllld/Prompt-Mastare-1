@@ -601,5 +601,595 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
     res.json({ received: true });
   });
 
+  // ============ TEAM COLLABORATION ROUTES ============
+
+  // Get user's teams
+  app.get("/api/teams", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teams = await storage.getUserTeams(user.id);
+      res.json(teams);
+    } catch (err) {
+      console.error("Error getting teams:", err);
+      res.status(500).json({ message: "Could not fetch teams" });
+    }
+  });
+
+  // Create a new team
+  app.post("/api/teams", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { name } = req.body;
+      
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ message: "Team name is required" });
+      }
+
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const existing = await storage.getTeamBySlug(slug);
+      if (existing) {
+        return res.status(400).json({ message: "A team with this name already exists" });
+      }
+
+      const team = await storage.createTeam({
+        name: name.trim(),
+        slug,
+        ownerId: user.id,
+      });
+
+      await storage.addTeamMember({
+        teamId: team.id,
+        userId: user.id,
+        role: "owner",
+      });
+
+      res.status(201).json(team);
+    } catch (err) {
+      console.error("Error creating team:", err);
+      res.status(500).json({ message: "Could not create team" });
+    }
+  });
+
+  // Get a specific team
+  app.get("/api/teams/:teamId", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: "Invalid team ID" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      const team = await storage.getTeamById(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      res.json(team);
+    } catch (err) {
+      console.error("Error getting team:", err);
+      res.status(500).json({ message: "Could not fetch team" });
+    }
+  });
+
+  // Get team members
+  app.get("/api/teams/:teamId/members", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: "Invalid team ID" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      const members = await storage.getTeamMembers(teamId);
+      const safeMembers = members.map(m => ({
+        id: m.id,
+        teamId: m.teamId,
+        userId: m.userId,
+        role: m.role,
+        joinedAt: m.joinedAt,
+        user: {
+          id: m.user.id,
+          email: m.user.email,
+          displayName: m.user.displayName,
+          avatarColor: m.user.avatarColor,
+        }
+      }));
+
+      res.json(safeMembers);
+    } catch (err) {
+      console.error("Error getting team members:", err);
+      res.status(500).json({ message: "Could not fetch team members" });
+    }
+  });
+
+  // Invite a member to team
+  app.post("/api/teams/:teamId/invite", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.teamId);
+      const { email } = req.body;
+
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: "Invalid team ID" });
+      }
+
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+        return res.status(403).json({ message: "Only admins and owners can invite members" });
+      }
+
+      const invite = await storage.createTeamInvite(teamId, email.trim().toLowerCase(), user.id);
+      res.status(201).json({ token: invite.token, expiresAt: invite.expiresAt });
+    } catch (err) {
+      console.error("Error creating invite:", err);
+      res.status(500).json({ message: "Could not create invite" });
+    }
+  });
+
+  // Accept team invite
+  app.post("/api/teams/join/:token", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { token } = req.params;
+
+      const invite = await storage.getInviteByToken(token);
+      if (!invite) {
+        return res.status(404).json({ message: "Invite not found or expired" });
+      }
+
+      if (new Date() > invite.expiresAt) {
+        await storage.deleteInvite(invite.id);
+        return res.status(400).json({ message: "This invite has expired" });
+      }
+
+      const existing = await storage.getUserTeamMembership(user.id, invite.teamId);
+      if (existing) {
+        await storage.deleteInvite(invite.id);
+        return res.status(400).json({ message: "You are already a member of this team" });
+      }
+
+      await storage.addTeamMember({
+        teamId: invite.teamId,
+        userId: user.id,
+        role: "member",
+      });
+
+      await storage.deleteInvite(invite.id);
+
+      const team = await storage.getTeamById(invite.teamId);
+      res.json(team);
+    } catch (err) {
+      console.error("Error accepting invite:", err);
+      res.status(500).json({ message: "Could not join team" });
+    }
+  });
+
+  // ============ SHARED PROMPTS ROUTES ============
+
+  // Get team's shared prompts
+  app.get("/api/teams/:teamId/prompts", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: "Invalid team ID" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      const prompts = await storage.getTeamSharedPrompts(teamId);
+      res.json(prompts);
+    } catch (err) {
+      console.error("Error getting shared prompts:", err);
+      res.status(500).json({ message: "Could not fetch prompts" });
+    }
+  });
+
+  // Create a shared prompt
+  app.post("/api/teams/:teamId/prompts", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.teamId);
+      const { title, content, category } = req.body;
+
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: "Invalid team ID" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      if (!title || !content) {
+        return res.status(400).json({ message: "Title and content are required" });
+      }
+
+      const prompt = await storage.createSharedPrompt({
+        teamId,
+        creatorId: user.id,
+        title: title.trim(),
+        content: content.trim(),
+        category: category || "General",
+        status: "draft",
+      });
+
+      res.status(201).json(prompt);
+    } catch (err) {
+      console.error("Error creating shared prompt:", err);
+      res.status(500).json({ message: "Could not create prompt" });
+    }
+  });
+
+  // Get a specific shared prompt
+  app.get("/api/prompts/:promptId", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      res.json(prompt);
+    } catch (err) {
+      console.error("Error getting prompt:", err);
+      res.status(500).json({ message: "Could not fetch prompt" });
+    }
+  });
+
+  // Update a shared prompt
+  app.patch("/api/prompts/:promptId", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+      const { title, content, category, optimizedContent, status } = req.body;
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      if (prompt.isLocked && prompt.lockedBy !== user.id) {
+        return res.status(423).json({ message: "This prompt is being edited by someone else" });
+      }
+
+      const updated = await storage.updateSharedPrompt(promptId, {
+        ...(title && { title }),
+        ...(content && { content }),
+        ...(category && { category }),
+        ...(optimizedContent !== undefined && { optimizedContent }),
+        ...(status && { status }),
+      });
+
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating prompt:", err);
+      res.status(500).json({ message: "Could not update prompt" });
+    }
+  });
+
+  // Lock a prompt for editing
+  app.post("/api/prompts/:promptId/lock", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      if (prompt.isLocked && prompt.lockedBy !== user.id) {
+        const lockAge = prompt.lockedAt ? Date.now() - new Date(prompt.lockedAt).getTime() : 0;
+        if (lockAge < 5 * 60 * 1000) {
+          return res.status(423).json({ message: "This prompt is being edited by someone else" });
+        }
+      }
+
+      const locked = await storage.lockPrompt(promptId, user.id);
+      res.json(locked);
+    } catch (err) {
+      console.error("Error locking prompt:", err);
+      res.status(500).json({ message: "Could not lock prompt" });
+    }
+  });
+
+  // Unlock a prompt
+  app.post("/api/prompts/:promptId/unlock", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      if (prompt.lockedBy !== user.id) {
+        const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+        if (!membership || (membership.role !== "owner" && membership.role !== "admin")) {
+          return res.status(403).json({ message: "Only the lock holder or admins can unlock" });
+        }
+      }
+
+      const unlocked = await storage.unlockPrompt(promptId);
+      res.json(unlocked);
+    } catch (err) {
+      console.error("Error unlocking prompt:", err);
+      res.status(500).json({ message: "Could not unlock prompt" });
+    }
+  });
+
+  // Delete a shared prompt
+  app.delete("/api/prompts/:promptId", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      if (prompt.creatorId !== user.id && membership.role !== "owner" && membership.role !== "admin") {
+        return res.status(403).json({ message: "Only the creator or admins can delete" });
+      }
+
+      await storage.deleteSharedPrompt(promptId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting prompt:", err);
+      res.status(500).json({ message: "Could not delete prompt" });
+    }
+  });
+
+  // ============ COMMENTS ROUTES ============
+
+  // Get comments for a prompt
+  app.get("/api/prompts/:promptId/comments", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      const comments = await storage.getPromptComments(promptId);
+      const safeComments = comments.map(c => ({
+        id: c.id,
+        promptId: c.promptId,
+        userId: c.userId,
+        content: c.content,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        user: {
+          id: c.user.id,
+          email: c.user.email,
+          displayName: c.user.displayName,
+          avatarColor: c.user.avatarColor,
+        }
+      }));
+
+      res.json(safeComments);
+    } catch (err) {
+      console.error("Error getting comments:", err);
+      res.status(500).json({ message: "Could not fetch comments" });
+    }
+  });
+
+  // Add a comment
+  app.post("/api/prompts/:promptId/comments", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+      const { content } = req.body;
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      if (!content || typeof content !== "string" || content.trim().length === 0) {
+        return res.status(400).json({ message: "Comment content is required" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      const comment = await storage.createComment({
+        promptId,
+        userId: user.id,
+        content: content.trim(),
+      });
+
+      res.status(201).json(comment);
+    } catch (err) {
+      console.error("Error creating comment:", err);
+      res.status(500).json({ message: "Could not create comment" });
+    }
+  });
+
+  // Delete a comment
+  app.delete("/api/comments/:commentId", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const commentId = parseInt(req.params.commentId);
+
+      if (isNaN(commentId)) {
+        return res.status(400).json({ message: "Invalid comment ID" });
+      }
+
+      await storage.deleteComment(commentId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+      res.status(500).json({ message: "Could not delete comment" });
+    }
+  });
+
+  // ============ PRESENCE ROUTES ============
+
+  // Update presence
+  app.post("/api/presence", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { teamId, promptId, cursorPosition } = req.body;
+
+      await storage.updatePresence(
+        user.id,
+        teamId || null,
+        promptId || null,
+        cursorPosition
+      );
+
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error updating presence:", err);
+      res.status(500).json({ message: "Could not update presence" });
+    }
+  });
+
+  // Get prompt presence
+  app.get("/api/prompts/:promptId/presence", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.promptId);
+
+      if (isNaN(promptId)) {
+        return res.status(400).json({ message: "Invalid prompt ID" });
+      }
+
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+
+      const presence = await storage.getPromptPresence(promptId);
+      const safePresence = presence.map(p => ({
+        userId: p.userId,
+        lastSeen: p.lastSeen,
+        cursorPosition: p.cursorPosition,
+        user: {
+          id: p.user.id,
+          email: p.user.email,
+          displayName: p.user.displayName,
+          avatarColor: p.user.avatarColor,
+        }
+      }));
+
+      res.json(safePresence);
+    } catch (err) {
+      console.error("Error getting presence:", err);
+      res.status(500).json({ message: "Could not fetch presence" });
+    }
+  });
+
+  // User profile update
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { displayName, avatarColor } = req.body;
+
+      const updated = await storage.updateUserProfile(user.id, {
+        ...(displayName !== undefined && { displayName }),
+        ...(avatarColor !== undefined && { avatarColor }),
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({
+        id: updated.id,
+        email: updated.email,
+        displayName: updated.displayName,
+        avatarColor: updated.avatarColor,
+      });
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      res.status(500).json({ message: "Could not update profile" });
+    }
+  });
+
   return httpServer;
 }
