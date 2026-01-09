@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { pool, initializeDatabase } from "./db";
+import { setupWebSocket } from "./websocket";
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,6 +97,9 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize database tables
   await initializeDatabase();
+  
+  // Setup WebSocket server for real-time collaboration
+  setupWebSocket(httpServer);
   
   await registerRoutes(httpServer, app);
 
