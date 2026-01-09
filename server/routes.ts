@@ -722,7 +722,18 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
 
   app.delete("/api/b2b/knowledge/:id", requireAuth, requireCompanyMember, requireAdmin, async (req, res) => {
     try {
-      await storage.deleteKnowledgeBlock(parseInt(req.params.id));
+      const user = (req as any).user as User;
+      const blockId = parseInt(req.params.id);
+      
+      // Verify the knowledge block belongs to user's company (include inactive for validation)
+      const blocks = await storage.getKnowledgeBlocksByCompanyId(user.companyId!, true);
+      const block = blocks.find(b => b.id === blockId);
+      
+      if (!block) {
+        return res.status(404).json({ message: "Knowledge block not found" });
+      }
+      
+      await storage.deleteKnowledgeBlock(blockId);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Could not delete knowledge block" });

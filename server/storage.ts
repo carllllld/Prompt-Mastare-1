@@ -42,7 +42,7 @@ export interface IStorage {
   
   // Knowledge Block methods
   createKnowledgeBlock(block: InsertKnowledgeBlock): Promise<KnowledgeBlock>;
-  getKnowledgeBlocksByCompanyId(companyId: number): Promise<KnowledgeBlock[]>;
+  getKnowledgeBlocksByCompanyId(companyId: number, includeInactive?: boolean): Promise<KnowledgeBlock[]>;
   updateKnowledgeBlock(blockId: number, data: Partial<InsertKnowledgeBlock>): Promise<KnowledgeBlock | null>;
   deleteKnowledgeBlock(blockId: number): Promise<void>;
   
@@ -237,7 +237,13 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getKnowledgeBlocksByCompanyId(companyId: number): Promise<KnowledgeBlock[]> {
+  async getKnowledgeBlocksByCompanyId(companyId: number, includeInactive: boolean = false): Promise<KnowledgeBlock[]> {
+    if (includeInactive) {
+      return await db.select()
+        .from(knowledgeBlocks)
+        .where(eq(knowledgeBlocks.companyId, companyId))
+        .orderBy(desc(knowledgeBlocks.createdAt));
+    }
     return await db.select()
       .from(knowledgeBlocks)
       .where(and(eq(knowledgeBlocks.companyId, companyId), eq(knowledgeBlocks.isActive, true)))
