@@ -4,8 +4,7 @@ import { z } from "zod";
 
 export * from "./models/auth";
 
-import { users, companies, policies, knowledgeBlocks, supportCases } from "./models/auth";
-export { companies, policies, knowledgeBlocks, supportCases };
+import { users } from "./models/auth";
 
 export const optimizations = pgTable("optimizations", {
   id: serial("id").primaryKey(),
