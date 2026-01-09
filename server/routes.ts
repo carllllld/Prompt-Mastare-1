@@ -681,9 +681,19 @@ suggestions should be 5 advanced, specific additions (10-20 words) to further en
       
       if (!policy) return res.status(404).json({ message: "Policy not found" });
       
-      const updated = await storage.updatePolicy(policy.id, req.body);
+      // Only allow updating specific policy fields
+      const allowedFields = ['tone', 'addressForm', 'emojiUsage', 'forbiddenActions', 'forbiddenLanguage', 'maxResponseLength', 'mandatoryClosing', 'responseStructure'];
+      const updateData: Record<string, any> = {};
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) {
+          updateData[field] = req.body[field];
+        }
+      }
+      
+      const updated = await storage.updatePolicy(policy.id, updateData);
       res.json(updated);
     } catch (err) {
+      console.error("[Policy Update Error]", err);
       res.status(500).json({ message: "Could not update policy" });
     }
   });
