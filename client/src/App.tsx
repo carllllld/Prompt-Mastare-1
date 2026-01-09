@@ -4,12 +4,18 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
+import Teams from "@/pages/Teams";
+import PromptEditor from "@/pages/PromptEditor";
+import JoinTeam from "@/pages/JoinTeam";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/teams" component={Teams} />
+      <Route path="/teams/join/:token" component={JoinTeam} />
+      <Route path="/prompts/:id" component={PromptEditor} />
       <Route component={NotFound} />
     </Switch>
   );

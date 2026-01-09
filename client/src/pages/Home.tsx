@@ -10,7 +10,7 @@ import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
-import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User, Clock, Headphones } from "lucide-react";
+import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User, Clock, Users } from "lucide-react";
 import { Link } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -197,15 +197,15 @@ export default function Home() {
                   <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Log out</span>
                 </Button>
-                <Link href="/support">
+                <Link href="/teams">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="text-white/70 hover:text-white gap-1.5"
-                    data-testid="button-support-dashboard"
+                    data-testid="button-teams"
                   >
-                    <Headphones className="w-4 h-4" />
-                    <span className="hidden sm:inline">B2B Support</span>
+                    <Users className="w-4 h-4" />
+                    <span className="hidden sm:inline">Teams</span>
                   </Button>
                 </Link>
                 {userStatus?.stripeCustomerId && (
