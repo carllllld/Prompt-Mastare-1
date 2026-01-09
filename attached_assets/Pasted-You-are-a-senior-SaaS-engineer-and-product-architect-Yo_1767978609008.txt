@@ -1,0 +1,153 @@
+You are a senior SaaS engineer and product architect.
+
+Your task is to extend my existing web app (OptiPrompt) into a B2B-ready customer support AI system.
+
+IMPORTANT CONTEXT:
+- This is NOT a generic “prompt improver”.
+- This is a B2B system for customer support teams.
+- The product must standardize AI usage across a company.
+- Agents should never write prompts.
+- Companies must have isolated policies (multi-tenant).
+- The system must handle ALL types of support cases safely.
+
+GOAL:
+Build a system where:
+Human agent → structured input → policy + decision logic → AI → safe, non-generic response OR escalation.
+
+---
+
+### CORE ARCHITECTURE (MUST FOLLOW)
+
+#### 1. Multi-tenant company system
+Each company must have:
+- Its own account
+- Its own policy configuration
+- Its own knowledge blocks
+- Its own users
+
+No data or policies are shared between companies.
+
+---
+
+#### 2. Company Policy Wizard (admin-only)
+Create a setup flow where a company admin defines:
+
+A) Tone & Style
+- Tone (professional / friendly / concise)
+- Address form (du / ni)
+- Emoji usage (never / limited / allowed)
+
+B) Rules
+- Forbidden actions (e.g. never promise compensation)
+- Forbidden language (custom list)
+- Max response length (word count)
+- Mandatory closing sentence
+
+C) Structure
+- Ordered response sections:
+  1. Greeting
+  2. Acknowledge issue
+  3. Resolution or next step
+  4. Closing
+
+Store this as a Policy object linked to company_id.
+
+---
+
+#### 3. Universal Support Case Flow (for ALL cases)
+
+Every incoming case must follow these internal steps:
+
+STEP 1 – CLASSIFICATION (internal, invisible to user)
+- Identify issue category (free text)
+- Determine confidence level (high / low)
+- Determine risk level (low / medium / high)
+- Check if information is missing (yes / no)
+- Decide if AI is allowed to answer (yes / no)
+
+STEP 2 – DECISION
+Based on classification:
+- If risk = high → ESCALATE
+- If confidence = low → ASK FOR MORE INFO
+- If missing info = yes → ASK FOR MORE INFO
+- If allowed = yes → PROCEED TO RESPONSE
+
+STEP 3 – RESPONSE
+Only now generate the customer-facing response using:
+- Company policy
+- Case context
+- Allowed knowledge only
+
+The AI must NEVER hallucinate facts.
+If no knowledge is available, it must ask clarifying questions.
+
+---
+
+#### 4. Agent-facing UI (simple)
+Agents should only see:
+- Customer message (text input)
+- Optional dropdown: “case type” (can be empty)
+- Submit button
+
+Agents NEVER write prompts.
+
+---
+
+#### 5. Output Handling
+The system must:
+- Either generate a full response
+- OR generate a clarification request
+- OR flag for escalation (no response generated)
+
+Show clear status:
+- “Ready to send”
+- “Needs more information”
+- “Escalated – human required”
+
+---
+
+#### 6. Prompting Strategy (critical)
+Use a hidden master system prompt with strict instructions:
+
+- Always classify first
+- Never answer before decision
+- Never invent policy or facts
+- Never break company rules
+- Prefer safe clarification over guessing
+
+The master prompt must inject:
+- Company policy
+- Decision rules
+- Knowledge blocks (if any)
+- Current case input
+
+---
+
+### TECHNICAL REQUIREMENTS
+- Keep implementation simple and readable
+- No overengineering
+- MVP-level persistence (DB or local store)
+- Clean separation between:
+  - Company
+  - Policy
+  - Case
+  - Output
+
+---
+
+### DELIVERABLES
+1. Backend logic for policy-based decision flow
+2. Data models for company, policy, case
+3. Master prompt template used for AI calls
+4. Basic UI components to test the flow
+5. Clear comments explaining architecture
+
+---
+
+### CONSTRAINTS
+- Do not build a chatbot
+- Do not expose prompts to agents
+- Do not assume AI can solve everything
+- Safety > completeness
+
+Build this directly into my existing app structure and explain any assumptions you make.
