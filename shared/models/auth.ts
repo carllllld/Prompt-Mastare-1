@@ -18,7 +18,6 @@ export const users = pgTable("users", {
   lastResetDate: date("last_reset_date").defaultNow(),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
-  displayName: varchar("display_name"),
   avatarColor: varchar("avatar_color"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
