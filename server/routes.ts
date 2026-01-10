@@ -114,8 +114,7 @@ export async function registerRoutes(
       res.status(500).json({ message: "Could not fetch user status" });
     }
   });
-
-  app.post(api.optimize.path, rateLimit, async (req, res) => {
+app.post(api.optimize.path, rateLimit, async (req, res) => {
     try {
       const userId = req.session?.userId;
       const sessionId = req.sessionID;
@@ -140,8 +139,8 @@ export async function registerRoutes(
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      const freeSystemPrompt = `Du är en expertmäklare. Skriv en säljande Hemnet-annons på svenska baserat på fakta. Svara i JSON med fälten: improvedPrompt, improvements (array), suggestions (array).`;
-      const proSystemPrompt = `Du är Sveriges främsta mäklare. Skriv en exklusiv, emotionell Hemnet-annons med rubrik, ingress och interiörbeskrivning. Svara i JSON med fälten: improvedPrompt, improvements, suggestions.`;
+      const freeSystemPrompt = `Du är en expertmäklare. Skriv en säljande Hemnet-annons på svenska baserat på fakta. Svara i JSON med fälten: improvedPrompt (sträng), improvements (array), suggestions (array).`;
+      const proSystemPrompt = `Du är Sveriges främsta mäklare. Skriv en exklusiv, emotionell Hemnet-annons med rubrik, ingress och interiörbeskrivning. Svara i JSON med fälten: improvedPrompt (sträng), improvements (array), suggestions (array).`;
 
       const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
 
@@ -154,28 +153,43 @@ export async function registerRoutes(
         response_format: { type: "json_object" },
       });
 
+      // --- HÄR ÄR FIXEN ---
       const result = JSON.parse(completion.choices[0].message.content || "{}");
+
+      // Vi tvingar improvedPrompt att bli en textsträng oavsett vad AI:n skickar
+      let finalText = "";
+      if (typeof result.improvedPrompt === 'object' && result.improvedPrompt !== null) {
+        // Om AI:n skickade ett objekt, slå ihop innehållet till en snygg text
+        finalText = Object.values(result.improvedPrompt).join('\n\n');
+      } else {
+        // Annars använd det som en vanlig sträng
+        finalText = String(result.improvedPrompt || "Kunde inte generera text.");
+      }
+
+      const responseData = {
+        originalPrompt: prompt,
+        improvedPrompt: finalText,
+        improvements: Array.isArray(result.improvements) ? result.improvements : [],
+        suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
+      };
 
       if (userId && user) {
         await storage.incrementUserPrompts(userId);
-        storage.createOptimization({
+        await storage.createOptimization({
           userId,
-          originalPrompt: prompt,
-          improvedPrompt: result.improvedPrompt,
+          originalPrompt: responseData.originalPrompt,
+          improvedPrompt: responseData.improvedPrompt,
           category: type,
-          improvements: result.improvements || [],
-          suggestions: result.suggestions || [],
-        }).catch(e => console.error("History error:", e));
+          improvements: responseData.improvements,
+          suggestions: responseData.suggestions,
+        });
       } else {
         await storage.incrementSessionPrompts(sessionId);
       }
 
-      res.json({
-        originalPrompt: prompt,
-        improvedPrompt: result.improvedPrompt,
-        improvements: result.improvements || [],
-        suggestions: result.suggestions || [],
-      });
+      res.json(responseData);
+      // --- SLUT PÅ FIX ---
+
     } catch (err) {
       console.error("Genereringsfel:", err);
       res.status(500).json({ message: "Kunde inte generera text." });
