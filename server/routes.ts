@@ -114,7 +114,7 @@ export async function registerRoutes(
       res.status(500).json({ message: "Could not fetch user status" });
     }
   });
-app.post(api.optimize.path, rateLimit, async (req, res) => {
+  app.post(api.optimize.path, rateLimit, async (req, res) => {
     try {
       const userId = req.session?.userId;
       const sessionId = req.sessionID;
@@ -139,30 +139,52 @@ app.post(api.optimize.path, rateLimit, async (req, res) => {
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      const freeSystemPrompt = `Du är en expertmäklare. Skriv en säljande Hemnet-annons på svenska baserat på fakta. Svara i JSON med fälten: improvedPrompt (sträng), improvements (array), suggestions (array).`;
-      const proSystemPrompt = `Du är Sveriges främsta mäklare. Skriv en exklusiv, emotionell Hemnet-annons med rubrik, ingress och interiörbeskrivning. Svara i JSON med fälten: improvedPrompt (sträng), improvements (array), suggestions (array).`;
+      // --- DEN EXTREMT BRA MASTER-PROMPTEN (Gemensam för alla) ---
+      const masterSystemPrompt = `Du är Sveriges främsta fastighetsmäklare, känd för att skriva texter som säljer slut på objekt vid första visningen. 
+      Din ton är sofistikerad, förtroendeingivande och målande, men aldrig klyschig.
 
-      const systemPrompt = plan === "pro" ? proSystemPrompt : freeSystemPrompt;
+      DIN STILGUIDE:
+      - Skapa en omedelbar längtan. 
+      - Fokusera på livsstil och unika detaljer (ljusinsläpp, materialval, atmosfär).
+      - Använd ett rikt men precist språk (t.ex. 'vilsam färgsättning', 'socialt kök', 'generösa fönsterpartier').
+      - Strukturera texten med Rubrik, Ingress och en sammanhängande Interiörbeskrivning.
+
+      JURIDISK REGLER:
+      - Hitta aldrig på fakta. Om det inte står 'balkong' i faktan, nämn inte balkong.
+      - Var tydlig med areans källa.`;
+
+      // --- JURIDISK VARNING (Endast för PRO) ---
+      const proLegalInstruction = `
+      EXTRA UPPGIFT (PRO-FUNKTION):
+      Du ska även agera juridisk granskare enligt FMI:s krav. 
+      Kontrollera om indatan saknar obligatoriska uppgifter (Pantsättning, andelstal, årsavgift, indirekt nettoskuldsättning för BRF | Fastighetsbeteckning, taxeringsvärde, driftskostnader för Villa).
+      Lista dessa saknade uppgifter som korta varningar i fältet 'suggestions'.`;
+
+      const finalSystemPrompt = `${masterSystemPrompt}
+      ${plan === "pro" ? proLegalInstruction : "I fältet 'suggestions' ska du istället ge 3 korta tips på hur mäklaren kan styla just detta objekt inför fotografering."}
+
+      Svara strikt i JSON:
+      {
+        "improvedPrompt": "Din säljande text här",
+        "improvements": ["lista på språkliga förbättringar"],
+        "suggestions": ["lista på juridiska varningar (om PRO) eller stylingtips (om FREE)"]
+      }`;
 
       const completion = await openai.chat.completions.create({
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: finalSystemPrompt },
           { role: "user", content: `Kategori: ${type}\nFakta: ${prompt}` },
         ],
         model: "gpt-4o-mini",
         response_format: { type: "json_object" },
       });
 
-      // --- HÄR ÄR FIXEN ---
       const result = JSON.parse(completion.choices[0].message.content || "{}");
 
-      // Vi tvingar improvedPrompt att bli en textsträng oavsett vad AI:n skickar
       let finalText = "";
       if (typeof result.improvedPrompt === 'object' && result.improvedPrompt !== null) {
-        // Om AI:n skickade ett objekt, slå ihop innehållet till en snygg text
         finalText = Object.values(result.improvedPrompt).join('\n\n');
       } else {
-        // Annars använd det som en vanlig sträng
         finalText = String(result.improvedPrompt || "Kunde inte generera text.");
       }
 
@@ -188,7 +210,6 @@ app.post(api.optimize.path, rateLimit, async (req, res) => {
       }
 
       res.json(responseData);
-      // --- SLUT PÅ FIX ---
 
     } catch (err) {
       console.error("Genereringsfel:", err);
