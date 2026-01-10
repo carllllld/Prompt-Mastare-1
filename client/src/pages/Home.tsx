@@ -191,25 +191,6 @@ export default function Home() {
           <p className="text-xl md:text-2xl text-white/70 max-w-2xl mx-auto leading-relaxed">
             Skapa proffsiga objektbeskrivningar för Hemnet på 30 sekunder. Utan att det låter som en robot.
           </p>
-
-          {/* Mäklar-Demo */}
-          <div className="mt-12 max-w-4xl mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              <div className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.06] backdrop-blur-sm">
-                <div className="text-xs font-bold text-white/30 uppercase tracking-wider mb-2">Dina stödanteckningar</div>
-                <div className="text-sm text-white/70 italic">"3:a på Vasagatan, sekelskifte, 3.2m takhöjd, fungerande kakelugn, nyslipade golv, stabil brf, låg avgift."</div>
-              </div>
-              <div className="p-5 rounded-xl bg-violet-500/10 border border-violet-500/20 backdrop-blur-sm relative overflow-hidden group">
-                <div className="text-xs font-bold text-violet-400/50 uppercase tracking-wider mb-2">Färdig Hemnet-text</div>
-                <div className="text-sm text-white/90 font-medium">
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    {"Välkommen till denna magnifika sekelskiftespärla på eftertraktade Vasagatan. Här möts tidstypisk charm och moderna bekvämligheter i en perfekt symbios...\n\n• Generös takhöjd om 3,2 meter\n• Fungerande kakelugn\n• Skuldfri och stabil förening"}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">

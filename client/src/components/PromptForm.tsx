@@ -1,156 +1,81 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Sparkles, Loader2, Home, ListChecks, MapPin, Wand2 } from "lucide-react";
-import { type OptimizeRequest, CHARACTER_LIMITS } from "@shared/schema";
-import { useUserStatus } from "@/hooks/use-user-status";
-import { motion } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import { Sparkles, Building2, Home as HouseIcon } from "lucide-react";
 
 interface PromptFormProps {
-  onSubmit: (data: OptimizeRequest) => void;
+  onSubmit: (data: { prompt: string; type: "apartment" | "villa" }) => void;
   isPending: boolean;
-  disabled?: boolean;
+  disabled: boolean;
   clearOnSuccess?: boolean;
 }
 
-const tonlages = [
-  { id: "Elegant", label: "Exklusivt & Elegant" },
-  { id: "Modern", label: "Modernt & Avskalat" },
-  { id: "Familjärt", label: "Varmt & Familjärt" },
-  { id: "Säljigt", label: "Säljigt & Kraftfullt" },
-] as const;
+export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
+  const [objectType, setObjectType] = useState<"apartment" | "villa">("apartment");
+  const [formData, setFormData] = useState({
+    address: "",
+    area: "",
+    rooms: "",
+    fee: "",
+    netDebt: "",
+    association: "",
+    plotArea: "",
+    renovations: "",
+    highlights: ""
+  });
 
-export function PromptForm({ onSubmit, isPending, disabled = false, clearOnSuccess = false }: PromptFormProps) {
-  // Nya fält för mäklardata
-  const [address, setAddress] = useState("");
-  const [highlights, setHighlights] = useState("");
-  const [areaInfo, setAreaInfo] = useState("");
-  const [ton, setTon] = useState<string>("Elegant");
-
-  const wasSubmitting = useRef(false);
-  const { data: userStatus } = useUserStatus();
-  const plan = userStatus?.plan || "free";
-  const charLimit = CHARACTER_LIMITS[plan as keyof typeof CHARACTER_LIMITS];
-
-  // Slå ihop all info till en "super-prompt" för backend
-  const combinedPrompt = `ADRESS: ${address}\nHÖJDPUNKTER: ${highlights}\nOMRÅDE/FÖRENING: ${areaInfo}\nÖNSKAT TONLÄGE: ${ton}`;
-  const isOverLimit = combinedPrompt.length > charLimit;
-
-  useEffect(() => {
-    if (wasSubmitting.current && !isPending && clearOnSuccess) {
-      setAddress("");
-      setHighlights("");
-      setAreaInfo("");
-    }
-    wasSubmitting.current = isPending;
-  }, [isPending, clearOnSuccess]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!address.trim() || !highlights.trim() || isPending) return;
-
-    // Vi skickar den sammansatta texten som "prompt"
-    onSubmit({ prompt: combinedPrompt, type: "Marketing" });
+  const handleGenerate = () => {
+    const structuredPrompt = `
+      OBJEKTSTYP: ${objectType === "apartment" ? "Bostadsrätt" : "Villa"}
+      ADRESS: ${formData.address}
+      YTA: ${formData.area} kvm, RUM: ${formData.rooms}
+      ${objectType === "apartment" ? `FÖRENING: ${formData.association}\nAVGIFT: ${formData.fee}\nNETTOSKULD: ${formData.netDebt}` : `TOMTAREAL: ${formData.plotArea}\nDRIFTSKOSTNAD: ${formData.fee}\nTAXERINGSVÄRDE: ${formData.netDebt}`}
+      SKICK/RENOVERINGAR: ${formData.renovations}
+      MERVÄRDEN: ${formData.highlights}
+    `;
+    onSubmit({ prompt: structuredPrompt, type: objectType });
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white/[0.03] backdrop-blur-md rounded-2xl border border-white/[0.08] p-6 md:p-8 shadow-2xl"
-    >
-      <form onSubmit={handleSubmit} className="space-y-6">
-
-        {/* Adress & Typ */}
-        <div className="space-y-2">
-          <Label className="text-white/70 flex items-center gap-2">
-            <Home className="w-4 h-4" /> Bostadstyp & Adress
-          </Label>
-          <Input 
-            placeholder="t.ex. 3:a på Vasagatan 12, vindsvåning"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="bg-white/[0.03] border-white/10 text-white h-12"
-          />
+    <Card className="p-6 bg-white/[0.02] border-white/[0.06] backdrop-blur-md shadow-2xl">
+      <div className="space-y-8">
+        <div className="flex p-1 bg-white/[0.04] rounded-lg w-full max-w-[320px] mx-auto">
+          <button onClick={() => setObjectType("apartment")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all ${objectType === "apartment" ? "bg-violet-600 text-white" : "text-white/40"}`}>
+            <Building2 className="w-4 h-4" /> Lägenhet
+          </button>
+          <button onClick={() => setObjectType("villa")} className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all ${objectType === "villa" ? "bg-violet-600 text-white" : "text-white/40"}`}>
+            <HouseIcon className="w-4 h-4" /> Villa
+          </button>
         </div>
-
-        {/* Höjdpunkter */}
-        <div className="space-y-2">
-          <Label className="text-white/70 flex items-center gap-2">
-            <ListChecks className="w-4 h-4" /> Höjdpunkter & Detaljer
-          </Label>
-          <Textarea
-            placeholder="t.ex. Sekelskifte, 3.2m takhöjd, kakelugn, nyslipade golv, solig balkong..."
-            value={highlights}
-            onChange={(e) => setHighlights(e.target.value)}
-            className="min-h-[100px] bg-white/[0.03] border-white/10 text-white"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400/80 px-1">Objektsdata</h3>
+            <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder="Adress" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
+            <div className="grid grid-cols-2 gap-4">
+              <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder="Boarea" value={formData.area} onChange={(e) => setFormData({...formData, area: e.target.value})} />
+              <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder="Antal rum" value={formData.rooms} onChange={(e) => setFormData({...formData, rooms: e.target.value})} />
+            </div>
+            {objectType === "villa" && <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder="Tomtareal" value={formData.plotArea} onChange={(e) => setFormData({...formData, plotArea: e.target.value})} />}
+          </div>
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-400/80 px-1">Ekonomi & Juridik</h3>
+            <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder={objectType === "apartment" ? "Månadsavgift" : "Driftskostnad"} value={formData.fee} onChange={(e) => setFormData({...formData, fee: e.target.value})} />
+            <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder={objectType === "apartment" ? "Indirekt nettoskuldsättning" : "Taxeringsvärde"} value={formData.netDebt} onChange={(e) => setFormData({...formData, netDebt: e.target.value})} />
+            {objectType === "apartment" && <Input className="bg-white/[0.03] border-white/[0.1] h-12" placeholder="BRF-namn" value={formData.association} onChange={(e) => setFormData({...formData, association: e.target.value})} />}
+          </div>
+          <div className="col-span-full space-y-4 pt-4 border-t border-white/[0.06]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Textarea className="bg-white/[0.03] border-white/[0.1] min-h-[120px] resize-none" placeholder="Renoveringar och skick" value={formData.renovations} onChange={(e) => setFormData({...formData, renovations: e.target.value})} />
+              <Textarea className="bg-white/[0.03] border-white/[0.1] min-h-[120px] resize-none" placeholder="Säljande attribut (balkongläge, utsikt etc)" value={formData.highlights} onChange={(e) => setFormData({...formData, highlights: e.target.value})} />
+            </div>
+          </div>
         </div>
-
-        {/* Område */}
-        <div className="space-y-2">
-          <Label className="text-white/70 flex items-center gap-2">
-            <MapPin className="w-4 h-4" /> Område & Förening
-          </Label>
-          <Input 
-            placeholder="t.ex. Stabil brf med låg belåning. Nära parker och kommunikationer."
-            value={areaInfo}
-            onChange={(e) => setAreaInfo(e.target.value)}
-            className="bg-white/[0.03] border-white/10 text-white h-12"
-          />
-        </div>
-
-        {/* Tonläge */}
-        <div className="space-y-2">
-          <Label className="text-white/70 flex items-center gap-2">
-            <Wand2 className="w-4 h-4" /> Önskat Tonläge
-          </Label>
-          <Select value={ton} onValueChange={setTon}>
-            <SelectTrigger className="bg-white/[0.03] border-white/10 text-white h-12">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-[#1a1a2e] border-white/10">
-              {tonlages.map((t) => (
-                <SelectItem key={t.id} value={t.id} className="text-white">
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="pt-4">
-          <Button
-            type="submit"
-            disabled={!address.trim() || !highlights.trim() || isPending || disabled || isOverLimit}
-            className="w-full h-14 text-lg font-bold bg-gradient-to-r from-violet-600 to-indigo-600 hover:scale-[1.02] transition-transform shadow-lg shadow-violet-500/20"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Skapar beskrivning...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-5 w-5" />
-                Generera Hemnet-text
-              </>
-            )}
-          </Button>
-          <p className="text-center text-xs text-white/30 mt-4">
-            Genom att klicka genererar du en professionell objektsbeskrivning baserad på din fakta.
-          </p>
-        </div>
-      </form>
-    </motion.div>
+        <Button className="w-full h-14 bg-violet-600 hover:bg-violet-700 text-white font-bold rounded-xl shadow-lg" onClick={handleGenerate} disabled={isPending || disabled}>
+          {isPending ? "Analyserar enligt FMI-standard..." : "Generera Objektbeskrivning"}
+        </Button>
+      </div>
+    </Card>
   );
 }
