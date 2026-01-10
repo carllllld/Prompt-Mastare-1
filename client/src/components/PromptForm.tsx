@@ -1,11 +1,8 @@
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { insertOptimizationSchema } from "@shared/schema";
-import { Form, FormControl,FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, FileText } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -14,7 +11,6 @@ interface PromptFormProps {
   onSubmit: (data: { prompt: string; type: "apartment" | "house" }) => void;
   isPending: boolean;
   disabled?: boolean;
-  clearOnSuccess?: boolean;
 }
 
 export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
@@ -28,111 +24,83 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
     },
   });
 
-  const handleSubmit = (values: any) => {
-    // Vi kombinerar fälten till en snygg prompt för AI:n
+  const onLocalSubmit = (values: any) => {
     const combinedPrompt = `
       Typ: ${propertyType === "apartment" ? "Lägenhet" : "Villa"}
       Adress: ${values.address}
       Storlek: ${values.size}
-      Egenskaper/Anteckningar: ${values.features}
+      Egenskaper: ${values.features}
     `;
     onSubmit({ prompt: combinedPrompt, type: propertyType });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
-        {/* Typ av bostad - Toggle */}
-        <div className="flex justify-center p-1 bg-slate-100 rounded-xl w-fit mx-auto border border-slate-200">
+      <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-6">
+        {/* Toggle */}
+        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
           <button
             type="button"
             onClick={() => setPropertyType("apartment")}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all",
-              propertyType === "apartment" 
-                ? "bg-white text-indigo-600 shadow-sm" 
-                : "text-slate-500 hover:text-slate-700"
+              "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all",
+              propertyType === "apartment" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"
             )}
           >
-            <Building2 className="w-4 h-4" />
-            Lägenhet
+            <Building2 className="w-4 h-4" /> Lägenhet
           </button>
           <button
             type="button"
             onClick={() => setPropertyType("house")}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all",
-              propertyType === "house" 
-                ? "bg-white text-indigo-600 shadow-sm" 
-                : "text-slate-500 hover:text-slate-700"
+              "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all",
+              propertyType === "house" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500"
             )}
           >
-            <Home className="w-4 h-4" />
-            Villa / Radhus
+            <Home className="w-4 h-4" /> Villa
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Adress */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="address"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-slate-400" /> Adress
-                </FormLabel>
+                <FormLabel className="text-slate-700 font-bold">Adress</HelpingLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="t.ex. Vasagatan 12" 
-                    {...field} 
-                    className="bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 h-11"
-                  />
+                  <Input {...field} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white" placeholder="Gatunamn 12" />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
-
-          {/* Storlek */}
           <FormField
             control={form.control}
             name="size"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
-                  <Maximize className="w-4 h-4 text-slate-400" /> Antal rum & kvm
-                </FormLabel>
+                <FormLabel className="text-slate-700 font-bold">Storlek</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="t.ex. 3 rok, 78 kvm" 
-                    {...field} 
-                    className="bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 h-11"
-                  />
+                  <Input {...field} className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white" placeholder="3 rok, 75 kvm" />
                 </FormControl>
-                <FormMessage />
               </FormItem>
             )}
           />
         </div>
 
-        {/* Egenskaper */}
         <FormField
           control={form.control}
           name="features"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-slate-700 font-medium flex items-center gap-2">
-                <FileText className="w-4 h-4 text-slate-400" /> Beskriv bostaden
-              </FormLabel>
+              <FormLabel className="text-slate-700 font-bold">Information om bostaden</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Skriv in dina stödanteckningar här... (t.ex. nyrenoverat kök, öppen spis, söderbalkong, stabil förening)"
-                  className="min-h-[150px] bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 resize-none p-4 leading-relaxed"
-                  {...field}
+                <Textarea 
+                  {...field} 
+                  className="bg-slate-50 border-slate-200 text-slate-900 focus:bg-white min-h-[120px]" 
+                  placeholder="Berätta om balkong, renoveringar, förening..." 
                 />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -140,19 +108,9 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
         <Button
           type="submit"
           disabled={isPending || disabled}
-          className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg rounded-xl transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+          className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-lg shadow-lg"
         >
-          {isPending ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Skriver objektbeskrivning...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5" />
-              Generera proffsig annonstext
-            </>
-          )}
+          {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : "Skapa annonstext"}
         </Button>
       </form>
     </Form>
