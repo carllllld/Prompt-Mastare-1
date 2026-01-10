@@ -57,29 +57,29 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans">
       {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b bg-white border-slate-200 sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-1.5 rounded-lg">
-              <HomeIcon className="w-5 h-5 text-white" />
+            <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
+              <HomeIcon className="w-5 h-5" />
             </div>
             <span className="font-bold text-lg tracking-tight text-slate-900">OptiPrompt</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-slate-900">
             {authLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
             ) : isAuthenticated ? (
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium text-slate-600 hidden sm:block">{user?.email}</span>
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-slate-900">
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-600 hover:text-indigo-600">
                   <LogOut className="w-4 h-4 mr-2" /> Logga ut
                 </Button>
               </div>
             ) : (
-              <Button variant="default" size="sm" onClick={handleLogin} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6">
+              <Button onClick={handleLogin} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6">
                 Logga in
               </Button>
             )}
@@ -88,36 +88,33 @@ export default function Home() {
       </nav>
 
       <main className="flex-grow">
-        {/* Hero Section */}
-        <section className="py-20 bg-white border-b">
+        <section className="py-20 bg-slate-50 border-b border-slate-200">
           <div className="max-w-4xl mx-auto px-6 text-center">
-            <Badge variant="outline" className="mb-6 border-indigo-100 bg-indigo-50 text-indigo-600 px-4 py-1 rounded-full">
+            <Badge variant="outline" className="mb-6 border-indigo-200 bg-indigo-50 text-indigo-700 px-4 py-1 rounded-full">
               För professionella fastighetsmäklare
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight mb-6">
+            <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6">
               Sälj bostaden med <span className="text-indigo-600">rätt ord.</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Skapa engagerande objektbeskrivningar på sekunder. Mata in din fakta, låt vår AI sköta formuleringarna.
+            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
+              Skapa engagerande objektbeskrivningar på sekunder.
             </p>
           </div>
         </section>
 
-        {/* Form Section */}
-        <section className="max-w-3xl mx-auto px-6 -mt-10 pb-20">
-          <Card className="p-2 shadow-xl border-none bg-white rounded-2xl">
-            <div className="bg-white rounded-xl p-4 sm:p-6">
+        <section className="max-w-3xl mx-auto px-6 -mt-12 pb-20 relative z-10">
+          <Card className="p-6 shadow-2xl border border-slate-200 bg-white rounded-2xl">
               {userStatus && (
-                <div className="mb-6 flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-sm font-medium text-slate-600">
+                <div className="mb-8 flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-sm font-bold">
                       {userStatus.promptsRemaining} av {userStatus.dailyLimit} texter kvar idag
                     </span>
                   </div>
                   {userStatus.plan !== "pro" && (
-                    <button onClick={() => handleUpgrade("pro")} className="text-xs font-bold text-indigo-600 hover:underline">
-                      Uppgradera för mer
+                    <button onClick={() => handleUpgrade("pro")} className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+                      Uppgradera
                     </button>
                   )}
                 </div>
@@ -127,9 +124,7 @@ export default function Home() {
                 onSubmit={handleSubmit} 
                 isPending={isPending} 
                 disabled={userStatus?.promptsRemaining === 0}
-                clearOnSuccess={true}
               />
-            </div>
           </Card>
 
           {result && (
@@ -138,78 +133,10 @@ export default function Home() {
             </div>
           )}
         </section>
-
-        {/* Features */}
-        <section className="py-24 max-w-5xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="space-y-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold">Mäklarkvalitet</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">Vår AI är tränad på tusentals framgångsrika svenska bostadsannonser för att hitta rätt tonläge.</p>
-            </div>
-            <div className="space-y-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <Zap className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold">Blixtsnabbt</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">Spara upp till 2 timmar per objekt. Fokusera på kunderna istället för att leta efter adjektiv.</p>
-            </div>
-            <div className="space-y-4">
-              <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
-                <PenTool className="w-5 h-5" />
-              </div>
-              <h3 className="text-lg font-bold">Enkelt att använda</h3>
-              <p className="text-slate-500 text-sm leading-relaxed">Ingen krånglig "prompting". Fyll bara i faktan så sköter OptiPrompt resten.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing */}
-        <section className="py-24 bg-slate-100/50 border-y border-slate-200">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-3xl font-bold mb-16">Enkla priser för alla behov</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-              {/* Free Plan */}
-              <Card className="p-10 border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow text-left flex flex-col">
-                <h3 className="text-slate-500 font-medium uppercase tracking-wider text-xs mb-2">För nystartade</h3>
-                <div className="text-3xl font-bold mb-6">Gratis</div>
-                <ul className="space-y-4 mb-8 flex-grow">
-                  <li className="flex items-center gap-3 text-sm text-slate-600"><Check className="w-4 h-4 text-emerald-500" /> 2 texter per dag</li>
-                  <li className="flex items-center gap-3 text-sm text-slate-600"><Check className="w-4 h-4 text-emerald-500" /> Standard AI-modell</li>
-                </ul>
-                <Button variant="outline" className="w-full border-slate-200 rounded-full">Nuvarande plan</Button>
-              </Card>
-
-              {/* Pro Plan */}
-              <Card className="p-10 border-indigo-600 bg-white shadow-lg relative text-left flex flex-col ring-1 ring-indigo-600">
-                <div className="absolute -top-4 right-8 bg-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">Rekommenderas</div>
-                <h3 className="text-indigo-600 font-medium uppercase tracking-wider text-xs mb-2">För proffsen</h3>
-                <div className="text-3xl font-bold mb-1">499 kr</div>
-                <div className="text-slate-400 text-sm mb-6">per månad / exkl. moms</div>
-                <ul className="space-y-4 mb-8 flex-grow">
-                  <li className="flex items-center gap-3 text-sm text-slate-700 font-medium"><Check className="w-4 h-4 text-indigo-600" /> 50 texter per dag</li>
-                  <li className="flex items-center gap-3 text-sm text-slate-700 font-medium"><Check className="w-4 h-4 text-indigo-600" /> GPT-4o (Högsta kvalitet)</li>
-                  <li className="flex items-center gap-3 text-sm text-slate-700 font-medium"><Check className="w-4 h-4 text-indigo-600" /> Prioriterad support</li>
-                </ul>
-                <Button onClick={() => handleUpgrade("pro")} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md shadow-indigo-200">Uppgradera nu</Button>
-              </Card>
-            </div>
-          </div>
-        </section>
       </main>
 
-      <footer className="bg-white py-12 border-t">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2 opacity-50">
-            <HomeIcon className="w-4 h-4" />
-            <span className="font-bold text-sm">OptiPrompt Mäklare</span>
-          </div>
-          <p className="text-slate-400 text-xs">
-            &copy; {new Date().getFullYear()} OptiPrompt. Allt innehåll genereras med ansvarsfull AI.
-          </p>
-        </div>
+      <footer className="bg-slate-50 py-12 border-t border-slate-200 text-center">
+        <p className="text-slate-400 text-xs">&copy; {new Date().getFullYear()} OptiPrompt Mäklare.</p>
       </footer>
 
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
