@@ -9,11 +9,10 @@ import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
-import { Zap, Loader2, HomeIcon, PenTool, Sparkles, LogOut, Check } from "lucide-react";
+import { Zap, Loader2, HomeIcon, LogOut, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,17 +24,6 @@ export default function Home() {
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-
-  const handleLogin = () => setAuthModalOpen(true);
-  const handleLogout = () => logout();
-
-  const handleUpgrade = (tier: "basic" | "pro" = "pro") => {
-    if (!isAuthenticated) {
-      setAuthModalOpen(true);
-      return;
-    }
-    startCheckout(tier);
-  };
 
   const handleSubmit = (data: { prompt: string; type: any }) => {
     mutate(data, {
@@ -57,29 +45,26 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans">
-      {/* Navigation */}
-      <nav className="border-b bg-white border-slate-200 sticky top-0 z-50">
+    <div className="min-h-screen !bg-white !text-black flex flex-col font-sans">
+      {/* Nav */}
+      <nav className="border-b border-slate-200 !bg-white sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
               <HomeIcon className="w-5 h-5" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-slate-900">OptiPrompt</span>
+            <span className="font-bold text-lg text-black">OptiPrompt</span>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-900">
+          <div className="flex items-center gap-4">
             {authLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
             ) : isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-slate-600 hidden sm:block">{user?.email}</span>
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-600 hover:text-indigo-600">
-                  <LogOut className="w-4 h-4 mr-2" /> Logga ut
-                </Button>
-              </div>
+              <Button variant="ghost" size="sm" onClick={() => logout()} className="text-slate-600">
+                <LogOut className="w-4 h-4 mr-2" /> Logga ut
+              </Button>
             ) : (
-              <Button onClick={handleLogin} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6">
+              <Button onClick={() => setAuthModalOpen(true)} className="bg-indigo-600 text-white rounded-full">
                 Logga in
               </Button>
             )}
@@ -87,44 +72,39 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="flex-grow">
-        <section className="py-20 bg-slate-50 border-b border-slate-200">
+      <main className="flex-grow !bg-slate-50">
+        <section className="py-16 !bg-white border-b border-slate-200">
           <div className="max-w-4xl mx-auto px-6 text-center">
-            <Badge variant="outline" className="mb-6 border-indigo-200 bg-indigo-50 text-indigo-700 px-4 py-1 rounded-full">
-              För professionella fastighetsmäklare
+            <Badge className="mb-4 bg-indigo-50 text-indigo-700 border-indigo-100 uppercase tracking-widest text-[10px]">
+              Professional Edition
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-6">
-              Sälj bostaden med <span className="text-indigo-600">rätt ord.</span>
+            <h1 className="text-4xl md:text-5xl font-black text-black mb-4">
+              Sälj med <span className="text-indigo-600">rätt ord.</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
-              Skapa engagerande objektbeskrivningar på sekunder.
-            </p>
+            <p className="text-slate-500 text-lg">Skapa proffsiga bostadsannonser på sekunder.</p>
           </div>
         </section>
 
-        <section className="max-w-3xl mx-auto px-6 -mt-12 pb-20 relative z-10">
-          <Card className="p-6 shadow-2xl border border-slate-200 bg-white rounded-2xl">
-              {userStatus && (
-                <div className="mb-8 flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <div className="flex items-center gap-2 text-slate-700">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-sm font-bold">
-                      {userStatus.promptsRemaining} av {userStatus.dailyLimit} texter kvar idag
-                    </span>
-                  </div>
-                  {userStatus.plan !== "pro" && (
-                    <button onClick={() => handleUpgrade("pro")} className="text-xs font-bold text-indigo-600 uppercase tracking-wider">
-                      Uppgradera
-                    </button>
-                  )}
-                </div>
-              )}
+        <section className="max-w-3xl mx-auto px-6 -mt-10 pb-20">
+          <Card className="p-8 shadow-xl border border-slate-200 !bg-white rounded-2xl">
+            {userStatus && (
+              <div className="mb-8 flex items-center justify-between !bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <span className="text-sm font-bold text-slate-700">
+                  {userStatus.promptsRemaining} av {userStatus.dailyLimit} texter kvar
+                </span>
+                {userStatus.plan !== "pro" && (
+                  <button onClick={() => startCheckout("pro")} className="text-xs font-black text-indigo-600 uppercase">
+                    Uppgradera
+                  </button>
+                )}
+              </div>
+            )}
 
-              <PromptForm 
-                onSubmit={handleSubmit} 
-                isPending={isPending} 
-                disabled={userStatus?.promptsRemaining === 0}
-              />
+            <PromptForm 
+              onSubmit={handleSubmit} 
+              isPending={isPending} 
+              disabled={userStatus?.promptsRemaining === 0}
+            />
           </Card>
 
           {result && (
@@ -134,10 +114,6 @@ export default function Home() {
           )}
         </section>
       </main>
-
-      <footer className="bg-slate-50 py-12 border-t border-slate-200 text-center">
-        <p className="text-slate-400 text-xs">&copy; {new Date().getFullYear()} OptiPrompt Mäklare.</p>
-      </footer>
 
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
