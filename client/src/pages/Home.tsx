@@ -3,15 +3,13 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { PromptForm } from "@/components/PromptForm";
 import { ResultSection } from "@/components/ResultSection";
-import { PromptHistory } from "@/components/PromptHistory";
 import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
-import { Zap, Crown, AlertCircle, Loader2, Globe, LogIn, LogOut, User, Clock, Users, HomeIcon, PenTool, Sparkles } from "lucide-react";
-import { Link } from "wouter";
+import { Zap, Loader2, HomeIcon, PenTool, Sparkles, LogOut } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,25 +28,16 @@ function useCountdown(resetTime: string | undefined) {
       const reset = new Date(resetTime);
       const diff = reset.getTime() - now.getTime();
 
-      if (diff <= 0) {
-        return "Återställs nu";
-      }
+      if (diff <= 0) return "Återställs nu";
 
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-      if (hours > 0) {
-        return `${hours}t ${minutes}m`;
-      }
-      return `${minutes}m`;
+      return hours > 0 ? `${hours}t ${minutes}m` : `${minutes}m`;
     };
 
     setTimeLeft(calculateTimeLeft());
-
-    const interval = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 60000);
-
+    const interval = setInterval(() => setTimeLeft(calculateTimeLeft()), 60000);
     return () => clearInterval(interval);
   }, [resetTime]);
 
@@ -57,29 +46,11 @@ function useCountdown(resetTime: string | undefined) {
 
 export default function Home() {
   const { mutate, isPending } = useOptimize();
-  const { data: userStatus, isLoading: statusLoading } = useUserStatus();
-  const resetTimeLeft = useCountdown(userStatus?.resetTime);
-  const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
-  const { mutate: startPortal, isPending: isPortalPending } = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/stripe/create-portal");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      window.location.href = data.url;
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Ett fel uppstod",
-        description: error.message || "Kunde inte öppna faktureringsportalen.",
-        variant: "destructive",
-      });
-    },
-  });
+  const { data: userStatus } = useUserStatus();
+  const { mutate: startCheckout } = useStripeCheckout();
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
-  const [limitError, setLimitError] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
@@ -91,13 +62,6 @@ export default function Home() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
       queryClient.invalidateQueries({ queryKey: ["/auth/me"] });
-      window.history.replaceState({}, "", "/");
-    } else if (params.get("canceled") === "true") {
-      toast({
-        title: "Betalning avbruten",
-        description: "Du avbröt betalningen. Prova igen när du är redo.",
-        variant: "destructive",
-      });
       window.history.replaceState({}, "", "/");
     }
   }, [toast]);
@@ -115,26 +79,20 @@ export default function Home() {
   };
 
   const handleSubmit = (data: { prompt: string; type: any }) => {
-    setLimitError(null);
     mutate(data, {
       onSuccess: (data) => {
         setResult(data);
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/history"] });
         setTimeout(() => {
           document.getElementById("results")?.scrollIntoView({ behavior: "smooth", block: "start" });
         }, 100);
       },
       onError: (error: any) => {
-        if (error?.limitReached) {
-          setLimitError(error.message);
-        } else {
-          toast({
-            title: "Kunde inte generera text",
-            description: error?.message || "Något gick fel. Försök igen.",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "Kunde inte generera text",
+          description: error?.message || "Något gick fel. Försök igen.",
+          variant: "destructive",
+        });
       },
     });
   };
@@ -142,7 +100,7 @@ export default function Home() {
   const isLimitReached = userStatus && userStatus.promptsRemaining <= 0;
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white">
+    <div className="min-h-screen bg-[#030303] text-white flex flex-col">
       {/* Header / Hero */}
       <header className="relative overflow-hidden border-b border-white/[0.06]">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -191,9 +149,10 @@ export default function Home() {
           <p className="text-xl md:text-2xl text-white/70 max-w-2xl mx-auto leading-relaxed">
             Skapa proffsiga objektbeskrivningar för Hemnet på 30 sekunder. Utan att det låter som en robot.
           </p>
+        </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-12 flex-grow">
         {/* Statusbar */}
         {userStatus && (
           <div className="mb-8 p-4 bg-white/[0.03] rounded-xl border border-white/[0.06] flex items-center justify-between">
@@ -228,29 +187,29 @@ export default function Home() {
           </div>
         )}
 
-        {/* Hur det fungerar */}
+        {/* Informationstext och Steg */}
         <section className="mt-24 space-y-12">
           <h2 className="text-3xl font-bold text-center">Tre steg till en färdig annons</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="space-y-4 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
               <div className="w-12 h-12 rounded-xl bg-violet-500/20 mx-auto flex items-center justify-center text-violet-300 font-bold">1</div>
-              <h3 className="font-semibold">Mata in fakta</h3>
-              <p className="text-sm text-white/50">Klistra in dina stödanteckningar om bostaden.</p>
+              <h3 className="font-semibold">Fyll i fakta</h3>
+              <p className="text-sm text-white/50">Ange adress, yta och dina egna anteckningar.</p>
             </div>
             <div className="space-y-4 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
               <div className="w-12 h-12 rounded-xl bg-violet-500/20 mx-auto flex items-center justify-center text-violet-300 font-bold">2</div>
-              <h3 className="font-semibold">AI:n skapar magi</h3>
-              <p className="text-sm text-white/50">Vår AI anpassar tonläget efter svensk mäklarstandard.</p>
+              <h3 className="font-semibold">AI:n skriver</h3>
+              <p className="text-sm text-white/50">Vi genererar en säljande text i rätt tonläge.</p>
             </div>
             <div className="space-y-4 p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] text-center">
               <div className="w-12 h-12 rounded-xl bg-violet-500/20 mx-auto flex items-center justify-center text-violet-300 font-bold">3</div>
-              <h3 className="font-semibold">Publicera</h3>
-              <p className="text-sm text-white/50">Kopiera texten direkt till Hemnet eller din hemsida.</p>
+              <h3 className="font-semibold">Klart</h3>
+              <p className="text-sm text-white/50">Kopiera direkt in i ditt mäklarsystem.</p>
             </div>
           </div>
         </section>
 
-        {/* Varför OptiPrompt */}
+        {/* Varför välja oss */}
         <section className="mt-32 p-8 md:p-12 bg-white/[0.02] rounded-2xl border border-white/[0.06]">
           <h2 className="text-3xl font-bold text-center mb-12">Varför välja oss?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -260,7 +219,7 @@ export default function Home() {
               </div>
               <div>
                 <h4 className="font-semibold">Svenskt tonläge</h4>
-                <p className="text-white/50 text-sm">Ingen "Google Translate"-känsla. Vi skriver som en mäklare.</p>
+                <p className="text-white/50 text-sm">Vi skriver som en svensk mäklare, inte en översättning.</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
@@ -268,23 +227,22 @@ export default function Home() {
                 <PenTool className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-semibold">Spara timmar</h4>
-                <p className="text-white/50 text-sm">Gå från rådata till färdigt utkast på under en minut.</p>
+                <h4 className="font-semibold">Spara tid</h4>
+                <p className="text-white/50 text-sm">Gå från rådata till färdig annons på 30 sekunder.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Pricing */}
+        {/* Prisplaner */}
         <section className="mt-32 mb-20">
-          <h2 className="text-3xl font-bold text-center mb-12">Prisplaner för framgångsrika mäklare</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Prisplaner</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
             <Card className="p-8 bg-white/[0.03] border-white/[0.08]">
               <h3 className="text-xl font-bold mb-1">Gratis</h3>
               <p className="text-3xl font-extrabold my-6">0 kr</p>
               <ul className="space-y-4 text-white/70 mb-8 text-sm">
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 2 beskrivningar/dag</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Standard AI-modell</li>
               </ul>
               <Button variant="outline" className="w-full">Börja nu</Button>
             </Card>
@@ -295,7 +253,6 @@ export default function Home() {
               <ul className="space-y-4 text-white/80 mb-8 text-sm">
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> 50 beskrivningar/dag</li>
                 <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Prioriterad GPT-4o access</li>
-                <li className="flex items-center gap-3"><Zap className="w-4 h-4 text-emerald-400" /> Spara dina favorit-mallar</li>
               </ul>
               <Button className="w-full bg-violet-600 hover:bg-violet-700" onClick={() => handleUpgrade("pro")}>
                 Välj Pro
@@ -305,8 +262,8 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-white/[0.06] py-8 mt-auto text-center text-white/40 text-sm">
-        <p>&copy; {new Date().getFullYear()} OptiPrompt Mäklare. Effektivisera din försäljning.</p>
+      <footer className="border-t border-white/[0.06] py-8 text-center text-white/40 text-sm">
+        <p>&copy; {new Date().getFullYear()} OptiPrompt Mäklare.</p>
       </footer>
 
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
