@@ -3,12 +3,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees } from "lucide-react";
+import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface PromptFormProps {
-  onSubmit: (data: { prompt: string; type: "apartment" | "house" }) => void;
+  // Uppdaterad interface för att inkludera plattform
+  onSubmit: (data: { prompt: string; type: "apartment" | "house"; platform: "hemnet" | "general" }) => void;
   isPending: boolean;
   disabled?: boolean;
 }
@@ -25,6 +26,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
       elevator: "",
       lotSize: "",
       features: "",
+      platform: "hemnet", // Standardvalet är Hemnet
     },
   });
 
@@ -44,7 +46,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
     detailString += `Övriga egenskaper: ${values.features}`;
 
-    onSubmit({ prompt: detailString, type: propertyType });
+    // Skickar nu med platform-valet till backend
+    onSubmit({ 
+      prompt: detailString, 
+      type: propertyType, 
+      platform: values.platform 
+    });
   };
 
   return (
@@ -167,6 +174,45 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             />
           )}
         </div>
+
+        {/* --- NY SEKTION: PLATFORMSVÄLJARE --- */}
+        <FormField
+          control={form.control}
+          name="platform"
+          render={({ field }) => (
+            <FormItem className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <FormLabel className="!text-slate-700 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+                <Layout className="w-3.5 h-3.5 text-indigo-500" /> Anpassa formatet för:
+              </FormLabel>
+              <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => form.setValue("platform", "hemnet")}
+                  className={cn(
+                    "flex-1 py-2 rounded-md text-xs font-bold transition-all",
+                    form.watch("platform") === "hemnet" 
+                      ? "bg-indigo-600 text-white shadow-md" 
+                      : "text-slate-500 hover:bg-slate-50"
+                  )}
+                >
+                  Hemnet (Brödtext)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => form.setValue("platform", "general")}
+                  className={cn(
+                    "flex-1 py-2 rounded-md text-xs font-bold transition-all",
+                    form.watch("platform") === "general" 
+                      ? "bg-indigo-600 text-white shadow-md" 
+                      : "text-slate-500 hover:bg-slate-50"
+                  )}
+                >
+                  Egen hemsida / Booli
+                </button>
+              </div>
+            </FormItem>
+          )}
+        />
 
         {/* STOR TEXTRUTA: Övrig info */}
         <FormField
