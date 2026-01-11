@@ -214,6 +214,14 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           )}
         />
 
+        {/* HÄR ÄR DEN DISKRETA TEXTEN */}
+              <p className="text-[11px] text-slate-400 italic leading-tight mt-2 px-1">
+                * Fakta om bostaden används för att anpassa ordval och tonläge, även om siffrorna inte skrivs ut i Hemnet-läget.
+              </p>
+            </FormItem>
+          )}
+        />
+      
         {/* STOR TEXTRUTA: Övrig info */}
         <FormField
           control={form.control}
