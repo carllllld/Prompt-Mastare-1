@@ -8,7 +8,6 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface PromptFormProps {
-  // Uppdaterad interface för att inkludera plattform
   onSubmit: (data: { prompt: string; type: "apartment" | "house"; platform: "hemnet" | "general" }) => void;
   isPending: boolean;
   disabled?: boolean;
@@ -26,27 +25,26 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
       elevator: "",
       lotSize: "",
       features: "",
-      platform: "hemnet", // Standardvalet är Hemnet
+      platform: "hemnet", // Standardval
     },
   });
 
   const onLocalSubmit = (values: any) => {
-    // Här bygger vi ihop en detaljerad prompt baserat på ALLA fält
-    let detailString = `Typ: ${propertyType === "apartment" ? "Lägenhet" : "Villa/Hus"}\n`;
+    // Bygg ihop en detaljerad prompt som AI:n använder för kontext
+    let detailString = `Bostadstyp: ${propertyType === "apartment" ? "Lägenhet" : "Villa/Hus"}\n`;
     detailString += `Adress: ${values.address}\n`;
-    detailString += `Boarea: ${values.size}\n`;
+    detailString += `Boarea: ${values.size} kvm\n`;
     detailString += `Antal rum: ${values.rooms}\n`;
 
     if (propertyType === "apartment") {
-      detailString += `Våning: ${values.floor}\n`;
-      detailString += `Hiss: ${values.elevator}\n`;
+      detailString += `Våning: ${values.floor}, Hiss: ${values.elevator}\n`;
     } else {
-      detailString += `Tomtarea: ${values.lotSize}\n`;
+      detailString += `Tomtarea: ${values.lotSize} kvm\n`;
     }
 
-    detailString += `Övriga egenskaper: ${values.features}`;
+    detailString += `Beskrivning av egenskaper: ${values.features}`;
 
-    // Skickar nu med platform-valet till backend
+    // Skicka all data till backend
     onSubmit({ 
       prompt: detailString, 
       type: propertyType, 
@@ -57,7 +55,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-6">
-        {/* VÄLJ TYP - Ändrar formulärets fält */}
+
+        {/* VÄLJ TYP */}
         <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
           <button
             type="button"
@@ -81,7 +80,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           </button>
         </div>
 
-        {/* RAD 1: Adress och Storlek */}
+        {/* ADRESS & STORLEK */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -92,7 +91,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <MapPin className="w-3.5 h-3.5" /> Adress
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="Storgatan 1" />
+                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. Riddargatan 12" />
                 </FormControl>
               </FormItem>
             )}
@@ -106,14 +105,14 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <Maximize className="w-3.5 h-3.5" /> Boarea (kvm)
                 </FormLabel>
                 <FormControl>
-                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. 85" />
+                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. 65" />
                 </FormControl>
               </FormItem>
             )}
           />
         </div>
 
-        {/* RAD 2: Specifika fält beroende på typ */}
+        {/* SPECIFIKA FÄLT */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField
             control={form.control}
@@ -122,7 +121,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               <FormItem>
                 <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Antal rum</FormLabel>
                 <FormControl>
-                  <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="3.5" />
+                  <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="2.5" />
                 </FormControl>
               </FormItem>
             )}
@@ -151,7 +150,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <ArrowUpCircle className="w-3 h-3" /> Hiss
                     </FormLabel>
                     <FormControl>
-                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="Ja/Nej" />
+                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="Ja" />
                     </FormControl>
                   </FormItem>
                 )}
@@ -175,15 +174,16 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           )}
         </div>
 
-        {/* --- NY SEKTION: PLATFORMSVÄLJARE --- */}
+        {/* PLATFORMSVÄLJARE MED HJÄLPTEXT */}
         <FormField
           control={form.control}
           name="platform"
           render={({ field }) => (
-            <FormItem className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+            <FormItem className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200 shadow-inner">
               <FormLabel className="!text-slate-700 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
-                <Layout className="w-3.5 h-3.5 text-indigo-500" /> Anpassa formatet för:
+                <Layout className="w-3.5 h-3.5 text-indigo-500" /> Publiceringsformat:
               </FormLabel>
+
               <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                 <button
                   type="button"
@@ -207,33 +207,29 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       : "text-slate-500 hover:bg-slate-50"
                   )}
                 >
-                  Egen hemsida / Booli
+                  Egen sida / Booli
                 </button>
               </div>
-            </FormItem>
-          )}
-        />
 
-        {/* HÄR ÄR DEN DISKRETA TEXTEN */}
-              <p className="text-[11px] text-slate-400 italic leading-tight mt-2 px-1">
-                * Fakta om bostaden används för att anpassa ordval och tonläge, även om siffrorna inte skrivs ut i Hemnet-läget.
+              <p className="text-[11px] text-slate-400 italic leading-snug mt-2 px-1">
+                * Faktan ovan används för att AI:n ska förstå kontext och anpassa ordval, även om siffrorna döljs i Hemnet-läget.
               </p>
             </FormItem>
           )}
         />
-      
-        {/* STOR TEXTRUTA: Övrig info */}
+
+        {/* FRITEXT: BESKRIVNING */}
         <FormField
           control={form.control}
           name="features"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="!text-slate-700 font-bold">Beskrivning & Egenskaper</FormLabel>
+              <FormLabel className="!text-slate-700 font-bold">Unika egenskaper & Känsla</FormLabel>
               <FormControl>
                 <Textarea 
                   {...field} 
-                  className="!bg-white !text-black border-slate-300 min-h-[140px] leading-relaxed" 
-                  placeholder="Berätta om balkong i söderläge, nyrenoverat kök, eldstad, stabil förening eller lummig trädgård..." 
+                  className="!bg-white !text-black border-slate-300 min-h-[140px] leading-relaxed focus:border-indigo-500 transition-all" 
+                  placeholder="Berätta om materialval, renoveringar, ljusinsläpp, balkongläge eller föreningens ekonomi..." 
                 />
               </FormControl>
             </FormItem>
