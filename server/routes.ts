@@ -126,7 +126,6 @@ export async function registerRoutes(
 
       const plan = (user?.plan as PlanType) || "free";
       const dailyLimit = PLAN_LIMITS[plan];
-
       let promptsUsedToday = user ? (user.promptsUsedToday || 0) : (await storage.getSessionUsage(sessionId)).promptsUsedToday;
 
       if (promptsUsedToday >= dailyLimit) {
@@ -139,62 +138,78 @@ export async function registerRoutes(
 
       const { prompt, type } = api.optimize.input.parse(req.body);
 
-      // --- DEN EXTREMT BRA MASTER-PROMPTEN (Gemensam för alla) ---
-      const masterSystemPrompt = `Du är Sveriges främsta fastighetsmäklare, känd för att skriva texter som säljer slut på objekt vid första visningen. 
-      Din ton är sofistikerad, förtroendeingivande och målande, men aldrig klyschig.
+      // --- KNOWLEDGE BASE: EXPERT-EXEMPEL & JURIDIK ---
+      const knowledgeBase = {
+        expertExamples: [
+          { tag: "Sekelskifte", text: "Tidstypiska attribut såsom högresta fönsterpartier, djupa nischer och en generös takhöjd som skapar en magnifik rymd. Fiskbensparketten flyter tröskelfritt och binder samman de sociala rummen på ett smakfullt sätt." },
+          { tag: "Modern/Minimalistisk", text: "Stilren estetik möter funktion i en symbios av betong, glas och ljust trä. Den öppna planlösningen och de sobra färgvalen skapar ett lugn, där varje kvadratmeter är optimerad för ett modernt liv." },
+          { tag: "Vindsvåning", text: "Här bor ni högt ovan takåsarna med synliga takbalkar och murstockar som ger karaktär. Terrassen blir ett extra rum under sommarmånaderna, en privat oas mitt i citypulsen." },
+          { tag: "Sjöutsikt/Natur", text: "Stora fönsterpartier suddar ut gränsen mellan ute och inne, där glittrande vatten och lummig grönska blir en levande tavla som förändras med årstiderna." },
+          { tag: "Familjevilla", text: "En trygg hamn för familjelivet med välplanerade sociala ytor och en trädgård som bjuder in till lek och sena grillkvällar. Här är varje detalj genomtänkt för att underlätta vardagen." },
+          { tag: "Kök/Bad", text: "Köket är en dröm för den matintresserade med maskinell utrustning i toppklass och bänkskivor i natursten. Badrummet är en privat spa-avdelning med hotellkänsla och påkostade materialval." }
+        ],
+        legalFramework: {
+          general: "Enligt Fastighetsmäklarlagen (2021:516) ska beskrivningen vara korrekt och inte vilseledande. Boarea ska alltid anges med källa (ex. Fastighetsutdrag).",
+          apartment: "Obligatoriskt för BRF: Årsavgift, andelstal, pantsättning samt indirekt nettoskuldsättning (viktigt för köparens ekonomi).",
+          house: "Obligatoriskt för Villa: Energiprestanda, taxeringsvärde, fastighetsbeteckning och aktuella driftskostnader (el, VA, renhållning)."
+        },
+        forbiddenPhrases: [
+          "unikt tillfälle", "magisk", "drömboende", "hjärtat i hemmet", "måste ses", 
+          "fantastisk chans", "enastående", "varmt välkomna (som inledning)"
+        ]
+      };
 
-      DIN STILGUIDE:
-      - Skapa en omedelbar längtan. 
-      - Fokusera på livsstil och unika detaljer (ljusinsläpp, materialval, atmosfär).
-      - Använd ett rikt men precist språk (t.ex. 'vilsam färgsättning', 'socialt kök', 'generösa fönsterpartier').
-      - Strukturera texten med Rubrik, Ingress och en sammanhängande Interiörbeskrivning.
+      // --- DEN AVANCERADE MASTER-PROMPTEN ---
+      const masterSystemPrompt = `Du är Sveriges främsta fastighetsmäklare och expert-copywriter. 
+      Din specialitet är att skriva säljande, förtroendeingivande och språkligt eleganta texter för premiumobjekt.
 
-      JURIDISK REGLER:
-      - Hitta aldrig på fakta. Om det inte står 'balkong' i faktan, nämn inte balkong.
-      - Var tydlig med areans källa.`;
+      INSTRUKTIONER FÖR TEXTEN:
+      1. ANALYS: Hitta 3 unika USP:er i datan. Fokusera på ljus, rymd och materialval.
+      2. SPRÅK: Använd ett varierat, rikt språk. Undvik upprepningar. Starta aldrig tre meningar i rad med samma ord.
+      3. NEGATIV PROMPT: Använd ALDRIG dessa klyschor: ${knowledgeBase.forbiddenPhrases.join(", ")}.
+      4. STIL-INSPIRATION: Inspireras av dessa strukturer: ${knowledgeBase.expertExamples.map(e => e.text).join(" | ")}.
 
-      // --- JURIDISK VARNING (Endast för PRO) ---
-      const proLegalInstruction = `
-      EXTRA UPPGIFT (PRO-FUNKTION):
-      Du ska även agera juridisk granskare enligt FMI:s krav. 
-      Kontrollera om indatan saknar obligatoriska uppgifter (Pantsättning, andelstal, årsavgift, indirekt nettoskuldsättning för BRF | Fastighetsbeteckning, taxeringsvärde, driftskostnader för Villa).
-      Lista dessa saknade uppgifter som korta varningar i fältet 'suggestions'.`;
+      JURIDISK KONTROLL (FMI-STANDARD):
+      - Du får aldrig hitta på fakta. Om information saknas, utelämna det i texten men flagga för det i 'suggestions'.
+      - Granska mot: ${type === 'apartment' ? knowledgeBase.legalFramework.apartment : knowledgeBase.legalFramework.house}
+      - Var noga med källa för boarea.`;
+
+      const proInstruction = `
+      PRO-FUNKTIONALITET (EXTRA NOGGRANNHET):
+      - Agenta som juridisk granskare: Kontrollera om Pantsättning, Indirekt nettoskuldsättning (för BRF) eller Driftskostnader (för Villa) saknas. Om de saknas, skriv 'VARNING: Saknar [info]' i suggestions.
+      - Inkludera en kort 'Marketing Hook' i början av beskrivningen (max 10 ord) som sticker ut på Hemnet.
+      - Ge 2 tips på målgruppsanpassning (t.ex. 'Passar den unga karriäristen' eller 'Perfekt för barnfamiljen').`;
 
       const finalSystemPrompt = `${masterSystemPrompt}
-      ${plan === "pro" ? proLegalInstruction : "I fältet 'suggestions' ska du istället ge 3 korta tips på hur mäklaren kan styla just detta objekt inför fotografering."}
+      ${plan === "pro" ? proInstruction : "I fältet 'suggestions', ge 3 korta stylingtips för att höja värdet inför fotografering."}
 
-      Svara strikt i JSON:
+      Svara ENDAST i JSON-format:
       {
-        "improvedPrompt": "Din säljande text här",
-        "improvements": ["lista på språkliga förbättringar"],
-        "suggestions": ["lista på juridiska varningar (om PRO) eller stylingtips (om FREE)"]
+        "improvedPrompt": "DIN PROFESSIONELLA TEXT HÄR (inkl. rubrik, ingress, interiör)",
+        "improvements": ["Lista på 3 språkliga val du gjort för att höja kvaliteten"],
+        "suggestions": ["Juridiska varningar (PRO) eller Stylingtips (FREE)"]
       }`;
 
       const completion = await openai.chat.completions.create({
         messages: [
           { role: "system", content: finalSystemPrompt },
-          { role: "user", content: `Kategori: ${type}\nFakta: ${prompt}` },
+          { role: "user", content: `TYP: ${type}\nINDATA: ${prompt}` },
         ],
-        model: "gpt-4o-mini",
+        model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini", 
         response_format: { type: "json_object" },
+        temperature: 0.65, // Balans mellan kreativitet och exakthet
       });
 
       const result = JSON.parse(completion.choices[0].message.content || "{}");
 
-      let finalText = "";
-      if (typeof result.improvedPrompt === 'object' && result.improvedPrompt !== null) {
-        finalText = Object.values(result.improvedPrompt).join('\n\n');
-      } else {
-        finalText = String(result.improvedPrompt || "Kunde inte generera text.");
-      }
-
       const responseData = {
         originalPrompt: prompt,
-        improvedPrompt: finalText,
+        improvedPrompt: result.improvedPrompt || "Kunde inte generera text.",
         improvements: Array.isArray(result.improvements) ? result.improvements : [],
         suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
       };
 
+      // Spara till databas
       if (userId && user) {
         await storage.incrementUserPrompts(userId);
         await storage.createOptimization({
@@ -213,7 +228,7 @@ export async function registerRoutes(
 
     } catch (err) {
       console.error("Genereringsfel:", err);
-      res.status(500).json({ message: "Kunde inte generera text." });
+      res.status(500).json({ message: "Kunde inte generera text. Kontrollera din API-nyckel." });
     }
   });
 
