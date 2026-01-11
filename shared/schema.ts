@@ -10,7 +10,7 @@ export const optimizations = pgTable("optimizations", {
   userId: text("user_id").references(() => users.id),
   originalPrompt: text("original_prompt").notNull(),
   improvedPrompt: text("improved_prompt").notNull(),
-  socialCopy: text("social_copy"), 
+  socialCopy: text("social_copy"),
   category: text("category").notNull(),
   improvements: jsonb("improvements").$type<string[]>().notNull(),
   suggestions: jsonb("suggestions").$type<string[]>().notNull(),
@@ -26,11 +26,11 @@ export const optimizeRequestSchema = z.object({
 });
 
 export const optimizeResponseSchema = z.object({
-  originalPrompt: z.string(),
   improvedPrompt: z.string(),
   socialCopy: z.string(),
   improvements: z.array(z.string()),
   suggestions: z.array(z.string()),
 });
 
+export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
 export type PlanType = "free" | "basic" | "pro";
