@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
+import { setupAuth } from "./auth"; // LÄGG TILL DENNA
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { pool, initializeDatabase } from "./db";
@@ -15,7 +16,6 @@ app.set("trust proxy", 1);
 
 const PgStore = connectPgSimple(session);
 
-// Detect production by checking for Render or explicit flag (since NODE_ENV may not be set during build)
 const isProduction = process.env.NODE_ENV === "production" || 
                      process.env.RENDER === "true" || 
                      !!process.env.RENDER_EXTERNAL_URL;
@@ -25,7 +25,7 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "optiprompt-secret-key-2024",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Ändrad till false (best practice med Passport)
     store: new PgStore({
       pool,
       tableName: "user_sessions",
@@ -40,6 +40,9 @@ app.use(
     },
   })
 );
+
+// --- HÄR SKA setupAuth LIGGA ---
+setupAuth(app); 
 
 declare module "http" {
   interface IncomingMessage {
@@ -97,10 +100,10 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize database tables
   await initializeDatabase();
-  
+
   // Setup WebSocket server for real-time collaboration
   setupWebSocket(httpServer);
-  
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -108,12 +111,9 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    // Ta bort throw err här om du inte vill att servern ska logga hela stacktracet i konsolen vid 401:or
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -121,10 +121,6 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     {
