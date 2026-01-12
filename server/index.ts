@@ -34,6 +34,29 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // --- AUTOMATISK SQL-FIX FÖR SESSIONSTABELL ---
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL
+      ) WITH (OIDS=FALSE);
+
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
+          ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid");
+        END IF;
+      END $$;
+
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+    `);
+    console.log("✅ Sessionstabellen är redo i databasen.");
+  } catch (err) {
+    console.error("❌ SQL-fix misslyckades:", err);
+  }
+
   const server = createServer(app);
 
   // 1. Aktivera Inloggning
