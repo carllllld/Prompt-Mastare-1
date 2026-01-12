@@ -3,18 +3,25 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
-import { setupVite, serveStatic, log } from "./vite"; 
 import { createServer } from "http";
 import { pool } from "./db";
+import path from "path";
+import { setupVite, serveStatic, log } from "./vite";
 
 const PostgresStore = connectPgSimple(session);
 const app = express();
 
+// --- STRIPE SUPPORT ---
+// Måste ligga FÖRE express.json() för att webhooken ska fungera
+app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), (req, res) => {
+  // Här landar betalningsbekräftelserna från Stripe
+  res.json({ received: true });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// 1. SESSION-HANTERING
-// Detta krävs för att hålla mäklaren inloggad på plattformen
+// --- SESSIONER & AUTH ---
 app.use(session({
   store: new PostgresStore({ pool, createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || "realtor_dna_2026",
@@ -23,14 +30,13 @@ app.use(session({
   cookie: { secure: process.env.NODE_ENV === "production" }
 }));
 
-// Loggning av trafik på plattformen
+// Loggning av trafik (viktigt för att se AI-anropen)
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api") || path.startsWith("/auth")) {
-      log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
+    if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+      log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
     }
   });
   next();
@@ -39,19 +45,18 @@ app.use((req, res, next) => {
 (async () => {
   const server = createServer(app);
 
-  // 2. AKTIVERA AUTH & MÄKLAR-STRATEGI
-  setupAuth(app); // Hanterar konton och inloggning
-  await registerRoutes(server, app); // Hanterar Realtor-DNA och objektanalys
+  // --- AKTIVERA PLATTFORMENS KÄRNA ---
+  setupAuth(app);           // 1. Inloggning
+  await registerRoutes(server, app); // 2. Realtor-DNA & AI
 
-  // 3. FELHANTERING
+  // --- FELHANTERING ---
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Tekniskt fel på plattformen";
+    const message = err.message || "Internt fel på plattformen";
     res.status(status).json({ message });
   });
 
-  // 4. FRONTEND-SERVERING (Det som tar bort "Cannot GET /")
-  // Denna del ser till att hela din mäklar-sajt faktiskt renderas i webbläsaren
+  // --- FRONTEND & VITE (Fixar "Cannot GET /") ---
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
