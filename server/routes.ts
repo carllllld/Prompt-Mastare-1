@@ -5,7 +5,6 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import OpenAI from "openai";
 import { optimizeRequestSchema, type PlanType, type User } from "@shared/schema";
-import { setupAuth } from "./auth";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPEN_API_KEY,
