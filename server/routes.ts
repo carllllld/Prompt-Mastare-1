@@ -30,6 +30,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const finalSystemPrompt = `
         Du är Sveriges främsta fastighetsmäklare och copywriter. 
         Språket ska vara elegant, förtroendeingivande och säljande.
+        ${platformInstruction}
 
         UPPGIFT:
         1. Skapa en säljande beskrivning (improvedPrompt).
@@ -38,10 +39,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
         Svara i JSON:
         {
-          "improvedPrompt": "Texten här...",
-          "socialCopy": "Professionell text för sociala medier utan emojis...",
-          "improvements": ["språklig förbättring 1", "språklig förbättring 2"],
-          "suggestions": ["juridiskt/praktiskt tips 1", "tips 2"]
+          "improvedPrompt": "Huvudtexten...",
+          "socialCopy": "Text utan emojis...",
+          "improvements": ["förbättring 1", "förbättring 2"],
+          "suggestions": ["tips 1", "tips 2"]
         }
       `;
 
@@ -56,20 +57,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const result = JSON.parse(completion.choices[0].message.content || "{}");
 
+      // VIKTIG FIX: Säkerställ att vi har strängar och arrayer innan vi sparar
       if (userId) {
         await storage.createOptimization({
           userId,
           originalPrompt: prompt,
-          improvedPrompt: result.improvedPrompt,
-          socialCopy: result.socialCopy, // Se till att denna rad finns med!
-          category: type,
-          improvements: result.improvements || [],
-          suggestions: result.suggestions || [],
+          improvedPrompt: result.improvedPrompt || "Kunde inte generera text",
+          socialCopy: result.socialCopy || "", // Om AI missar detta, skicka tom sträng istället för krasch
+          category: type || "apartment",
+          improvements: Array.isArray(result.improvements) ? result.improvements : [],
+          suggestions: Array.isArray(result.suggestions) ? result.suggestions : [],
         });
       }
 
       res.json(result);
     } catch (err) {
+      console.error("Genereringsfel:", err); // Logga felet i terminalen så vi ser vad som händer
       res.status(500).json({ message: "Internt fel vid generering" });
     }
   });
