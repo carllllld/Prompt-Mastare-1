@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import OpenAI from "openai";
 import { optimizeRequestSchema, type PlanType, type User } from "@shared/schema";
+import { requireAuth } from "./auth";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPEN_API_KEY,
@@ -40,9 +41,8 @@ Du är en Senior Marknadsstrateg och Mäklarcoach med 20 års erfarenhet av den 
 `;
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-  // Raden setupAuth(app) är nu borttagen härifrån eftersom den bor i index.ts
 
-  app.post(api.optimize.path, async (req, res) => {
+  app.post(api.optimize.path, requireAuth, async (req, res) => {
     try {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ message: "Inloggning krävs" });
