@@ -20,7 +20,7 @@ app.use(express.urlencoded({ extended: false }));
 
 // --- SESSIONER & AUTH ---
 app.use(session({
-  store: new PostgresStore({ pool, createTableIfMissing: true }),
+  store: new PostgresStore({ pool, createTableIfMissing: false }),
   secret: process.env.SESSION_SECRET || "realtor_dna_2026",
   resave: false,
   saveUninitialized: false,
