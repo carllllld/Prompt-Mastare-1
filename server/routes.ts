@@ -23,6 +23,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const plan = (user?.plan as PlanType) || "free";
       const { prompt, type, platform } = optimizeRequestSchema.parse(req.body);
 
+      app.get("/api/optimizations", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Inte inloggad" });
+  }
+  const history = await storage.getOptimizationHistory(req.user.id);
+  res.json(history);
+});
+
       const platformInstruction = platform === "hemnet" 
         ? "Du skriver för Hemnet. Fokusera helt på känsla och beskrivande adjektiv. Repetera INTE siffror (kvm/rum) då de redan finns i faktarutan." 
         : "Du skriver för en egen hemsida. Inkludera all fakta (kvm, rum, adress) naturligt i texten.";
