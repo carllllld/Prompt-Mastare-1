@@ -61,7 +61,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           userId,
           originalPrompt: prompt,
           improvedPrompt: result.improvedPrompt,
-          socialCopy: result.socialCopy,
+          socialCopy: result.socialCopy, // Se till att denna rad finns med!
           category: type,
           improvements: result.improvements || [],
           suggestions: result.suggestions || [],
