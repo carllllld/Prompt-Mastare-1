@@ -10,6 +10,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gt } from "drizzle-orm";
+import crypto from "crypto";
 
 export interface IStorage {
   // Auth methods
@@ -31,7 +32,7 @@ export interface IStorage {
   getOptimizationHistory(userId: string, limit?: number): Promise<Optimization[]>;
   deleteOptimization(userId: string, optimizationId: number): Promise<void>;
   deleteAllOptimizations(userId: string): Promise<void>;
-  
+
   // Team methods
   createTeam(team: InsertTeam): Promise<Team>;
   getTeamById(teamId: number): Promise<Team | null>;
@@ -39,14 +40,14 @@ export interface IStorage {
   getUserTeams(userId: string): Promise<Team[]>;
   updateTeam(teamId: number, data: Partial<InsertTeam>): Promise<Team | null>;
   deleteTeam(teamId: number): Promise<void>;
-  
+
   // Team member methods
   addTeamMember(member: InsertTeamMember): Promise<TeamMember>;
   getTeamMembers(teamId: number): Promise<(TeamMember & { user: User })[]>;
   getUserTeamMembership(userId: string, teamId: number): Promise<TeamMember | null>;
   updateTeamMemberRole(memberId: number, role: string): Promise<TeamMember | null>;
   removeTeamMember(memberId: number): Promise<void>;
-  
+
   // Shared prompt methods
   createSharedPrompt(prompt: InsertSharedPrompt): Promise<SharedPrompt>;
   getSharedPromptById(promptId: number): Promise<SharedPrompt | null>;
@@ -55,18 +56,18 @@ export interface IStorage {
   deleteSharedPrompt(promptId: number): Promise<void>;
   lockPrompt(promptId: number, userId: string): Promise<SharedPrompt | null>;
   unlockPrompt(promptId: number): Promise<SharedPrompt | null>;
-  
+
   // Comment methods
   createComment(comment: InsertPromptComment): Promise<PromptComment>;
   getPromptComments(promptId: number): Promise<(PromptComment & { user: User })[]>;
   deleteComment(commentId: number): Promise<void>;
-  
+
   // Presence methods
   updatePresence(userId: string, teamId: number | null, promptId: number | null, cursorPosition?: number): Promise<void>;
   getTeamPresence(teamId: number): Promise<PresenceSession[]>;
   getPromptPresence(promptId: number): Promise<(PresenceSession & { user: User })[]>;
   cleanupStalePresence(): Promise<void>;
-  
+
   // Invite methods
   createTeamInvite(teamId: number, email: string, invitedBy: string): Promise<TeamInvite>;
   getInviteByToken(token: string): Promise<TeamInvite | null>;
@@ -101,7 +102,7 @@ export class DatabaseStorage implements IStorage {
   async resetUserPromptsIfNewDay(user: User): Promise<User> {
     const today = new Date().toISOString().split('T')[0];
     const lastReset = user.lastResetDate ? String(user.lastResetDate) : '';
-    
+
     if (lastReset !== today) {
       const [updated] = await db.update(users)
         .set({ 
@@ -112,7 +113,7 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return updated;
     }
-    
+
     return user;
   }
 
@@ -140,7 +141,7 @@ export class DatabaseStorage implements IStorage {
       userId: optimization.userId,
       originalPrompt: optimization.originalPrompt,
       improvedPrompt: optimization.improvedPrompt,
-      socialCopy: optimization.socialCopy,
+      socialCopy: optimization.socialCopy ?? "",
       category: optimization.category,
       improvements: optimization.improvements,
       suggestions: optimization.suggestions,
@@ -174,32 +175,30 @@ export class DatabaseStorage implements IStorage {
   async getSessionUsage(sessionId: string): Promise<{ promptsUsedToday: number }> {
     const today = new Date().toISOString().split('T')[0];
     const result = await db.select().from(sessionUsage).where(eq(sessionUsage.sessionId, sessionId));
-    
+
     if (!result[0]) {
       return { promptsUsedToday: 0 };
     }
-    
-    // Handle date comparison properly - PostgreSQL dates come as strings in YYYY-MM-DD format
+
     let lastReset = '';
     if (result[0].lastResetDate) {
       lastReset = String(result[0].lastResetDate).split('T')[0];
     }
-    
+
     if (lastReset !== today) {
-      // Reset for new day
       await db.update(sessionUsage)
         .set({ promptsUsedToday: 0, lastResetDate: today })
         .where(eq(sessionUsage.sessionId, sessionId));
       return { promptsUsedToday: 0 };
     }
-    
+
     return { promptsUsedToday: result[0].promptsUsedToday };
   }
 
   async incrementSessionPrompts(sessionId: string): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
     const result = await db.select().from(sessionUsage).where(eq(sessionUsage.sessionId, sessionId));
-    
+
     if (!result[0]) {
       await db.insert(sessionUsage).values({
         sessionId,
@@ -221,7 +220,6 @@ export class DatabaseStorage implements IStorage {
     return result || null;
   }
 
-  // Team methods
   async createTeam(team: InsertTeam): Promise<Team> {
     const [result] = await db.insert(teams).values(team).returning();
     return result;
@@ -241,9 +239,9 @@ export class DatabaseStorage implements IStorage {
     const memberships = await db.select()
       .from(teamMembers)
       .where(eq(teamMembers.userId, userId));
-    
+
     if (memberships.length === 0) return [];
-    
+
     const teamIds = memberships.map(m => m.teamId);
     const result: Team[] = [];
     for (const teamId of teamIds) {
@@ -267,7 +265,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(teams).where(eq(teams.id, teamId));
   }
 
-  // Team member methods
   async addTeamMember(member: InsertTeamMember): Promise<TeamMember> {
     const [result] = await db.insert(teamMembers).values(member).returning();
     return result;
@@ -304,7 +301,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(teamMembers).where(eq(teamMembers.id, memberId));
   }
 
-  // Shared prompt methods
   async createSharedPrompt(prompt: InsertSharedPrompt): Promise<SharedPrompt> {
     const [result] = await db.insert(sharedPrompts).values(prompt).returning();
     return result;
@@ -351,7 +347,6 @@ export class DatabaseStorage implements IStorage {
     return result || null;
   }
 
-  // Comment methods
   async createComment(comment: InsertPromptComment): Promise<PromptComment> {
     const [result] = await db.insert(promptComments).values(comment).returning();
     return result;
@@ -362,7 +357,7 @@ export class DatabaseStorage implements IStorage {
       .from(promptComments)
       .where(eq(promptComments.promptId, promptId))
       .orderBy(desc(promptComments.createdAt));
-    
+
     const results: (PromptComment & { user: User })[] = [];
     for (const comment of comments) {
       const user = await this.getUserById(comment.userId);
@@ -377,12 +372,11 @@ export class DatabaseStorage implements IStorage {
     await db.delete(promptComments).where(eq(promptComments.id, commentId));
   }
 
-  // Presence methods
   async updatePresence(userId: string, teamId: number | null, promptId: number | null, cursorPosition?: number): Promise<void> {
     const existing = await db.select()
       .from(presenceSessions)
       .where(eq(presenceSessions.userId, userId));
-    
+
     if (existing.length > 0) {
       await db.update(presenceSessions)
         .set({ teamId, promptId, lastSeen: new Date(), cursorPosition })
@@ -399,7 +393,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamPresence(teamId: number): Promise<PresenceSession[]> {
-    const threshold = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes
+    const threshold = new Date(Date.now() - 5 * 60 * 1000);
     return await db.select()
       .from(presenceSessions)
       .where(and(
@@ -409,14 +403,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPromptPresence(promptId: number): Promise<(PresenceSession & { user: User })[]> {
-    const threshold = new Date(Date.now() - 2 * 60 * 1000); // 2 minutes
+    const threshold = new Date(Date.now() - 2 * 60 * 1000);
     const sessions = await db.select()
       .from(presenceSessions)
       .where(and(
         eq(presenceSessions.promptId, promptId),
         gt(presenceSessions.lastSeen, threshold)
       ));
-    
+
     const results: (PresenceSession & { user: User })[] = [];
     for (const session of sessions) {
       const user = await this.getUserById(session.userId);
@@ -428,15 +422,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async cleanupStalePresence(): Promise<void> {
-    const threshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes
+    const threshold = new Date(Date.now() - 10 * 60 * 1000);
     await db.delete(presenceSessions)
       .where(gt(presenceSessions.lastSeen, threshold));
   }
 
-  // Invite methods
   async createTeamInvite(teamId: number, email: string, invitedBy: string): Promise<TeamInvite> {
     const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const [result] = await db.insert(teamInvites).values({
       teamId,
       email,
