@@ -136,7 +136,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOptimization(optimization: InsertOptimization): Promise<void> {
-    await db.insert(optimizations).values(optimization);
+    await db.insert(optimizations).values({
+      userId: optimization.userId,
+      originalPrompt: optimization.originalPrompt,
+      improvedPrompt: optimization.improvedPrompt,
+      socialCopy: optimization.socialCopy,
+      category: optimization.category,
+      improvements: optimization.improvements,
+      suggestions: optimization.suggestions,
+    });
   }
 
   async getOptimizationHistory(userId: string, limit: number = 20): Promise<Optimization[]> {
