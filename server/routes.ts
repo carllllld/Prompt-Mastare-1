@@ -328,5 +328,256 @@ Returnera ett JSON-svar med följande struktur:
     }
   });
 
+  // ==================== TEAM ROUTES ====================
+  
+  // Get user's teams
+  app.get("/api/teams", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teams = await storage.getUserTeams(user.id);
+      res.json(teams);
+    } catch (err) {
+      console.error("Get teams error:", err);
+      res.status(500).json({ message: "Failed to get teams" });
+    }
+  });
+
+  // Create a new team
+  app.post("/api/teams", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { name } = req.body;
+      
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ message: "Team name is required" });
+      }
+      
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const team = await storage.createTeam({
+        name: name.trim(),
+        slug: `${slug}-${Date.now()}`,
+        ownerId: user.id,
+      });
+      
+      // Add creator as owner member
+      await storage.addTeamMember({
+        teamId: team.id,
+        userId: user.id,
+        role: "owner",
+      });
+      
+      res.json(team);
+    } catch (err) {
+      console.error("Create team error:", err);
+      res.status(500).json({ message: "Failed to create team" });
+    }
+  });
+
+  // Get single team
+  app.get("/api/teams/:id", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.id);
+      
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
+      const team = await storage.getTeamById(teamId);
+      res.json(team);
+    } catch (err) {
+      console.error("Get team error:", err);
+      res.status(500).json({ message: "Failed to get team" });
+    }
+  });
+
+  // Get team members
+  app.get("/api/teams/:id/members", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.id);
+      
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
+      const members = await storage.getTeamMembers(teamId);
+      res.json(members);
+    } catch (err) {
+      console.error("Get team members error:", err);
+      res.status(500).json({ message: "Failed to get team members" });
+    }
+  });
+
+  // Create team invite
+  app.post("/api/teams/:id/invite", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.id);
+      const { email } = req.body;
+      
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership || !["owner", "admin"].includes(membership.role)) {
+        return res.status(403).json({ message: "Only owners and admins can invite members" });
+      }
+      
+      const invite = await storage.createTeamInvite(teamId, email.trim().toLowerCase(), user.id);
+      res.json({ token: invite.token, email: invite.email });
+    } catch (err) {
+      console.error("Create invite error:", err);
+      res.status(500).json({ message: "Failed to create invite" });
+    }
+  });
+
+  // Accept team invite
+  app.post("/api/teams/join/:token", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { token } = req.params;
+      
+      const invite = await storage.getInviteByToken(token);
+      if (!invite) {
+        return res.status(404).json({ message: "Invalid or expired invite" });
+      }
+      
+      if (new Date(invite.expiresAt) < new Date()) {
+        await storage.deleteInvite(invite.id);
+        return res.status(410).json({ message: "This invite has expired" });
+      }
+      
+      // Check if already a member
+      const existingMembership = await storage.getUserTeamMembership(user.id, invite.teamId);
+      if (existingMembership) {
+        await storage.deleteInvite(invite.id);
+        const team = await storage.getTeamById(invite.teamId);
+        return res.json(team);
+      }
+      
+      // Add as member
+      await storage.addTeamMember({
+        teamId: invite.teamId,
+        userId: user.id,
+        role: "member",
+      });
+      
+      await storage.deleteInvite(invite.id);
+      
+      const team = await storage.getTeamById(invite.teamId);
+      res.json(team);
+    } catch (err) {
+      console.error("Join team error:", err);
+      res.status(500).json({ message: "Failed to join team" });
+    }
+  });
+
+  // Get team shared prompts
+  app.get("/api/teams/:id/prompts", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.id);
+      
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
+      const prompts = await storage.getTeamSharedPrompts(teamId);
+      res.json(prompts);
+    } catch (err) {
+      console.error("Get team prompts error:", err);
+      res.status(500).json({ message: "Failed to get prompts" });
+    }
+  });
+
+  // Create shared prompt
+  app.post("/api/teams/:id/prompts", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const teamId = parseInt(req.params.id);
+      const { title, content, category } = req.body;
+      
+      const membership = await storage.getUserTeamMembership(user.id, teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
+      const prompt = await storage.createSharedPrompt({
+        teamId,
+        creatorId: user.id,
+        title: title || "Untitled",
+        content: content || "",
+        category: category || "General",
+        status: "draft",
+      });
+      
+      res.json(prompt);
+    } catch (err) {
+      console.error("Create prompt error:", err);
+      res.status(500).json({ message: "Failed to create prompt" });
+    }
+  });
+
+  // Update shared prompt
+  app.patch("/api/prompts/:id", requireAuth, async (req, res) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      const prompt = await storage.updateSharedPrompt(promptId, req.body);
+      res.json(prompt);
+    } catch (err) {
+      console.error("Update prompt error:", err);
+      res.status(500).json({ message: "Failed to update prompt" });
+    }
+  });
+
+  // Delete shared prompt
+  app.delete("/api/prompts/:id", requireAuth, async (req, res) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      await storage.deleteSharedPrompt(promptId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Delete prompt error:", err);
+      res.status(500).json({ message: "Failed to delete prompt" });
+    }
+  });
+
+  // Get prompt comments
+  app.get("/api/prompts/:id/comments", requireAuth, async (req, res) => {
+    try {
+      const promptId = parseInt(req.params.id);
+      const comments = await storage.getPromptComments(promptId);
+      res.json(comments);
+    } catch (err) {
+      console.error("Get comments error:", err);
+      res.status(500).json({ message: "Failed to get comments" });
+    }
+  });
+
+  // Add comment to prompt
+  app.post("/api/prompts/:id/comments", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const promptId = parseInt(req.params.id);
+      const { content } = req.body;
+      
+      const comment = await storage.createComment({
+        promptId,
+        userId: user.id,
+        content: content || "",
+      });
+      
+      res.json(comment);
+    } catch (err) {
+      console.error("Create comment error:", err);
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
   return httpServer;
 }

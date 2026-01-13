@@ -148,10 +148,16 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getOptimizationHistory(userId: string, limit: number = 20): Promise<Optimization[]> {
+  async getOptimizationHistory(userId: string, limit: number = 100): Promise<Optimization[]> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const result = await db.select()
       .from(optimizations)
-      .where(eq(optimizations.userId, userId))
+      .where(
+        and(
+          eq(optimizations.userId, userId),
+          gt(optimizations.createdAt, thirtyDaysAgo)
+        )
+      )
       .orderBy(desc(optimizations.createdAt))
       .limit(limit);
     return result;
