@@ -99,32 +99,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
       
-      const { prompt, type } = optimizeRequestSchema.parse(req.body);
-      
-      const systemPrompt = `You are an expert prompt engineer. Your task is to improve the user's prompt to get better responses from AI models.
+    const { prompt, type, platform } = req.body;
+    
+    const systemPrompt = `Du är en expert på att skriva säljande objektbeskrivningar för svenska fastighetsmäklare.
+Ditt mål är att omvandla teknisk information och korta anteckningar till en professionell, lockande och korrekt beskrivning.
 
-Analyze the prompt and:
-1. Make it clearer and more specific
-2. Add context where needed
-3. Structure it for better results
-4. Consider the category: ${type}
+Analysera informationen och:
+1. Skriv en säljande rubrik som fångar intresset.
+2. Skapa en målande beskrivning av bostadens främsta egenskaper och fördelar.
+3. Anpassa tonläget efter målgrupp och plattform: ${platform === 'hemnet' ? 'Hemnet (professionellt och informativt)' : 'Sociala medier (engagerande och personligt)'}.
+4. Se till att språket är felfritt och följer god mäklarsed.
+5. Inkludera de viktigaste detaljerna om arkitektur, läge och mervärden.
 
-Return a JSON response with:
+Returnera ett JSON-svar med följande struktur:
 {
-  "improvedPrompt": "The enhanced prompt",
-  "improvements": ["List of specific improvements made"],
-  "suggestions": ["Additional tips for the user"]
+  "improvedPrompt": "Den färdiga objektbeskrivningen",
+  "analysis": {
+    "tone_choice": "Kort motivering till tonval",
+    "target_group": "Målgruppsanalys",
+    "area_advantage": "Områdesfördelar"
+  },
+  "critical_gaps": ["Viktiga saker som saknas i informationen"],
+  "pro_tips": ["Specifika tips för annonsen"],
+  "socialCopy": "En kortare, engagerande text anpassad för Instagram/Facebook"
 }`;
 
-      const completion = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ],
-        model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-      });
+    const completion = await openai.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ],
+      model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
 
       const result = JSON.parse(completion.choices[0].message.content || "{}");
       
