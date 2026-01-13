@@ -1,115 +1,322 @@
-import { Switch, Route } from "wouter";
 import type { Express } from "express";
 import type { Server } from "http";
+import Stripe from "stripe";
 import { storage } from "./storage";
-import { api } from "@shared/routes";
 import OpenAI from "openai";
-import { optimizeRequestSchema, type PlanType, type User } from "@shared/schema";
+import { optimizeRequestSchema, PLAN_LIMITS, type PlanType, type User } from "@shared/schema";
 import { requireAuth } from "./auth";
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPEN_API_KEY,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-// --- THE ELITE REALTOR DNA (MASSIVE DATA INJECTION) ---
-const REALTOR_KNOWLEDGE_BASE = `
-### DIN IDENTITET & EXPERTIS
-Du är en Senior Marknadsstrateg och Mäklarcoach med 20 års erfarenhet av den svenska fastighetsmarknaden. Din expertis täcker arkitektur, materialvetenskap, fastighetsjuridik och konsumentpsykologi.
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
-### ARKITEKTONISKT BIBLIOTEK (STYLE INJECTION)
-- 1880-1920: Sekelskifte. Karaktär: Takhöjd (3m+), stuckatur, takrosetter, speglade golvsocklar (15-20cm), serveringsgångar, spegeldörrar med överstycken, fiskbensparkett, spröjsade korspostfönster, kakelugnar, gjutjärnsradiatorer. Retorik: "Kontinental elegans", "arkitektonisk tidsresa".
-- 1920-tal: Nordisk klassicism (Swedish Grace). Karaktär: Stramare än sekelskiftet men med bevarad elegans. Smala spröjs, 6-delade fönster, diskreta taklister.
-- 1930-1940: Funktionalism (Funkis). Karaktär: Runda fönster (oxögon), hörn fönster, slätspontade dörrar, teakdetaljer, smidesräcken, kolmårdsmarmor i trapphus. Retorik: "Ljusflöde", "form följer funktion".
-- 1960-1970: Modernism/Tegel. Karaktär: Yteffektivitet, stora fönsterpartier, gillestugor, vidbyggda garage, platta tak eller sadeltak.
-- Nyproduktion: Svanenmärkt, öppen planlösning, köksöar, hiss till garage, hållbarhetstänk.
-
-### MATERIAL & TEKNIK (SENSORY RULES)
-- Golv: Skilj på laminat, 3-stavsparkett, enstavsparkett (exklusivt), massiv furu, slipbar fiskbensparkett, kalksten (Öland/Jämtland), Carraramarmor.
-- Teknik: Bergvärme, fjärrvärme, FTX-ventilation, solceller, laddstolpar. Om detta saknas i indata, SKALL det flaggas.
-- Storytelling-regel: Koppla materialet till känslan. "De svala kalkstensgolven möter fötterna i hallen", "Ekgolvets varma lyster reflekterar eftermiddagsljuset".
-
-### STRATEGISK ANALYS & PSYKOLOGI (TARGETING)
-- BUDGET: Fokus på insteg, låg avgift, stabil Brf, närhet till T-bana/buss, framtida värdeökning.
-- FAMILJ: Fokus på "det enkla livet". Groventré (viktigt!), tvättstuga, förvaring (klädkammare), bilfria vägar, skolgång.
-- PREMIUM: Fokus på integritet, "extraordinärt", materialval, arkitektens namn, historik, exklusivitet.
-
-### RETORISKA LAGAR (THE ANTI-AI SHIELD)
-- TOTALFÖRBUD: "Ljus och fräsch", "Ett stenkast från", "Fantastisk", "Unik chans", "Hjärtat i huset", "Välplanerad", "Chans", "Magisk".
-- EMOJI-FÖRBUD: Inga emojis i professionell copy eller social media.
-- VERIFIERING: Ersätt adjektiv med bevis. Skriv inte "bra förvaring", skriv "en rymlig walk-in-closet om 6 kvadratmeter".
-`;
+const STRIPE_BASIC_PRICE_ID = process.env.STRIPE_BASIC_PRICE_ID;
+const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
-
-  app.post(api.optimize.path, requireAuth, async (req, res) => {
+  
+  // User status endpoint
+  app.get("/api/user/status", async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
-      if (!userId) return res.status(401).json({ message: "Inloggning krävs" });
-
-      const user = await storage.getUserById(userId);
-      const plan = (user?.plan as PlanType) || "free";
-      const { prompt, type, platform } = optimizeRequestSchema.parse(req.body);
-
-      const finalSystemPrompt = `
-        ${REALTOR_KNOWLEDGE_BASE}
-
-        DIN ARBETSPROCESS (CHAIN OF THOUGHT & VERIFICATION):
-
-        STEG 1: DJUP ANALYS. Läs igenom indatan. Var ligger objektet? Finns det kända fördelar eller framtida infrastruktur. Vilken tidsepok? Vilken prisklass? Vem är köparen? Vad har mäklaren GLÖMT? (Fiber? Pantbrev? Driftskostnad? Parkeringsplats?)
-
-        STEG 2: STRATEGISK PLANERING. Bestäm tonläget. Om objektet är unikt (t.ex. en herrgård eller en liten stuga), anpassa din intelligens efter dess "själ".
-
-        STEG 3: PRODUKTION. Skriv en huvudtext. Använd Grounded Sensory Storytelling.
-
-        STEG 4: CHAIN OF VERIFICATION. Läs din text. Innehåller den förbudna ord? Om ja, skriv om. Är den för kort? Expandera. Innehåller den emojis? Ta bort.
-
-        STEG 5: SLUTRESULTAT. Leverera i JSON format:
-        {
-          "internal_reasoning": "Dold analys",
-          "analysis": {
-            "target_group": "...",
-            "usp": ["...", "...", "..."],
-            "tone_choice": "...",
-            "area_advantage": "Beskrivning av område/infrastruktur (t.ex. Tunnelbana i Nacka)"
-          },
-          "improvedPrompt": "Beskrivningen",
-          "socialCopy": "Teaser",
-          "critical_gaps": ["Lista på saker mäklaren bör lägga till/dubbelkolla"], 
-          "pro_tips": ["Strategiska säljknep för visning/foto"]
+      const userId = req.session?.userId;
+      const tzOffset = parseInt(req.query.tz as string) || 0;
+      
+      // Calculate reset time at midnight in user's timezone
+      const now = new Date();
+      const userNow = new Date(now.getTime() - tzOffset * 60000);
+      const tomorrow = new Date(userNow);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      const resetTime = new Date(tomorrow.getTime() + tzOffset * 60000);
+      
+      if (userId) {
+        const user = await storage.getUserById(userId);
+        if (user) {
+          const plan = (user.plan as PlanType) || "free";
+          const dailyLimit = PLAN_LIMITS[plan];
+          const promptsUsedToday = user.promptsUsedToday || 0;
+          
+          return res.json({
+            plan,
+            promptsUsedToday,
+            promptsRemaining: Math.max(0, dailyLimit - promptsUsedToday),
+            dailyLimit,
+            isLoggedIn: true,
+            resetTime: resetTime.toISOString(),
+            stripeCustomerId: user.stripeCustomerId || null,
+          });
         }
-      `;
+      }
+      
+      // Anonymous user - use session-based tracking
+      const sessionId = req.sessionID;
+      const usage = await storage.getSessionUsage(sessionId);
+      const dailyLimit = PLAN_LIMITS.free;
+      
+      res.json({
+        plan: "free",
+        promptsUsedToday: usage.promptsUsedToday,
+        promptsRemaining: Math.max(0, dailyLimit - usage.promptsUsedToday),
+        dailyLimit,
+        isLoggedIn: false,
+        resetTime: resetTime.toISOString(),
+      });
+    } catch (err) {
+      console.error("User status error:", err);
+      res.status(500).json({ message: "Failed to get user status" });
+    }
+  });
+
+  // Optimize endpoint
+  app.post("/api/optimize", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      const sessionId = req.sessionID;
+      
+      // Check usage limits
+      let plan: PlanType = "free";
+      let promptsUsedToday = 0;
+      
+      if (userId) {
+        const user = await storage.getUserById(userId);
+        if (user) {
+          plan = (user.plan as PlanType) || "free";
+          promptsUsedToday = user.promptsUsedToday || 0;
+        }
+      } else {
+        const usage = await storage.getSessionUsage(sessionId);
+        promptsUsedToday = usage.promptsUsedToday;
+      }
+      
+      const dailyLimit = PLAN_LIMITS[plan];
+      if (promptsUsedToday >= dailyLimit) {
+        return res.status(429).json({
+          message: `You've reached your daily limit of ${dailyLimit} optimizations. Upgrade for more!`,
+          limitReached: true,
+        });
+      }
+      
+      const { prompt, type } = optimizeRequestSchema.parse(req.body);
+      
+      const systemPrompt = `You are an expert prompt engineer. Your task is to improve the user's prompt to get better responses from AI models.
+
+Analyze the prompt and:
+1. Make it clearer and more specific
+2. Add context where needed
+3. Structure it for better results
+4. Consider the category: ${type}
+
+Return a JSON response with:
+{
+  "improvedPrompt": "The enhanced prompt",
+  "improvements": ["List of specific improvements made"],
+  "suggestions": ["Additional tips for the user"]
+}`;
 
       const completion = await openai.chat.completions.create({
         messages: [
-          { role: "system", content: finalSystemPrompt },
-          { role: "user", content: `OBJEKT: ${type}. PLATTFORM: ${platform}. RÅDATA: ${prompt}` }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
         ],
         model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
         response_format: { type: "json_object" },
-        temperature: 0.5,
+        temperature: 0.7,
       });
 
       const result = JSON.parse(completion.choices[0].message.content || "{}");
+      
+      // Increment usage
+      if (userId) {
+        await storage.incrementUserPrompts(userId);
+        await storage.createOptimization({
+          userId,
+          originalPrompt: prompt,
+          improvedPrompt: result.improvedPrompt || prompt,
+          category: type,
+          improvements: result.improvements || [],
+          suggestions: result.suggestions || [],
+        });
+      } else {
+        await storage.incrementSessionPrompts(sessionId);
+      }
 
-      await storage.createOptimization({
-        userId,
+      res.json({
         originalPrompt: prompt,
-        improvedPrompt: result.improvedPrompt,
-        socialCopy: result.socialCopy,
-        category: type,
-        improvements: [
-          `Målgrupp: ${result.analysis?.target_group}`,
-          `Strategi: ${result.analysis?.tone_choice}`,
-          ...result.critical_gaps.map((g: string) => `KOM IHÅG: ${g}`)
-        ],
-        suggestions: result.pro_tips,
+        improvedPrompt: result.improvedPrompt || prompt,
+        improvements: result.improvements || [],
+        suggestions: result.suggestions || [],
       });
+    } catch (err: any) {
+      console.error("Optimize error:", err);
+      res.status(500).json({ message: err.message || "Optimization failed" });
+    }
+  });
 
-      res.json(result);
+  // Stripe checkout
+  app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { tier } = req.body as { tier: "basic" | "pro" };
+      
+      const priceId = tier === "basic" ? STRIPE_BASIC_PRICE_ID : STRIPE_PRO_PRICE_ID;
+      if (!priceId) {
+        return res.status(500).json({ message: "Stripe price not configured" });
+      }
+      
+      let customerId = user.stripeCustomerId;
+      
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: { userId: user.id },
+        });
+        customerId = customer.id;
+      }
+      
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+      
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: "subscription",
+        success_url: `${baseUrl}?success=true`,
+        cancel_url: `${baseUrl}?canceled=true`,
+        metadata: { userId: user.id, targetPlan: tier },
+      });
+      
+      res.json({ url: session.url });
+    } catch (err: any) {
+      console.error("Stripe checkout error:", err);
+      res.status(500).json({ message: err.message || "Payment failed" });
+    }
+  });
+
+  // Stripe customer portal
+  app.post("/api/stripe/create-portal", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      
+      if (!user.stripeCustomerId) {
+        return res.status(400).json({ message: "No subscription found" });
+      }
+      
+      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+      
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: baseUrl,
+      });
+      
+      res.json({ url: portalSession.url });
+    } catch (err: any) {
+      console.error("Portal error:", err);
+      res.status(500).json({ message: err.message || "Could not open portal" });
+    }
+  });
+
+  // Stripe webhook
+  app.post("/api/stripe/webhook", async (req, res) => {
+    const sig = req.headers["stripe-signature"] as string;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    if (!webhookSecret) {
+      console.error("Stripe webhook secret not configured");
+      return res.status(500).json({ message: "Webhook not configured" });
+    }
+    
+    let event: Stripe.Event;
+    
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err: any) {
+      console.error("Webhook signature verification failed:", err.message);
+      return res.status(400).json({ message: `Webhook Error: ${err.message}` });
+    }
+    
+    try {
+      switch (event.type) {
+        case "checkout.session.completed": {
+          const session = event.data.object as Stripe.Checkout.Session;
+          const userId = session.metadata?.userId;
+          const targetPlan = session.metadata?.targetPlan as "basic" | "pro";
+          
+          if (userId && targetPlan && session.subscription && session.customer) {
+            await storage.upgradeUser(
+              userId,
+              targetPlan,
+              session.customer as string,
+              session.subscription as string
+            );
+            console.log(`User ${userId} upgraded to ${targetPlan}`);
+          }
+          break;
+        }
+        
+        case "customer.subscription.deleted": {
+          const subscription = event.data.object as Stripe.Subscription;
+          await storage.downgradeUserToFree(subscription.id);
+          console.log(`Subscription ${subscription.id} cancelled`);
+          break;
+        }
+        
+        case "invoice.payment_failed": {
+          const invoice = event.data.object as Stripe.Invoice;
+          const subscriptionId = (invoice as any).subscription;
+          if (subscriptionId) {
+            await storage.downgradeUserToFree(subscriptionId as string);
+            console.log(`Payment failed for subscription ${subscriptionId}`);
+          }
+          break;
+        }
+      }
+      
+      res.json({ received: true });
     } catch (err) {
-      console.error("KRITISKT FEL:", err);
-      res.status(500).json({ message: "Strategimotorn kunde inte slutföra analysen pga tekniskt fel." });
+      console.error("Webhook processing error:", err);
+      res.status(500).json({ message: "Webhook processing failed" });
+    }
+  });
+
+  // History endpoints
+  app.get("/api/history", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const history = await storage.getOptimizationHistory(user.id);
+      res.json(history);
+    } catch (err) {
+      console.error("History error:", err);
+      res.status(500).json({ message: "Failed to get history" });
+    }
+  });
+
+  app.delete("/api/history/:id", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const id = parseInt(req.params.id);
+      await storage.deleteOptimization(user.id, id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Delete history error:", err);
+      res.status(500).json({ message: "Failed to delete" });
+    }
+  });
+
+  app.delete("/api/history", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      await storage.deleteAllOptimizations(user.id);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Clear history error:", err);
+      res.status(500).json({ message: "Failed to clear history" });
     }
   });
 
