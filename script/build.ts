@@ -32,6 +32,14 @@ const allowlist = [
   "zod-validation-error",
 ];
 
+// Always exclude Replit-specific dev plugins from production builds
+const alwaysExternal = [
+  "@replit/vite-plugin-runtime-error-modal",
+  "@replit/vite-plugin-cartographer", 
+  "@replit/vite-plugin-dev-banner",
+  "vite",
+];
+
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
@@ -44,20 +52,26 @@ async function buildAll() {
     ...Object.keys(pkg.dependencies || {}),
     ...Object.keys(pkg.devDependencies || {}),
   ];
-  const externals = allDeps.filter((dep) => !allowlist.includes(dep));
+  const externals = [
+    ...allDeps.filter((dep) => !allowlist.includes(dep)),
+    ...alwaysExternal,
+  ];
 
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
-    format: "cjs",
-    outfile: "dist/index.cjs",
+    format: "esm",
+    outfile: "dist/index.mjs",
     define: {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
     external: externals,
     logLevel: "info",
+    banner: {
+      js: `import { createRequire } from 'module'; const require = createRequire(import.meta.url);`,
+    },
   });
 }
 
