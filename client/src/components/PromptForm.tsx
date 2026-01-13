@@ -2,234 +2,72 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout } from "lucide-react";
-import { useState } from "react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PromptFormProps {
-  onSubmit: (data: { prompt: string; type: "apartment" | "house"; platform: "hemnet" | "general" }) => void;
+  onSubmit: (data: { prompt: string; type: string; platform: string }) => void;
   isPending: boolean;
   disabled?: boolean;
 }
 
 export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
-  const [propertyType, setPropertyType] = useState<"apartment" | "house">("apartment");
-
   const form = useForm({
     defaultValues: {
-      address: "",
-      size: "",
-      rooms: "",
-      floor: "",
-      elevator: "",
-      lotSize: "",
-      features: "",
-      platform: "hemnet", // Standardval
+      prompt: "",
+      type: "General",
     },
   });
 
   const onLocalSubmit = (values: any) => {
-    // Bygg ihop en detaljerad prompt som AI:n använder för kontext
-    let detailString = `Bostadstyp: ${propertyType === "apartment" ? "Lägenhet" : "Villa/Hus"}\n`;
-    detailString += `Adress: ${values.address}\n`;
-    detailString += `Boarea: ${values.size} kvm\n`;
-    detailString += `Antal rum: ${values.rooms}\n`;
-
-    if (propertyType === "apartment") {
-      detailString += `Våning: ${values.floor}, Hiss: ${values.elevator}\n`;
-    } else {
-      detailString += `Tomtarea: ${values.lotSize} kvm\n`;
-    }
-
-    detailString += `Beskrivning av egenskaper: ${values.features}`;
-
-    // Skicka all data till backend
     onSubmit({ 
-      prompt: detailString, 
-      type: propertyType, 
-      platform: values.platform 
+      prompt: values.prompt, 
+      type: values.type, 
+      platform: "general" 
     });
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-6">
-
-        {/* VÄLJ TYP */}
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setPropertyType("apartment")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all",
-              propertyType === "apartment" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            <Building2 className="w-4 h-4" /> Lägenhet
-          </button>
-          <button
-            type="button"
-            onClick={() => setPropertyType("house")}
-            className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all",
-              propertyType === "house" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            <Home className="w-4 h-4" /> Villa / Hus
-          </button>
-        </div>
-
-        {/* ADRESS & STORLEK */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="address"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5" /> Adress
-                </FormLabel>
-                <FormControl>
-                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. Riddargatan 12" />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="size"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
-                  <Maximize className="w-3.5 h-3.5" /> Boarea (kvm)
-                </FormLabel>
-                <FormControl>
-                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. 65" />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {/* SPECIFIKA FÄLT */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormField
-            control={form.control}
-            name="rooms"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Antal rum</FormLabel>
-                <FormControl>
-                  <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="2.5" />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          {propertyType === "apartment" ? (
-            <>
-              <FormField
-                control={form.control}
-                name="floor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Våning</FormLabel>
-                    <FormControl>
-                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="3 av 5" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="elevator"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="!text-slate-700 font-bold text-xs uppercase flex items-center gap-1">
-                      <ArrowUpCircle className="w-3 h-3" /> Hiss
-                    </FormLabel>
-                    <FormControl>
-                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="Ja" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </>
-          ) : (
-            <FormField
-              control={form.control}
-              name="lotSize"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel className="!text-slate-700 font-bold text-xs uppercase flex items-center gap-1">
-                    <Trees className="w-3 h-3" /> Tomtarea (kvm)
-                  </FormLabel>
-                  <FormControl>
-                    <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="t.ex. 1200" />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-          )}
-        </div>
-
-        {/* PLATFORMSVÄLJARE MED HJÄLPTEXT */}
         <FormField
           control={form.control}
-          name="platform"
+          name="type"
           render={({ field }) => (
-            <FormItem className="space-y-3 p-4 bg-slate-50 rounded-xl border border-slate-200 shadow-inner">
-              <FormLabel className="!text-slate-700 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
-                <Layout className="w-3.5 h-3.5 text-indigo-500" /> Publiceringsformat:
-              </FormLabel>
-
-              <div className="flex bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => form.setValue("platform", "hemnet")}
-                  className={cn(
-                    "flex-1 py-2 rounded-md text-xs font-bold transition-all",
-                    form.watch("platform") === "hemnet" 
-                      ? "bg-indigo-600 text-white shadow-md" 
-                      : "text-slate-500 hover:bg-slate-50"
-                  )}
-                >
-                  Hemnet (Brödtext)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => form.setValue("platform", "general")}
-                  className={cn(
-                    "flex-1 py-2 rounded-md text-xs font-bold transition-all",
-                    form.watch("platform") === "general" 
-                      ? "bg-indigo-600 text-white shadow-md" 
-                      : "text-slate-500 hover:bg-slate-50"
-                  )}
-                >
-                  Egen sida / Booli
-                </button>
-              </div>
-
-              <p className="text-[11px] text-slate-400 italic leading-snug mt-2 px-1">
-                * Faktan ovan används för att AI:n ska förstå kontext och anpassa ordval, även om siffrorna döljs i Hemnet-läget.
-              </p>
+            <FormItem>
+              <FormLabel className="!text-slate-700 font-bold uppercase tracking-wider text-xs">Category</FormLabel>
+              <FormControl>
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
+                  {["General", "Business", "Programming", "Creative"].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => field.onChange(t)}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-xs font-bold transition-all",
+                        field.value === t ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </FormControl>
             </FormItem>
           )}
         />
 
-        {/* FRITEXT: BESKRIVNING */}
         <FormField
           control={form.control}
-          name="features"
+          name="prompt"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="!text-slate-700 font-bold">Unika egenskaper & Känsla</FormLabel>
+              <FormLabel className="!text-slate-700 font-bold">Your Prompt</FormLabel>
               <FormControl>
                 <Textarea 
                   {...field} 
                   className="!bg-white !text-black border-slate-300 min-h-[140px] leading-relaxed focus:border-indigo-500 transition-all" 
-                  placeholder="Berätta om materialval, renoveringar, ljusinsläpp, balkongläge eller föreningens ekonomi..." 
+                  placeholder="Paste the prompt you want to improve here..." 
                 />
               </FormControl>
             </FormItem>
@@ -244,12 +82,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Skapar din annons...
+              Optimizing...
             </>
           ) : (
             <>
               <Sparkles className="mr-2 h-5 w-5" />
-              Generera annonstext
+              Optimize Prompt
             </>
           )}
         </Button>
