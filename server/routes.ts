@@ -451,6 +451,11 @@ Returnera ett JSON-svar med följande struktur:
         return res.status(410).json({ message: "This invite has expired" });
       }
       
+      // Verify email matches the invite
+      if (invite.email && user.email && invite.email.toLowerCase() !== user.email.toLowerCase()) {
+        return res.status(403).json({ message: "This invite is for a different email address" });
+      }
+      
       // Check if already a member
       const existingMembership = await storage.getUserTeamMembership(user.id, invite.teamId);
       if (existingMembership) {
@@ -526,7 +531,20 @@ Returnera ett JSON-svar med följande struktur:
   // Update shared prompt
   app.patch("/api/prompts/:id", requireAuth, async (req, res) => {
     try {
+      const user = (req as any).user as User;
       const promptId = parseInt(req.params.id);
+      
+      // Verify user is a team member
+      const existingPrompt = await storage.getSharedPromptById(promptId);
+      if (!existingPrompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+      
+      const membership = await storage.getUserTeamMembership(user.id, existingPrompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
       const prompt = await storage.updateSharedPrompt(promptId, req.body);
       res.json(prompt);
     } catch (err) {
@@ -538,7 +556,25 @@ Returnera ett JSON-svar med följande struktur:
   // Delete shared prompt
   app.delete("/api/prompts/:id", requireAuth, async (req, res) => {
     try {
+      const user = (req as any).user as User;
       const promptId = parseInt(req.params.id);
+      
+      // Verify user is team owner/admin or prompt creator
+      const existingPrompt = await storage.getSharedPromptById(promptId);
+      if (!existingPrompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+      
+      const membership = await storage.getUserTeamMembership(user.id, existingPrompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
+      // Only owner/admin or the creator can delete
+      if (!["owner", "admin"].includes(membership.role) && existingPrompt.creatorId !== user.id) {
+        return res.status(403).json({ message: "Only team owners, admins, or the creator can delete prompts" });
+      }
+      
       await storage.deleteSharedPrompt(promptId);
       res.json({ success: true });
     } catch (err) {
@@ -550,7 +586,20 @@ Returnera ett JSON-svar med följande struktur:
   // Get prompt comments
   app.get("/api/prompts/:id/comments", requireAuth, async (req, res) => {
     try {
+      const user = (req as any).user as User;
       const promptId = parseInt(req.params.id);
+      
+      // Verify user is a team member
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+      
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
+      
       const comments = await storage.getPromptComments(promptId);
       res.json(comments);
     } catch (err) {
@@ -565,6 +614,17 @@ Returnera ett JSON-svar med följande struktur:
       const user = (req as any).user as User;
       const promptId = parseInt(req.params.id);
       const { content } = req.body;
+      
+      // Verify user is a team member
+      const prompt = await storage.getSharedPromptById(promptId);
+      if (!prompt) {
+        return res.status(404).json({ message: "Prompt not found" });
+      }
+      
+      const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
+      if (!membership) {
+        return res.status(403).json({ message: "Not a member of this team" });
+      }
       
       const comment = await storage.createComment({
         promptId,

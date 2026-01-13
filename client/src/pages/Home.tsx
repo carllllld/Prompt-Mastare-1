@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { PromptForm } from "@/components/PromptForm";
 import { AuthModal } from "@/components/AuthModal";
@@ -63,12 +64,12 @@ export default function Home() {
               <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
             ) : isAuthenticated ? (
               <div className="flex items-center gap-4">
-                <a href="/history" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-history">
+                <Link href="/history" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-history">
                   Historik
-                </a>
-                <a href="/teams" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-teams">
+                </Link>
+                <Link href="/teams" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-teams">
                   Teams
-                </a>
+                </Link>
                 <span className="text-sm font-medium text-slate-400 hidden sm:block">|</span>
                 <span className="text-sm font-medium text-slate-500 hidden sm:block">{user?.email}</span>
                 <Button variant="ghost" size="sm" onClick={() => logout()} className="text-slate-600 hover:text-indigo-600">
