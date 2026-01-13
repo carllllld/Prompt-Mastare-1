@@ -27,7 +27,7 @@ export default function Home() {
   const [result, setResult] = useState<any | null>(null); // Använder any här för att stödja den nya utökade JSON-strukturen
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  const handleSubmit = (data: { prompt: string; type: any }) => {
+  const handleSubmit = (data: { prompt: string; type: string; platform: string }) => {
     mutate(data, {
       onSuccess: (data) => {
         setResult(data);
@@ -233,25 +233,126 @@ export default function Home() {
           )}
         </section>
 
-        {/* HOW IT WORKS OCH ÖVRIGA SEKTIONER (Behållna från din originalkod) */}
+        {/* HOW IT WORKS */}
         <section className="py-24 max-w-5xl mx-auto px-6 border-t border-slate-100">
-          <h2 className="text-3xl font-bold text-center !text-slate-900 mb-16">Varför OptiPrompt Mäklare?</h2>
+          <h2 className="text-3xl font-bold text-center !text-slate-900 mb-16">Why OptiPrompt?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
              <div className="space-y-4">
                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Check className="w-6 h-6" /></div>
-               <h3 className="text-lg font-bold !text-slate-900">Mäklar-DNA</h3>
-               <p className="text-slate-500 text-sm">Vi analyserar arkitektur och segment för att pricka rätt tonfall.</p>
+               <h3 className="text-lg font-bold !text-slate-900">Expert AI</h3>
+               <p className="text-slate-500 text-sm">Our AI analyzes your prompts and enhances them for better results.</p>
              </div>
              <div className="space-y-4">
                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Target className="w-6 h-6" /></div>
-               <h3 className="text-lg font-bold !text-slate-900">Målgruppsfokus</h3>
-               <p className="text-slate-500 text-sm">Texten anpassas för barnfamiljer, förstagångsköpare eller premiunkunder.</p>
+               <h3 className="text-lg font-bold !text-slate-900">Precision Focus</h3>
+               <p className="text-slate-500 text-sm">Get clear, specific prompts that give you exactly what you need.</p>
              </div>
              <div className="space-y-4">
-               <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><MapPin className="w-6 h-6" /></div>
-               <h3 className="text-lg font-bold !text-slate-900">Lokal Kännedom</h3>
-               <p className="text-slate-500 text-sm">AI:n förstår mervärdet av områdets framtida infrastruktur.</p>
+               <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Sparkles className="w-6 h-6" /></div>
+               <h3 className="text-lg font-bold !text-slate-900">Better Results</h3>
+               <p className="text-slate-500 text-sm">Get higher quality responses from ChatGPT, Claude, and other AI.</p>
              </div>
+          </div>
+        </section>
+
+        {/* PRICING SECTION */}
+        <section className="py-24 bg-slate-50 border-t border-slate-200" id="pricing">
+          <div className="max-w-5xl mx-auto px-6">
+            <h2 className="text-3xl font-bold text-center !text-slate-900 mb-4">Simple Pricing</h2>
+            <p className="text-center text-slate-600 mb-16 max-w-2xl mx-auto">
+              Start free and upgrade when you need more. No credit card required.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* FREE */}
+              <Card className="relative overflow-hidden border-slate-200 !bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-bold !text-slate-900">Free</CardTitle>
+                  <div className="mt-4">
+                    <span className="text-4xl font-black !text-slate-900">$0</span>
+                    <span className="text-slate-500">/month</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-3 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 2 optimizations per day</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 500 character limit</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Basic AI model</li>
+                  </ul>
+                  <Button variant="outline" className="w-full" disabled>
+                    Current Plan
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* BASIC */}
+              <Card className="relative overflow-hidden border-indigo-200 !bg-white">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-bold !text-slate-900">Basic</CardTitle>
+                  <div className="mt-4">
+                    <span className="text-4xl font-black !text-slate-900">$3.99</span>
+                    <span className="text-slate-500">/month</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-3 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 20 optimizations per day</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 1000 character limit</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Standard AI model</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> History saved</li>
+                  </ul>
+                  <Button 
+                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        setAuthModalOpen(true);
+                        return;
+                      }
+                      startCheckout("basic");
+                    }}
+                    data-testid="button-upgrade-basic"
+                  >
+                    Upgrade to Basic
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* PRO */}
+              <Card className="relative overflow-hidden border-2 border-indigo-600 !bg-white shadow-xl">
+                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                  POPULAR
+                </div>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl font-bold !text-slate-900">Pro</CardTitle>
+                  <div className="mt-4">
+                    <span className="text-4xl font-black !text-slate-900">$6.99</span>
+                    <span className="text-slate-500">/month</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-3 text-sm text-slate-600">
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 50 optimizations per day</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 2000 character limit</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Advanced AI)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Priority support</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team collaboration</li>
+                  </ul>
+                  <Button 
+                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        setAuthModalOpen(true);
+                        return;
+                      }
+                      startCheckout("pro");
+                    }}
+                    data-testid="button-upgrade-pro"
+                  >
+                    Upgrade to Pro
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
       </main>

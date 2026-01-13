@@ -1,8 +1,9 @@
-import { pgTable, text, serial, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, date, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export * from "./models/auth";
+
 import { users } from "./models/auth";
 
 export const optimizations = pgTable("optimizations", {
@@ -18,19 +19,52 @@ export const optimizations = pgTable("optimizations", {
 });
 
 export const insertOptimizationSchema = createInsertSchema(optimizations).omit({ id: true, createdAt: true });
+export type Optimization = typeof optimizations.$inferSelect;
+export type InsertOptimization = z.infer<typeof insertOptimizationSchema>;
 
 export const optimizeRequestSchema = z.object({
-  prompt: z.string().min(1),
-  type: z.enum(["apartment", "house"]),
-  platform: z.enum(["hemnet", "general"]),
+  prompt: z.string().min(1, "Please enter a prompt to optimize"),
+  type: z.string().default("General"),
+  platform: z.string().default("general"),
 });
 
 export const optimizeResponseSchema = z.object({
+  originalPrompt: z.string(),
   improvedPrompt: z.string(),
-  socialCopy: z.string(),
+  socialCopy: z.string().optional(),
   improvements: z.array(z.string()),
   suggestions: z.array(z.string()),
 });
 
+export const userStatusSchema = z.object({
+  plan: z.enum(["free", "basic", "pro"]),
+  promptsUsedToday: z.number(),
+  promptsRemaining: z.number(),
+  dailyLimit: z.number(),
+  isLoggedIn: z.boolean(),
+  resetTime: z.string(),
+  stripeCustomerId: z.string().optional().nullable(),
+});
+
+export type OptimizeRequest = z.infer<typeof optimizeRequestSchema>;
 export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
+export type UserStatus = z.infer<typeof userStatusSchema>;
+
+export const PLAN_LIMITS = {
+  free: 2,
+  basic: 20,
+  pro: 50,
+} as const;
+
+export const CHARACTER_LIMITS = {
+  free: 500,
+  basic: 1000,
+  pro: 2000,
+} as const;
+
+export const PLAN_PRICES = {
+  basic: { amount: 399, currency: "usd", display: "$3.99" },
+  pro: { amount: 699, currency: "usd", display: "$6.99" },
+} as const;
+
 export type PlanType = "free" | "basic" | "pro";

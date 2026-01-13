@@ -3,90 +3,116 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
+import { setupVite } from "./vite";
 import { createServer } from "http";
 import { pool } from "./db";
 import path from "path";
+import fs from "fs";
 
 const PostgresStore = connectPgSimple(session);
 const app = express();
 
-// --- STRIPE SUPPORT ---
-app.post("/api/webhooks/stripe", express.raw({ type: "application/json" }), (req, res) => {
-  res.json({ received: true });
-});
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+// Stripe webhook needs raw body - must be before express.json()
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// --- SESSIONER & AUTH ---
+// Session configuration
+const isProduction = process.env.NODE_ENV === "production";
 app.use(session({
-  store: new PostgresStore({ pool, createTableIfMissing: false }),
-  secret: process.env.SESSION_SECRET || "realtor_dna_2026",
+  store: new PostgresStore({ 
+    pool, 
+    tableName: "session",
+    createTableIfMissing: true,
+  }),
+  secret: process.env.SESSION_SECRET || "optiprompt_dev_secret_2026",
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === "production" }
+  cookie: { 
+    secure: isProduction,
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+  }
 }));
 
-// Enkel loggning som alltid fungerar
+// Request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toLocaleTimeString()} - ${req.method} ${req.path}`);
+  const start = Date.now();
+  const reqPath = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (reqPath.startsWith("/api")) {
+      let logLine = `${req.method} ${reqPath} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      if (logLine.length > 120) {
+        logLine = logLine.slice(0, 119) + "…";
+      }
+
+      log(logLine);
+    }
+  });
+
   next();
 });
 
 (async () => {
-  // --- AUTOMATISK SQL-FIX FÖR SESSIONSTABELL ---
-  try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "session" (
-        "sid" varchar NOT NULL COLLATE "default",
-        "sess" json NOT NULL,
-        "expire" timestamp(6) NOT NULL
-      ) WITH (OIDS=FALSE);
-
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey') THEN
-          ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid");
-        END IF;
-      END $$;
-
-      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
-    `);
-    console.log("✅ Sessionstabellen är redo i databasen.");
-  } catch (err) {
-    console.error("❌ SQL-fix misslyckades:", err);
-  }
-
+  // Setup auth routes
+  setupAuth(app);
+  
+  // Create HTTP server
   const server = createServer(app);
 
-  // 1. Aktivera Inloggning
-  setupAuth(app);
-
-  // 2. Aktivera din Mäklar-motor (Realtor-DNA)
+  // Setup API routes
   await registerRoutes(server, app);
 
-  // 3. FRONTEND-FIX (Ersätter trasiga vite.ts)
-  // Detta gör att "Cannot GET /" försvinner
-  if (process.env.NODE_ENV === "production") {
-    const publicPath = path.resolve(process.cwd(), "dist", "public");
-    app.use(express.static(publicPath));
-    app.get("*", (req, res) => {
-      if (!req.path.startsWith("/api") && !req.path.startsWith("/auth")) {
-        res.sendFile(path.join(publicPath, "index.html"));
-      }
-    });
-  } else {
-    // Om du kör lokalt/dev, försök importera vite-setup dynamiskt
-    try {
-      const { setupVite } = await import("./vite");
-      await setupVite(app, server);
-    } catch (e) {
-      console.error("Kunde inte starta Vite-dev mode, kör statiskt istället.");
+  // Setup error handler for API routes
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    console.error("Server error:", err);
+    res.status(status).json({ message });
+  });
+
+  // Setup Vite or static serving
+  if (isProduction) {
+    const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+    
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.use("*", (_req, res) => {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
+    } else {
+      console.error("Production build not found at:", distPath);
     }
+  } else {
+    await setupVite(server, app);
   }
 
-  const PORT = process.env.PORT || 5000;
+  const PORT = parseInt(process.env.PORT || "5000");
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Mäklarplattformen är live på port ${PORT}`);
+    log(`serving on port ${PORT}`);
   });
 })();
