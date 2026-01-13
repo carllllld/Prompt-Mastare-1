@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import Teams from "@/pages/Teams";
 import PromptEditor from "@/pages/PromptEditor";
 import JoinTeam from "@/pages/JoinTeam";
+import HistoryPage from "@/pages/HistoryPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/teams" component={Teams} />
       <Route path="/teams/join/:token" component={JoinTeam} />
       <Route path="/prompts/:id" component={PromptEditor} />
+      <Route path="/history" component={HistoryPage} />
       <Route component={NotFound} />
     </Switch>
   );
