@@ -97,8 +97,7 @@ app.use((req, res, next) => {
 
   // Setup Vite or static serving
   if (isProduction) {
-    const __dirname = path.dirname(new URL(import.meta.url).pathname);
-    const distPath = path.resolve(__dirname, "..", "dist", "public");
+    const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
     
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
