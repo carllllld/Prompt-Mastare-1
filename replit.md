@@ -1,8 +1,57 @@
-# OptiPrompt
+# OptiPrompt Mäklare
 
 ## Overview
 
-OptiPrompt is an AI-powered prompt optimization tool with multilingual prompt support. Users submit prompts in any language along with a category (General, Business, Programming, etc.), and the application uses OpenAI's GPT-4o-mini to improve the prompt, explain what was changed, and provide additional suggestions. The goal is to help users get better, more precise responses from AI models like ChatGPT.
+OptiPrompt Mäklare is an AI-powered SaaS application for Swedish real estate agents (mäklare) to generate professional property descriptions (objektbeskrivningar). The system uses sophisticated AI prompts with deep knowledge of Swedish architecture (1880-2026), geographic intelligence (Stockholm/Göteborg/Malmö), market trends 2025-2026, and buyer psychology to create selling descriptions optimized for Hemnet and social media.
+
+## AI Knowledge Base Features (Updated January 2025)
+
+### Architectural Library
+- **Epochs covered**: 1880-1920 (Sekelskifte/Jugend), 1920-1940 (Klassicism), 1930-1950 (Funktionalism), 1950-1960 (Folkhemmet), 1960-1970 (Miljonprogrammet), 1970-1990 (Postmodernism), 2000-2010 (Millennieskiftet), 2015-2026 (Nyproduktion)
+- **Material palettes and sales angles** for each epoch
+
+### Geographic Intelligence
+- **Stockholm**: Innerstan, Söderort, Västerort, Nacka/Värmdö, Solna/Sundbyberg, Täby/Danderyd
+- **Göteborg**: Centrum, Örgryte/Härlanda, Hisingen, Askim/Hovås
+- **Malmö**: Centrum, Västra Hamnen, Limhamn/Bunkeflo
+
+### Market Trends 2025-2026
+- Ränteklimat & köpbeteende
+- Energiklass & driftskostnader (kritiskt säljargument)
+- Hållbarhet & miljö
+- Hybridarbete & hemmakontor
+- Balkong & uteplats värdering
+- Föreningsekonomi
+
+### Buyer Psychology Segments
+- Förstagångsköpare (25-35)
+- Unga familjer (30-40)
+- Etablerade familjer (40-55)
+- Downsizers (55+)
+- Investerare
+
+### BRF/Förening Analysis
+- Skuldfri förening, stambytt, avgift, markägande
+- Gemensamma utrymmen och faciliteter
+- Varningsflaggor och proaktiv hantering
+
+### Hemnet-Optimized Output
+- **Top 5 Highlights**: Bullet points först (✓ format)
+- **Öppningsmallar**: Standard, Premium (4M+), Exklusivt (8M+), Charm-fokus
+- **Anti-klysch-filter**: 20+ förbjudna ord med ersättningsstrategier
+- **Premium adjektiv**: Tidlös, sofistikerad, raffinerad (max 2-3 per text)
+
+### Mäklarstil-inspiration
+- **Erik Olsson-stilen**: Varmt välkomnande, sekelskiftescharm + modern funktion
+- **Fastighetsbyrån-stilen**: Stolt presentation, tidlösa element, emotionell livsstilsförsäljning
+
+### 6-Step AI Work Process
+1. Dekonstruktion & Analys
+2. Highlights (Top 5)
+3. Öppningsmall
+4. Sensoriskt Storytelling
+5. Anti-klysch-verifiering
+6. Slutförädling
 
 ## User Preferences
 
