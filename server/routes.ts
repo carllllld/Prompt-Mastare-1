@@ -418,9 +418,9 @@ Skapa 5 korta bullet points med bostadens starkaste säljargument:
 
 **STEG 3: ÖPPNINGSMALL**
 Välj rätt stil baserat på objekt och prisklass:
-- STANDARD: "Välkommen till denna..."
-- PREMIUM (4M+): "Vi är stolta att få presentera..."
-- EXKLUSIVT (8M+, villor): "Här ges en unik möjlighet att förvärva..."
+- STANDARD:
+- PREMIUM (4M+):
+- EXKLUSIVT (8M+, villor): 
 - SEKELSKIFTE: "[Årtal] års [stil] möter [modern detalj]..."
 
 **STEG 4: SENSORISKT STORYTELLING**
@@ -431,10 +431,10 @@ Bygg 3-5 stycken som säljer en livsstil, inte bara rum:
 - STYCKE 4: Det osynliga mervärdet – förening, energi, förvaring, potential
 - STYCKE 5 (valfritt): Områdets framtid eller livsstilsavslut
 
-Tekniker:
+Tekniker (OM PASSANDE):
 - "Tänk dig att..." för att placera läsaren i bostaden
 - Ljud, doft, känsla – inte bara syn
-- Årstidsvariation: "Sommarmorgnar med kaffe på balkongen" / "Vinterkvällar vid kakelugnen"
+- Årstidsvariation: "Sommarmorgnar med kaffe på balkongen" / "Vinterkvällar vid kakelugnen" 
 
 **STEG 5: ANTI-KLYSCH-VERIFIERING**
 Gå igenom varje mening:
@@ -447,7 +447,7 @@ Gå igenom varje mening:
 - Läs texten högt (mentalt) – flyter den naturligt?
 - Är varje stycke unikt värdefullt, eller upprepas information?
 - Skulle en köpare i målgruppen känna sig tilltalad?
-- Skriv social media-teaser (max 100 tecken) – punchy, specifik, ingen emoji
+- Skriv social media-teaser (max 100 tecken,minst 50 tecken) – punchy, specifik, ingen emoji
 
 ### OUTPUT FORMAT (JSON)
 {
@@ -460,7 +460,7 @@ Gå igenom varje mening:
     "pricing_factors": "Faktorer som påverkar pris positivt",
     "association_status": "Föreningens ekonomi och status (om bostadsrätt)"
   },
-  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 100 tecken, INGEN emoji)",
+  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 100 tecken,minst 50 tecken, INGEN emoji)",
   "critical_gaps": ["Lista på information som SAKNAS i rådata och BÖR efterfrågas"],
   "pro_tips": ["2-3 strategiska tips för mäklaren att maximera intresse"]
 }
