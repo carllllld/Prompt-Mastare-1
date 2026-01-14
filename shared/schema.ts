@@ -31,7 +31,15 @@ export const optimizeRequestSchema = z.object({
 export const optimizeResponseSchema = z.object({
   originalPrompt: z.string(),
   improvedPrompt: z.string(),
-  socialCopy: z.string().optional(),
+  highlights: z.array(z.string()).optional(),
+  analysis: z.object({
+    identified_epoch: z.string().optional(),
+    target_group: z.string().optional(),
+    area_advantage: z.string().optional(),
+    pricing_factors: z.string().optional(),
+    association_status: z.string().optional(),
+  }).optional(),
+  socialCopy: z.string().optional().nullable(),
   improvements: z.array(z.string()),
   suggestions: z.array(z.string()),
 });

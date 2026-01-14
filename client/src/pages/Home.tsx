@@ -11,7 +11,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import { 
   Zap, Loader2, HomeIcon, LogOut, Sparkles, Check, 
-  PenTool, Target, MapPin, ClipboardCheck, AlertCircle 
+  PenTool, Target, MapPin, ClipboardCheck, AlertCircle,
+  Building, Home as HomeIconAlt
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -131,23 +132,51 @@ export default function Home() {
           {result && (
             <div id="results" className="mt-16 space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
 
-              {/* TOPP-ANALYS: STRATEGI & OMRÅDE */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* HEMNET-STIL HIGHLIGHTS */}
+              {result.highlights && result.highlights.length > 0 && (
+                <Card className="bg-gradient-to-r from-indigo-50 to-white border-indigo-200 shadow-lg">
+                  <CardContent className="pt-6 pb-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="w-5 h-5 text-indigo-600" />
+                      <h3 className="font-black text-slate-800 text-sm uppercase tracking-wider">Topphöjdpunkter</h3>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      {result.highlights.map((highlight: string, i: number) => (
+                        <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-indigo-100 shadow-sm">
+                          <span className="text-emerald-500 font-bold">✓</span>
+                          <span className="text-slate-700 text-sm font-medium">{highlight.replace(/^✓\s*/, '')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* TOPP-ANALYS: EPOK, MÅLGRUPP & OMRÅDE */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {result.analysis?.identified_epoch && (
+                  <Card className="bg-slate-50/50 border-amber-100 shadow-sm">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Building className="w-5 h-5 text-amber-600" />
+                        <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Arkitektur</h3>
+                      </div>
+                      <p className="text-slate-600 text-sm leading-relaxed">
+                        {result.analysis.identified_epoch}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <Card className="bg-slate-50/50 border-indigo-100 shadow-sm">
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2 mb-3">
                       <Target className="w-5 h-5 text-indigo-600" />
-                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Strategiskt Tonval</h3>
+                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Målgrupp</h3>
                     </div>
-                    <p className="text-slate-600 text-sm leading-relaxed mb-4">
-                      {result.analysis?.tone_choice}
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      {result.analysis?.target_group || "Analyserar köparprofilering..."}
                     </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Målgrupp:</span>
-                      <Badge variant="outline" className="bg-white text-indigo-600 border-indigo-100">
-                        {result.analysis?.target_group}
-                      </Badge>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -157,12 +186,27 @@ export default function Home() {
                       <MapPin className="w-5 h-5 text-emerald-600" />
                       <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Områdesanalys</h3>
                     </div>
-                    <p className="text-slate-600 text-sm leading-relaxed italic">
+                    <p className="text-slate-600 text-sm leading-relaxed">
                       {result.analysis?.area_advantage || "Hämtar lokal kännedom om området..."}
                     </p>
                   </CardContent>
                 </Card>
               </div>
+
+              {/* FÖRENINGSSTATUS (om bostadsrätt) */}
+              {result.analysis?.association_status && (
+                <Card className="bg-gradient-to-r from-emerald-50 to-white border-emerald-200 shadow-sm">
+                  <CardContent className="pt-6 pb-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <HomeIconAlt className="w-5 h-5 text-emerald-600" />
+                      <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Föreningsekonomi</h3>
+                    </div>
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      {result.analysis.association_status}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* KOM IHÅG (DINA VIKTIGA PUNKTER) */}
               {result.critical_gaps && result.critical_gaps.length > 0 && (
