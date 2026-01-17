@@ -291,18 +291,18 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
              <div className="space-y-4">
                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Check className="w-6 h-6" /></div>
-               <h3 className="text-lg font-bold !text-slate-900">Expert AI</h3>
-               <p className="text-slate-500 text-sm">Our AI analyzes your prompts and enhances them for better results.</p>
+               <h3 className="text-lg font-bold !text-slate-900">Mäklar-DNA</h3>
+               <p className="text-slate-500 text-sm">Vår AI är tränad på tusentals svenska objektbeskrivningar, arkitekturstilar och god mäklarsed.</p>
              </div>
              <div className="space-y-4">
                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Target className="w-6 h-6" /></div>
-               <h3 className="text-lg font-bold !text-slate-900">Precision Focus</h3>
-               <p className="text-slate-500 text-sm">Get clear, specific prompts that give you exactly what you need.</p>
+               <h3 className="text-lg font-bold !text-slate-900">Marknadspsykologi</h3>
+               <p className="text-slate-500 text-sm">Vi analyserar målgrupp och område för att skapa texter som faktiskt leder till fler visningsbokningar.</p>
              </div>
              <div className="space-y-4">
                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Sparkles className="w-6 h-6" /></div>
-               <h3 className="text-lg font-bold !text-slate-900">Better Results</h3>
-               <p className="text-slate-500 text-sm">Get higher quality responses from ChatGPT, Claude, and other AI.</p>
+               <h3 className="text-lg font-bold !text-slate-900">Klyschfri Garanti</h3>
+               <p className="text-slate-500 text-sm">Vi städar automatiskt bort trötta uttryck som "ljus och fräsch" och ersätter dem med säljande fakta.</p>
              </div>
           </div>
         </section>
