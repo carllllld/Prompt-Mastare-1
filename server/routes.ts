@@ -441,7 +441,7 @@ Gå igenom varje mening:
 - Finns något förbjudet ord? → ERSÄTT med specifik detalj
 - Finns emoji i löptexten? → TA BORT omedelbart (endast ✓ i highlights är OK)
 - Finns adjektiv utan bevis? → Lägg till mått, årtal eller märke
-- Låter det som AI eller "mäklarspråk"? → Skriv om till naturlig svenska
+- Låter det som AI → Skriv om med mer personlighet
 
 **STEG 6: SLUTFÖRÄDLING**
 - Läs texten högt (mentalt) – flyter den naturligt?
