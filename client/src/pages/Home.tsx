@@ -57,7 +57,7 @@ export default function Home() {
             <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
               <HomeIcon className="w-5 h-5" />
             </div>
-            <span className="font-bold text-lg !text-slate-900">OptiPrompt <span className="text-indigo-600">Mäklare</span></span>
+            <span className="font-bold text-lg !text-slate-900">Mäklartexter <span className="text-indigo-600">För Fastighetsmäklare</span></span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -110,7 +110,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-sm font-bold !text-slate-700">
-                    {userStatus.promptsRemaining} av {userStatus.dailyLimit} texter kvar idag
+                    {userStatus.promptsRemaining} av {userStatus.dailyLimit} texter kvar denna månad
                   </span>
                 </div>
                 {userStatus.plan !== "pro" && (
@@ -287,7 +287,7 @@ export default function Home() {
 
         {/* HOW IT WORKS */}
         <section className="py-24 max-w-5xl mx-auto px-6 border-t border-slate-100">
-          <h2 className="text-3xl font-bold text-center !text-slate-900 mb-16">Why OptiPrompt?</h2>
+          <h2 className="text-3xl font-bold text-center !text-slate-900 mb-16">Varför Mäklartexter?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
              <div className="space-y-4">
                <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-bold text-xl"><Check className="w-6 h-6" /></div>
@@ -310,61 +310,28 @@ export default function Home() {
         {/* PRICING SECTION */}
         <section className="py-24 bg-slate-50 border-t border-slate-200" id="pricing">
           <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-3xl font-bold text-center !text-slate-900 mb-4">Simple Pricing</h2>
+            <h2 className="text-3xl font-bold text-center !text-slate-900 mb-4">Simpel prissättning</h2>
             <p className="text-center text-slate-600 mb-16 max-w-2xl mx-auto">
-              Start free and upgrade when you need more. No credit card required.
+              Börja gratis och uppgradera när du behöver mer. 
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {/* FREE */}
               <Card className="relative overflow-hidden border-slate-200 !bg-white">
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-xl font-bold !text-slate-900">Free</CardTitle>
+                  <CardTitle className="text-xl font-bold !text-slate-900">Gratis</CardTitle>
                   <div className="mt-4">
-                    <span className="text-4xl font-black !text-slate-900">$0</span>
-                    <span className="text-slate-500">/month</span>
+                    <span className="text-4xl font-black !text-slate-900">0kr</span>
+                    <span className="text-slate-500">/månad</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ul className="space-y-3 text-sm text-slate-600">
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 2 optimizations per day</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 500 character limit</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Basic AI model</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 1 objektbeskrivning per månad</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Grundläggande AI modell</li>
                   </ul>
                   <Button variant="outline" className="w-full" disabled>
-                    Current Plan
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* BASIC */}
-              <Card className="relative overflow-hidden border-indigo-200 !bg-white">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl font-bold !text-slate-900">Basic</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-black !text-slate-900">$3.99</span>
-                    <span className="text-slate-500">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-3 text-sm text-slate-600">
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 20 optimizations per day</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 1000 character limit</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Standard AI model</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> History saved</li>
-                  </ul>
-                  <Button 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700"
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        setAuthModalOpen(true);
-                        return;
-                      }
-                      startCheckout("basic");
-                    }}
-                    data-testid="button-upgrade-basic"
-                  >
-                    Upgrade to Basic
+                    Nuvarande plan
                   </Button>
                 </CardContent>
               </Card>
@@ -372,22 +339,21 @@ export default function Home() {
               {/* PRO */}
               <Card className="relative overflow-hidden border-2 border-indigo-600 !bg-white shadow-xl">
                 <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
-                  POPULAR
+                  POPULÄR
                 </div>
                 <CardHeader className="pb-4">
                   <CardTitle className="text-xl font-bold !text-slate-900">Pro</CardTitle>
                   <div className="mt-4">
-                    <span className="text-4xl font-black !text-slate-900">$6.99</span>
-                    <span className="text-slate-500">/month</span>
+                    <span className="text-4xl font-black !text-slate-900">199kr</span>
+                    <span className="text-slate-500">/månad</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ul className="space-y-3 text-sm text-slate-600">
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 50 optimizations per day</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 2000 character limit</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Advanced AI)</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Priority support</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team collaboration</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 20 objektbeskrivningar per månad</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Avancerad AI)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Prioriterad support</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team samarbete</li>
                   </ul>
                   <Button 
                     className="w-full bg-indigo-600 hover:bg-indigo-700"
@@ -400,7 +366,7 @@ export default function Home() {
                     }}
                     data-testid="button-upgrade-pro"
                   >
-                    Upgrade to Pro
+                    Uppgradera till Pro
                   </Button>
                 </CardContent>
               </Card>
@@ -413,10 +379,10 @@ export default function Home() {
         <div className="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 text-slate-400">
             <HomeIcon className="w-4 h-4" />
-            <span className="font-bold text-sm">OptiPrompt Mäklare</span>
+            <span className="font-bold text-sm">Mäklartexter</span>
           </div>
           <p className="text-slate-400 text-xs">
-            &copy; {new Date().getFullYear()} OptiPrompt. Allt innehåll genereras med AI.
+            &copy; {new Date().getFullYear()} Mäklartexter. Allt innehåll genereras med AI.
           </p>
         </div>
       </footer>
