@@ -390,7 +390,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const dailyLimit = PLAN_LIMITS[plan];
       if (promptsUsedToday >= dailyLimit) {
         return res.status(429).json({
-          message: `You've reached your daily limit of ${dailyLimit} optimizations. Upgrade for more!`,
+          message: `Du har nått din månadsgräns av ${dailyLimit} objektbeskrivningar. Uppgradera för fler!`,
           limitReached: true,
         });
       }
@@ -460,7 +460,7 @@ Gå igenom varje mening:
     "pricing_factors": "Faktorer som påverkar pris positivt",
     "association_status": "Föreningens ekonomi och status (om bostadsrätt)"
   },
-  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 100 tecken,minst 50 tecken, INGEN emoji)",
+  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 1160 tecken,minst 100 tecken, INGEN emoji)",
   "critical_gaps": ["Lista på information som SAKNAS i rådata och BÖR efterfrågas"],
   "pro_tips": ["2-3 strategiska tips för mäklaren att maximera intresse"]
 }
