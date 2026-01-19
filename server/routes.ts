@@ -515,15 +515,16 @@ Gå igenom varje mening:
     }
   });
 
+
   // Stripe checkout
   app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user as User;
-      const { tier } = req.body as { tier: "pro" };
+      const { tier } = req.body;
 
       console.log("[Stripe Checkout] User authenticated:", user.id, user.email);
 
-      const priceId = tier === "pro" ? STRIPE_PRO_PRICE_ID;
+      const priceId = tier === "basic" ? STRIPE_BASIC_PRICE_ID : STRIPE_PRO_PRICE_ID;
       if (!priceId) {
         console.error("[Stripe Checkout] Price ID not configured for tier:", tier);
         return res.status(500).json({ message: "Stripe price not configured" });
@@ -540,7 +541,6 @@ Gå igenom varje mening:
         customerId = customer.id;
         console.log("[Stripe Checkout] Stripe customer created:", customerId);
 
-        // Spara Stripe customer ID i databasen
         await storage.updateUserStripeCustomer(user.id, customerId);
         console.log("[Stripe Checkout] Customer ID saved to database");
       } else {
