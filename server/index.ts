@@ -41,10 +41,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   name: "connect.sid",
+  proxy: true,
   cookie: { 
     secure: true,
     httpOnly: true,
-    sameSite: isProduction ? "none" : "lax",
+    sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   }
 }));
