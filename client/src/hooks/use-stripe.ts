@@ -1,46 +1,80 @@
 import { useMutation } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "./use-toast";
 
 export function useStripeCheckout() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (tier: "basic" | "pro" = "pro") => {
-      const res = await fetch("/api/stripe/create-checkout", {
+    mutationFn: async (tier: "basic" | "pro") => {
+      console.log("[Stripe Checkout] Starting checkout for tier:", tier);
+
+      const response = await fetch("/api/stripe/create-checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // ⬅️ KRITISKT
         body: JSON.stringify({ tier }),
       });
 
-      if (res.status === 401) {
-        throw new Error("LOGIN_REQUIRED");
+      console.log("[Stripe Checkout] Response status:", response.status);
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("[Stripe Checkout] Error response:", error);
+        throw new Error(error.message || "Failed to create checkout session");
       }
 
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Could not start payment." }));
-        throw new Error(error.message);
-      }
-
-      const data = await res.json();
-      return data.url as string;
+      const data = await response.json();
+      console.log("[Stripe Checkout] Success, redirecting to:", data.url);
+      return data;
     },
-    onSuccess: (url) => {
-      if (url) {
-        window.location.href = url;
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
       }
     },
-    onError: (error: Error) => {
-      if (error.message === "LOGIN_REQUIRED") {
-        toast({
-          title: "Login required",
-          description: "Please log in to upgrade.",
-        });
-        return;
-      }
+    onError: (error: any) => {
+      console.error("[Stripe Checkout] Final error:", error);
       toast({
-        title: "Payment error",
-        description: error.message,
+        title: "Fel vid betalning",
+        description: error.message || "Kunde inte skapa betalningssession. Vänligen försök igen.",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useStripePortal() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/stripe/create-portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create portal session");
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: any) => {
+      console.error("Portal error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte öppna kundportal.",
         variant: "destructive",
       });
     },
