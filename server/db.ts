@@ -59,7 +59,28 @@ export async function initializeDatabase() {
         prompts_used_today INTEGER DEFAULT 0,
         last_reset_date DATE DEFAULT CURRENT_DATE,
         stripe_customer_id TEXT,
-        stripe_subscription_id TEXT
+        stripe_subscription_id TEXT,
+        email_verified BOOLEAN DEFAULT false,
+        verification_token TEXT,
+        verification_token_expires TIMESTAMP
+      )
+    `);
+    
+    // Add email verification columns if they don't exist
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS verification_token TEXT,
+      ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP
+    `);
+    
+    // Create email rate limits table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS email_rate_limits (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL,
+        email_type TEXT NOT NULL,
+        sent_at TIMESTAMP DEFAULT NOW()
       )
     `);
     

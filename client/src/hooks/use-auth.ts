@@ -45,8 +45,23 @@ export function useAuth() {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
-      const response = await apiRequest("POST", "/auth/login", credentials);
-      return response.json();
+      const response = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(credentials),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        const error: any = new Error(data.message || "Login failed");
+        error.emailNotVerified = data.emailNotVerified || false;
+        error.email = data.email;
+        throw error;
+      }
+      
+      return data;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/auth/me"], data);
@@ -56,10 +71,25 @@ export function useAuth() {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterCredentials) => {
-      const response = await apiRequest("POST", "/auth/register", credentials);
-      return response.json();
+      const response = await fetch("/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(credentials),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+      
+      return data;
     },
     onSuccess: (data) => {
+      if (!data.emailVerified) {
+        return;
+      }
       queryClient.setQueryData(["/auth/me"], data);
       queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
     },

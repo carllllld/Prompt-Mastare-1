@@ -5,6 +5,9 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import { optimizeRequestSchema, PLAN_LIMITS, type PlanType, type User } from "@shared/schema";
 import { requireAuth } from "./auth";
+import { sendTeamInviteEmail } from "./email";
+
+const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
@@ -787,8 +790,25 @@ Gå igenom varje mening:
         return res.status(403).json({ message: "Only owners and admins can invite members" });
       }
 
+      // Check rate limit for invites
+      const canSend = await storage.canSendEmail(user.email, 'team_invite', MAX_INVITE_EMAILS_PER_HOUR);
+      if (!canSend) {
+        return res.status(429).json({ 
+          message: "Du har skickat för många inbjudningar. Vänligen vänta en timme." 
+        });
+      }
+
       const invite = await storage.createTeamInvite(teamId, email.trim().toLowerCase(), user.id);
-      res.json({ token: invite.token, email: invite.email });
+      
+      // Get team name for the email
+      const team = await storage.getTeamById(teamId);
+      if (team) {
+        await storage.recordEmailSent(user.email, 'team_invite');
+        await sendTeamInviteEmail(invite.email, invite.token, team.name, user.email);
+        console.log("[Invite] Team invite email sent to:", invite.email);
+      }
+      
+      res.json({ token: invite.token, email: invite.email, emailSent: true });
     } catch (err) {
       console.error("Create invite error:", err);
       res.status(500).json({ message: "Failed to create invite" });

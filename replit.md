@@ -138,3 +138,35 @@ Pre-built integration modules in `server/replit_integrations/`:
 - Sessions are stored in PostgreSQL using `connect-pg-simple`
 - Table: `user_sessions` (auto-created)
 - Sessions persist across server restarts
+
+## Email Verification System
+- **Email service**: Resend (requires `RESEND_API_KEY` environment variable)
+- **Verification flow**:
+  1. User registers → verification email sent automatically
+  2. User clicks link in email → redirected to `/verify-email?token=xxx`
+  3. Backend verifies token → marks email as verified, logs user in
+  4. User can now use the full application
+- **Rate limiting**: Max 3 verification emails per hour per email address
+- **Token expiry**: 24 hours
+- **Login requirement**: Email must be verified before login is allowed
+- **Endpoints**:
+  - `GET /auth/verify-email?token=xxx` - Verify email address
+  - `POST /auth/resend-verification` - Resend verification email (body: `{email}`)
+
+## Team Invitation Emails
+- Team invitations now send emails automatically via Resend
+- Rate limited: Max 5 invite emails per hour per user
+- Invitation links expire after 7 days
+- Works even if invitee doesn't have an account yet
+
+## Required Environment Variables
+- `DATABASE_URL` - PostgreSQL connection string
+- `SESSION_SECRET` - Secret for session encryption
+- `RESEND_API_KEY` - Resend API key for sending emails
+- `APP_URL` - Base URL of the application (for email links)
+- `FROM_EMAIL` - Sender email address (optional, defaults to `OptiPrompt <noreply@optiprompt.se>`)
+- `STRIPE_SECRET_KEY` - Stripe secret key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
+- `STRIPE_BASIC_PRICE_ID` - Stripe price ID for Basic plan
+- `STRIPE_PRO_PRICE_ID` - Stripe price ID for Pro plan
+- `AI_INTEGRATIONS_OPENAI_API_KEY` - OpenAI API key

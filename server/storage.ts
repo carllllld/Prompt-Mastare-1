@@ -6,10 +6,11 @@ import {
   sharedPrompts, type SharedPrompt, type InsertSharedPrompt,
   promptComments, type PromptComment, type InsertPromptComment,
   presenceSessions, type PresenceSession,
-  teamInvites, type TeamInvite
+  teamInvites, type TeamInvite,
+  emailRateLimits, type EmailRateLimit
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, gt } from "drizzle-orm";
+import { eq, sql, desc, and, gt, gte } from "drizzle-orm";
 import crypto from "crypto";
 
 export interface IStorage {
@@ -73,6 +74,15 @@ export interface IStorage {
   createTeamInvite(teamId: number, email: string, invitedBy: string): Promise<TeamInvite>;
   getInviteByToken(token: string): Promise<TeamInvite | null>;
   deleteInvite(inviteId: number): Promise<void>;
+
+  // Email verification methods
+  setVerificationToken(userId: string, token: string, expires: Date): Promise<void>;
+  getUserByVerificationToken(token: string): Promise<User | null>;
+  markEmailVerified(userId: string): Promise<void>;
+  
+  // Email rate limiting methods
+  canSendEmail(email: string, emailType: string, maxPerHour: number): Promise<boolean>;
+  recordEmailSent(email: string, emailType: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -118,7 +128,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upgradeUser(userId: string, plan: "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
+  async upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
       .set({ 
         plan,
@@ -464,6 +474,53 @@ export class DatabaseStorage implements IStorage {
 
   async deleteInvite(inviteId: number): Promise<void> {
     await db.delete(teamInvites).where(eq(teamInvites.id, inviteId));
+  }
+
+  async setVerificationToken(userId: string, token: string, expires: Date): Promise<void> {
+    await db.update(users)
+      .set({ 
+        verificationToken: token, 
+        verificationTokenExpires: expires,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | null> {
+    const result = await db.select()
+      .from(users)
+      .where(eq(users.verificationToken, token));
+    return result[0] || null;
+  }
+
+  async markEmailVerified(userId: string): Promise<void> {
+    await db.update(users)
+      .set({ 
+        emailVerified: true, 
+        verificationToken: null, 
+        verificationTokenExpires: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async canSendEmail(email: string, emailType: string, maxPerHour: number): Promise<boolean> {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const result = await db.select()
+      .from(emailRateLimits)
+      .where(and(
+        eq(emailRateLimits.email, email.toLowerCase()),
+        eq(emailRateLimits.emailType, emailType),
+        gte(emailRateLimits.sentAt, oneHourAgo)
+      ));
+    return result.length < maxPerHour;
+  }
+
+  async recordEmailSent(email: string, emailType: string): Promise<void> {
+    await db.insert(emailRateLimits).values({
+      email: email.toLowerCase(),
+      emailType,
+    });
   }
 }
 
