@@ -18,8 +18,19 @@ export const users = pgTable("users", {
   lastResetDate: date("last_reset_date").defaultNow(),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  verificationToken: varchar("verification_token"),
+  verificationTokenExpires: timestamp("verification_token_expires"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Email verification rate limiting
+export const emailRateLimits = pgTable("email_rate_limits", {
+  id: serial("id").primaryKey(),
+  email: varchar("email").notNull(),
+  emailType: varchar("email_type").notNull(),
+  sentAt: timestamp("sent_at").defaultNow(),
 });
 
 // Anonymous session usage tracking
@@ -117,6 +128,9 @@ export type InsertPresenceSession = typeof presenceSessions.$inferInsert;
 
 export type TeamInvite = typeof teamInvites.$inferSelect;
 export type InsertTeamInvite = typeof teamInvites.$inferInsert;
+
+export type EmailRateLimit = typeof emailRateLimits.$inferSelect;
+export type InsertEmailRateLimit = typeof emailRateLimits.$inferInsert;
 
 export type TeamRole = "owner" | "admin" | "member";
 export type PromptStatus = "draft" | "in_progress" | "optimized" | "archived";
