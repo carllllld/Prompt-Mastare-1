@@ -37,13 +37,13 @@ app.use(session({
     tableName: "session",
     createTableIfMissing: true,
   }),
-  secret: process.env.SESSION_SECRET || "optiprompt_dev_secret_2026",
+  secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
-  name: "connect.sid",
+  name: "maklartexter.sid",
   proxy: true,
   cookie: { 
-    secure: true,
+    secure: isProduction,
     httpOnly: true,
     sameSite: "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
