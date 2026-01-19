@@ -30,6 +30,7 @@ app.use(express.urlencoded({ extended: false }));
 
 // Session configuration
 const isProduction = process.env.NODE_ENV === "production";
+
 app.use(session({
   store: new PostgresStore({ 
     pool, 
@@ -39,12 +40,27 @@ app.use(session({
   secret: process.env.SESSION_SECRET || "optiprompt_dev_secret_2026",
   resave: false,
   saveUninitialized: false,
+  name: "connect.sid",
   cookie: { 
     secure: isProduction,
-    sameSite: "lax",
+    httpOnly: true,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   }
 }));
+
+// Debug-logging för session (valfritt, kan tas bort senare)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    console.log('[Session Debug]', {
+      path: req.path,
+      sessionID: req.sessionID?.substring(0, 10) + '...',
+      userId: req.session?.userId,
+      hasCookie: !!req.headers.cookie
+    });
+  }
+  next();
+});
 
 // Request logging
 app.use((req, res, next) => {

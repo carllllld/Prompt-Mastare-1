@@ -18,6 +18,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(userId: string): Promise<User | null>;
   updateUserProfile(userId: string, data: { displayName?: string; avatarColor?: string }): Promise<User | null>;
+  updateUserStripeCustomer(userId: string, stripeCustomerId: string): Promise<void>;
   // Usage methods
   incrementUserPrompts(userId: string): Promise<void>;
   resetUserPromptsIfNewDay(user: User): Promise<User>;
@@ -117,7 +118,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
+  async upgradeUser(userId: string, plan: "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
       .set({ 
         plan,
@@ -127,6 +128,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
+  async updateUserStripeCustomer(userId: string, stripeCustomerId: string): Promise<void> {
+    console.log("[Storage] Updating Stripe customer ID for user:", userId);
+    await db.update(users)
+      .set({ stripeCustomerId })
+      .where(eq(users.id, userId));
+    console.log("[Storage] Stripe customer ID updated successfully");
+  }
+  
   async downgradeUserToFree(stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
       .set({ 
