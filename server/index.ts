@@ -42,7 +42,7 @@ app.use(session({
   saveUninitialized: false,
   name: "connect.sid",
   cookie: { 
-    secure: isProduction,
+    secure: true,
     httpOnly: true,
     sameSite: isProduction ? "none" : "lax",
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
