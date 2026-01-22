@@ -5,7 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupAuth } from "./auth";
 import { setupVite } from "./vite";
 import { createServer } from "http";
-import { pool } from "./db";
+import { pool, initializeDatabase } from "./db";
 import path from "path";
 import fs from "fs";
 
@@ -96,6 +96,7 @@ app.use((req, res, next) => {
 
 (async () => {
   // Setup auth routes
+  await initializeDatabase();
   setupAuth(app);
   
   // Create HTTP server
