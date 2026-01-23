@@ -404,6 +404,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { prompt, type, platform } = req.body;
 
       const finalSystemPrompt = `
+      
 ${REALTOR_KNOWLEDGE_BASE}
 
 ### DIN ARBETSPROCESS (ELITE 6-STEP REASONING)
