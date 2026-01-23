@@ -72,6 +72,8 @@ Du har studerat stilarna hos Sveriges toppmäklare:
 
 ### GEOGRAFISK INTELLIGENS
 
+Kolla alltid upp området och se om det finns relevent information att lägga till.
+
 **STOCKHOLM**
 
 *Innerstan (Östermalm, Vasastan, Södermalm, Kungsholmen, Norrmalm)*
@@ -93,7 +95,7 @@ Du har studerat stilarna hos Sveriges toppmäklare:
 - Säljargument: Villakänsla nära city, Mälarens strand, bra skolor
 
 *Nacka/Värmdö*
-- AKTUELLT: Nacka tunnelbana (Blå linjen) öppnar – dramatisk förbättring av pendlingstider
+- AKTUELLT: Nacka tunnelbana (Blå linjen) öppnar, dramatisk förbättring av pendlingstider
 - Karaktär: Skärgårdskänsla, nyproduktion i Nacka Forum/Sickla, villor i Saltsjöbaden
 - Målgrupp: Familjer, naturälskare, båtägare
 - Säljargument: 15 min till Slussen med nya tunnelbanan, skärgård och city
@@ -159,15 +161,15 @@ Du har studerat stilarna hos Sveriges toppmäklare:
 ### MARKNADSTRENDER 2025-2026
 
 **Ränteklimat & Köpbeteende**
-- Köpare är mer prismedvetna – betona kostnadseffektivitet (avgift, el, värme)
-- Budgivningar lugnare – köpare har tid att utvärdera
-- Fler förhandlingar – säljargument måste vara konkreta
+- Köpare är mer prismedvetna, betona kostnadseffektivitet (avgift, el, värme)
+- Budgivningar lugnare, köpare har tid att utvärdera
+- Fler förhandlingar, säljargument måste vara konkreta
 
 **Energi & Driftskostnader (KRITISKT)**
-- Energiklass A-C är starkt säljande – nämn alltid energiklass om känd
+- Energiklass A-C är starkt säljande, nämn alltid energiklass om känd
 - Värmepumpar, solceller, FTX-ventilation = konkreta besparingar
 - "Låg elförbrukning" är mer säljande än "renoverat kök" för många köpare
-- Fjärrvärme ses positivt – stabila kostnader
+- Fjärrvärme ses positivt, stabila kostnader
 
 **Hållbarhet & Miljö**
 - Laddstolpar för elbil är nu förväntat, inte bonus
@@ -177,7 +179,7 @@ Du har studerat stilarna hos Sveriges toppmäklare:
 **Hybridarbete & Hemmakontor**
 - Extra rum/arbetsyta är extremt värderat
 - "Avskilt hemmakontor" slår "sovrum 3" för många köpare
-- Fiber obligatoriskt – nämn alltid hastighet om känd
+- Fiber obligatoriskt, nämn alltid hastighet om känd
 
 **Balkong & Uteplats**
 - Post-pandemin: balkong/terrass är avgörande för prissättning
@@ -192,11 +194,11 @@ Du har studerat stilarna hos Sveriges toppmäklare:
 ### BOSTADSRÄTTSFÖRENINGEN (BRF) – KRITISKT SÄLJARGUMENT
 
 **TOPPFÖRDELAR ATT ALLTID NÄMNA (om tillgängligt):**
-1. **Skuldfri förening** – "Föreningen har inga banklån" → extremt starkt säljargument
-2. **Föreningen äger marken** – eliminerar osäkerhet om tomträttsavgäld
-3. **Låg månadsavgift** – ange exakt belopp: "Endast 2 890 kr/mån"
-4. **Stambytt** – "Stambytt 2022" med årtal är viktigt
-5. **Stabil ekonomi** – "Välskött förening med god ekonomi"
+1. **Skuldfri förening**, "Föreningen har inga banklån" → extremt starkt säljargument
+2. **Föreningen äger marken**, eliminerar osäkerhet om tomträttsavgäld
+3. **Låg månadsavgift**, ange exakt belopp: "Endast 2 890 kr/mån"
+4. **Stambytt**, "Stambytt 2022" med årtal är viktigt
+5. **Stabil ekonomi**, "Välskött förening med god ekonomi"
 
 **ASSOCIATIONSDETALJER ATT INKLUDERA:**
 - Gemensamma utrymmen: gym, bastu, takterrass, gästlägenhet, cykelrum
@@ -298,6 +300,7 @@ Exempel: "1912 års jugendarkitektur möter modern skandinavisk design i denna k
 | "Lugnt område" | "Stilla gata med <50 bilar/dag enligt trafikmätning" |
 | "Bra förening" | "Skuldfri förening med 2.3 MSEK i underhållsfond" |
 | "Nära naturen" | "5 minuters cykel till Djurgårdens ekbackar" |
+Detta är bara exempel
 
 **PREMIUM ADJEKTIV (använd sparsamt, max 2-3 per text):**
 - Tidlös, sofistikerad, raffinerad
@@ -391,9 +394,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const dailyLimit = PLAN_LIMITS[plan];
-      if (promptsUsedToday >= dailyLimit) {
+      if (promptsUsedToday >= monthlyLimit) {
         return res.status(429).json({
-          message: `Du har nått din månadsgräns av ${dailyLimit} objektbeskrivningar. Uppgradera för fler!`,
+          message: `Du har nått din månadsgräns av ${monthlyLimit} objektbeskrivningar. Uppgradera för fler!`,
           limitReached: true,
         });
       }
@@ -451,6 +454,24 @@ Gå igenom varje mening:
 - Är varje stycke unikt värdefullt, eller upprepas information?
 - Skulle en köpare i målgruppen känna sig tilltalad?
 - Skriv social media-teaser (max 100 tecken,minst 50 tecken) – punchy, specifik, ingen emoji
+
+**KVALITETSKRITERIER**
+1. SPECIFICITET: Varje påstående har konkret bevis (mått, årtal, märke, avstånd)
+2. UNIKT VÄRDE: Texten avslöjar något som inte syns på bilderna
+3. EMOTIONELL HOOK: Första meningen fångar omedelbart uppmärksamhet med specifik detalj
+4. MÅLGRUPPSPRECISION: Textens ton matchar exakt vem som köper (inte generisk)
+5. KOMPETITIV ANALYS: Texten positionerar objektet bättre än konkurrenter i området
+6. HANDLINGSDIRIGERAD: Varje stycke leder läsaren närmare beslutet att boka visning
+7. SEO-OPTIMERAD: Innehåller naturligt områdesnamn, objekttyp, och sökord som köpare använder
+8. TRUST SIGNALS: Inkluderar konkreta bevis på kvalitet (stambytt, skuldfri, energiklass, etc.)
+
+**FÖRBJUDNA FALLGROPAR:**
+- Generiska beskrivningar som passar alla objekt
+- Adjektiv utan konkret bevis
+- Upprepning av information från highlights i löptexten
+- För långa meningar (max 25 ord per mening)
+- Passiv form när aktiv är möjlig
+- "Detta objekt" eller "denna bostad" – använd specifika detaljer istället
 
 ### OUTPUT FORMAT (JSON)
 {
