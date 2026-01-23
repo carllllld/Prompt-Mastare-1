@@ -340,14 +340,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const user = await storage.getUserById(userId);
         if (user) {
           const plan = (user.plan as PlanType) || "free";
-          const dailyLimit = PLAN_LIMITS[plan];
+          const monthlyLimit = PLAN_LIMITS[plan];
           const promptsUsedToday = user.promptsUsedToday || 0;
 
           return res.json({
             plan,
             promptsUsedToday,
-            promptsRemaining: Math.max(0, dailyLimit - promptsUsedToday),
-            dailyLimit,
+            promptsRemaining: Math.max(0, monthlyLimit - promptsUsedToday),
+            monthlyLimit,
             isLoggedIn: true,
             resetTime: resetTime.toISOString(),
             stripeCustomerId: user.stripeCustomerId || null,
@@ -357,13 +357,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const sessionId = req.sessionID;
       const usage = await storage.getSessionUsage(sessionId);
-      const dailyLimit = PLAN_LIMITS.free;
+      const monthlyLimit = PLAN_LIMITS.free;
 
       res.json({
         plan: "free",
         promptsUsedToday: usage.promptsUsedToday,
-        promptsRemaining: Math.max(0, dailyLimit - usage.promptsUsedToday),
-        dailyLimit,
+        promptsRemaining: Math.max(0, monthlyLimit - usage.promptsUsedToday),
+        monthlyLimit,
         isLoggedIn: false,
         resetTime: resetTime.toISOString(),
       });
@@ -393,7 +393,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         promptsUsedToday = usage.promptsUsedToday;
       }
 
-      const dailyLimit = PLAN_LIMITS[plan];
+      const monthlyLimit = PLAN_LIMITS[plan];
       if (promptsUsedToday >= monthlyLimit) {
         return res.status(429).json({
           message: `Du har nått din månadsgräns av ${monthlyLimit} objektbeskrivningar. Uppgradera för fler!`,

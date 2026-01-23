@@ -48,7 +48,7 @@ export const userStatusSchema = z.object({
   plan: z.enum(["free", "basic", "pro"]),
   promptsUsedToday: z.number(),
   promptsRemaining: z.number(),
-  dailyLimit: z.number(),
+  monthlyLimit: z.number(),
   isLoggedIn: z.boolean(),
   resetTime: z.string(),
   stripeCustomerId: z.string().optional().nullable(),
