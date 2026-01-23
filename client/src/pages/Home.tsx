@@ -110,7 +110,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-sm font-bold !text-slate-700">
-                    {userStatus.promptsRemaining} av {userStatus.dailyLimit} texter kvar denna månad
+                    {userStatus.promptsRemaining} av {userStatus.monthlyLimit} texter kvar denna månad
                   </span>
                 </div>
                 {userStatus.plan !== "pro" && (
