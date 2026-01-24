@@ -268,7 +268,7 @@ Exempel: "1912 års jugendarkitektur möter modern skandinavisk design i denna k
 
 ### RETORISKA LAGAR (ANTI-KLYSCH-FILTER)
 
-**FÖRBJUDNA ORD (Använd ALDRIG):**
+**FÖRBJUDNA ORD (Använd ALDRIG, NÅGONSIN):**
 - "Ljus och fräsch", "ljust och luftigt", "fräsch"
 - "Ett stenkast från", "nära till allt"
 - "Fantastisk", "underbar", "magisk", "otrolig"
@@ -300,7 +300,6 @@ Exempel: "1912 års jugendarkitektur möter modern skandinavisk design i denna k
 | "Lugnt område" | "Stilla gata med <50 bilar/dag enligt trafikmätning" |
 | "Bra förening" | "Skuldfri förening med 2.3 MSEK i underhållsfond" |
 | "Nära naturen" | "5 minuters cykel till Djurgårdens ekbackar" |
-Detta är bara exempel
 
 **PREMIUM ADJEKTIV (använd sparsamt, max 2-3 per text):**
 - Tidlös, sofistikerad, raffinerad
@@ -454,7 +453,8 @@ Gå igenom varje mening:
 - Läs texten högt (mentalt) – flyter den naturligt?
 - Är varje stycke unikt värdefullt, eller upprepas information?
 - Skulle en köpare i målgruppen känna sig tilltalad?
-- Skriv social media-teaser (max 100 tecken,minst 50 tecken) – punchy, specifik, ingen emoji
+- Skriv social media-teaser – punchy, specifik, ingen emoji
+- Används några förbjudna ord eller klyschor, skriv om tills det inte gör det
 
 **KVALITETSKRITERIER**
 1. SPECIFICITET: Varje påstående har konkret bevis (mått, årtal, märke, avstånd)
@@ -477,8 +477,8 @@ Gå igenom varje mening:
 ### OUTPUT FORMAT (JSON)
 {
   "highlights": ["5 korta bullet points med ✓-prefix, de starkaste säljargumenten"],
-  "improvedPrompt": "Den färdiga objektbeskrivningen (3-5 stycken, professionell svenska). BÖRJA med highlights som bullet-lista, sedan löptext.",
-  "analysis": {
+  "improvedPrompt": "Den färdiga objektbeskrivningen (professionell svenska). BÖRJA med highlights som bullet-lista, sedan löptext.",
+  "analysis": { 
     "identified_epoch": "Identifierad byggnadsepok och stil",
     "target_group": "Primär målgrupp och varför",
     "area_advantage": "Områdets största säljpunkter",
