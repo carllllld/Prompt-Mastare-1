@@ -3,7 +3,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout } from "lucide-react";
+import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout, DollarSign } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
       floor: "",
       elevator: "",
       lotSize: "",
+      price: "",
       features: "",
       platform: "hemnet", // Standardval
     },
@@ -40,6 +41,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
       detailString += `Våning: ${values.floor}, Hiss: ${values.elevator}\n`;
     } else {
       detailString += `Tomtarea: ${values.lotSize} kvm\n`;
+    }
+
+    if (values.price) {
+      detailString += `Pris: ${values.price} kr\n`;
     }
 
     detailString += `Beskrivning av egenskaper: ${values.features}`;
@@ -111,6 +116,25 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             )}
           />
         </div>
+
+        {/* PRIS */}
+        <FormField
+          control={form.control}
+          name="price"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
+                <DollarSign className="w-3.5 h-3.5" /> Pris (kr)
+              </FormLabel>
+              <FormControl>
+                <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. 4 500 000" />
+              </FormControl>
+              <p className="text-[11px] text-slate-400 italic leading-snug mt-1">
+                * Priset används av AI:n för att välja rätt ton och stil (STANDARD/PREMIUM/EXKLUSIVT), även om det döljs i Hemnet-läget.
+              </p>
+            </FormItem>
+          )}
+        />
 
         {/* SPECIFIKA FÄLT */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

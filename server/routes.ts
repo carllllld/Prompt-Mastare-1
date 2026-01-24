@@ -406,10 +406,37 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
 ${REALTOR_KNOWLEDGE_BASE}
 
+### ⚠️ KRITISKA REGLER - LÄS DETTA FÖRST ⚠️
+
+**DU MÅSTE FÖLJA ALLA REGLER NEDAN. INGA UNDANTAG. INGEN AVVIKELSE TILLÅTEN.**
+
+1. **FÖRBJUDNA ORD (KRITISKT)**: Använd ALDRIG något av dessa ord: "ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "smart planerad", "drömboende", "drömlägenhet", "drömhem", "pärlor", "oas", "en sann pärla", "påkostad renovering" (utan specifikation), "moderna ytskikt", "fräscha ytskikt", "praktisk planlösning", "flexibel planlösning", "rymlig" (utan mått), "generös" (utan mått), "härlig", "mysig", "trivsam" (utan konkret detalj), "centralt belägen", "strategiskt läge", "perfekt för den som...". Om du ser något förbjudet ord, ERSÄTT det omedelbart med en specifik detalj.
+
+2. **INGA EMOJIS (KRITISKT)**: INGA emojis i löptexten. Endast ✓ i highlights är tillåtet. INGA andra emojis någonsin. INGA emojis i socialCopy.
+
+3. **SPECIFICITET (KRITISKT)**: Varje adjektiv MÅSTE ha konkret bevis (mått, årtal, märke, avstånd). Inga generiska beskrivningar. Exempel: Inte "rymlig" utan "72 kvm fördelat på 3 rum".
+
+4. **PRISKLASS (KRITISKT)**: Om pris anges i rådata, MÅSTE du använda det för att välja rätt stil:
+   - Under 4M kr → STANDARD stil ("Välkommen till denna...")
+   - 4M-8M kr → PREMIUM stil ("Vi är stolta att få presentera...")
+   - Över 8M kr eller villor → EXKLUSIVT stil ("Här ges en unik möjlighet...")
+
+5. **VALIDERING (OBLIGATORISK)**: Efter att du skrivit texten, gå igenom varje mening och kontrollera att:
+   - ✓ Inga förbjudna ord finns
+   - ✓ Inga emojis finns (utom ✓ i highlights)
+   - ✓ Varje adjektiv har bevis
+   - ✓ Max 25 ord per mening
+   - ✓ Inga upprepningar från highlights i löptexten
+   - ✓ Inga generiska beskrivningar
+   - ✓ Inga passiva former när aktiv är möjlig
+
+**OM DU BRYTER MOT NÅGON AV DESSA REGLER, SKRIV OM TEXTEN TILLS ALLA REGLER FÖLJS. INGEN UNDANTAG.**
+
 ### DIN ARBETSPROCESS (ELITE 6-STEP REASONING)
 
 **STEG 1: DEKONSTRUKTION & ANALYS**
 Innan du skriver ett ord, analysera rådata:
+- PRIS: Om pris anges, identifiera prisklass för att välja rätt stil (STANDARD/PREMIUM/EXKLUSIVT)
 - GEOGRAFI: Identifiera exakt område. Använd din geografiska intelligens för att förstå kontexten.
 - EPOK: Avgör byggnadens ålder baserat på ledtrådar (takhöjd, material, stil).
 - MÅLGRUPP: Vem köper denna bostad? Använd köparpsykologin för att välja ton och fokus.
@@ -423,11 +450,11 @@ Skapa 5 korta bullet points med bostadens starkaste säljargument:
 - Exempel: "✓ Skuldfri förening", "✓ Stambytt 2023", "✓ 5 min till tunnelbana"
 
 **STEG 3: ÖPPNINGSMALL**
-Välj rätt stil baserat på objekt och prisklass:
-- STANDARD:
-- PREMIUM (4M+):
-- EXKLUSIVT (8M+, villor): 
-- SEKELSKIFTE: "[Årtal] års [stil] möter [modern detalj]..."
+Välj rätt stil baserat på objekt och prisklass (OM PRIS ANGES I RÅDATA, ANVÄND DET):
+- STANDARD (under 4M kr): "Välkommen till denna [adjektiv] [typ] om [X] kvm, belägen [lägesdetalj]."
+- PREMIUM (4M-8M kr): "Vi är stolta att få presentera [unik detalj]..."
+- EXKLUSIVT (över 8M kr, villor): "Här ges en unik möjlighet att förvärva [specifik beskrivning]..."
+- SEKELSKIFTE (om byggnaden är från 1880-1940): "[Årtal] års [arkitektur] möter [modern detalj]..."
 
 **STEG 4: SENSORISKT STORYTELLING**
 Bygg 3-5 stycken som säljer en livsstil, inte bara rum:
@@ -442,19 +469,35 @@ Tekniker (OM PASSANDE):
 - Ljud, doft, känsla – inte bara syn
 - Årstidsvariation: "Sommarmorgnar med kaffe på balkongen" / "Vinterkvällar vid kakelugnen" 
 
-**STEG 5: ANTI-KLYSCH-VERIFIERING**
-Gå igenom varje mening:
-- Finns något förbjudet ord? → ERSÄTT med specifik detalj
-- Finns emoji i löptexten? → TA BORT omedelbart (endast ✓ i highlights är OK)
-- Finns adjektiv utan bevis? → Lägg till mått, årtal eller märke
-- Låter det som AI → Skriv om med mer personlighet
+**STEG 5: ANTI-KLYSCH-VERIFIERING (OBLIGATORISK CHECKLIST)**
+Gå igenom varje mening och kontrollera:
 
-**STEG 6: SLUTFÖRÄDLING**
-- Läs texten högt (mentalt) – flyter den naturligt?
-- Är varje stycke unikt värdefullt, eller upprepas information?
-- Skulle en köpare i målgruppen känna sig tilltalad?
-- Skriv social media-teaser – punchy, specifik, ingen emoji
-- Används några förbjudna ord eller klyschor, skriv om tills det inte gör det
+✓ INGA förbjudna ord finns → Om ja, ERSÄTT omedelbart med specifik detalj
+✓ INGA emojis i löptexten → Om ja, TA BORT omedelbart (endast ✓ i highlights är OK)
+✓ Varje adjektiv har bevis (mått/årtal/märke) → Om nej, LÄGG TILL bevis
+✓ Max 25 ord per mening → Om nej, DELA UPP meningen
+✓ Inga upprepningar från highlights → Om ja, TA BORT eller OMFORMULERA
+✓ Inga generiska beskrivningar → Om ja, SPECIFIERA med konkreta detaljer
+✓ Inga passiva former när aktiv är möjlig → Om ja, SKRIV OM till aktiv form
+✓ Låter det naturligt och inte som AI? → Om nej, SKRIV OM med mer personlighet
+
+**OM NÅGON AV DESSA CHECKPOINTS FAILAR, SKRIV OM TEXTEN TILLS ALLA ÄR ✓**
+
+**STEG 6: SLUTFÖRÄDLING & FINAL VALIDERING**
+Innan du skickar in resultatet, gör en sista kontroll:
+
+1. Läs texten högt (mentalt) – flyter den naturligt?
+2. Är varje stycke unikt värdefullt, eller upprepas information?
+3. Skulle en köpare i målgruppen känna sig tilltalad?
+4. Skriv social media-teaser – punchy, specifik, INGEN emoji (max 1160 tecken, minst 100 tecken)
+5. **KRITISKT**: Gå igenom varje ord i improvedPrompt och socialCopy:
+   - Inga förbjudna ord? ✓
+   - Inga emojis (utom ✓ i highlights)? ✓
+   - Varje adjektiv har bevis? ✓
+   - Max 25 ord per mening? ✓
+   - Inga upprepningar från highlights? ✓
+
+**OM NÅGON VALIDERING FAILAR, SKRIV OM TEXTEN TILLS ALLA CHECKPOINTS ÄR ✓ INNAN DU SKICKAR IN RESULTATET.**
 
 **KVALITETSKRITERIER**
 1. SPECIFICITET: Varje påstående har konkret bevis (mått, årtal, märke, avstånd)
@@ -498,7 +541,7 @@ Gå igenom varje mening:
         ],
         model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
         response_format: { type: "json_object" },
-        temperature: 0.5,
+        temperature: 0.2, // Lägre temperature för mer konsekvent regel-följning
       });
 
       const result = JSON.parse(completion.choices[0].message.content || "{}");
