@@ -307,12 +307,68 @@ export default function Home() {
           </div>
         </section>
 
+        {/* PRO EXAMPLE SECTION */}
+        <section className="py-24 bg-gradient-to-b from-indigo-50 to-white border-t border-slate-200">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="text-center mb-12">
+              <Badge className="mb-4 bg-indigo-600 text-white px-4 py-1">Pro-kvalitet</Badge>
+              <h2 className="text-3xl font-bold !text-slate-900 mb-4">Se skillnaden med Pro</h2>
+              <p className="text-slate-600 max-w-2xl mx-auto">
+                Pro-användare får expertkvalitet med djup analys, arkitekturhistoria och marknadspsykologi. 
+                Här är ett exempel på en Pro-objektbeskrivning:
+              </p>
+            </div>
+            
+            <Card className="border-2 border-indigo-600 shadow-2xl">
+              <div className="bg-indigo-600 text-white px-8 py-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                <span className="font-bold">Pro Objektbeskrivning - Exempel</span>
+              </div>
+              <CardContent className="p-8">
+                <div className="space-y-4 text-slate-700">
+                  <div>
+                    <h4 className="font-bold mb-2">Highlights:</h4>
+                    <ul className="list-none space-y-1 text-sm">
+                      <li>✓ Skuldfri förening med 2.3 MSEK i underhållsfond</li>
+                      <li>✓ Stambytt 2023 med moderna rör och elinstallationer</li>
+                      <li>✓ Balkong i sydvästerläge med kvällssol till 21:00 sommartid</li>
+                      <li>✓ 5 minuters promenad till Odenplans tunnelbana</li>
+                      <li>✓ Gym och bastu i huset, cykelrum med laddstation</li>
+                    </ul>
+                  </div>
+                  <div className="pt-4 border-t">
+                    <h4 className="font-bold mb-2">Objektbeskrivning:</h4>
+                    <p className="text-sm leading-relaxed">
+                      1912 års jugendarkitektur möter modern skandinavisk design i denna karaktärsfulla hörnlägenhet vid Odenplan. 
+                      Med 3.2 meters takhöjd, bevarad originalstuckatur och fiskbensparkett i ek erbjuder denna tvåa om 58 kvm 
+                      en unik kombination av sekelskiftescharm och nutida komfort.
+                      <br/><br/>
+                      Köket renoverades 2023 med Siemens-vitvaror, induktionshäll och kvartskomposit. Vardagsrummet sträcker sig 
+                      över 24 kvm med tre stora fönster mot sydväst, vilket ger naturligt ljus från morgon till kväll. 
+                      Balkongen på 8 kvm är perfekt för sommarkvällar med utsikt över grönområden.
+                      <br/><br/>
+                      Föreningen är skuldfri med 2.3 MSEK i underhållsfond och stambytt genomförd 2023. Månadsavgiften är endast 
+                      2 890 kr/månad. Gemensamma utrymmen inkluderar gym, bastu och takterrass. Cykelrum med laddstation för elcykel.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-8 pt-6 border-t">
+                  <p className="text-xs text-slate-500 italic">
+                    Detta är ett exempel på Pro-kvalitet. Gratis-versionen ger bra resultat, men Pro ger expertnivå med 
+                    djupare analys, längre texter (400+ ord) och professionell marknadspsykologi.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
         {/* PRICING SECTION */}
         <section className="py-24 bg-slate-50 border-t border-slate-200" id="pricing">
           <div className="max-w-5xl mx-auto px-6">
             <h2 className="text-3xl font-bold text-center !text-slate-900 mb-4">Simpel prissättning</h2>
             <p className="text-center text-slate-600 mb-16 max-w-2xl mx-auto">
-              Börja gratis och uppgradera när du behöver mer. 
+              Börja gratis och uppgradera när du behöver mer. Pro ger dig expertkvalitet som ovan. 
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -328,7 +384,9 @@ export default function Home() {
                 <CardContent className="space-y-4">
                   <ul className="space-y-3 text-sm text-slate-600">
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 1 objektbeskrivning per månad</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Grundläggande AI modell</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o-mini (Grundläggande AI)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 250-350 ord per beskrivning</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Klyschfri garanti</li>
                   </ul>
                   <Button variant="outline" className="w-full" disabled>
                     Nuvarande plan
@@ -351,9 +409,12 @@ export default function Home() {
                 <CardContent className="space-y-4">
                   <ul className="space-y-3 text-sm text-slate-600">
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 20 objektbeskrivningar per månad</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Avancerad AI)</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Prioriterad support</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Expert AI)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 400+ ord per beskrivning</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Arkitekturhistoria & marknadspsykologi</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Geografisk intelligens (Stockholm/Göteborg/Malmö)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team samarbete</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Prioriterad support</li>
                   </ul>
                   <Button 
                     className="w-full bg-indigo-600 hover:bg-indigo-700"
