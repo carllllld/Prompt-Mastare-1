@@ -68,9 +68,11 @@ export default function Home() {
                 <Link href="/history" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-history">
                   Historik
                 </Link>
-                <Link href="/teams" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-teams">
-                  Teams
-                </Link>
+                {user?.plan === "pro" && (
+                  <Link href="/teams" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block" data-testid="link-teams">
+                    Teams
+                  </Link>
+                )}
                 <span className="text-sm font-medium text-slate-400 hidden sm:block">|</span>
                 <span className="text-sm font-medium text-slate-500 hidden sm:block">{user?.email}</span>
                 <Button variant="ghost" size="sm" onClick={() => logout()} className="text-slate-600 hover:text-indigo-600">

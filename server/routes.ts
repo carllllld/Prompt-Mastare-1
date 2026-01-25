@@ -437,7 +437,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (err) {
       console.error("User status error:", err);
-      res.status(500).json({ message: "Failed to get user status" });
+      res.status(500).json({ message: "Kunde inte hämta användarstatus" });
     }
   });
 
@@ -464,7 +464,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const monthlyLimit = PLAN_LIMITS[plan];
       if (promptsUsedToday >= monthlyLimit) {
         return res.status(429).json({
-          message: `Du har nått din månadsgräns av ${monthlyLimit} objektbeskrivningar. Uppgradera för fler!`,
+          message: `Du har nått din månadsgräns av ${monthlyLimit} objektbeskrivningar. Uppgradera till Pro för fler!`,
           limitReached: true,
         });
       }
@@ -674,7 +674,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       });
     } catch (err: any) {
       console.error("Optimize error:", err);
-      res.status(500).json({ message: err.message || "Optimization failed" });
+      res.status(500).json({ message: err.message || "Optimering misslyckades" });
     }
   });
 
@@ -730,7 +730,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       res.json({ url: session.url });
     } catch (err: any) {
       console.error("[Stripe Checkout] Error:", err);
-      res.status(500).json({ message: err.message || "Payment failed" });
+      res.status(500).json({ message: err.message || "Betalning misslyckades" });
     }
   });
 
@@ -830,7 +830,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       res.json(history);
     } catch (err) {
       console.error("History error:", err);
-      res.status(500).json({ message: "Failed to get history" });
+      res.status(500).json({ message: "Kunde inte hämta historik" });
     }
   });
 
@@ -842,7 +842,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       res.json({ success: true });
     } catch (err) {
       console.error("Delete history error:", err);
-      res.status(500).json({ message: "Failed to delete" });
+      res.status(500).json({ message: "Kunde inte radera" });
     }
   });
 
@@ -853,7 +853,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       res.json({ success: true });
     } catch (err) {
       console.error("Clear history error:", err);
-      res.status(500).json({ message: "Failed to clear history" });
+      res.status(500).json({ message: "Kunde inte rensa historik" });
     }
   });
 
@@ -866,7 +866,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       res.json(teams);
     } catch (err) {
       console.error("Get teams error:", err);
-      res.status(500).json({ message: "Failed to get teams" });
+      res.status(500).json({ message: "Kunde inte hämta team" });
     }
   });
 
@@ -895,7 +895,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
       res.json(team);
     } catch (err) {
       console.error("Create team error:", err);
-      res.status(500).json({ message: "Failed to create team" });
+      res.status(500).json({ message: "Kunde inte skapa team" });
     }
   });
 

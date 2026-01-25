@@ -304,7 +304,7 @@ export const requirePro: RequestHandler = async (req, res, next) => {
 
   if (user.plan !== "pro") {
     return res.status(403).json({ 
-      message: "This feature requires a Pro subscription",
+      message: "Denna funktion kräver en Pro-prenumeration",
       requiresPro: true 
     });
   }
