@@ -44,12 +44,36 @@ export default function Teams() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
-            <CardTitle>Sign in Required</CardTitle>
-            <CardDescription>Please sign in to access team collaboration features</CardDescription>
+            <CardTitle>Inloggning krävs</CardTitle>
+            <CardDescription>Du måste logga in för att komma åt teamfunktioner</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/">
-              <Button data-testid="button-go-home">Go to Home</Button>
+              <Button data-testid="button-go-home">Till startsidan</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Kontrollera om användaren har pro-plan
+  if (user?.plan !== "pro") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md w-full mx-4">
+          <CardHeader className="text-center">
+            <CardTitle>Pro-prenumeration krävs</CardTitle>
+            <CardDescription>
+              Teamfunktioner är endast tillgängliga för Pro-användare. Uppgradera för att samarbeta med ditt team.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <Link href="/">
+              <Button className="w-full" data-testid="button-go-home">Till startsidan</Button>
+            </Link>
+            <Link href="/#pricing">
+              <Button variant="outline" className="w-full">Se priser</Button>
             </Link>
           </CardContent>
         </Card>
@@ -84,18 +108,18 @@ export default function Teams() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-semibold">My Teams</h1>
+            <h1 className="text-xl font-semibold">Mina Team</h1>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-team">
+                <Button data-testid="button-create-team">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Team
+                Skapa Team
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create a New Team</DialogTitle>
+                <DialogTitle>Skapa ett nytt team</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <Input
@@ -105,13 +129,13 @@ export default function Teams() {
                   onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()}
                   data-testid="input-team-name"
                 />
-                <Button 
+                  <Button 
                   className="w-full" 
                   onClick={handleCreateTeam}
                   disabled={isCreatingTeam || !newTeamName.trim()}
                   data-testid="button-submit-team"
                 >
-                  {isCreatingTeam ? "Creating..." : "Create Team"}
+                  {isCreatingTeam ? "Skapar..." : "Skapa Team"}
                 </Button>
               </div>
             </DialogContent>
@@ -135,13 +159,13 @@ export default function Teams() {
           <Card className="max-w-md mx-auto text-center">
             <CardContent className="pt-8 pb-8">
               <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-semibold mb-2">No teams yet</h2>
+              <h2 className="text-xl font-semibold mb-2">Inga team ännu</h2>
               <p className="text-muted-foreground mb-6">
-                Create a team to start collaborating on prompts with others
+                Skapa ett team för att börja samarbeta med andra
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-first-team">
                 <Plus className="h-4 w-4 mr-2" />
-                Create Your First Team
+                Skapa ditt första team
               </Button>
             </CardContent>
           </Card>
@@ -257,17 +281,17 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
               <DialogTrigger asChild>
                 <Button variant="outline" data-testid="button-invite-member">
                   <Users className="h-4 w-4 mr-2" />
-                  Invite
+                  Bjud in
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Invite Team Member</DialogTitle>
+                  <DialogTitle>Bjud in teammedlem</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <Input
                     type="email"
-                    placeholder="Email address"
+                    placeholder="E-postadress"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     data-testid="input-invite-email"
@@ -278,7 +302,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                     disabled={isInviting || !inviteEmail.trim()}
                     data-testid="button-send-invite"
                   >
-                    {isInviting ? "Creating invite..." : "Create Invite Link"}
+                    {isInviting ? "Skapar inbjudan..." : "Skapa inbjudningslänk"}
                   </Button>
                 </div>
               </DialogContent>
@@ -287,23 +311,23 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
               <DialogTrigger asChild>
                 <Button data-testid="button-new-prompt">
                   <Plus className="h-4 w-4 mr-2" />
-                  New Prompt
+                  Ny Prompt
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Create Shared Prompt</DialogTitle>
+                  <DialogTitle>Skapa delad prompt</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <Input
-                    placeholder="Prompt title"
+                    placeholder="Prompt-titel"
                     value={newPromptTitle}
                     onChange={(e) => setNewPromptTitle(e.target.value)}
                     data-testid="input-prompt-title"
                   />
                   <textarea
                     className="w-full min-h-[120px] rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Enter your prompt content..."
+                    placeholder="Ange din prompt-innehåll..."
                     value={newPromptContent}
                     onChange={(e) => setNewPromptContent(e.target.value)}
                     data-testid="input-prompt-content"
@@ -314,7 +338,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                     disabled={isCreating || !newPromptTitle.trim() || !newPromptContent.trim()}
                     data-testid="button-submit-prompt"
                   >
-                    {isCreating ? "Creating..." : "Create Prompt"}
+                    {isCreating ? "Skapar..." : "Skapa Prompt"}
                   </Button>
                 </div>
               </DialogContent>
@@ -329,7 +353,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Shared Prompts
+                Delade Prompter
               </h2>
               {isLoadingPrompts ? (
                 <div className="grid gap-4 md:grid-cols-2">
@@ -346,11 +370,11 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                 <Card className="text-center py-12">
                   <CardContent>
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No prompts yet</h3>
-                    <p className="text-muted-foreground mb-4">Create your first shared prompt to start collaborating</p>
+                    <h3 className="text-lg font-medium mb-2">Inga prompter ännu</h3>
+                    <p className="text-muted-foreground mb-4">Skapa din första delade prompt för att börja samarbeta</p>
                     <Button onClick={() => setIsNewPromptDialogOpen(true)} data-testid="button-create-first-prompt">
                       <Plus className="h-4 w-4 mr-2" />
-                      Create First Prompt
+                      Skapa första prompten
                     </Button>
                   </CardContent>
                 </Card>
@@ -407,7 +431,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Team Members ({members.length})
+                Teammedlemmar ({members.length})
               </h2>
               <Card>
                 <CardContent className="pt-4">

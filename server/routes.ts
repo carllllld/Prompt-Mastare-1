@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import { optimizeRequestSchema, PLAN_LIMITS, type PlanType, type User } from "@shared/schema";
-import { requireAuth } from "./auth";
+import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
@@ -22,27 +22,69 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 // --- THE ELITE REALTOR DNA (KNOWLEDGE BASE) ---
 // Förenklad version för gratis-användare
 const BASIC_REALTOR_PROMPT = `
-Du är en hjälpsam AI som förbättrar svenska fastighetsbeskrivningar.
+Du är en expert på svenska fastighetsbeskrivningar med kunskap om svensk fastighetsmarknad, arkitektur och köparpsykologi.
 
-**VIKTIGA REGLER:**
-- Använd ALDRIG dessa ord: "ljus och fräsch", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte"
-- INGA emojis i texten
-- Var specifik med mått, årtal, märken
-- Skriv naturlig svenska
+### KRITISKA REGLER (FÖLJ STRICT)
 
-**PROCESS:**
-1. Skapa 5 korta bullet points med ✓ för starkaste fördelar
-2. Skriv en objektbeskrivning på 200-300 ord
-3. Fokusera på praktiska fördelar och läge
+**FÖRBJUDNA ORD (Använd ALDRIG):**
+"ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "smart planerad", "drömboende", "drömlägenhet", "drömhem", "pärlor", "oas", "en sann pärla", "påkostad renovering" (utan specifikation), "moderna ytskikt", "fräscha ytskikt", "praktisk planlösning", "flexibel planlösning", "rymlig" (utan mått), "generös" (utan mått), "härlig", "mysig", "trivsam" (utan konkret detalj), "centralt belägen", "strategiskt läge", "perfekt för den som..."
 
-**OUTPUT FORMAT:**
+**INGA EMOJIS** i löptexten. Endast ✓ i highlights är tillåtet.
+
+**SPECIFICITET:** Varje adjektiv MÅSTE ha konkret bevis (mått, årtal, märke, avstånd). Exempel: Inte "rymlig" utan "72 kvm fördelat på 3 rum". Inte "renoverat" utan "nytt kök 2023: Siemens-vitvaror, induktionshäll".
+
+### ARBETSPROCESS
+
+**STEG 1: ANALYS**
+- Identifiera område och typ av bostad
+- Avgör byggnadens ålder baserat på ledtrådar
+- Identifiera målgrupp (förstagångsköpare, familj, downsizer, investerare)
+- Notera saknad information
+
+**STEG 2: HIGHLIGHTS (TOP 5)**
+Skapa 5 korta bullet points med ✓-prefix. Prioritera:
+- Föreningsekonomi (skuldfri, låg avgift, stambytt)
+- Läge och kommunikationer (avstånd till tunnelbana, skolor)
+- Balkong/uteplats och läge
+- Standard och renoveringar
+- Unika fördelar
+
+**STEG 3: OBJEKTBESKRIVNING (250-350 ord)**
+Bygg en professionell beskrivning med:
+- **Öppning:** Hook med specifik detalj om bostaden
+- **Läge & Område:** Specifika avstånd, namn på gator, närhet till servicer
+- **Bostaden:** Detaljerad beskrivning med mått, material, märken, årtal
+- **Förening:** Ekonomi, gemensamma utrymmen, avgift
+- **Livsstil:** Vad bostaden erbjuder för livsstil
+
+**STEG 4: VALIDERING**
+Kontrollera att:
+- ✓ Inga förbjudna ord finns
+- ✓ Inga emojis (utom ✓ i highlights)
+- ✓ Varje adjektiv har bevis
+- ✓ Max 25 ord per mening
+- ✓ Specifika detaljer istället för generiska beskrivningar
+
+### STILREGLER
+- Använd metriska mått och årtal som bevis
+- Namnge specifika märken och material när möjligt
+- Första meningen ska vara en "hook" – specifik och intresseväckande
+- Varje stycke ska ge ny information
+- Skriv för att läsas högt – naturlig svenska, ingen "mäklarsvenska"
+- Balansera fakta (kvm, rum, våning) med känsla (ljus, atmosfär, livsstil)
+
+### OUTPUT FORMAT (JSON)
 {
-  "highlights": ["5 bullet points med ✓"],
-  "improvedPrompt": "Objektbeskrivning som börjar med highlights",
-  "analysis": {"target_group": "Vem passar bostaden för"},
-  "socialCopy": "Kort teaser utan emoji",
-  "critical_gaps": ["Saknad info"],
-  "pro_tips": ["Tips för mäklaren"]
+  "highlights": ["5 korta bullet points med ✓-prefix, de starkaste säljargumenten"],
+  "improvedPrompt": "Objektbeskrivning (250-350 ord). BÖRJA med highlights som bullet-lista, sedan detaljrik löptext med specifika detaljer.",
+  "analysis": {
+    "target_group": "Primär målgrupp och varför",
+    "area_advantage": "Områdets största säljpunkter",
+    "pricing_factors": "Faktorer som påverkar pris positivt"
+  },
+  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 1160 tecken, minst 100 tecken, INGEN emoji, INGA klyschor)",
+  "critical_gaps": ["Lista på information som SAKNAS i rådata och BÖR efterfrågas"],
+  "pro_tips": ["2-3 strategiska tips för mäklaren att maximera intresse"]
 }
 `;
 
@@ -815,9 +857,9 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  // ==================== TEAM ROUTES ====================
+  // ==================== TEAM ROUTES (PRO ONLY) ====================
 
-  app.get("/api/teams", requireAuth, async (req, res) => {
+  app.get("/api/teams", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const teams = await storage.getUserTeams(user.id);
@@ -828,7 +870,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.post("/api/teams", requireAuth, async (req, res) => {
+  app.post("/api/teams", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const { name } = req.body;
@@ -857,7 +899,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.get("/api/teams/:id", requireAuth, async (req, res) => {
+  app.get("/api/teams/:id", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const teamId = parseInt(req.params.id);
@@ -875,7 +917,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.get("/api/teams/:id/members", requireAuth, async (req, res) => {
+  app.get("/api/teams/:id/members", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const teamId = parseInt(req.params.id);
@@ -893,7 +935,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.post("/api/teams/:id/invite", requireAuth, async (req, res) => {
+  app.post("/api/teams/:id/invite", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const teamId = parseInt(req.params.id);
@@ -933,7 +975,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.post("/api/teams/join/:token", requireAuth, async (req, res) => {
+  app.post("/api/teams/join/:token", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const { token } = req.params;
@@ -974,7 +1016,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.get("/api/teams/:id/prompts", requireAuth, async (req, res) => {
+  app.get("/api/teams/:id/prompts", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const teamId = parseInt(req.params.id);
@@ -992,7 +1034,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
-  app.post("/api/teams/:id/prompts", requireAuth, async (req, res) => {
+  app.post("/api/teams/:id/prompts", requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
       const teamId = parseInt(req.params.id);
