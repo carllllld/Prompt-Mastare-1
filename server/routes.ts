@@ -76,7 +76,7 @@ Kontrollera att:
 ### OUTPUT FORMAT (JSON)
 {
   "highlights": ["5 korta bullet points med ✓-prefix, de starkaste säljargumenten"],
-  "improvedPrompt": "Objektbeskrivning (250-350 ord). BÖRJA med highlights som bullet-lista, sedan detaljrik löptext med specifika detaljer.",
+  "improvedPrompt": "SJÄLVA färdiga objektbeskrivningen i fulltext (250-350 ord). INGA instruktioner här – skriv den slutgiltiga texten som mäklaren ska klistra in på Hemnet.",
   "analysis": {
     "target_group": "Primär målgrupp och varför",
     "area_advantage": "Områdets största säljpunkter",
@@ -614,7 +614,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
 ### OUTPUT FORMAT (JSON) - FÖLJ EXAKT
 {
   "highlights": ["5 korta bullet points med ✓-prefix, de starkaste säljargumenten"],
-  "improvedPrompt": "OMFATTANDE objektbeskrivning (minst 400 ord). BÖRJA med highlights som bullet-lista, sedan detaljrik löptext med sensoriska detaljer och självsäker ton.",
+  "improvedPrompt": "SJÄLVA färdiga, omfattande objektbeskrivningen i fulltext (minst 400 ord). INGA instruktioner här – skriv endast den slutgiltiga texten som mäklaren ska publicera.",
   "analysis": {
     "identified_epoch": "Identifierad byggnadsepok och stil",
     "target_group": "Primär målgrupp och varför",
