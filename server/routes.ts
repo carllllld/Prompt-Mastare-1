@@ -1228,5 +1228,59 @@ Innan du skickar in resultatet, gör en sista kontroll:
     }
   });
 
+  // ==================== ADMIN ROUTES ====================
+  
+  // Admin endpoint to set user plan manually (no Stripe required)
+  // Usage: POST /api/admin/set-plan
+  // Body: { userId: "user-id", plan: "pro" } OR { email: "user@example.com", plan: "pro" }
+  // Query param: ?adminKey=YOUR_SECRET_KEY (set ADMIN_KEY env variable)
+  app.post("/api/admin/set-plan", async (req, res) => {
+    try {
+      const adminKey = req.query.adminKey as string;
+      const expectedKey = process.env.ADMIN_KEY || "change-this-secret-key";
+
+      if (adminKey !== expectedKey) {
+        return res.status(403).json({ message: "Invalid admin key" });
+      }
+
+      const { userId, email, plan } = req.body;
+
+      if (!plan || !["free", "basic", "pro"].includes(plan)) {
+        return res.status(400).json({ message: "Invalid plan. Must be 'free', 'basic', or 'pro'" });
+      }
+
+      let targetUser: User | null = null;
+
+      if (userId) {
+        targetUser = await storage.getUserById(userId);
+      } else if (email) {
+        targetUser = await storage.getUserByEmail(email);
+      } else {
+        return res.status(400).json({ message: "Either userId or email must be provided" });
+      }
+
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.setUserPlan(targetUser.id, plan);
+      
+      console.log(`[Admin] User ${targetUser.email} (${targetUser.id}) plan set to ${plan}`);
+      
+      res.json({ 
+        success: true, 
+        message: `User ${targetUser.email} plan set to ${plan}`,
+        user: {
+          id: targetUser.id,
+          email: targetUser.email,
+          plan: plan
+        }
+      });
+    } catch (err: any) {
+      console.error("Admin set-plan error:", err);
+      res.status(500).json({ message: err.message || "Failed to set user plan" });
+    }
+  });
+
   return httpServer;
 }
