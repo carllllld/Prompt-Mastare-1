@@ -61,7 +61,7 @@ export type UserStatus = z.infer<typeof userStatusSchema>;
 export const PLAN_LIMITS = {
   free: 2,
   basic: 20,
-  pro: 50,
+  pro: 20,
 } as const;
 
 export const CHARACTER_LIMITS = {

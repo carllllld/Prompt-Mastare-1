@@ -10,131 +10,148 @@ import { sendTeamInviteEmail } from "./email";
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
 const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
+
+function extractFirstJsonObject(text: string): string {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return "{}";
+  return text.slice(start, end + 1);
+}
+
+const FORBIDDEN_PHRASES = [
+  "ljus och fräsch",
+  "ljust och luftigt",
+  "fräsch",
+  "ett stenkast",
+  "nära till allt",
+  "fantastisk",
+  "underbar",
+  "magisk",
+  "otrolig",
+  "unik chans",
+  "sällsynt tillfälle",
+  "missa inte",
+  "hjärtat i hemmet",
+  "husets hjärta",
+  "välplanerad",
+  "genomtänkt",
+  "drömboende",
+  "drömlägenhet",
+  "drömhem",
+  "en sann pärla",
+  "pärla",
+  "oas",
+  "moderna ytskikt",
+  "fräscha ytskikt",
+  "praktisk planlösning",
+  "flexibel planlösning",
+  "centralt belägen",
+  "strategiskt läge",
+  "perfekt för den som",
+];
+
+function findRuleViolations(text: string): string[] {
+  const violations: string[] = [];
+  const lower = (text || "").toLowerCase();
+
+  for (const phrase of FORBIDDEN_PHRASES) {
+    if (lower.includes(phrase)) {
+      violations.push(`Förbjudet ord/fras: "${phrase}"`);
+    }
+  }
+
+  // Heuristik: de flesta emojis ligger i surrogate-pairs i UTF-16
+  const emojiRegex = /[\uD83C-\uDBFF][\uDC00-\uDFFF]/;
+  if (emojiRegex.test(text || "")) {
+    violations.push("Emojis är inte tillåtna i löptext (endast ✓ i highlights)");
+  }
+
+  return violations;
+}
+
+function validateOptimizationResult(result: any): string[] {
+  const violations: string[] = [];
+  if (typeof result?.improvedPrompt === "string") {
+    violations.push(...findRuleViolations(result.improvedPrompt));
+  }
+  if (typeof result?.socialCopy === "string") {
+    violations.push(...findRuleViolations(result.socialCopy));
+  }
+  return Array.from(new Set(violations));
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 const STRIPE_BASIC_PRICE_ID = process.env.STRIPE_BASIC_PRICE_ID;
 const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
-// --- THE ELITE REALTOR DNA (KNOWLEDGE BASE) ---
-// Förenklad version för gratis-användare
+// --- PROMPT FÖR GRATIS-ANVÄNDARE (BASIC) ---
 const BASIC_REALTOR_PROMPT = `
-Du är en expert på svenska fastighetsbeskrivningar med kunskap om svensk fastighetsmarknad, arkitektur och köparpsykologi.
-De regler du får under detta ska följas STENHÅRT och du börjar skriva när du läst alla instruktioner.
+Du är en expert på svenska fastighetsbeskrivningar. Följ reglerna nedan exakt.
 
-### KRITISKA REGLER (FÖLJ STRICT)
+### ABSOLUTA REGLER
 
-**FÖRBJUDNA ORD (Använd ALDRIG):**
-"ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "smart planerad", "drömboende", "drömlägenhet", "drömhem", "pärlor", "oas", "en sann pärla", "påkostad renovering" (utan specifikation), "moderna ytskikt", "fräscha ytskikt", "praktisk planlösning", "flexibel planlösning", "rymlig" (utan mått), "generös" (utan mått), "härlig", "mysig", "trivsam" (utan konkret detalj), "centralt belägen", "strategiskt läge", "perfekt för den som..."
+**FÖRBJUDNA ORD:** "ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "drömboende", "drömhem", "pärlor", "oas", "en sann pärla", "moderna ytskikt", "praktisk planlösning", "rymlig" (utan mått), "generös" (utan mått), "mysig", "trivsam" (utan detalj), "centralt belägen", "perfekt för den som..."
 
-**INGA EMOJIS** i löptexten. Endast ✓ i highlights är tillåtet.
+**INGA EMOJIS** i löptexten. Endast ✓ i highlights.
 
-**SPECIFICITET:** Varje adjektiv MÅSTE ha konkret bevis (mått, årtal, märke, avstånd). Exempel: Inte "rymlig" utan "72 kvm fördelat på 3 rum". Inte "renoverat" utan "nytt kök 2023: Siemens-vitvaror, induktionshäll".
+**SPECIFICITET:** Varje adjektiv MÅSTE ha bevis (mått, årtal, märke). Exempel: "72 kvm fördelat på 3 rum", "nytt kök 2023 med Siemens-vitvaror".
 
-**SLUTA VARA GENERISK:** Inga tomma avslut som "harmonisk och trivsam atmosfär" eller "perfekt för den som...". Avsluta istället med ett konkret, säljande stycke som sammanfattar 2–3 bevisbara styrkor (siffror/årtal/märken/läge).
+**FABRICERA ALDRIG FAKTA:** Om info saknas (avstånd, årtal, avgift) – HITTA INTE PÅ. Lista det i "missing_info" istället.
 
-### ARBETSPROCESS
+**MAX 25 ORD PER MENING.**
 
-**STEG 1: ANALYS**
-- Identifiera område och typ av bostad
-- Avgör byggnadens ålder baserat på ledtrådar
-- Identifiera målgrupp (förstagångsköpare, familj, downsizer, investerare)
-- Notera saknad information
+### EXEMPEL PÅ BRA OUTPUT
 
-**STEG 2: HIGHLIGHTS (TOP 5)**
-Skapa 5 korta bullet points med ✓-prefix. Prioritera:
-- Föreningsekonomi (skuldfri, låg avgift, stambytt)
-- Läge och kommunikationer (avstånd till tunnelbana, skolor)
-- Balkong/uteplats och läge
-- Standard och renoveringar
-- Unika fördelar
+**Input:** "2 rok vasastan stockholm 58 kvm balkong renoverat 2022"
 
-<<<<<<< HEAD
-**STEG 3: OBJEKTBESKRIVNING, Hemnet=(250-350 ord), Booli/Egen sida=(350-450 ord)**
-Bygg en professionell beskrivning med:
-- **Öppning:** Hook med specifik detalj om bostaden
-- **Läge & Område:** Specifika avstånd, namn på gator, närhet till servicer
-- **Bostaden:** Detaljerad beskrivning med mått, material, märken, årtal
-- **Förening:** Ekonomi, gemensamma utrymmen, avgift
-- **Livsstil:** Vad bostaden erbjuder för livsstil
-=======
-**STEG 3: OBJEKTBESKRIVNING (PLATTFORM-SPECIFIK)**
-**OM PLATTFORM = "hemnet":**
-- Längd: 350-450 ord (balanserat, tillräckligt för att sälja men inte för långt)
-- Format: 5-7 korta stycken, direkt klistringsbar text
-- Fokus: Fakta, bevis, SEO-optimerat (områdesnamn, objekttyp). Varje stycke måste sälja.
-- Ton: Professionell men snabb att läsa. Varje mening ska leda till visningsbokning.
-- Viktigt: Köpare skannar snabbt på Hemnet - första stycket måste fånga, varje stycke måste ge värde.
->>>>>>> 243db12cd0593fb0d3c23b5dcbc115f6ac57b08d
+**Output improvedPrompt:**
+"Välkommen till denna tvåa om 58 kvm på tredje våningen i ett 1920-talshus vid Odenplan. Lägenheten renoverades 2022 med nytt badrum och kök i ljusa toner.
 
-**OM PLATTFORM = "general" (Booli/egen sida):**
-- Längd: 500-700 ord (detaljerad, berättande, mer utrymme för livsstil)
-- Format: 7-9 längre stycken med mer atmosfär och sensoriska detaljer
-- Fokus: Sensoriska detaljer, livsstil, längre beskrivningar av material och känsla. Berätta historien om bostaden.
-- Ton: Mer berättande, kan vara lite mer personlig, men fortfarande professionell. Tillåt mer "tänk dig att..."-moment.
+Vardagsrummet vetter mot den lugna innergården. Två fönster i söderläge ger naturligt ljus från morgon till eftermiddag. Här ryms både soffa och matplats.
 
-**MÅSTE INNEHÅLLA (om det finns i rådata):**
-- Bostadstyp, antal rum, boyta (kvm), adress/område
-- Våningsplan + hiss (om relevant)
-- Balkong/uteplats (läge + sol/utsikt + användning)
-- Kök (år/standard + material + vitvarumärken om givna)
-- Vardagsrum (möblerbarhet + ljusförhållanden med konkret orsak)
-- Sovrum (läge mot gata/gård + förvaring om givna)
-- Badrum (standard + komfort, t.ex. golvvärme + tvättmöjlighet med märke om givna)
-- Förening (belåningsgrad/ekonomi + 1 konkret trygghetsfaktor)
-- Område/kommunikationer: NÄMN ENDAST avstånd om det finns i rådata. Om avstånd saknas → lägg i "critical_gaps" istället för att hitta på.
+Köket har vita luckor, bänkskiva i laminat och spishäll från Electrolux. Gott om förvaringsutrymme i både över- och underskåp.
 
-**SKRIVSÄTT:**
-- Max 25 ord per mening.
-- Undvik "denna bostad/detta objekt" – använd kvm, våning, gatunamn, epok, planlösningsdetaljer.
-- Undvik superlativer. Sälj med bevis.
-- Undvik mäklar-klyschor (se förbjudna ord). Om du vill skriva "rymligt", ange mått eller möblering som bevis.
+Sovrummet är 12 kvm och rymmer dubbelsäng samt garderob. Badrummet är helkaklat med dusch och tvättmaskin.
 
-**STEG 4: VALIDERING**
-VÄLDIGT VIKTIGT, Kontrollera att:
-- ✓ Inga förbjudna ord finns
-- ✓ Inga emojis (utom ✓ i highlights)
-- ✓ Varje adjektiv har bevis
-- ✓ Max 25 ord per mening
-- ✓ Specifika detaljer istället för generiska beskrivningar
-
-### STILREGLER
-- Använd metriska mått och årtal som bevis
-- Namnge specifika märken och material när möjligt
-- Första meningen ska vara en "hook" – specifik och intresseväckande
-- Varje stycke ska ge ny information
-- Skriv för att läsas högt – naturlig svenska, ingen "mäklarsvenska"
-- Balansera fakta (kvm, rum, våning) med känsla (ljus, atmosfär, livsstil)
+Balkongen i söderläge är 4 kvm och får kvällssol. Föreningen är välskött med nyligen stambytta rör."
 
 ### OUTPUT FORMAT (JSON)
 {
-  "highlights": ["5 korta bullet points med ✓-prefix, de starkaste säljargumenten"],
-  "improvedPrompt": "SJÄLVA färdiga objektbeskrivningen i fulltext (350-450 ord för Hemnet, 500-700 ord för Booli/egen sida). INGA instruktioner här – skriv endast den slutgiltiga texten som mäklaren ska publicera.",
+  "highlights": ["5 bullet points med ✓-prefix, konkreta säljargument"],
+  "improvedPrompt": "Färdig objektbeskrivning (Hemnet: 350-450 ord, Booli: 500-700 ord)",
   "analysis": {
-    "target_group": "Primär målgrupp och varför",
-    "area_advantage": "Områdets största säljpunkter",
-    "pricing_factors": "Faktorer som påverkar pris positivt"
+    "target_group": "Primär målgrupp",
+    "area_advantage": "Områdets styrkor",
+    "pricing_factors": "Prispåverkande faktorer"
   },
-  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 1160 tecken, minst 100 tecken, INGEN emoji, INGA klyschor)",
-  "critical_gaps": ["Lista på information som SAKNAS i rådata och BÖR efterfrågas"],
-  "pro_tips": ["2-3 strategiska tips för mäklaren att maximera intresse"]
+  "socialCopy": "Teaser för sociala medier (100-1160 tecken, INGEN emoji)",
+  "missing_info": ["Info som saknas och bör efterfrågas för att stärka texten"],
+  "pro_tips": ["2-3 tips för mäklaren"]
 }
 `;
 
-// Expertversion för pro-användare
+// Expertversion för pro-användare (kunskapsbas utan duplicerade regler)
 const REALTOR_KNOWLEDGE_BASE = `
-### DIN IDENTITET & EXPERTIS
-Du är Sveriges främsta copywriter för fastighetsbranschen med 20 års erfarenhet. Du kombinerar djup lokalkunskap, arkitekturhistoria och köparpsykologi för att skapa texter som säljer. Din ton är sofistikerad men tillgänglig – aldrig säljig eller klyschig.
+### DIN IDENTITET
+Du är Sveriges främsta copywriter för fastighetsbranschen. Din ton är sofistikerad men tillgänglig – aldrig säljig eller klyschig.
 
-Du har studerat stilarna hos Sveriges toppmäklare:
-- **Erik Olsson-stilen** (Östermalm/premium lägenheter): Varmt välkomnande, balanserar sekelskiftescharm med modern funktion
-- **Fastighetsbyrån-stilen** (Premium villor): Stolt presentation, tidlösa element, emotionell livsstilsförsäljning
-- **Hemnet-optimerad struktur**: Bullet points först med nyckelfördelar, sedan flytande text
+### ABSOLUTA REGLER
 
-### ARKITEKTONISKT BIBLIOTEK (DETALJERAT)
+**FÖRBJUDNA ORD:** "ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "drömboende", "drömhem", "pärlor", "oas", "en sann pärla", "moderna ytskikt", "praktisk planlösning", "rymlig" (utan mått), "generös" (utan mått), "mysig", "trivsam" (utan detalj), "centralt belägen", "perfekt för den som..."
+
+**INGA EMOJIS** i löptexten. Endast ✓ i highlights.
+
+**SPECIFICITET:** Varje adjektiv MÅSTE ha bevis (mått, årtal, märke).
+
+**FABRICERA ALDRIG FAKTA:** Om info saknas – HITTA INTE PÅ. Lista det i "missing_info" istället.
+
+**MAX 25 ORD PER MENING.**
+
+### ARKITEKTONISKT BIBLIOTEK
 
 **1880-1920: Sekelskifte/Jugend**
 - Kännetecken: 3.2m+ takhöjd, stuckatur, takrosetter, speglade socklar, fiskbensparkett, kakelugnar (Rörstrand, Gustavsberg), blyinfattade fönster
@@ -315,32 +332,6 @@ Kolla alltid upp området och se om det finns relevent information att lägga ti
 **VARNINGSFLAGGOR ATT HANTERA PROAKTIVT:**
 Om det finns kommande renoveringar → presentera positivt: "Föreningen planerar stamrenovering 2026 med god framförhållning och transparent kommunikation"
 
-### PLATTFORM-SPECIFIK STRUKTUR
-
-**TOP 5 HIGHLIGHTS (BULLET POINTS FÖRST - ALLA PLATTFORMAR):**
-Varje objektbeskrivning ska inledas med 5 korta, konkreta fördelar:
-- ✓ Skuldfri förening
-- ✓ Balkong i sydvästerläge
-- ✓ Stambytt 2023
-- ✓ Gym och bastu i huset
-- ✓ 5 min till tunnelbana
-
-Välj de 5 starkaste säljpunkterna för just detta objekt.
-
-**HEMNET-SPECIFIKT:**
-- Balanserad text (350-450 ord), 5-7 korta stycken
-- Fakta först, atmosfär sekundärt - men båda måste finnas
-- SEO-optimerat med områdesnamn och objekttyp
-- Max 25 ord per mening
-- Varje stycke måste sälja - köpare skannar snabbt
-
-**BOOLI/EGEN SIDA-SPECIFIKT:**
-- Längre text (500-700 ord), 7-9 längre stycken
-- Mer sensoriska detaljer och livsstilsbeskrivningar
-- Berättande ton, mer personlig, tillåt mer "tänk dig att..."
-- Max 30 ord per mening (längre meningar för flyt)
-- Mer utrymme för att berätta historien om bostaden
-
 ### ÖPPNINGSMALLAR (VÄLJ RÄTT STIL)
 
 **STANDARD (de flesta objekt):**
@@ -385,28 +376,7 @@ Exempel: "1912 års jugendarkitektur möter modern skandinavisk design i denna k
 - Prioriterar: Hyresavkastning, läge, renoveringspotential
 - Språk: Siffror, avkastning, utvecklingsområden
 
-### RETORISKA LAGAR (ANTI-KLYSCH-FILTER)
-
-**FÖRBJUDNA ORD (Använd ALDRIG, NÅGONSIN):**
-- "Ljus och fräsch", "ljust och luftigt", "fräsch"
-- "Ett stenkast från", "nära till allt"
-- "Fantastisk", "underbar", "magisk", "otrolig"
-- "Unik chans", "sällsynt tillfälle", "missa inte"
-- "Hjärtat i hemmet", "husets hjärta"
-- "Välplanerad", "genomtänkt", "smart planerad"
-- "Drömboende", "drömlägenhet", "drömhem"
-- "Pärlor", "oas", "en sann pärla"
-- "Påkostad renovering" (utan specifikation)
-- "Moderna ytskikt", "fräscha ytskikt"
-- "Praktisk planlösning", "flexibel planlösning"
-- "Rymlig", "generös" (utan mått)
-- "Härlig", "mysig", "trivsam" (utan konkret detalj)
-- "Centralt belägen", "strategiskt läge"
-- "Perfekt för den som..."
-- Alla superlativer utan bevis
-- ALLA EMOJIS (absolut förbjudet)
-
-**ERSÄTTNINGSSTRATEGIER:**
+### ERSÄTTNINGSSTRATEGIER (KLYSCH → KONKRET)
 | Klysch | Ersättning |
 |--------|------------|
 | "Högt i tak" | "3.2 meters takhöjd med bevarad originalstuckatur" |
@@ -525,8 +495,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isPro = plan === "pro";
       const systemPrompt = isPro ? REALTOR_KNOWLEDGE_BASE : BASIC_REALTOR_PROMPT;
 
+      const model = isPro ? "gpt-4o" : "gpt-4o-mini";
+
       // Debug: logga vilken prompt som används
-      console.log(`[AI] Using ${isPro ? 'PRO' : 'BASIC'} prompt for plan: ${plan}, model: ${plan === "pro" ? "gpt-4o" : "gpt-4o-mini"}`);
+      console.log(`[AI] Using ${isPro ? 'PRO' : 'BASIC'} prompt for plan: ${plan}, model: ${model}`);
 
       const finalSystemPrompt = `
 ${systemPrompt}
@@ -613,89 +585,77 @@ Var detaljrik och specifik. Använd kraftfulla verb och levande beskrivningar:
 - Årstidsvariation: "Sommarmorgnar med kaffe på balkongen" / "Vinterkvällar vid kakelugnen"
 - Personliga anekdoter: "Familjer som bott här i generationer" / "Första gången du öppnar dörren efter jobbet" 
 
-**STEG 5: ANTI-KLYSCH-VERIFIERING (OBLIGATORISK CHECKLIST)**
-Gå igenom varje mening och kontrollera:
+### KVALITETSKRAV
+- **LÄNGD**: ${platform === "hemnet" ? "350-450 ord" : "500-700 ord"}
+- Varje adjektiv har bevis (mått, årtal, märke)
+- Första meningen är en specifik hook
+- Varje stycke ger ny information
+- SEO: områdesnamn och objekttyp naturligt infogat
+- Skriv social media-teaser (100-1160 tecken, INGEN emoji)
 
-✓ INGA förbjudna ord finns → Om ja, ERSÄTT omedelbart med specifik detalj
-✓ INGA emojis i löptexten → Om ja, TA BORT omedelbart (endast ✓ i highlights är OK)
-✓ Varje adjektiv har bevis (mått/årtal/märke) → Om nej, LÄGG TILL bevis
-✓ Max 25 ord per mening → Om nej, DELA UPP meningen
-✓ Inga upprepningar från highlights → Om ja, TA BORT eller OMFORMULERA
-✓ Inga generiska beskrivningar → Om ja, SPECIFIERA med konkreta detaljer
-✓ Inga passiva former när aktiv är möjlig → Om ja, SKRIV OM till aktiv form
-✓ Låter det naturligt och inte som AI? → Om nej, SKRIV OM med mer personlighet
-
-**OM NÅGON AV DESSA CHECKPOINTS FAILAR, SKRIV OM TEXTEN TILLS ALLA ÄR ✓**
-
-**STEG 6: SLUTFÖRÄDLING & FINAL VALIDERING**
-Innan du skickar in resultatet, gör en sista kontroll:
-
-1. Läs texten högt (mentalt) – flyter den naturligt?
-2. Är varje stycke unikt värdefullt, eller upprepas information?
-3. Skulle en köpare i målgruppen känna sig tilltalad?
-4. Skriv social media-teaser – punchy, specifik, INGEN emoji (max 1160 tecken, minst 100 tecken)
-5. **KRITISKT**: Gå igenom varje ord i improvedPrompt och socialCopy:
-   - Inga förbjudna ord? ✓
-   - Inga emojis (utom ✓ i highlights)? ✓
-   - Varje adjektiv har bevis? ✓
-   - Max 25 ord per mening? ✓
-   - Inga upprepningar från highlights? ✓
-
-**OM NÅGON VALIDERING FAILAR, SKRIV OM TEXTEN TILLS ALLA CHECKPOINTS ÄR ✓ INNAN DU SKICKAR IN RESULTATET.**
-
-**KVALITETSKRITERIER (MANDATORY MINIMUM)**
-1. **LÄNGD**: ${platform === "hemnet" ? "350-450 ord för improvedPrompt (Hemnet-format, balanserat för att sälja)." : "500-700 ord för improvedPrompt (Booli/egen sida-format, detaljerad och berättande)."} Varje stycke ska vara substantiellt och detaljrikt.
-2. **SPECIFICITET**: Varje påstående har konkret bevis (mått, årtal, märke, avstånd, namn)
-3. **UNIKT VÄRDE**: Texten avslöjar något som inte syns på bilderna – gör den unik
-4. **EMOTIONELL HOOK**: Första meningen fångar omedelbart uppmärksamhet med specifik detalj
-5. **SJÄLVSÄKER TON**: Var säljande och självsäker, inte försiktig eller tveksam
-6. **MÅLGRUPPSPRECISION**: Textens ton matchar exakt vem som köper (inte generisk)
-7. **KOMPETITIV ANALYS**: Texten positionerar objektet bättre än konkurrenter i området
-8. **HANDLINGSDIRIGERAD**: Varje stycke leder läsaren närmare beslutet att boka visning
-9. **SEO-OPTIMERAD**: Innehåller naturligt områdesnamn, objekttyp, och sökord som köpare använder
-10. **TRUST SIGNALS**: Inkluderar konkreta bevis på kvalitet (stambytt, skuldfri, energiklass, etc.)
-
-**FÖRBJUDNA FALLGROPAR (AUTOMATISK FAIL):**
-- För kort text (${platform === "hemnet" ? "under 350 ord för Hemnet-format" : "under 500 ord för Booli/egen sida-format"})
-- Försiktig eller tveksam ton
-- Generiska beskrivningar som passar alla objekt
-- Adjektiv utan konkret bevis
-- Upprepning av information från highlights i löptexten
-- För långa meningar (max 25 ord per mening)
-- Passiv form när aktiv är möjlig
-- "Detta objekt" eller "denna bostad" – använd specifika detaljer istället
-- För många klyschor eller förbjudna ord
-- Inga sensoriska detaljer eller levande beskrivningar
-
-### OUTPUT FORMAT (JSON) - FÖLJ EXAKT
+### OUTPUT FORMAT (JSON)
 {
-  "highlights": ["5 korta bullet points med ✓-prefix, de starkaste säljargumenten"],
-  "improvedPrompt": "SJÄLVA färdiga objektbeskrivningen i fulltext (${platform === "hemnet" ? "350-450 ord för Hemnet" : "500-700 ord för Booli/egen sida"}). INGA instruktioner här – skriv endast den slutgiltiga texten som mäklaren ska publicera.",
+  "highlights": ["5 bullet points med ✓-prefix"],
+  "improvedPrompt": "Färdig objektbeskrivning (${platform === "hemnet" ? "350-450 ord" : "500-700 ord"})",
   "analysis": {
-    "identified_epoch": "Identifierad byggnadsepok och stil",
-    "target_group": "Primär målgrupp och varför",
-    "area_advantage": "Områdets största säljpunkter",
-    "pricing_factors": "Faktorer som påverkar pris positivt",
-    "association_status": "Föreningens ekonomi och status (om bostadsrätt)"
+    "identified_epoch": "Byggnadsepok",
+    "target_group": "Målgrupp",
+    "area_advantage": "Områdets styrkor",
+    "pricing_factors": "Prisfaktorer",
+    "association_status": "Föreningsstatus"
   },
-  "socialCopy": "Kort, punchy teaser för Instagram/Facebook (max 1160 tecken, minst 100 tecken, INGEN emoji, INGA klyschor)",
-  "critical_gaps": ["Lista på information som SAKNAS i rådata och BÖR efterfrågas"],
-  "pro_tips": ["2-3 strategiska tips för mäklaren att maximera intresse"]
+  "socialCopy": "Teaser för sociala medier (100-1160 tecken, INGEN emoji)",
+  "missing_info": ["Info som saknas och bör efterfrågas för att stärka texten ytterligare"],
+  "pro_tips": ["2-3 tips för mäklaren"]
 }
 `;
 
-      const completion = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: finalSystemPrompt },
-          { role: "user", content: `OBJEKT: ${type}. PLATTFORM: ${platform === "hemnet" ? "HEMNET (balanserat format, 350-450 ord, varje stycke måste sälja)" : "BOOLI/EGEN SIDA (detaljerat format, 500-700 ord, berätta historien)"}. RÅDATA: ${prompt}` }
-        ],
-        model: plan === "pro" ? "gpt-4o" : "gpt-4o-mini",
-        max_tokens: plan === "pro" ? 4000 : 2000, // Mer tokens för pro-versionen
+      const baseMessages = [
+        {
+          role: "system" as const,
+          content:
+            finalSystemPrompt +
+            "\n\nDu kommer få rådata inuti <db_context>...</db_context>. Följ reglerna i systemprompten. Svara ENDAST med ett giltigt JSON-objekt enligt OUTPUT FORMAT.",
+        },
+        {
+          role: "user" as const,
+          content: `<db_context>OBJEKT: ${type}. PLATTFORM: ${platform === "hemnet" ? "HEMNET (balanserat format, 350-450 ord, varje stycke måste sälja)" : "BOOLI/EGEN SIDA (detaljerat format, 500-700 ord, berätta historien)"}. RÅDATA: ${prompt}</db_context>`,
+        },
+      ];
+
+      const completion1 = await openai.chat.completions.create({
+        model,
+        messages: baseMessages,
+        max_tokens: plan === "pro" ? 4000 : 2000,
+        temperature: 0.3,
         response_format: { type: "json_object" },
-        temperature: 0.3, // Balans mellan regel-följning och kreativitet för längre texter
       });
 
-      const result = JSON.parse(completion.choices[0].message.content || "{}");
+      const text1 = completion1.choices[0]?.message?.content || "{}";
+      let result: any = JSON.parse(extractFirstJsonObject(text1));
+
+      const violations = validateOptimizationResult(result);
+      if (violations.length > 0) {
+        const completion2 = await openai.chat.completions.create({
+          model,
+          messages: [
+            ...baseMessages,
+            {
+              role: "user" as const,
+              content:
+                `<rule_violations>${violations.join("; ")}</rule_violations>` +
+                "\n\nDu bröt minst en regel. Skriv om improvedPrompt och socialCopy så att ALLA regler följs. " +
+                "Returnera ENDAST ett giltigt JSON-objekt enligt OUTPUT FORMAT.",
+            },
+          ],
+          max_tokens: plan === "pro" ? 4000 : 2000,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+        });
+
+        const text2 = completion2.choices[0]?.message?.content || "{}";
+        result = JSON.parse(extractFirstJsonObject(text2));
+      }
 
       // Increment usage
       if (userId) {
@@ -724,7 +684,7 @@ Innan du skickar in resultatet, gör en sista kontroll:
         improvedPrompt: result.improvedPrompt || prompt,
         highlights: result.highlights || [],
         analysis: result.analysis || {},
-        improvements: result.critical_gaps || [],
+        improvements: result.missing_info || [],
         suggestions: result.pro_tips || [],
         socialCopy: result.socialCopy || null
       });
