@@ -23,6 +23,7 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 // Förenklad version för gratis-användare
 const BASIC_REALTOR_PROMPT = `
 Du är en expert på svenska fastighetsbeskrivningar med kunskap om svensk fastighetsmarknad, arkitektur och köparpsykologi.
+De regler du får under detta ska följas STENHÅRT och du börjar skriva när du läst alla instruktioner.
 
 ### KRITISKA REGLER (FÖLJ STRICT)
 
@@ -51,6 +52,15 @@ Skapa 5 korta bullet points med ✓-prefix. Prioritera:
 - Standard och renoveringar
 - Unika fördelar
 
+<<<<<<< HEAD
+**STEG 3: OBJEKTBESKRIVNING, Hemnet=(250-350 ord), Booli/Egen sida=(350-450 ord)**
+Bygg en professionell beskrivning med:
+- **Öppning:** Hook med specifik detalj om bostaden
+- **Läge & Område:** Specifika avstånd, namn på gator, närhet till servicer
+- **Bostaden:** Detaljerad beskrivning med mått, material, märken, årtal
+- **Förening:** Ekonomi, gemensamma utrymmen, avgift
+- **Livsstil:** Vad bostaden erbjuder för livsstil
+=======
 **STEG 3: OBJEKTBESKRIVNING (PLATTFORM-SPECIFIK)**
 **OM PLATTFORM = "hemnet":**
 - Längd: 350-450 ord (balanserat, tillräckligt för att sälja men inte för långt)
@@ -58,6 +68,7 @@ Skapa 5 korta bullet points med ✓-prefix. Prioritera:
 - Fokus: Fakta, bevis, SEO-optimerat (områdesnamn, objekttyp). Varje stycke måste sälja.
 - Ton: Professionell men snabb att läsa. Varje mening ska leda till visningsbokning.
 - Viktigt: Köpare skannar snabbt på Hemnet - första stycket måste fånga, varje stycke måste ge värde.
+>>>>>>> 243db12cd0593fb0d3c23b5dcbc115f6ac57b08d
 
 **OM PLATTFORM = "general" (Booli/egen sida):**
 - Längd: 500-700 ord (detaljerad, berättande, mer utrymme för livsstil)
@@ -83,7 +94,7 @@ Skapa 5 korta bullet points med ✓-prefix. Prioritera:
 - Undvik mäklar-klyschor (se förbjudna ord). Om du vill skriva "rymligt", ange mått eller möblering som bevis.
 
 **STEG 4: VALIDERING**
-Kontrollera att:
+VÄLDIGT VIKTIGT, Kontrollera att:
 - ✓ Inga förbjudna ord finns
 - ✓ Inga emojis (utom ✓ i highlights)
 - ✓ Varje adjektiv har bevis
@@ -543,34 +554,14 @@ ${platform === "hemnet" ? `
 
 ### 🚨 ABSOLUT KRITISKA REGLER - FÖLJ DETTA ELLER FAIL 🚨
 
-**DU MÅSTE FÖLJA ALLA REGLER NEDAN. INGA UNDANTAG. INGEN AVVIKELSE. INGEN KOMPROMISSER.**
+**DU MÅSTE FÖLJA ALLA REGLER NEDAN. INGA UNDANTAG. INGEN AVVIKELSE. INGA KOMPROMISSER.**
 
-1. **FÖRBJUDNA ORD (STRICT FORBIDDEN)**: Använd ALDRIG något av dessa ord: "ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "smart planerad", "drömboende", "drömlägenhet", "drömhem", "pärlor", "oas", "en sann pärla", "påkostad renovering" (utan specifikation), "moderna ytskikt", "fräscha ytskikt", "praktisk planlösning", "flexibel planlösning", "rymlig" (utan mått), "generös" (utan mått), "härlig", "mysig", "trivsam" (utan konkret detalj), "centralt belägen", "strategiskt läge", "perfekt för den som...". **OM DU ANVÄNDER NÅGOT AV DESSA ORD → ERSÄTT OMEDDELBART MED SPECIFIK DETALJ.**
+LÄS IGENOM HELA DATABASEN DU FÅTT OCH ALLT I DENNA PROMPT INNAN DU SKRIVER ETT ENDA ORD SÅ DU VET EXAKT VAD DU SKA GÖRA.
 
-2. **INGA EMOJIS (ABSOLUT FÖRBJUDET)**: INGA emojis i löptexten. Endast ✓ i highlights är tillåtet. INGA andra emojis någonsin. INGA emojis i socialCopy. INGA emojis i improvedPrompt.
-
-3. **SPECIFICITET (MANDATORY)**: Varje adjektiv MÅSTE ha konkret bevis (mått, årtal, märke, avstånd). **INGA GENERISKA BESKRIVNINGAR.** Exempel: Inte "rymlig" utan "72 kvm fördelat på 3 rum". Inte "renoverat" utan "nytt kök 2023: Siemens-vitvaror, induktionshäll, kvartskomposit".
-
-4. **LÄNGD OCH DJUP (MANDATORY)**: Texten MÅSTE vara omfattande och detaljrik. ${platform === "hemnet" ? "350-450 ord för improvedPrompt (balanserat, tillräckligt för att sälja)." : "500-700 ord för improvedPrompt (detaljerad, berättande)."} Varje stycke ska ge NY information. Beskriv material, märken, mått, år, färger, ljusförhållanden. Gör det levande och engagerande.
-
-5. **SJÄLVSÄKER RÖST (MANDATORY)**: Var självsäker och säljande, inte försiktig. Använd kraftfulla verb och specifika detaljer. Gör mäklaren trovärdig genom att nämna konkreta fördelar och bevis.
-
-6. **PRISKLASS (MANDATORY)**: Om pris anges i rådata, ANVÄND DET för att välja rätt stil:
+**PRISKLASS (MANDATORY)**: Om pris anges i rådata, ANVÄND DET för att välja rätt stil:
    - Under 4M kr → STANDARD stil ("Välkommen till denna...")
    - 4M-8M kr → PREMIUM stil ("Vi är stolta att få presentera...")
    - Över 8M kr eller villor → EXKLUSIVT stil ("Här ges en unik möjlighet...")
-
-7. **VALIDERING (MANDATORY)**: Efter att du skrivit texten, gå igenom varje mening:
-   - ❌ Inga förbjudna ord finns?
-   - ❌ Inga emojis finns (utom ✓ i highlights)?
-   - ❌ Varje adjektiv har bevis?
-   - ❌ ${platform === "hemnet" ? "350-450 ord för improvedPrompt (Hemnet-format)?" : "500-700 ord för improvedPrompt (Booli/egen sida-format)?"}
-   - ❌ Självsäker, säljande ton?
-   - ❌ ${platform === "hemnet" ? "Max 25 ord per mening (Hemnet-format)?" : "Max 30 ord per mening (Booli/egen sida-format)?"}
-   - ❌ Inga upprepningar från highlights?
-   - ❌ Inga generiska beskrivningar?
-
-**OM NÅGON VALIDERING FAILAR → SKRIV OM HELA TEXTEN. INGEN UNDANTAG. INGEN KOMPROMISS.**
 
 ### DIN ARBETSPROCESS (ELITE 6-STEP REASONING)
 
