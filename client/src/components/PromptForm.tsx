@@ -25,6 +25,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
       elevator: "",
       lotSize: "",
       price: "",
+      fee: "", // Avgift för bostadsrätt
+      buildYear: "", // Byggår
       features: "",
       platform: "hemnet", // Standardval
     },
@@ -39,8 +41,15 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
     if (propertyType === "apartment") {
       detailString += `Våning: ${values.floor}, Hiss: ${values.elevator}\n`;
+      if (values.fee) {
+        detailString += `Avgift: ${values.fee} kr/mån\n`;
+      }
     } else {
       detailString += `Tomtarea: ${values.lotSize} kvm\n`;
+    }
+
+    if (values.buildYear) {
+      detailString += `Byggår: ${values.buildYear}\n`;
     }
 
     if (values.price) {
@@ -155,26 +164,24 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             <>
               <FormField
                 control={form.control}
-                name="floor"
+                name="fee"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Våning</FormLabel>
+                    <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Avgift (kr/mån)</FormLabel>
                     <FormControl>
-                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="3 av 5" />
+                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="4 200" />
                     </FormControl>
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="elevator"
+                name="floor"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="!text-slate-700 font-bold text-xs uppercase flex items-center gap-1">
-                      <ArrowUpCircle className="w-3 h-3" /> Hiss
-                    </FormLabel>
+                    <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Våning</FormLabel>
                     <FormControl>
-                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="Ja" />
+                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="3 av 5" />
                     </FormControl>
                   </FormItem>
                 )}
@@ -248,14 +255,25 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           name="features"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="!text-slate-700 font-bold">Unika egenskaper & Känsla</FormLabel>
+              <FormLabel className="!text-slate-700 font-bold">Övrig information till AI:n</FormLabel>
               <FormControl>
                 <Textarea 
                   {...field} 
                   className="!bg-white !text-black border-slate-300 min-h-[140px] leading-relaxed focus:border-indigo-500 transition-all" 
-                  placeholder="Berätta om materialval, renoveringar, ljusinsläpp, balkongläge eller föreningens ekonomi..." 
+                  placeholder={`Skriv allt annat som AI:n behöver veta, t.ex:
+
+• Balkong/uteplats (väderstreck, storlek)
+• Renoveringar (kök 2022, badrum 2020, stambytt)
+• Material (parkett, kakel, marmor)
+• Ljusförhållanden (genomgående, fönster i flera väderstreck)
+• Förening (skuldfri, stabil ekonomi, planerade renoveringar)
+• Unika detaljer (öppen spis, takhöjd, originaldetaljer)
+• Närområde (tunnelbana, skola, park)`} 
                 />
               </FormControl>
+              <p className="text-[11px] text-amber-600 font-medium mt-2">
+                ⚠️ Juridiskt viktigt för bostadsrätt: avgift, andelstal, pantsättning, föreningens skuld
+              </p>
             </FormItem>
           )}
         />
