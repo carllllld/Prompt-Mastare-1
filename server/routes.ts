@@ -22,21 +22,53 @@ function extractFirstJsonObject(text: string): string {
 }
 
 // Förbjudna fraser - AI-fraser som avslöjar genererad text
+// VIKTIGT: Använd KORTA fraser för att fånga alla varianter
 const FORBIDDEN_PHRASES = [
   // Generiska AI-öppningar
-  "välkommen till denna",
-  "välkommen hem till",
+  "välkommen till",
+  "välkommen hem",
   "här erbjuds",
   "nu finns chansen",
-  "missa inte denna",
+  "missa inte",
   "unik möjlighet",
   "unik chans",
   "sällsynt tillfälle",
   
+  // "erbjuder" i alla former (KORT för att fånga alla varianter)
+  " erbjuder ",
+  " erbjuds ",
+  
+  // "perfekt för" i alla former
+  "perfekt för",
+  "idealiskt för",
+  "idealt för",
+  
+  // Atmosfär-fraser
+  "trivsam atmosfär",
+  "härlig atmosfär",
+  "mysig atmosfär",
+  
+  // Rofylld/lugn klyschor
+  "rofyllt",
+  "rofylld",
+  
+  // Trygg-fraser
+  "trygg boendemiljö",
+  "trygg boendeekonomi",
+  "tryggt boende",
+  
+  // Sociala klyschor
+  "sociala sammanhang",
+  "sociala tillställningar",
+  "socialt umgänge",
+  
+  // Komfort-fraser
+  "extra komfort",
+  "maximal komfort",
+  
   // Överdrivna adjektiv
-  "fantastisk lägenhet",
-  "fantastiskt läge",
-  "underbar bostad",
+  "fantastisk",
+  "underbar",
   "magisk",
   "otrolig",
   "drömboende",
@@ -44,31 +76,28 @@ const FORBIDDEN_PHRASES = [
   "drömhem",
   "en sann pärla",
   
-  // AI-specifika fraser (från senaste output)
-  "erbjuder en",
-  "erbjuds en",
-  "idealiskt för",
-  "perfekt för den som",
-  "perfekt plats för",
-  "trivsam atmosfär",
-  "härlig atmosfär",
-  "rofyllt läge",
-  "rofylld miljö",
-  "eftertraktat boendealternativ",
+  // Vardags-klyschor
   "underlättar vardagen",
+  "bekvämlighet i vardagen",
   "den matlagningsintresserade",
-  "sociala sammanhang",
   "god natts sömn",
-  "trygg boendemiljö",
-  "luftig och trivsam",
   
-  // Andra klyschor
+  // Läges-klyschor
+  "eftertraktat boendealternativ",
+  "attraktivt läge",
+  "attraktivt med närhet",
+  "inom räckhåll",
+  "stadens puls",
+  
+  // Hjärta-klyschor
   "hjärtat i hemmet",
   "husets hjärta",
+  "hemmets hjärta",
+  
+  // Andra
   "inte bara ett hem",
-  "stadens puls",
   "stark efterfrågan",
-  "bekvämlighet i vardagen",
+  "goda arbetsytor",
 ];
 
 function findRuleViolations(text: string): string[] {
@@ -99,6 +128,49 @@ function validateOptimizationResult(result: any): string[] {
     violations.push(...findRuleViolations(result.socialCopy));
   }
   return Array.from(new Set(violations));
+}
+
+// Post-processing: Rensa bort förbjudna fraser automatiskt
+const PHRASE_REPLACEMENTS: Record<string, string> = {
+  " erbjuder ": " har ",
+  " erbjuds ": " finns ",
+  "perfekt för": "passar",
+  "idealiskt för": "passar",
+  "idealt för": "passar",
+  "rofyllt": "tyst",
+  "rofylld": "tyst",
+  "attraktivt läge": "bra läge",
+  "attraktivt med närhet": "nära",
+  "inom räckhåll": "i närheten",
+  "sociala tillställningar": "middagar",
+  "sociala sammanhang": "umgänge",
+  "extra komfort": "",
+  "maximal komfort": "",
+  "trygg boendemiljö": "stabil förening",
+  "trygg boendeekonomi": "stabil ekonomi",
+  "goda arbetsytor": "bänkyta",
+  "trivsam atmosfär": "",
+  "härlig atmosfär": "",
+  "underlättar vardagen": "",
+  "bekvämlighet i vardagen": "",
+  "fantastisk": "fin",
+  "underbar": "fin",
+  "magisk": "",
+  "otrolig": "",
+};
+
+function cleanForbiddenPhrases(text: string): string {
+  if (!text) return text;
+  let cleaned = text;
+  for (const [phrase, replacement] of Object.entries(PHRASE_REPLACEMENTS)) {
+    const regex = new RegExp(phrase, "gi");
+    cleaned = cleaned.replace(regex, replacement);
+  }
+  // Ta bort dubbla mellanslag
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
+  // Ta bort meningar som börjar med tomt efter ersättning
+  cleaned = cleaned.replace(/\.\s*\./g, ".").replace(/,\s*,/g, ",");
+  return cleaned;
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
@@ -191,35 +263,47 @@ Du är en erfaren mäklarcopywriter. Din uppgift är att skriva objektbeskrivnin
 - Ton: aktiv, äventyr
 - Nämn: liftar, skidbackar, fjällutsikt
 
-## STRUKTUR FÖR OBJEKTBESKRIVNING
+## STRUKTUR FÖR OBJEKTBESKRIVNING (minst 250-350 ord)
 
-### 1. ÖPPNING (1-2 meningar)
-Fånga läsaren. Adress/område + det mest unika.
+Skriv UTFÖRLIGT. Varje sektion ska ha flera meningar med rika detaljer.
 
-### 2. RUMSBESKRIVNINGAR
-Rum för rum med konkreta detaljer. Ljus, storlek, material.
+### 1. ÖPPNING (2-3 meningar)
+Sätt scenen. Beskriv läget, fastighetens karaktär och första intryck. Använd sensoriska detaljer.
+**Exempel:** "I en av Sigtunas mest attraktiva delar, där grönska möter Mälarens vatten, ligger denna eleganta villa med utsikt över sjön. Fastigheten om totalt ca 380 kvm är uppförd med klassisk arkitektur och en tilltalande symmetri, inramad av en uppvuxen trädgård med stensatta gångar."
 
-### 3. FÖRENING/FASTIGHET
-Avgift, ekonomi, stambytt, renoveringar. Eller tomt, driftskostnader.
+### 2. RUMSBESKRIVNINGAR (huvuddelen, 150-200 ord)
+Beskriv VARJE rum utförligt. Nämn:
+- Storlek och känsla av rymd
+- Ljusförhållanden och fönster
+- Material och detaljer (snickerier, golv, eldstäder)
+- Hur rummen hänger ihop ("i fil", "genomgående")
+- Vad som får plats ("plats för långbord", "soffgrupp och matbord")
 
-### 4. LÄGE
-Nämn bara det som finns i rådata.
+### 3. FÖRENING/FASTIGHET (2-3 meningar)
+Ekonomi, underhåll, renoveringar. För villa: tomt, garage, gästhus, uthus.
 
-### 5. AVSLUTNING (valfritt)
-En kort sammanfattande mening.
+### 4. LÄGE OCH NÄROMRÅDE (2-3 meningar)
+Beskriv området med känsla. Nämn skolor, torg, natur, kommunikationer.
 
-## SKRIV ALDRIG
+### 5. AVSLUTNING (1-2 meningar)
+Sammanfatta känslan och livsstilen bostaden möjliggör.
 
-❌ "erbjuder" / "erbjuds"
-❌ "idealiskt för" / "perfekt för"
-❌ "trivsam atmosfär" / "härlig atmosfär"
-❌ "rofyllt" / "rofylld"
-❌ "eftertraktat boendealternativ"
-❌ "underlättar vardagen"
-❌ "den matlagningsintresserade"
-❌ "sociala sammanhang"
-❌ "god natts sömn"
-❌ "trygg boendemiljö"
+## EXEMPEL PÅ BRA OBJEKTBESKRIVNING
+
+RÅDATA: "3 rok Karlavägen 112, 62 kvm, våning 3, balkong SV, takhöjd 2.8m, 30-talshus, renoverat kök, golvvärme badrum, avgift 4200, stabil förening"
+
+BRA TEXT (kopiera denna stil):
+"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna ljusa trea om 62 kvadratmeter. Lägenheten på tredje våningen har en takhöjd om 2,8 meter som ger rummen en generös känsla.
+
+Vardagsrummet är genomgående ljust med fönster som vetter mot gatan. Här finns plats för både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och har gott om bänkyta. Sovrummet vetter mot gården – tyst på nätterna. Badrummet är helkaklat med golvvärme.
+
+Balkongen i sydvästläge ger sol från eftermiddagen och framåt. Föreningen har stabil ekonomi och låg belåning. Avgiften är 4 200 kr per månad.
+
+Karlavägen ligger centralt med närhet till Karlaplan och Östermalms saluhall."
+
+## FÖRBJUDNA ORD (använd ALDRIG)
+
+erbjuder, erbjuds, perfekt för, idealiskt för, rofyllt, rofylld, attraktivt, inom räckhåll, sociala tillställningar, extra komfort, trygg boendemiljö, goda arbetsytor, trivsam atmosfär, underlättar vardagen, fantastisk, underbar, magisk, otrolig
 
 ## REGLER
 
@@ -230,7 +314,7 @@ En kort sammanfattande mening.
 ## OUTPUT (JSON)
 {
   "highlights": ["5 punkter med ✓"],
-  "improvedPrompt": "Objektbeskrivningen (350-500 ord)",
+  "improvedPrompt": "Objektbeskrivningen (MINST 250 ord, gärna 300-400 ord)",
   "analysis": {
     "target_group": "Vem passar bostaden för",
     "area_advantage": "Områdets styrkor",
@@ -323,27 +407,46 @@ Du är en erfaren mäklarcopywriter. Din uppgift är att skriva objektbeskrivnin
 - Fokus: skidåkning, natur, säsong
 - Ton: aktiv, äventyr
 
-## STRUKTUR
+## STRUKTUR FÖR OBJEKTBESKRIVNING (minst 300-450 ord)
 
-### 1. ÖPPNING – Adress/område + det mest unika
-### 2. RUMSBESKRIVNINGAR – Rum för rum med konkreta detaljer
-### 3. FÖRENING/FASTIGHET – Avgift, ekonomi, tomt, driftskostnader
-### 4. LÄGE – Bara det som finns i rådata
-### 5. AVSLUTNING – Kort sammanfattande mening (valfritt)
+Skriv UTFÖRLIGT som en toppmäklare. Varje sektion ska ha flera meningar med rika detaljer.
 
-## SKRIV ALDRIG
+### 1. ÖPPNING (2-3 meningar)
+Sätt scenen. Beskriv läget, fastighetens karaktär och första intryck.
 
-❌ "erbjuder" / "erbjuds"
-❌ "idealiskt för" / "perfekt för"
-❌ "trivsam atmosfär" / "härlig atmosfär"
-❌ "rofyllt" / "rofylld"
-❌ "eftertraktat boendealternativ"
-❌ "underlättar vardagen"
-❌ "den matlagningsintresserade"
-❌ "sociala sammanhang"
-❌ "god natts sömn"
-❌ "trygg boendemiljö"
-❌ "luftig" (skriv "hög takhöjd" eller mått)
+### 2. RUMSBESKRIVNINGAR (huvuddelen, 150-250 ord)
+Beskriv VARJE rum utförligt:
+- Storlek och känsla av rymd
+- Ljusförhållanden och fönster
+- Material och detaljer (snickerier, golv, eldstäder)
+- Hur rummen hänger ihop ("i fil", "genomgående")
+- Vad som får plats ("plats för långbord", "soffgrupp och matbord")
+
+### 3. FÖRENING/FASTIGHET (2-3 meningar)
+Ekonomi, underhåll, renoveringar. För villa: tomt, garage, gästhus, uthus.
+
+### 4. LÄGE OCH NÄROMRÅDE (2-3 meningar)
+Beskriv området med känsla. Nämn skolor, torg, natur, kommunikationer.
+
+### 5. AVSLUTNING (1-2 meningar)
+Sammanfatta känslan och livsstilen bostaden möjliggör.
+
+## EXEMPEL PÅ BRA OBJEKTBESKRIVNING
+
+RÅDATA: "Villa Sigtuna, 380 kvm, sjöutsikt Mälaren, trädgård, gästhus 32 kvm, garage 60 kvm, klassisk arkitektur, eldstäder, terrass"
+
+BRA TEXT (kopiera denna stil):
+"I en av Sigtunas mest eftersökta delar, där grönska möter Mälarens vatten, ligger denna eleganta villa med utsikt över sjön. Fastigheten om totalt 380 kvm har klassisk arkitektur och tilltalande symmetri, inramad av en uppvuxen trädgård med stensatta gångar.
+
+De sociala ytorna i entréplanet är generösa med flera sällskapsrum i fil, stora fönsterpartier och fungerande eldstäder. Köket är ljust och rymligt med plats för långbord. Från matsalen nås terrass och trädgård i soligt läge. Övre plan rymmer flera sovrum med förvaring och badrum.
+
+Till fastigheten hör ett gästhus om 32 kvm med eget kök och badrum, samt ett garage om 60 kvm med plats för tre bilar.
+
+På gångavstånd nås skolor och det charmiga torget med Sigtuna rådhus och små butiker."
+
+## FÖRBJUDNA ORD (använd ALDRIG)
+
+erbjuder, erbjuds, perfekt för, idealiskt för, rofyllt, rofylld, attraktivt, inom räckhåll, sociala tillställningar, extra komfort, trygg boendemiljö, goda arbetsytor, trivsam atmosfär, underlättar vardagen, fantastisk, underbar, magisk, otrolig, luftig
 
 ## REGLER
 
@@ -753,7 +856,7 @@ ${platform === "hemnet" ? `
         },
         {
           role: "user" as const,
-          content: `<db_context>OBJEKT: ${type}. PLATTFORM: ${platform === "hemnet" ? "HEMNET (balanserat format, 350-450 ord, varje stycke måste sälja)" : "BOOLI/EGEN SIDA (detaljerat format, 500-700 ord, berätta historien)"}. RÅDATA: ${prompt}</db_context>`,
+          content: `<db_context>OBJEKT: ${type}. PLATTFORM: ${platform === "hemnet" ? "HEMNET (minst 250-350 ord, flytande text utan punktlistor)" : "BOOLI/EGEN SIDA (minst 400-500 ord, utförlig beskrivning med alla detaljer, berätta historien)"}. RÅDATA: ${prompt}</db_context>`,
         },
       ];
 
@@ -768,27 +871,52 @@ ${platform === "hemnet" ? `
       const text1 = completion1.choices[0]?.message?.content || "{}";
       let result: any = JSON.parse(extractFirstJsonObject(text1));
 
-      const violations = validateOptimizationResult(result);
-      if (violations.length > 0) {
-        const completion2 = await openai.chat.completions.create({
+      let violations = validateOptimizationResult(result);
+      console.log("[AI Validation] First attempt violations:", violations.length > 0 ? violations : "NONE");
+      
+      // Retry loop - max 3 attempts
+      let attempts = 0;
+      while (violations.length > 0 && attempts < 2) {
+        attempts++;
+        console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
+        
+        const retryCompletion = await openai.chat.completions.create({
           model,
           messages: [
             ...baseMessages,
             {
               role: "user" as const,
               content:
-                `Du använde förbjudna ord/fraser: ${violations.join(", ")}.\n\n` +
-                "Skriv om texten utan dessa ord. Ersätt klyschor med konkreta fakta från rådata. " +
-                "Om du inte har fakta – ta bort meningen helt. Returnera ENDAST JSON.",
+                `STOPP! Du använde FÖRBJUDNA ord/fraser: ${violations.join(", ")}.\n\n` +
+                "REGLER:\n" +
+                "1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n" +
+                "2. Ersätt VARJE klysch med KONKRET fakta från rådata\n" +
+                "3. Om du inte har fakta – TA BORT meningen helt\n" +
+                "4. Skriv som en toppmäklare, inte som en AI\n\n" +
+                "Returnera ENDAST JSON med omskriven text.",
             },
           ],
           max_tokens: 4000,
-          temperature: 0.3,
+          temperature: 0.2, // Lägre temperatur för mer förutsägbar output
           response_format: { type: "json_object" },
         });
 
-        const text2 = completion2.choices[0]?.message?.content || "{}";
-        result = JSON.parse(extractFirstJsonObject(text2));
+        const retryText = retryCompletion.choices[0]?.message?.content || "{}";
+        result = JSON.parse(extractFirstJsonObject(retryText));
+        violations = validateOptimizationResult(result);
+        console.log(`[AI Validation] After retry ${attempts} violations:`, violations.length > 0 ? violations : "NONE");
+      }
+      
+      if (violations.length > 0) {
+        console.warn("[AI Validation] WARNING: Still has violations after retries:", violations);
+      }
+
+      // POST-PROCESSING: Rensa bort förbjudna fraser som backup
+      if (result.improvedPrompt) {
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+      }
+      if (result.socialCopy) {
+        result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
       }
 
       // Increment usage
