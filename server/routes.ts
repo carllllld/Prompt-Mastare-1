@@ -252,6 +252,112 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 const STRIPE_BASIC_PRICE_ID = process.env.STRIPE_BASIC_PRICE_ID;
 const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
+// --- 2-STEGS GENERATION ---
+
+// Steg 1: Extrahera fakta och skapa disposition
+const DISPOSITION_PROMPT = `
+# UPPGIFT
+
+Extrahera ALLA relevanta fakta från rådata och skapa en strukturerad disposition. Skriv INGEN text, bara fakta.
+
+# REGLER
+
+1. Hitta ALDRIG på – extrahera bara vad som faktiskt finns i rådata
+2. Använd exakta värden från rådata (kvm, pris, år, etc)
+3. Strukturera i JSON enligt formatet nedan
+4. Om info saknas, lämna fältet tomt eller null
+
+# INPUT FORMAT
+
+Rådata innehåller vanligtvis: adress, typ, kvm, rum, våning, balkong, material, avgift, pris, etc.
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "property": {
+    "type": "lägenhet/villa/radhus/nyproduktion/fritidshus",
+    "address": "exakt adress från rådata",
+    "size": 62,
+    "rooms": 3,
+    "floor": "3 av 5",
+    "year_built": "1930-tal",
+    "renovations": ["kök 2022", "badrum 2020"],
+    "materials": ["parkett", "kakel", "marmor"],
+    "balcony": {
+      "exists": true,
+      "direction": "sydväst"
+    }
+  },
+  "economics": {
+    "price": 4500000,
+    "fee": 4200,
+    "association": {
+      "name": "BRF Solhemmet",
+      "status": "stabil ekonomi, låg belåning",
+      "renovations": "stambytt 2019"
+    }
+  },
+  "location": {
+    "area": "Östermalm",
+    "transport": ["tunnelbana 5 min", "buss"],
+    "amenities": ["Karlaplan", "Östermalms saluhall"],
+    "schools": ["Högstadiet", "Gymnasium"]
+  },
+  "unique_features": ["takhöjd 2.8m", "eldstad", "originaldetaljer"],
+  "platform": "hemnet/booli"
+}
+`;
+
+// Steg 2: Skriv final text baserat på disposition
+const TEXT_PROMPT = `
+# KRITISKA REGLER (BRYT ALDRIG DESSA)
+
+1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
+2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
+3. DELA UPP I 4-5 STYCKEN med \\n\\n mellan varje stycke
+4. MINST 250 ORD – skriv utförligt om varje rum
+5. HITTA ALDRIG PÅ – använd bara fakta från dispositionen
+
+# DIN UPPGIFT
+
+Skriv en objektbeskrivning för Hemnet baserat på den strukturerade dispositionen nedan. Texten ska kunna publiceras direkt utan redigering.
+
+# STRUKTUR (följ exakt)
+
+STYCKE 1 - ÖPPNING: Adress + fastighetens karaktär + första intryck (2-3 meningar)
+STYCKE 2 - RUM: Beskriv vardagsrum, kök, sovrum med konkreta detaljer (4-5 meningar)
+STYCKE 3 - BADRUM/DETALJER: Badrum, balkong, förvaring, material (2-3 meningar)
+STYCKE 4 - FÖRENING/FASTIGHET: Avgift, ekonomi, renoveringar (2-3 meningar)
+STYCKE 5 - LÄGE: Närområde, kommunikationer, skolor (2-3 meningar)
+
+# EXEMPEL PÅ KORREKT TEXT
+
+"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna ljusa trea om 62 kvadratmeter. Lägenheten på tredje våningen har en takhöjd om 2,8 meter som ger rummen en generös känsla.
+
+Vardagsrummet har fönster mot gatan och rymmer både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och generös bänkyta. Sovrummet vetter mot gården och har plats för dubbelsäng och garderob.
+
+Badrummet är helkaklat med golvvärme. Balkongen i sydvästläge ger sol från eftermiddagen.
+
+Föreningen har stabil ekonomi. Avgiften är 4 200 kr per månad.
+
+Karlavägen ligger centralt med närhet till Karlaplan och tunnelbana."
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3", "✓ Punkt 4", "✓ Punkt 5"],
+  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
+  "analysis": {
+    "target_group": "Vem passar bostaden för",
+    "area_advantage": "Områdets styrkor",
+    "pricing_factors": "Prishöjande faktorer"
+  },
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Info som saknas i rådata"],
+  "pro_tips": ["Tips till mäklaren"]
+}
+`;
+
 // --- PROMPT FÖR GRATIS-ANVÄNDARE (BASIC) ---
 const BASIC_REALTOR_PROMPT = `
 # KRITISKA REGLER (BRYT ALDRIG DESSA)
@@ -839,32 +945,62 @@ ${platform === "hemnet" ? `
 }
 `;
 
-      const baseMessages = [
+      // === 2-STEGS GENERATION ===
+      
+      // Steg 1: Extrahera fakta och skapa disposition
+      console.log("[Step 1] Extracting facts and creating disposition...");
+      
+      const dispositionMessages = [
         {
           role: "system" as const,
-          content:
-            finalSystemPrompt +
-            "\n\nDu kommer få rådata inuti <db_context>...</db_context>. Följ reglerna i systemprompten. Svara ENDAST med ett giltigt JSON-objekt enligt OUTPUT FORMAT.",
+          content: DISPOSITION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user" as const,
-          content: `<db_context>OBJEKT: ${type}. PLATTFORM: ${platform === "hemnet" ? "HEMNET (minst 250-350 ord, flytande text utan punktlistor)" : "BOOLI/EGEN SIDA (minst 400-500 ord, utförlig beskrivning med alla detaljer, berätta historien)"}. RÅDATA: ${prompt}</db_context>`,
+          content: `RÅDATA: ${prompt}`,
         },
       ];
 
-      const completion1 = await openai.chat.completions.create({
+      const dispositionCompletion = await openai.chat.completions.create({
         model,
-        messages: baseMessages,
+        messages: dispositionMessages,
+        max_tokens: 2000,
+        temperature: 0.1, // Låg temperatur för faktaextrahering
+        response_format: { type: "json_object" },
+      });
+
+      const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
+      const disposition = JSON.parse(extractFirstJsonObject(dispositionText));
+      console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
+
+      // Steg 2: Skriv final text baserat på disposition
+      console.log("[Step 2] Writing final text based on disposition...");
+      
+      const textMessages = [
+        {
+          role: "system" as const,
+          content: TEXT_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET (minst 250-350 ord)" : "BOOLI/EGEN SIDA (minst 400-500 ord)"}`,
+        },
+      ];
+
+      const textCompletion = await openai.chat.completions.create({
+        model,
+        messages: textMessages,
         max_tokens: 4000,
         temperature: 0.4,
         response_format: { type: "json_object" },
       });
 
-      const text1 = completion1.choices[0]?.message?.content || "{}";
-      let result: any = JSON.parse(extractFirstJsonObject(text1));
+      const textResultText = textCompletion.choices[0]?.message?.content || "{}";
+      let result: any = JSON.parse(extractFirstJsonObject(textResultText));
 
+      // Validering och retries för text-steget
       let violations = validateOptimizationResult(result);
-      console.log("[AI Validation] First attempt violations:", violations.length > 0 ? violations : "NONE");
+      console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
       // Retry loop - max 3 attempts
       let attempts = 0;
@@ -875,21 +1011,21 @@ ${platform === "hemnet" ? `
         const retryCompletion = await openai.chat.completions.create({
           model,
           messages: [
-            ...baseMessages,
+            ...textMessages,
             {
               role: "user" as const,
               content:
                 `STOPP! Du använde FÖRBJUDNA ord/fraser: ${violations.join(", ")}.\n\n` +
                 "REGLER:\n" +
                 "1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n" +
-                "2. Ersätt VARJE klysch med KONKRET fakta från rådata\n" +
+                "2. Ersätt VARJE klysch med KONKRET fakta från dispositionen\n" +
                 "3. Om du inte har fakta – TA BORT meningen helt\n" +
                 "4. Skriv som en toppmäklare, inte som en AI\n\n" +
                 "Returnera ENDAST JSON med omskriven text.",
             },
           ],
           max_tokens: 4000,
-          temperature: 0.2, // Lägre temperatur för mer förutsägbar output
+          temperature: 0.2,
           response_format: { type: "json_object" },
         });
 
