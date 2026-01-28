@@ -12,19 +12,71 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "",
 });
 
-// --- SAMMA PROMPT SOM I routes.ts ---
-const BASIC_REALTOR_PROMPT = `
+// --- 2-STEGS GENERATION ---
+
+// Steg 1: Extrahera fakta och skapa disposition
+const DISPOSITION_PROMPT = `
+# UPPGIFT
+
+Extrahera ALLA relevanta fakta från rådata och skapa en strukturerad disposition. Skriv INGEN text, bara fakta.
+
+# REGLER
+
+1. Hitta ALDRIG på – extrahera bara vad som faktiskt finns i rådata
+2. Använd exakta värden från rådata (kvm, pris, år, etc)
+3. Strukturera i JSON enligt formatet nedan
+4. Om info saknas, lämna fältet tomt eller null
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "property": {
+    "type": "lägenhet/villa/radhus/nyproduktion/fritidshus",
+    "address": "exakt adress från rådata",
+    "size": 62,
+    "rooms": 3,
+    "floor": "3 av 5",
+    "year_built": "1930-tal",
+    "renovations": ["kök 2022", "badrum 2020"],
+    "materials": ["parkett", "kakel", "marmor"],
+    "balcony": {
+      "exists": true,
+      "direction": "sydväst"
+    }
+  },
+  "economics": {
+    "price": 4500000,
+    "fee": 4200,
+    "association": {
+      "name": "BRF Solhemmet",
+      "status": "stabil ekonomi, låg belåning",
+      "renovations": "stambytt 2019"
+    }
+  },
+  "location": {
+    "area": "Östermalm",
+    "transport": ["tunnelbana 5 min", "buss"],
+    "amenities": ["Karlaplan", "Östermalms saluhall"],
+    "schools": ["Högstadiet", "Gymnasium"]
+  },
+  "unique_features": ["takhöjd 2.8m", "eldstad", "originaldetaljer"],
+  "platform": "hemnet/booli"
+}
+`;
+
+// Steg 2: Skriv final text baserat på disposition
+const TEXT_PROMPT = `
 # KRITISKA REGLER (BRYT ALDRIG DESSA)
 
 1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
 2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
 3. DELA UPP I 4-5 STYCKEN med \\n\\n mellan varje stycke
 4. MINST 250 ORD – skriv utförligt om varje rum
-5. HITTA ALDRIG PÅ – om info saknas, nämn det inte
+5. HITTA ALDRIG PÅ – använd bara fakta från dispositionen
 
 # DIN UPPGIFT
 
-Skriv en objektbeskrivning för Hemnet. Texten ska kunna publiceras direkt utan redigering.
+Skriv en objektbeskrivning för Hemnet baserat på den strukturerade dispositionen nedan. Texten ska kunna publiceras direkt utan redigering.
 
 # STRUKTUR (följ exakt)
 
@@ -33,21 +85,6 @@ STYCKE 2 - RUM: Beskriv vardagsrum, kök, sovrum med konkreta detaljer (4-5 meni
 STYCKE 3 - BADRUM/DETALJER: Badrum, balkong, förvaring, material (2-3 meningar)
 STYCKE 4 - FÖRENING/FASTIGHET: Avgift, ekonomi, renoveringar (2-3 meningar)
 STYCKE 5 - LÄGE: Närområde, kommunikationer, skolor (2-3 meningar)
-
-# EXEMPEL PÅ KORREKT TEXT
-
-INPUT: "3 rok Karlavägen 112, 62 kvm, våning 3, balkong SV, takhöjd 2.8m, 30-talshus, renoverat kök, golvvärme badrum, avgift 4200"
-
-OUTPUT:
-"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna ljusa trea om 62 kvadratmeter. Lägenheten på tredje våningen har en takhöjd om 2,8 meter som ger rummen en generös känsla.
-
-Vardagsrummet har fönster mot gatan och rymmer både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och generös bänkyta. Sovrummet vetter mot gården och har plats för dubbelsäng och garderob.
-
-Badrummet är helkaklat med golvvärme. Balkongen i sydvästläge ger sol från eftermiddagen.
-
-Föreningen har stabil ekonomi. Avgiften är 4 200 kr per månad.
-
-Karlavägen ligger centralt med närhet till Karlaplan och tunnelbana."
 
 # OUTPUT FORMAT (JSON)
 
@@ -87,41 +124,20 @@ const testCases = [
 async function testPrompt(testCase: typeof testCases[0]) {
   console.log(`\n${"=".repeat(60)}`);
   console.log(`TEST: ${testCase.name}`);
-  console.log(`${"=".repeat(60)}`);
-  console.log(`\nRÅDATA:\n${testCase.rawData}\n`);
-
-  const systemPrompt = `
-${BASIC_REALTOR_PROMPT}
-
-## PLATTFORM: ${testCase.platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}
-
-${testCase.platform === "hemnet" ? `
-**Hemnet-format:**
-- Längd: 300-400 ord
-- 5-6 korta stycken
-- Rakt på sak, lätt att skanna
-` : `
-**Booli/egen sida-format:**
-- Längd: 450-600 ord
-- 6-8 stycken, mer detaljerat
-- Lite mer berättande ton
-`}
-
-## PÅMINNELSE
-
-- Skriv BARA det som finns i rådata
-- Om något saknas (avgift, avstånd, årtal) – hitta INTE på, skriv det i missing_info
-- Undvik klyschor och AI-språk
-- Korta meningar, naturlig svenska
-`;
+  console.log(`RÅDATA: ${testCase.rawData}`);
+  console.log(`PLATTFORM: ${testCase.platform}`);
+  console.log("=".repeat(60));
 
   try {
-    const completion = await openai.chat.completions.create({
+    // === STEG 1: Extrahera fakta och skapa disposition ===
+    console.log("\n[STEG 1] Extraherar fakta...");
+    
+    const dispositionCompletion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: systemPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: DISPOSITION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user",
@@ -129,14 +145,40 @@ ${testCase.platform === "hemnet" ? `
         },
       ],
       max_tokens: 2000,
-      temperature: 0.3,
+      temperature: 0.1,
       response_format: { type: "json_object" },
     });
 
-    const text = completion.choices[0]?.message?.content || "{}";
+    const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
+    const disposition = JSON.parse(dispositionText);
+    
+    console.log("DISPOSITION (JSON):");
+    console.log(JSON.stringify(disposition, null, 2));
+
+    // === STEG 2: Skriv final text baserat på disposition ===
+    console.log("\n[STEG 2] Skriver final text...");
+    
+    const textCompletion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: TEXT_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user",
+          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${testCase.platform === "hemnet" ? "HEMNET (minst 250-350 ord)" : "BOOLI/EGEN SIDA (minst 400-500 ord)"}`,
+        },
+      ],
+      max_tokens: 4000,
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+    });
+
+    const text = textCompletion.choices[0]?.message?.content || "{}";
     const result = JSON.parse(text);
 
-    console.log("OBJEKTBESKRIVNING:");
+    console.log("\nOBJEKTBESKRIVNING:");
     console.log("-".repeat(40));
     console.log(result.improvedPrompt);
     console.log("\nHIGHLIGHTS:");
