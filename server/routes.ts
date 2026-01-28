@@ -24,9 +24,10 @@ function extractFirstJsonObject(text: string): string {
 // Förbjudna fraser - AI-fraser som avslöjar genererad text
 // VIKTIGT: Använd KORTA fraser för att fånga alla varianter
 const FORBIDDEN_PHRASES = [
-  // Generiska AI-öppningar
+  // Generiska AI-öppningar - KRITISKT
   "välkommen till",
   "välkommen hem",
+  "här möts du",
   "här erbjuds",
   "nu finns chansen",
   "missa inte",
@@ -34,19 +35,24 @@ const FORBIDDEN_PHRASES = [
   "unik chans",
   "sällsynt tillfälle",
   
-  // "erbjuder" i alla former (KORT för att fånga alla varianter)
+  // "erbjuder" i alla former
   " erbjuder ",
   " erbjuds ",
   
-  // "perfekt för" i alla former
+  // "perfekt/idealisk" i alla former
+  "perfekt plats",
   "perfekt för",
+  "idealisk plats",
   "idealiskt för",
   "idealt för",
   
-  // Atmosfär-fraser
+  // Atmosfär/luftig-fraser
   "trivsam atmosfär",
   "härlig atmosfär",
   "mysig atmosfär",
+  "inbjudande atmosfär",
+  "luftig atmosfär",
+  "luftig och",
   
   // Rofylld/lugn klyschor
   "rofyllt",
@@ -131,38 +137,75 @@ function validateOptimizationResult(result: any): string[] {
 }
 
 // Post-processing: Rensa bort förbjudna fraser automatiskt
-const PHRASE_REPLACEMENTS: Record<string, string> = {
-  " erbjuder ": " har ",
-  " erbjuds ": " finns ",
-  "perfekt för": "passar",
-  "idealiskt för": "passar",
-  "idealt för": "passar",
-  "rofyllt": "tyst",
-  "rofylld": "tyst",
-  "attraktivt läge": "bra läge",
-  "attraktivt med närhet": "nära",
-  "inom räckhåll": "i närheten",
-  "sociala tillställningar": "middagar",
-  "sociala sammanhang": "umgänge",
-  "extra komfort": "",
-  "maximal komfort": "",
-  "trygg boendemiljö": "stabil förening",
-  "trygg boendeekonomi": "stabil ekonomi",
-  "goda arbetsytor": "bänkyta",
-  "trivsam atmosfär": "",
-  "härlig atmosfär": "",
-  "underlättar vardagen": "",
-  "bekvämlighet i vardagen": "",
-  "fantastisk": "fin",
-  "underbar": "fin",
-  "magisk": "",
-  "otrolig": "",
-};
+// VIKTIGT: Längre fraser FÖRST så de matchas innan kortare
+const PHRASE_REPLACEMENTS: [string, string][] = [
+  // Öppningar - ta bort helt
+  ["välkommen till denna", ""],
+  ["välkommen till", ""],
+  ["välkommen hem till", ""],
+  ["här möts du av", ""],
+  ["här erbjuds", ""],
+  
+  // Erbjuder-varianter
+  [" erbjuder ", " har "],
+  [" erbjuds ", " finns "],
+  
+  // Perfekt/idealisk-varianter
+  ["perfekt plats för", "bra för"],
+  ["perfekt för", "bra för"],
+  ["idealisk plats för", "bra för"],
+  ["idealiskt för", "bra för"],
+  ["idealt för", "bra för"],
+  
+  // Luftig/atmosfär
+  ["luftig och inbjudande atmosfär", "generös rumskänsla"],
+  ["luftig atmosfär", "generös rumskänsla"],
+  ["luftig", "rymlig"],
+  ["inbjudande atmosfär", ""],
+  ["trivsam atmosfär", ""],
+  ["härlig atmosfär", ""],
+  
+  // Rofylld
+  ["rofyllt läge", "tyst läge"],
+  ["rofylld miljö", "lugn miljö"],
+  ["rofyllt", "tyst"],
+  ["rofylld", "lugn"],
+  
+  // Vardagen
+  ["vilket ger i vardagen", ""],
+  ["underlättar vardagen", ""],
+  ["bekvämlighet i vardagen", ""],
+  ["i vardagen", ""],
+  
+  // Attraktivt
+  ["attraktivt läge", "bra läge"],
+  ["attraktivt med närhet", "nära"],
+  ["attraktivt", "bra"],
+  
+  // Övrigt
+  ["inom räckhåll", "i närheten"],
+  ["sociala tillställningar", "middagar"],
+  ["sociala sammanhang", "umgänge"],
+  ["extra komfort", ""],
+  ["maximal komfort", ""],
+  ["trygg boendemiljö", "stabil förening"],
+  ["trygg boendeekonomi", "stabil ekonomi"],
+  ["goda arbetsytor", "bänkyta"],
+  ["gott om arbetsyta", "bänkyta"],
+  ["fantastisk", "fin"],
+  ["underbar", "fin"],
+  ["magisk", ""],
+  ["otrolig", ""],
+  ["unik möjlighet", ""],
+  ["unik chans", ""],
+  ["sällsynt tillfälle", ""],
+  ["missa inte", ""],
+];
 
 function cleanForbiddenPhrases(text: string): string {
   if (!text) return text;
   let cleaned = text;
-  for (const [phrase, replacement] of Object.entries(PHRASE_REPLACEMENTS)) {
+  for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     const regex = new RegExp(phrase, "gi");
     cleaned = cleaned.replace(regex, replacement);
   }
@@ -170,7 +213,38 @@ function cleanForbiddenPhrases(text: string): string {
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
   // Ta bort meningar som börjar med tomt efter ersättning
   cleaned = cleaned.replace(/\.\s*\./g, ".").replace(/,\s*,/g, ",");
+  // Fixa meningar som börjar med liten bokstav efter borttagning
+  cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (match, letter) => `. ${letter.toUpperCase()}`);
+  // Ta bort meningar som bara är ett ord eller tomma
+  cleaned = cleaned.replace(/\.\s*\./g, ".");
   return cleaned;
+}
+
+// Lägg till styckeindelning om texten saknar radbrytningar
+function addParagraphs(text: string): string {
+  if (!text || text.includes("\n\n")) return text; // Redan styckeindelad
+  
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  if (sentences.length < 4) return text;
+  
+  // Dela upp i stycken om ~3-4 meningar vardera
+  const paragraphs: string[] = [];
+  let currentParagraph: string[] = [];
+  
+  for (let i = 0; i < sentences.length; i++) {
+    currentParagraph.push(sentences[i]);
+    // Skapa nytt stycke efter 3-4 meningar
+    if (currentParagraph.length >= 3 && i < sentences.length - 2) {
+      paragraphs.push(currentParagraph.join(" "));
+      currentParagraph = [];
+    }
+  }
+  
+  if (currentParagraph.length > 0) {
+    paragraphs.push(currentParagraph.join(" "));
+  }
+  
+  return paragraphs.join("\n\n");
 }
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
@@ -180,155 +254,70 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
 // --- PROMPT FÖR GRATIS-ANVÄNDARE (BASIC) ---
 const BASIC_REALTOR_PROMPT = `
-Du är en erfaren mäklarcopywriter. Din uppgift är att skriva objektbeskrivningar som kan publiceras direkt på Hemnet utan redigering.
+# KRITISKA REGLER (BRYT ALDRIG DESSA)
 
-## ANPASSA EFTER OBJEKTTYP
+1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
+2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
+3. DELA UPP I 4-5 STYCKEN med \\n\\n mellan varje stycke
+4. MINST 250 ORD – skriv utförligt om varje rum
+5. HITTA ALDRIG PÅ – om info saknas, nämn det inte
 
-### BOSTADSRÄTT (lägenhet)
-- Fokus: planlösning, ljus, balkong/uteplats, förening, läge
-- Nämn: avgift, stambytt, hiss, våning (om det finns)
-- Ton: urban, praktisk, livsstil
+# DIN UPPGIFT
 
-### VILLA
-- Fokus: tomt, trädgård, utrymme, privatliv, byggkvalitet
-- Nämn: tomtstorlek, uppvärmning, garage, renoveringar
-- Ton: familj, frihet, karaktär
+Skriv en objektbeskrivning för Hemnet. Texten ska kunna publiceras direkt utan redigering.
 
-### RADHUS/KEDJEHUS
-- Fokus: kombination av villa och lägenhet – trädgård + lågt underhåll
-- Nämn: förening/samfällighet, uteplats, garage/parkering
-- Ton: praktisk, familjevänlig
+# STRUKTUR (följ exakt)
 
-### NYPRODUKTION
-- Fokus: inflyttningsklart, garanti, energiklass, moderna material
-- Nämn: tillträde, energiklass, smarta funktioner
-- Ton: modern, bekväm, framtidssäker
+STYCKE 1 - ÖPPNING: Adress + fastighetens karaktär + första intryck (2-3 meningar)
+STYCKE 2 - RUM: Beskriv vardagsrum, kök, sovrum med konkreta detaljer (4-5 meningar)
+STYCKE 3 - BADRUM/DETALJER: Badrum, balkong, förvaring, material (2-3 meningar)
+STYCKE 4 - FÖRENING/FASTIGHET: Avgift, ekonomi, renoveringar (2-3 meningar)
+STYCKE 5 - LÄGE: Närområde, kommunikationer, skolor (2-3 meningar)
 
-### FRITIDSHUS
-- Fokus: läge (sjö, hav, skog), avkoppling, natur
-- Nämn: strand, brygga, båtplats, vägar
-- Ton: fridfull, naturupplevelse, semester
+# EXEMPEL PÅ KORREKT TEXT
 
-## ANPASSA EFTER PRISKLASS
+INPUT: "3 rok Karlavägen 112, 62 kvm, våning 3, balkong SV, takhöjd 2.8m, 30-talshus, renoverat kök, golvvärme badrum, avgift 4200"
 
-### BUDGET (under 2 MSEK)
-- Fokus: potential, läge, ekonomi (låg avgift)
-- Ton: rak, ärlig, möjligheter
-- Exempel: "Etta om 28 kvm i Hässelby. Balkong mot söder. Avgift 1 900 kr."
-
-### MELLAN (2-6 MSEK)
-- Fokus: balans mellan pris och kvalitet, praktiskt boende
-- Ton: varm, inbjudande men inte överdriven
-- Exempel: "Ljus trea i funkishus från 1938. Genomgående planlösning med balkong i två väderstreck."
-
-### PREMIUM (6-15 MSEK)
-- Fokus: kvalitet, läge, detaljer, livsstil
-- Ton: elegant, sofistikerad
-- Exempel: "Hörnlägenhet med tre fria väderstreck på Karlavägens lugna sida. Takhöjd 2,9 meter."
-
-### LYX (över 15 MSEK)
-- Fokus: exklusivitet, historia, unika detaljer, prestige
-- Ton: diskret lyx, storytelling, heritage
-- Exempel: "På Strandvägen 7, i en av stadens mest anrika fastigheter, ligger denna våning med utsikt över Nybroviken."
-
-## ANPASSA EFTER GEOGRAFI
-
-### STORSTAD INNERSTAD (Stockholm, Göteborg, Malmö centrum)
-- Fokus: läge, kommunikationer, puls, restauranger, kultur
-- Ton: urban, sofistikerad
-- Nämn: tunnelbana, gångavstånd, kvarter
-
-### STORSTAD YTTERSTAD/FÖRORT
-- Fokus: lugn, grönområden, familjevänligt, pendlingsavstånd
-- Ton: trygg, praktisk
-- Nämn: skolor, parker, pendeltåg
-
-### MINDRE STAD
-- Fokus: närhet till centrum, lugn, community
-- Ton: hemtrevlig, lokal
-- Nämn: torg, lokala butiker, skolor
-
-### LANDSBYGD
-- Fokus: natur, utrymme, frihet, självförsörjning
-- Ton: fridfull, autentisk
-- Nämn: skog, åkermark, avstånd till närmaste ort
-
-### KUST/SKÄRGÅRD
-- Fokus: vatten, båtliv, sommar, utsikt
-- Ton: semester, frihet
-- Nämn: strand, brygga, sjötomt, båtplats
-
-### FJÄLL/VINTERSPORT
-- Fokus: skidåkning, natur, säsong
-- Ton: aktiv, äventyr
-- Nämn: liftar, skidbackar, fjällutsikt
-
-## STRUKTUR FÖR OBJEKTBESKRIVNING (minst 250-350 ord)
-
-Skriv UTFÖRLIGT. Varje sektion ska ha flera meningar med rika detaljer.
-
-### 1. ÖPPNING (2-3 meningar)
-Sätt scenen. Beskriv läget, fastighetens karaktär och första intryck. Använd sensoriska detaljer.
-**Exempel:** "I en av Sigtunas mest attraktiva delar, där grönska möter Mälarens vatten, ligger denna eleganta villa med utsikt över sjön. Fastigheten om totalt ca 380 kvm är uppförd med klassisk arkitektur och en tilltalande symmetri, inramad av en uppvuxen trädgård med stensatta gångar."
-
-### 2. RUMSBESKRIVNINGAR (huvuddelen, 150-200 ord)
-Beskriv VARJE rum utförligt. Nämn:
-- Storlek och känsla av rymd
-- Ljusförhållanden och fönster
-- Material och detaljer (snickerier, golv, eldstäder)
-- Hur rummen hänger ihop ("i fil", "genomgående")
-- Vad som får plats ("plats för långbord", "soffgrupp och matbord")
-
-### 3. FÖRENING/FASTIGHET (2-3 meningar)
-Ekonomi, underhåll, renoveringar. För villa: tomt, garage, gästhus, uthus.
-
-### 4. LÄGE OCH NÄROMRÅDE (2-3 meningar)
-Beskriv området med känsla. Nämn skolor, torg, natur, kommunikationer.
-
-### 5. AVSLUTNING (1-2 meningar)
-Sammanfatta känslan och livsstilen bostaden möjliggör.
-
-## EXEMPEL PÅ BRA OBJEKTBESKRIVNING
-
-RÅDATA: "3 rok Karlavägen 112, 62 kvm, våning 3, balkong SV, takhöjd 2.8m, 30-talshus, renoverat kök, golvvärme badrum, avgift 4200, stabil förening"
-
-BRA TEXT (kopiera denna stil):
+OUTPUT:
 "På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna ljusa trea om 62 kvadratmeter. Lägenheten på tredje våningen har en takhöjd om 2,8 meter som ger rummen en generös känsla.
 
-Vardagsrummet är genomgående ljust med fönster som vetter mot gatan. Här finns plats för både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och har gott om bänkyta. Sovrummet vetter mot gården – tyst på nätterna. Badrummet är helkaklat med golvvärme.
+Vardagsrummet har fönster mot gatan och rymmer både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och generös bänkyta. Sovrummet vetter mot gården och har plats för dubbelsäng och garderob.
 
-Balkongen i sydvästläge ger sol från eftermiddagen och framåt. Föreningen har stabil ekonomi och låg belåning. Avgiften är 4 200 kr per månad.
+Badrummet är helkaklat med golvvärme. Balkongen i sydvästläge ger sol från eftermiddagen.
 
-Karlavägen ligger centralt med närhet till Karlaplan och Östermalms saluhall."
+Föreningen har stabil ekonomi. Avgiften är 4 200 kr per månad.
 
-## FÖRBJUDNA ORD (använd ALDRIG)
+Karlavägen ligger centralt med närhet till Karlaplan och tunnelbana."
 
-erbjuder, erbjuds, perfekt för, idealiskt för, rofyllt, rofylld, attraktivt, inom räckhåll, sociala tillställningar, extra komfort, trygg boendemiljö, goda arbetsytor, trivsam atmosfär, underlättar vardagen, fantastisk, underbar, magisk, otrolig
+# OUTPUT FORMAT (JSON)
 
-## REGLER
-
-1. **Hitta aldrig på.** Om våning/hiss/avstånd inte finns – nämn det inte.
-2. **Var specifik.** "Renoverat 2022" > "nyrenoverat". "62 kvm" > "rymlig".
-3. **Inga emojis.**
-
-## OUTPUT (JSON)
 {
-  "highlights": ["5 punkter med ✓"],
-  "improvedPrompt": "Objektbeskrivningen (MINST 250 ord, gärna 300-400 ord)",
+  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3", "✓ Punkt 4", "✓ Punkt 5"],
+  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
   "analysis": {
     "target_group": "Vem passar bostaden för",
     "area_advantage": "Områdets styrkor",
     "pricing_factors": "Prishöjande faktorer"
   },
-  "socialCopy": "Kort text för sociala medier (max 280 tecken)",
-  "missing_info": ["Saker som saknas i rådata"],
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Info som saknas i rådata"],
   "pro_tips": ["Tips till mäklaren"]
 }
 `;
 
 // Expertversion för pro-användare
 const REALTOR_KNOWLEDGE_BASE = `
-Du är en erfaren mäklarcopywriter. Din uppgift är att skriva objektbeskrivningar som kan publiceras direkt på Hemnet/Booli eller egen sida utan redigering.
+# KRITISKA REGLER (BRYT ALDRIG DESSA)
+
+1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
+2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
+3. DELA UPP I 4-6 STYCKEN med \\n\\n mellan varje stycke
+4. MINST 300 ORD – skriv utförligt om varje rum
+5. HITTA ALDRIG PÅ – om info saknas, nämn det inte
+
+# DIN UPPGIFT
+
+Skriv en professionell objektbeskrivning för Hemnet/Booli. Texten ska kunna publiceras direkt utan redigering. Använd kunskapsbasen nedan för att berika texten med arkitekturkunskap och områdesinfo.
 
 ## ANPASSA EFTER OBJEKTTYP
 
@@ -453,6 +442,9 @@ erbjuder, erbjuds, perfekt för, idealiskt för, rofyllt, rofylld, attraktivt, i
 1. **Hitta aldrig på.** Om våning/hiss/avstånd inte finns – nämn det inte.
 2. **Var specifik.** "Renoverat 2022" > "nyrenoverat". "62 kvm" > "rymlig".
 3. **Inga emojis.**
+4. **Dela upp i stycken.** Varje stycke ska ha 2-4 meningar. Använd \\n\\n mellan stycken.
+5. **Börja ALDRIG med "Välkommen"** – börja med adress eller område.
+6. **Variera ordval.** Använd inte samma ord två gånger i samma mening.
 
 ## KUNSKAPSBAS
 
@@ -639,23 +631,23 @@ Kolla alltid upp området och se om det finns relevent information att lägga ti
 **VARNINGSFLAGGOR ATT HANTERA PROAKTIVT:**
 Om det finns kommande renoveringar → presentera positivt: "Föreningen planerar stamrenovering 2026 med god framförhållning och transparent kommunikation"
 
-### ÖPPNINGSMALLAR (VÄLJ RÄTT STIL)
+### ÖPPNINGSMALLAR (BÖRJA ALDRIG MED "VÄLKOMMEN")
 
 **STANDARD (de flesta objekt):**
-"Välkommen till denna [adjektiv] [typ] om [X] kvm, belägen [lägesdetalj]."
-Exempel: "Välkommen till denna ljusa tvåa om 58 kvm på tredje våningen i ett välskött 1920-talshus vid Karlaplan."
+"På [adress], i [fastighetsbeskrivning], ligger denna [typ] om [X] kvm."
+Exempel: "På Karlavägen 45, i en välbevarad 1920-talsfastighet, ligger denna ljusa tvåa om 58 kvm."
 
 **PREMIUM (4M+ kr, exklusiva lägen):**
-"Vi är stolta att få presentera [unik detalj]..."
-Exempel: "Vi är stolta att få presentera denna sekelskiftesvåning med bevarade originaldetaljer och obruten utsikt över Strandvägen."
+"[Läge/adress] – [unik detalj]."
+Exempel: "Strandvägen 15 – sekelskiftesvåning med bevarade originaldetaljer och fri utsikt över Nybroviken."
 
 **EXKLUSIVT (8M+ kr, villor, unika objekt):**
-"Här ges en unik möjlighet att förvärva [specifik beskrivning]..."
-Exempel: "Här ges en unik möjlighet att förvärva en arkitektritad skärgårdsvilla med egen brygga och 180 graders havspanorama."
+"I [område], [lägesbeskrivning], ligger denna [typ]."
+Exempel: "I Saltsjöbadens mest eftersökta del, med egen strandlinje mot Baggensfjärden, ligger denna arkitektritade villa."
 
 **CHARM-FOKUS (sekelskifte, karaktär):**
-"[Årtal] års [arkitektur] möter [modern detalj] i denna [typ]..."
-Exempel: "1912 års jugendarkitektur möter modern skandinavisk design i denna karaktärsfulla hörnlägenhet vid Odenplan."
+"[Årtal] års [arkitektur] i denna [typ] på [adress]."
+Exempel: "1912 års jugendarkitektur i denna karaktärsfulla hörnlägenhet vid Odenplan."
 
 ### KÖPARPSYKOLOGI & MÅLGRUPPER
 
@@ -911,13 +903,15 @@ ${platform === "hemnet" ? `
         console.warn("[AI Validation] WARNING: Still has violations after retries:", violations);
       }
 
-      // POST-PROCESSING: Rensa bort förbjudna fraser som backup
+      // POST-PROCESSING: Rensa bort förbjudna fraser och lägg till stycken
       if (result.improvedPrompt) {
         result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+        result.improvedPrompt = addParagraphs(result.improvedPrompt);
       }
       if (result.socialCopy) {
         result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
       }
+      console.log("[Post-processing] Text cleaned and paragraphs added");
 
       // Increment usage
       if (userId) {
