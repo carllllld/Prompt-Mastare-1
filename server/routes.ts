@@ -21,65 +21,33 @@ function extractFirstJsonObject(text: string): string {
   return text.slice(start, end + 1);
 }
 
+// Förbjudna fraser - endast de mest generiska AI-fraserna
+// OBS: Toppmäklare använder ord som "välplanerad", "påkostad", "vacker" - dessa är OK
 const FORBIDDEN_PHRASES = [
-  "ljus och fräsch",
-  "ljust och luftigt",
-  "fräsch",
-  "välkommen till",
-  "välkommen hem",
-  "erbjuder",
-  "erbjuds",
-  "upplevs",
-  "en plats att",
-  "luftig",
-  "luftiga",
-  "nås enkelt",
-  "lugn utsikt",
-  "lugn vy",
-  "goda arbetsytor",
-  "ett stenkast",
-  "nära till allt",
-  "goda kommunikationer",
-  "bekvämt avstånd",
-  "brett utbud",
-  "fantastisk",
-  "underbar",
-  "magisk",
-  "otrolig",
+  "välkommen till denna",
+  "välkommen hem till",
+  "här erbjuds",
+  "nu finns chansen",
+  "missa inte denna",
+  "unik möjlighet",
   "unik chans",
   "sällsynt tillfälle",
-  "missa inte",
-  "hjärtat i hemmet",
-  "husets hjärta",
-  "välplanerad",
-  "genomtänkt",
+  "fantastisk lägenhet",
+  "fantastiskt läge",
+  "underbar bostad",
+  "magisk",
+  "otrolig",
   "drömboende",
   "drömlägenhet",
   "drömhem",
   "en sann pärla",
-  "pärla",
-  "oas",
-  "moderna ytskikt",
-  "fräscha ytskikt",
-  "praktisk planlösning",
-  "flexibel planlösning",
-  "centralt belägen",
-  "strategiskt läge",
+  "hjärtat i hemmet",
+  "husets hjärta",
   "perfekt för den som",
-  "härlig atmosfär",
-  "inbjudande",
-  "rofyllt",
-  "stilrent",
-  "attraktivt",
+  "inte bara ett hem",
   "stadens puls",
   "stark efterfrågan",
-  "social miljö",
-  "harmonisk",
-  "trivsam atmosfär",
   "bekvämlighet i vardagen",
-  "inte bara ett hem",
-  "livsstil",
-  "potential",
 ];
 
 function findRuleViolations(text: string): string[] {
@@ -119,59 +87,37 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
 // --- PROMPT FÖR GRATIS-ANVÄNDARE (BASIC) ---
 const BASIC_REALTOR_PROMPT = `
-Du skriver objektbeskrivningar för svenska mäklare. Texten ska vara **konkret, engagerande och läsvärd** – inte en torr faktalista.
+Du skriver objektbeskrivningar i samma stil som Lagerlings, Erik Olsson och andra toppmäklare i Stockholm.
 
-## BALANSEN
+## SÅ HÄR SKRIVER TOPPMÄKLARE (riktiga exempel)
 
-En bra objektbeskrivning är:
-- **Specifik** (mått, årtal, material) – inte vaga klyschor
-- **Engagerande** (flyt, rytm, bilder) – inte en punktlista
-- **Ärlig** (bara fakta från rådata) – hitta aldrig på
+**Lagerlings, Grevgatan 18A:**
+"Strålande ljus etagevåning med tyst läge högst upp i gårdshuset på Grevgatan 18. Våningen har en tilltalande planlösning med stora och öppna sällskapsytor, öppen spis, ett påkostat öppet kök och en stor solig terrass."
 
-## SÅ HÄR SKRIVER DU
+**Lagerlings, Erik Dahlbergsallén 11:**
+"Med bästa läge vid Karlaplan, högt och ljust i vacker nationalromantisk fastighet finns denna välplanerade våning för familjeliv och representation. Våningen är varsamt omhändertagen med de vackra ursprungsdetaljerna bevarade och fina golv av ekparkett och furuplank."
 
-**Öppning:** Börja med det mest intressanta. Adress + unik detalj.
-"Karlavägen 112, i en 30-talsfastighet med 2,8 meters takhöjd. Tvåa om 62 kvm med balkong i sydväst."
+**Lagerlings, Lovisagatan 4:**
+"Med ett av Östermalms allra bästa lägen finner vi denna välplanerade och exklusiva tvåa där samtliga material har valts med omsorg och med en tidlös kvalitet. Takhöjden är ca 3 meter. Massiv fiskbensparkett av ek i hela lägenheten förutom i hallen där det ligger marmor."
 
-**Rummen:** Beskriv hur de känns ATT VARA I, men med konkreta detaljer som bevis.
-"Vardagsrummet har plats för både soffgrupp och matbord. Ljuset faller in från sydväst och når ända in i köket på eftermiddagarna."
+## VAD DE GÖR
 
-"Köket är renoverat med vita luckor och integrerade vitvaror. Bänkytan räcker för att laga mat tillsammans."
-
-"Sovrummet vetter mot gården – tyst på nätterna. Badrummet är helkaklat med golvvärme."
-
-**Förening:** Konkreta siffror.
-"Föreningen har låg belåning. Avgiften är rimlig för läget."
-
-**Läge:** Nämn bara det som finns i rådata.
-"Karlaplan, Fältöversten och Djurgården ligger inom gångavstånd. Tunnelbanan är nära."
-
-## EXEMPEL PÅ BRA TEXT
-
-**Rådata:** "2 rok Karlavägen 62 kvm balkong sydväst 30-talshus takhöjd 2,8m renoverat kök golvvärme badrum"
-
-**Bra output:**
-"Karlavägen, i en 30-talsfastighet med 2,8 meters takhöjd. Tvåa om 62 kvm med balkong i sydväst.
-
-Vardagsrummet är genomgående med fönster åt två håll. Här ryms både soffgrupp och matbord. Eftermiddagssolen når in från balkongen.
-
-Köket är renoverat med moderna vitvaror och gott om bänkyta. Sovrummet vetter mot gården.
-
-Badrummet är helkaklat med golvvärme – varma fötter på vintermorgnarna.
-
-En lägenhet med karaktär från 30-talet och en balkong där kvällssolen stannar länge."
+1. **Öppnar med läge + känsla** – "Med bästa läge vid Karlaplan, högt och ljust..."
+2. **Nämner arkitekturstil** – "nationalromantisk", "jugend", "funktionalism", "30-tal"
+3. **Beskriver material specifikt** – "massiv fiskbensparkett av ek", "marmor i hallen"
+4. **Använder värdeord som stöds av fakta** – "påkostat kök" (om det är renoverat), "vacker fastighet" (om det är sekelskifte)
+5. **Beskriver hur man lever där** – "för familjeliv och representation", "sällskapsytor"
 
 ## REGLER
 
 1. **Hitta aldrig på.** Om våning/hiss/avstånd inte finns i rådata – nämn det inte. Skriv det i missing_info.
-2. **Inga tomma klyschor.** Inte "fantastisk", "underbar", "unik möjlighet", "perfekt för". Beskriv istället VAD som gör det bra.
-3. **Inga "Välkommen till..."** – börja direkt med substans.
-4. **Inga emojis.**
+2. **Undvik generiska AI-fraser** – inte "Välkommen till denna fantastiska...", inte "Här erbjuds en unik möjlighet..."
+3. **Inga emojis.**
 
 ## OUTPUT (JSON)
 {
   "highlights": ["5 punkter med ✓"],
-  "improvedPrompt": "Objektbeskrivningen (350-450 ord, engagerande och konkret)",
+  "improvedPrompt": "Objektbeskrivningen (350-500 ord)",
   "analysis": {
     "target_group": "Vem passar bostaden för",
     "area_advantage": "Områdets styrkor",
@@ -185,56 +131,33 @@ En lägenhet med karaktär från 30-talet och en balkong där kvällssolen stann
 
 // Expertversion för pro-användare
 const REALTOR_KNOWLEDGE_BASE = `
-Du skriver objektbeskrivningar för svenska mäklare. Texten ska vara **konkret, engagerande och läsvärd** – inte en torr faktalista.
+Du skriver objektbeskrivningar i samma stil som Lagerlings, Erik Olsson och andra toppmäklare i Stockholm.
 
-## BALANSEN
+## SÅ HÄR SKRIVER TOPPMÄKLARE (riktiga exempel)
 
-En bra objektbeskrivning är:
-- **Specifik** (mått, årtal, material) – inte vaga klyschor
-- **Engagerande** (flyt, rytm, bilder) – inte en punktlista  
-- **Ärlig** (bara fakta från rådata) – hitta aldrig på
+**Lagerlings, Grevgatan 18A:**
+"Strålande ljus etagevåning med tyst läge högst upp i gårdshuset på Grevgatan 18. Våningen har en tilltalande planlösning med stora och öppna sällskapsytor, öppen spis, ett påkostat öppet kök och en stor solig terrass."
 
-## SKRIVSÄTT
+**Lagerlings, Erik Dahlbergsallén 11:**
+"Med bästa läge vid Karlaplan, högt och ljust i vacker nationalromantisk fastighet finns denna välplanerade våning för familjeliv och representation. Våningen är varsamt omhändertagen med de vackra ursprungsdetaljerna bevarade och fina golv av ekparkett och furuplank. Pampig hall med öppen spis, balkong och gästwc."
 
-**Öppning:** Adress + det mest intressanta. Ingen "Välkommen till".
-"Karlavägen 112, i en 30-talsfastighet med 2,8 meters takhöjd. Tvåa om 62 kvm med balkong i sydväst."
+**Lagerlings, Artillerigatan 77:**
+"Med ljust och fritt läge ligger denna väldisponerade och smakfullt renoverade våning. Elegant fastighet i nyklassisk stil uppförd under 1920-talet. Stort exklusivt kök med köksö och rymlig matplats. Vardagsrum med fungerande öppen spis. Tre rymliga sovrum mot tyst gård. Balkong i västerläge med grön utsikt och kvällssol."
 
-**Rummen:** Beskriv hur de KÄNNS att vara i, men med konkreta detaljer som bevis.
-"Vardagsrummet har plats för både soffgrupp och matbord. Ljuset faller in från sydväst och når ända in i köket på eftermiddagarna."
+## VAD DE GÖR
 
-"Köket är renoverat med vita luckor och integrerade vitvaror. Bänkytan räcker för att laga mat tillsammans."
-
-**Känsla utan klyschor:** Istället för "härlig atmosfär", beskriv VAD som skapar känslan:
-- "Eftermiddagssolen når in från balkongen"
-- "Tyst mot gården på nätterna"
-- "Varma fötter på vintermorgnarna" (om golvvärme finns)
-
-**Avslut:** En mening som sammanfattar känslan – utan klyschor.
-"En lägenhet med karaktär från 30-talet och en balkong där kvällssolen stannar länge."
-
-## EXEMPEL PÅ BRA TEXT
-
-**Rådata:** "2 rok Karlavägen 62 kvm balkong sydväst 30-talshus takhöjd 2,8m renoverat kök golvvärme badrum förening låg belåning nära Karlaplan tunnelbana"
-
-**Bra output:**
-"Karlavägen, i en 30-talsfastighet med 2,8 meters takhöjd. Tvåa om 62 kvm med balkong i sydväst.
-
-Vardagsrummet är genomgående med fönster åt två håll. Här ryms både soffgrupp och matbord. Eftermiddagssolen når in från balkongen.
-
-Köket är renoverat med moderna vitvaror och gott om bänkyta. Sovrummet vetter mot gården.
-
-Badrummet är helkaklat med golvvärme – varma fötter på vintermorgnarna.
-
-Föreningen har låg belåning. Karlaplan och tunnelbanan ligger nära.
-
-En lägenhet med karaktär från 30-talet och en balkong där kvällssolen stannar länge."
+1. **Öppnar med läge + känsla** – "Med bästa läge vid Karlaplan, högt och ljust..."
+2. **Nämner arkitekturstil** – "nationalromantisk", "jugend", "nyklassisk", "30-tal"
+3. **Beskriver material specifikt** – "ekparkett och furuplank", "marmor i hallen"
+4. **Använder värdeord som stöds av fakta** – "påkostat kök" (om renoverat), "pampig hall" (om stor)
+5. **Beskriver hur man lever där** – "för familjeliv och representation", "sällskapsytor"
+6. **Rum för rum med konkreta detaljer** – "Tre rymliga sovrum mot tyst gård"
 
 ## REGLER
 
-1. **Hitta aldrig på.** Om våning/hiss/avstånd inte finns i rådata – nämn det inte.
-2. **Inga tomma klyschor.** Inte "fantastisk", "underbar", "unik möjlighet", "perfekt för", "erbjuder". Beskriv VAD som gör det bra.
-3. **Inga "Välkommen till..."**
-4. **Inga emojis.**
+1. **Hitta aldrig på.** Om våning/hiss/avstånd inte finns i rådata – nämn det inte. Skriv det i missing_info.
+2. **Undvik generiska AI-fraser** – inte "Välkommen till denna fantastiska...", inte "Här erbjuds en unik möjlighet...", inte "Missa inte..."
+3. **Inga emojis.**
 
 ## KUNSKAPSBAS
 
@@ -584,7 +507,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isPro = plan === "pro";
       const systemPrompt = isPro ? REALTOR_KNOWLEDGE_BASE : BASIC_REALTOR_PROMPT;
 
-      const model = isPro ? "gpt-4o" : "gpt-4o-mini";
+      // Använd GPT-4o för alla användare för bästa kvalitet
+      const model = "gpt-4o";
 
       // Debug: logga vilken prompt som används
       console.log(`[AI] Using ${isPro ? 'PRO' : 'BASIC'} prompt for plan: ${plan}, model: ${model}`);
@@ -644,8 +568,8 @@ ${platform === "hemnet" ? `
       const completion1 = await openai.chat.completions.create({
         model,
         messages: baseMessages,
-        max_tokens: plan === "pro" ? 4000 : 2000,
-        temperature: 0.3,
+        max_tokens: 4000,
+        temperature: 0.4,
         response_format: { type: "json_object" },
       });
 
@@ -666,8 +590,8 @@ ${platform === "hemnet" ? `
                 "Om du inte har fakta – ta bort meningen helt. Returnera ENDAST JSON.",
             },
           ],
-          max_tokens: plan === "pro" ? 4000 : 2000,
-          temperature: 0.2,
+          max_tokens: 4000,
+          temperature: 0.3,
           response_format: { type: "json_object" },
         });
 
