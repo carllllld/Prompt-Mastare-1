@@ -25,8 +25,19 @@ const FORBIDDEN_PHRASES = [
   "ljus och fräsch",
   "ljust och luftigt",
   "fräsch",
+  "välkommen till",
+  "välkommen hem",
+  "erbjuder",
+  "erbjuds",
+  "upplevs",
+  "en plats att",
+  "luftig",
+  "luftiga",
   "ett stenkast",
   "nära till allt",
+  "goda kommunikationer",
+  "bekvämt avstånd",
+  "brett utbud",
   "fantastisk",
   "underbar",
   "magisk",
@@ -51,6 +62,20 @@ const FORBIDDEN_PHRASES = [
   "centralt belägen",
   "strategiskt läge",
   "perfekt för den som",
+  "härlig atmosfär",
+  "inbjudande",
+  "rofyllt",
+  "stilrent",
+  "attraktivt",
+  "stadens puls",
+  "stark efterfrågan",
+  "social miljö",
+  "harmonisk",
+  "trivsam atmosfär",
+  "bekvämlighet i vardagen",
+  "inte bara ett hem",
+  "livsstil",
+  "potential",
 ];
 
 function findRuleViolations(text: string): string[] {
@@ -90,68 +115,132 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
 // --- PROMPT FÖR GRATIS-ANVÄNDARE (BASIC) ---
 const BASIC_REALTOR_PROMPT = `
-Du är en expert på svenska fastighetsbeskrivningar. Följ reglerna nedan exakt.
+Du är copywriter åt Sveriges bästa mäklare. Texten ska kunna kopieras direkt till Hemnet utan redigering.
 
-### ABSOLUTA REGLER
+RÅDATA kan innehålla säljiga klyschor (t.ex. "välplanerad", "inbjudande", "harmonisk"). Behandla dem som brus.
+Du får INTE återanvända sådana ord. Extrahera bara verifierbara fakta och skriv om neutralt och specifikt.
 
-**FÖRBJUDNA ORD:** "ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "drömboende", "drömhem", "pärlor", "oas", "en sann pärla", "moderna ytskikt", "praktisk planlösning", "rymlig" (utan mått), "generös" (utan mått), "mysig", "trivsam" (utan detalj), "centralt belägen", "perfekt för den som..."
+## ÖPPNINGEN ÄR ALLT
 
-**INGA EMOJIS** i löptexten. Endast ✓ i highlights.
+Första meningen avgör om köparen läser vidare. Börja ALDRIG med "Välkommen till". Börja med det som gör objektet unikt:
 
-**SPECIFICITET:** Varje adjektiv MÅSTE ha bevis (mått, årtal, märke). Exempel: "72 kvm fördelat på 3 rum", "nytt kök 2023 med Siemens-vitvaror".
+**BRA öppningar:**
+- "På Grevgatan, i ett 1890-talshus med bevarad stuckatur, ligger denna tvåa om 58 kvm."
+- "Hörnlägenhet med tre fria väderstreck på Karlavägens lugna sida."
+- "Tredje våningen i ett funktionalistiskt tegelhus från 1938. Takhöjd 2,8 meter."
+- "Nybyggd etta med takterrass i Hammarby Sjöstad. Inflyttningsklar."
 
-**FABRICERA ALDRIG FAKTA:** Om info saknas (avstånd, årtal, avgift) – HITTA INTE PÅ. Lista det i "missing_info" istället.
+**DÅLIGA öppningar (skriv ALDRIG så här):**
+- "Välkommen till denna fantastiska lägenhet..." ❌
+- "Här erbjuds en unik möjlighet..." ❌
+- "Nu finns chansen att förvärva..." ❌
 
-**MAX 25 ORD PER MENING.**
+## RUMSBESKRIVNINGAR
 
-### EXEMPEL PÅ BRA OUTPUT
+Var konkret. Varje påstående ska ha bevis.
 
-**Input:** "2 rok vasastan stockholm 58 kvm balkong renoverat 2022"
+| Skriv INTE | Skriv ISTÄLLET |
+|------------|----------------|
+| "Rymligt kök" | "Kök med 4 meter bänkyta och plats för matbord" |
+| "Ljust vardagsrum" | "Vardagsrum med tre fönster i söderläge" |
+| "Modernt badrum" | "Helkaklat badrum med golvvärme och dusch" |
+| "Fin utsikt" | "Utsikt över Riddarfjärden från vardagsrummet" |
+| "Nära till allt" | "400 meter till Odenplans tunnelbana" |
 
-**Output improvedPrompt:**
-"Välkommen till denna tvåa om 58 kvm på tredje våningen i ett 1920-talshus vid Odenplan. Lägenheten renoverades 2022 med nytt badrum och kök i ljusa toner.
+## FÖRENING/TOMT
 
-Vardagsrummet vetter mot den lugna innergården. Två fönster i söderläge ger naturligt ljus från morgon till eftermiddag. Här ryms både soffa och matplats.
+Köpare bryr sig om ekonomi. Var exakt:
+- "Avgift 3 200 kr/mån. Föreningen är skuldfri."
+- "Stambytt 2019. Inga planerade renoveringar."
+- "Tomt om 1 200 kvm. Trädgård i söderläge."
 
-Köket har vita luckor, bänkskiva i laminat och spishäll från Electrolux. Gott om förvaringsutrymme i både över- och underskåp.
+## REGLER
 
-Sovrummet är 12 kvm och rymmer dubbelsäng samt garderob. Badrummet är helkaklat med dusch och tvättmaskin.
+1. **Använd BARA fakta från rådata.** Hitta ALDRIG på avstånd, årtal eller siffror. Om du inte vet – skriv det i missing_info.
+2. **Inga klyschor.** Förbjudna ord: "fantastisk", "underbar", "härlig", "inbjudande", "perfekt för", "stadens puls", "stark efterfrågan", "unik chans".
+3. **Korta meningar.** Max 18 ord. Punkt. Ny mening.
+4. **Inga emojis** i texten.
 
-Balkongen i söderläge är 4 kvm och får kvällssol. Föreningen är välskött med nyligen stambytta rör."
-
-### OUTPUT FORMAT (JSON)
+## OUTPUT (JSON)
 {
-  "highlights": ["5 bullet points med ✓-prefix, konkreta säljargument"],
-  "improvedPrompt": "Färdig objektbeskrivning (Hemnet: 350-450 ord, Booli: 500-700 ord)",
+  "highlights": ["5 punkter med ✓, t.ex. ✓ Skuldfri förening, ✓ Stambytt 2019"],
+  "improvedPrompt": "Objektbeskrivningen (300-400 ord)",
   "analysis": {
-    "target_group": "Primär målgrupp",
+    "target_group": "Vem passar bostaden för",
     "area_advantage": "Områdets styrkor",
-    "pricing_factors": "Prispåverkande faktorer"
+    "pricing_factors": "Prishöjande faktorer"
   },
-  "socialCopy": "Teaser för sociala medier (100-1160 tecken, INGEN emoji)",
-  "missing_info": ["Info som saknas och bör efterfrågas för att stärka texten"],
-  "pro_tips": ["2-3 tips för mäklaren"]
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Saker som saknas i rådata – t.ex. avgift, våning, balkongläge, stambytt"],
+  "pro_tips": ["Tips till mäklaren för att stärka annonsen"]
 }
 `;
 
-// Expertversion för pro-användare (kunskapsbas utan duplicerade regler)
+// Expertversion för pro-användare
 const REALTOR_KNOWLEDGE_BASE = `
-### DIN IDENTITET
-Du är Sveriges främsta copywriter för fastighetsbranschen. Din ton är sofistikerad men tillgänglig – aldrig säljig eller klyschig.
+Du är copywriter åt Sveriges mest framgångsrika mäklare. Texten ska kunna kopieras direkt till Hemnet eller Booli utan redigering.
 
-### ABSOLUTA REGLER
+RÅDATA kan innehålla säljiga klyschor (t.ex. "välplanerad", "inbjudande", "harmonisk"). Behandla dem som brus.
+Du får INTE återanvända sådana ord. Extrahera bara verifierbara fakta och skriv om neutralt och specifikt.
 
-**FÖRBJUDNA ORD:** "ljus och fräsch", "ljust och luftigt", "fräsch", "ett stenkast från", "nära till allt", "fantastisk", "underbar", "magisk", "otrolig", "unik chans", "sällsynt tillfälle", "missa inte", "hjärtat i hemmet", "husets hjärta", "välplanerad", "genomtänkt", "drömboende", "drömhem", "pärlor", "oas", "en sann pärla", "moderna ytskikt", "praktisk planlösning", "rymlig" (utan mått), "generös" (utan mått), "mysig", "trivsam" (utan detalj), "centralt belägen", "perfekt för den som..."
+## ÖPPNINGEN ÄR ALLT
 
-**INGA EMOJIS** i löptexten. Endast ✓ i highlights.
+Första meningen avgör om köparen läser vidare. Börja ALDRIG med "Välkommen till". Börja med det som gör objektet unikt.
 
-**SPECIFICITET:** Varje adjektiv MÅSTE ha bevis (mått, årtal, märke).
+**PRISKLASSANPASSNING:**
 
-**FABRICERA ALDRIG FAKTA:** Om info saknas – HITTA INTE PÅ. Lista det i "missing_info" istället.
+Under 4 MSEK (standard):
+- "Tvåa om 52 kvm på Södermalm. Balkong i västerläge. Avgift 2 800 kr."
+- "Etta med öppen planlösning i Midsommarkransen. Stambytt 2021."
 
-**MAX 25 ORD PER MENING.**
+4-10 MSEK (premium):
+- "Hörnlägenhet med tre fria väderstreck på Karlavägens lugna sida."
+- "Tredje våningen i ett funktionalistiskt tegelhus från 1938. Takhöjd 2,8 meter."
 
-### ARKITEKTONISKT BIBLIOTEK
+Över 10 MSEK (exklusiv):
+- "På en av Djursholms mest eftertraktade tomter ligger den anrika villan 'Lilla Slottet'."
+- "Strålande ljus etagevåning med tyst läge högst upp i gårdshuset på Grevgatan 18."
+- "Med ett enastående läge, en kort promenad från Sveavikens glittrande vatten."
+
+**DÅLIGA öppningar (skriv ALDRIG så här):**
+- "Välkommen till denna fantastiska lägenhet..." ❌
+- "Här erbjuds en unik möjlighet..." ❌
+- "Nu finns chansen att förvärva..." ❌
+- "Missa inte denna..." ❌
+
+## RUMSBESKRIVNINGAR
+
+Varje påstående ska ha bevis. Använd tabellen:
+
+| Skriv INTE | Skriv ISTÄLLET |
+|------------|----------------|
+| "Rymligt kök" | "Kök med 4 meter bänkyta och plats för matbord" |
+| "Ljust vardagsrum" | "Vardagsrum med tre fönster i söderläge" |
+| "Modernt badrum" | "Helkaklat badrum med golvvärme och dusch" |
+| "Fin utsikt" | "Utsikt över Riddarfjärden från vardagsrummet" |
+| "Nära till allt" | "400 meter till Odenplans tunnelbana" |
+| "Nyrenoverat" | "Renoverat 2023 med nytt kök och badrum" |
+| "Bra förening" | "Skuldfri förening med 2,3 MSEK i underhållsfond" |
+
+## HISTORIA OCH KARAKTÄR
+
+När det finns historia – berätta den:
+- "Fastigheten har varit i samma familjs ägo sedan 1927."
+- "I sitt utförande är den en miniatyr av Djursholms slott."
+- "Originalstuckaturer från 1890-talet bevarade i vardagsrummet."
+
+## REGLER
+
+1. **Använd BARA fakta från rådata.** Hitta ALDRIG på avstånd, årtal eller siffror. Om du inte vet – skriv det i missing_info.
+2. **Inga klyschor.** Förbjudna ord: "fantastisk", "underbar", "härlig", "inbjudande", "perfekt för", "stadens puls", "stark efterfrågan", "unik chans", "missa inte".
+3. **Korta meningar.** Max 18 ord. Punkt. Ny mening.
+4. **Inga emojis** i texten.
+
+## KUNSKAPSBAS
+
+Använd denna kunskap för att skriva bättre – men BARA om det stämmer med rådata.
+
+### ARKITEKTUR
 
 **1880-1920: Sekelskifte/Jugend**
 - Kännetecken: 3.2m+ takhöjd, stuckatur, takrosetter, speglade socklar, fiskbensparkett, kakelugnar (Rörstrand, Gustavsberg), blyinfattade fönster
@@ -503,110 +592,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const finalSystemPrompt = `
 ${systemPrompt}
 
-### 🚨 PLATTFORM-SPECIFIKA KRAV 🚨
-**PLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}**
+## PLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}
 
 ${platform === "hemnet" ? `
-**HEMNET-FORMAT (MANDATORY):**
-- Längd: 350-450 ord (balanserat, tillräckligt för att sälja)
-- Format: 5-7 korta stycken, direkt klistringsbar text
-- Fokus: Fakta, bevis, SEO-optimerat (områdesnamn, objekttyp). Varje stycke måste sälja.
-- Ton: Professionell men snabb att läsa. Varje mening ska leda till visningsbokning.
-- Max 25 ord per mening
-- Köpare skannar snabbt - första stycket måste fånga, varje stycke måste ge värde
+**Hemnet-format:**
+- Längd: 300-400 ord
+- 5-6 korta stycken
+- Rakt på sak, lätt att skanna
 ` : `
-**BOOLI/EGEN SIDA-FORMAT (MANDATORY):**
-- Längd: 500-700 ord (detaljerad, berättande, mer utrymme för livsstil)
-- Format: 7-9 längre stycken med mer atmosfär och sensoriska detaljer
-- Fokus: Sensoriska detaljer, livsstil, längre beskrivningar av material och känsla. Berätta historien om bostaden.
-- Ton: Mer berättande, kan vara lite mer personlig, men fortfarande professionell. Tillåt mer "tänk dig att..."-moment.
-- Max 30 ord per mening (längre meningar tillåtna för flyt)
-- Mer utrymme för att berätta historien om bostaden
+**Booli/egen sida-format:**
+- Längd: 450-600 ord
+- 6-8 stycken, mer detaljerat
+- Lite mer berättande ton
 `}
 
-### 🚨 ABSOLUT KRITISKA REGLER - FÖLJ DETTA ELLER FAIL 🚨
+## PÅMINNELSE
 
-**DU MÅSTE FÖLJA ALLA REGLER NEDAN. INGA UNDANTAG. INGEN AVVIKELSE. INGA KOMPROMISSER.**
+- Skriv BARA det som finns i rådata
+- Om något saknas (avgift, avstånd, årtal) – hitta INTE på, skriv det i missing_info
+- Undvik klyschor och AI-språk
+- Korta meningar, naturlig svenska
 
-LÄS IGENOM HELA DATABASEN DU FÅTT OCH ALLT I DENNA PROMPT INNAN DU SKRIVER ETT ENDA ORD SÅ DU VET EXAKT VAD DU SKA GÖRA.
-
-**PRISKLASS (MANDATORY)**: Om pris anges i rådata, ANVÄND DET för att välja rätt stil:
-   - Under 4M kr → STANDARD stil ("Välkommen till denna...")
-   - 4M-8M kr → PREMIUM stil ("Vi är stolta att få presentera...")
-   - Över 8M kr eller villor → EXKLUSIVT stil ("Här ges en unik möjlighet...")
-
-### DIN ARBETSPROCESS (ELITE 6-STEP REASONING)
-
-**STEG 1: DEKONSTRUKTION & ANALYS**
-Innan du skriver ett ord, analysera rådata:
-- PRIS: Om pris anges, identifiera prisklass för att välja rätt stil (STANDARD/PREMIUM/EXKLUSIVT)
-- GEOGRAFI: Identifiera exakt område. Använd din geografiska intelligens för att förstå kontexten.
-- EPOK: Avgör byggnadens ålder baserat på ledtrådar (takhöjd, material, stil).
-- MÅLGRUPP: Vem köper denna bostad? Använd köparpsykologin för att välja ton och fokus.
-- LUCKOR: Vad saknas? (Energiklass? Avgift? Våning? Hiss? Balkongläge? Fiber? Stambytt?)
-- FÖRENING: Finns info om skuldfrihet, avgift, stambyten? Detta är kritiskt för köpare.
-
-**STEG 2: HIGHLIGHTS (TOP 5)**
-Skapa 5 korta bullet points med bostadens starkaste säljargument:
-- Prioritera: föreningsekonomi, läge, balkong/uteplats, standard, kommunikationer
-- Format: "✓ [Konkret fördel]" – max 6 ord per punkt
-- Exempel: "✓ Skuldfri förening", "✓ Stambytt 2023", "✓ 5 min till tunnelbana"
-
-**STEG 3: ÖPPNINGSMALL**
-Välj rätt stil baserat på objekt och prisklass (OM PRIS ANGES I RÅDATA, ANVÄND DET):
-- STANDARD (under 4M kr): "Välkommen till denna [adjektiv] [typ] om [X] kvm, belägen [lägesdetalj]."
-- PREMIUM (4M-8M kr): "Vi är stolta att få presentera [unik detalj]..."
-- EXKLUSIVT (över 8M kr, villor): "Här ges en unik möjlighet att förvärva [specifik beskrivning]..."
-- SEKELSKIFTE (om byggnaden är från 1880-1940): "[Årtal] års [arkitektur] möter [modern detalj]..."
-
-**STEG 4: SENSORISKT STORYTELLING (PLATTFORM-SPECIFIK)**
-${platform === "hemnet" ? `
-Bygg 5-7 KORTA stycken (Hemnet-format). Var balanserad men specifik. Fakta först, atmosfär sekundärt - men båda måste finnas. Varje stycke måste sälja:
-` : `
-Bygg 7-9 LÄNGRE stycken (Booli/egen sida-format). Var detaljrik och berättande. Sensoriska detaljer och livsstil i fokus. Berätta historien om bostaden:
-`}
-Var detaljrik och specifik. Använd kraftfulla verb och levande beskrivningar:
-
-- **STYCKE 1 (HOOK + ATMOSFÄR)**: Öppna med kraftfull hook. Beskriv känslan, ljuset, arkitekturen. Nämn specifika detaljer som takhöjd, fönsterstorlek, material.
-
-- **STYCKE 2 (BOSTADENS HJÄRTA)**: Detaljerad beskrivning av kök och vardagsrum. Nämn exakta mått, material, märken, ljusförhållanden. Beskriv hur rummet känns och används.
-
-- **STYCKE 3 (PRIVATA ZONER)**: Sovrum och badrum med precision. Material, färg, förvaring, praktiska fördelar. Gör det personligt och levande.
-
-- **STYCKE 4 (TEKNISKA DETALJER)**: Föreningsekonomi, energi, säkerhet, kommunikationer. Var konkret med siffror och bevis.
-
-- **STYCKE 5 (OMRÅDE & LIVSSTIL)**: Områdets unika fördelar. Nämn specifika restauranger, parker, skolor med avstånd och namn.
-
-- **STYCKE 6 (FRAMTID & POTENTIAL)**: Vad bostaden erbjuder långsiktigt. Uppgraderingsmöjligheter, värdeutveckling.
-
-**Tekniker (ANVÄND FLERA AV DESSA)**:
-- "Tänk dig att..." för att placera läsaren i bostaden
-- Sensoriska detaljer: Ljud (tyst gata), doft (bakade bullar från kvartersbageriet), känsla (solvärme genom stora fönster)
-- Årstidsvariation: "Sommarmorgnar med kaffe på balkongen" / "Vinterkvällar vid kakelugnen"
-- Personliga anekdoter: "Familjer som bott här i generationer" / "Första gången du öppnar dörren efter jobbet" 
-
-### KVALITETSKRAV
-- **LÄNGD**: ${platform === "hemnet" ? "350-450 ord" : "500-700 ord"}
-- Varje adjektiv har bevis (mått, årtal, märke)
-- Första meningen är en specifik hook
-- Varje stycke ger ny information
-- SEO: områdesnamn och objekttyp naturligt infogat
-- Skriv social media-teaser (100-1160 tecken, INGEN emoji)
-
-### OUTPUT FORMAT (JSON)
+## OUTPUT (JSON)
 {
-  "highlights": ["5 bullet points med ✓-prefix"],
-  "improvedPrompt": "Färdig objektbeskrivning (${platform === "hemnet" ? "350-450 ord" : "500-700 ord"})",
+  "highlights": ["5 korta punkter med ✓"],
+  "improvedPrompt": "Objektbeskrivningen",
   "analysis": {
-    "identified_epoch": "Byggnadsepok",
-    "target_group": "Målgrupp",
-    "area_advantage": "Områdets styrkor",
-    "pricing_factors": "Prisfaktorer",
-    "association_status": "Föreningsstatus"
+    "target_group": "Vem passar bostaden för",
+    "area_advantage": "Vad som är bra med området",
+    "pricing_factors": "Vad som påverkar priset"
   },
-  "socialCopy": "Teaser för sociala medier (100-1160 tecken, INGEN emoji)",
-  "missing_info": ["Info som saknas och bör efterfrågas för att stärka texten ytterligare"],
-  "pro_tips": ["2-3 tips för mäklaren"]
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Saker som saknas och bör efterfrågas"],
+  "pro_tips": ["Tips till mäklaren"]
 }
 `;
 
@@ -643,9 +661,9 @@ Var detaljrik och specifik. Använd kraftfulla verb och levande beskrivningar:
             {
               role: "user" as const,
               content:
-                `<rule_violations>${violations.join("; ")}</rule_violations>` +
-                "\n\nDu bröt minst en regel. Skriv om improvedPrompt och socialCopy så att ALLA regler följs. " +
-                "Returnera ENDAST ett giltigt JSON-objekt enligt OUTPUT FORMAT.",
+                `Du använde förbjudna ord/fraser: ${violations.join(", ")}.\n\n` +
+                "Skriv om texten utan dessa ord. Ersätt klyschor med konkreta fakta från rådata. " +
+                "Om du inte har fakta – ta bort meningen helt. Returnera ENDAST JSON.",
             },
           ],
           max_tokens: plan === "pro" ? 4000 : 2000,
