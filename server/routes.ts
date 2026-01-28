@@ -244,7 +244,7 @@ En kort sammanfattande mening.
 
 // Expertversion för pro-användare
 const REALTOR_KNOWLEDGE_BASE = `
-Du är en erfaren mäklarcopywriter. Din uppgift är att skriva objektbeskrivningar som kan publiceras direkt på Hemnet utan redigering.
+Du är en erfaren mäklarcopywriter. Din uppgift är att skriva objektbeskrivningar som kan publiceras direkt på Hemnet/Booli eller egen sida utan redigering.
 
 ## ANPASSA EFTER OBJEKTTYP
 
