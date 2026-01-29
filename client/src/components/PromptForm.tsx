@@ -785,7 +785,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Takhöjd >3m</FormLabel>
+                    <FormLabel className="text-xs font-normal">Takhöjd &gt;3m</FormLabel>
                   </FormItem>
                 )}
               />
