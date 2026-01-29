@@ -294,7 +294,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="inga">Ingen balkong</SelectItem>
                       <SelectItem value="vanlig">Vanlig balkong</SelectItem>
                       <SelectItem value="stor">Stor balkong</SelectItem>
@@ -321,7 +321,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="syd">Syd (solkigast)</SelectItem>
                       <SelectItem value="sydvast">Sydväst (kvällssol)</SelectItem>
                       <SelectItem value="vast">Väst</SelectItem>
@@ -350,7 +350,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="inga">Inga renoveringar</SelectItem>
                       <SelectItem value="kok">Kök nytt</SelectItem>
                       <SelectItem value="badrum">Badrum nytt</SelectItem>
@@ -375,7 +375,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="bra">Bra skick</SelectItem>
                       <SelectItem value="mycketbra">Mycket bra skick</SelectItem>
                       <SelectItem value="nyskick">Nyskick</SelectItem>
@@ -403,7 +403,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="nybyggd">Nybyggd (2020+)</SelectItem>
                       <SelectItem value="2000s">2000-tal</SelectItem>
                       <SelectItem value="1990s">1990-tal</SelectItem>
@@ -433,7 +433,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="A">A (Bäst)</SelectItem>
                       <SelectItem value="B">B</SelectItem>
                       <SelectItem value="C">C</SelectItem>
@@ -464,7 +464,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="parkett">Parkett</SelectItem>
                       <SelectItem value="ekparkett">Ekparkett</SelectItem>
                       <SelectItem value="laminat">Laminat</SelectItem>
@@ -494,7 +494,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="tra">Träfönster</SelectItem>
                       <SelectItem value="tra3">Trä 3-glas</SelectItem>
                       <SelectItem value="aluminium">Aluminiumfönster</SelectItem>
@@ -525,7 +525,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="kok">Standardkök</SelectItem>
                       <SelectItem value="kokkok">Kökskök</SelectItem>
                       <SelectItem value="oppet">Öppet kök</SelectItem>
@@ -553,7 +553,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="standard">Standardbadrum</SelectItem>
                       <SelectItem value="modernt">Modernt badrum</SelectItem>
                       <SelectItem value="golvvarme">Golvvärme</SelectItem>
@@ -584,7 +584,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="inga">Ingen särskild utsikt</SelectItem>
                       <SelectItem value="gard">Trädgård</SelectItem>
                       <SelectItem value="innergard">Innergård</SelectItem>
@@ -613,7 +613,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="centrum">Centrum</SelectItem>
                       <SelectItem value="stadskarn">Stadskärna</SelectItem>
                       <SelectItem value="residential">Bostadsområde</SelectItem>
@@ -644,7 +644,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="tunnelbana">Tunnelbana (nära)</SelectItem>
                       <SelectItem value="tunnelbana5">Tunnelbana (5 min)</SelectItem>
                       <SelectItem value="tunnelbana10">Tunnelbana (10 min)</SelectItem>
@@ -672,7 +672,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="popper">
                       <SelectItem value="skuldfri">Skuldfri</SelectItem>
                       <SelectItem value="lanskuldlag">Låg skuldsättning</SelectItem>
                       <SelectItem value="stabil">Stabil ekonomi</SelectItem>
@@ -836,11 +836,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <Textarea 
                   {...field} 
                   className="!bg-white !text-black border-slate-300 min-h-[80px] leading-relaxed focus:border-indigo-500 transition-all" 
-                  placeholder={`Endast om något saknas ovan:
+                  placeholder={`Använd dropdowns ovan för vanliga detaljer. Skriv bara här om något saknas:
 
 • Unika detaljer (öppen spis, takhöjd, originaldetaljer)
 • Speciella material (marmor, ekparkett, designkök)
-• Närområde (tunnelbana, skola, park)`} 
+• Egna observationer (särskild utsikt, unika lösningar)
+• Närområde (tunnelbana, skola, park, kommunikation)`} 
                 />
               </FormControl>
               <p className="text-[11px] text-slate-400 italic mt-2">
