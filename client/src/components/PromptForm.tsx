@@ -835,7 +835,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               <FormControl>
                 <Textarea 
                   {...field} 
-                  className="!bg-white !text-black border-slate-300 min-h-[80px] leading-relaxed focus:border-indigo-500 transition-all" 
+                  className="!bg-white !text-black border-slate-300 min-h-[80px] leading-relaxed focus:border-indigo-500 transition-all placeholder:text-slate-500" 
                   placeholder={`Använd dropdowns ovan för vanliga detaljer. Skriv bara här om något saknas:
 
 • Unika detaljer (öppen spis, takhöjd, originaldetaljer)
