@@ -281,66 +281,179 @@ Rådata innehåller vanligtvis: adress, typ, kvm, rum, våning, balkong, materia
     "rooms": 3,
     "floor": "3 av 5",
     "year_built": "1930-tal",
-    "renovations": ["kök 2022", "badrum 2020"],
-    "materials": ["parkett", "kakel", "marmor"],
+    "renovations": ["kök 2022", "badrum 2020", "fönster 2021"],
+    "materials": {
+      "floors": "parkettgolv i ek",
+      "walls": "målade väggar, originalsnickerier",
+      "kitchen": "marmor bänkskiva",
+      "bathroom": "kakel och klinker",
+      "windows": "träfönster med 3-glas",
+      "doors": "originaldörrar med höga socklar"
+    },
     "balcony": {
       "exists": true,
-      "direction": "sydväst"
-    }
+      "direction": "sydväst",
+      "size": "8 kvm",
+      "type": "inglasad balkong"
+    },
+    "windows": {
+      "description": "stora fönsterpartier med djupa nischer",
+      "directions": ["mot gata", "mot gård"],
+      "special": "överljus i vardagsrum"
+    },
+    "ceiling_height": "2.8 meter",
+    "layout": "genomgående planlösning, sovrum i fil",
+    "storage": ["garderob i sovrum", "förråd i källare 4 kvm"],
+    "heating": "fjärrvärme, golvvärme badrum",
+    "ventilation": "FTX-ventilation"
   },
   "economics": {
     "price": 4500000,
     "fee": 4200,
     "association": {
       "name": "BRF Solhemmet",
-      "status": "stabil ekonomi, låg belåning",
-      "renovations": "stambytt 2019"
+      "status": "stabil ekonomi, låg belåning 15%",
+      "renovations": "stambytt 2019, fönsterbytte 2021",
+      "fund": "underhållsfond 2.3 MSEK",
+      "insurance": "försäkring ingår i avgiften"
+    },
+    "running_costs": {
+      "heating": "1200 kr/år",
+      "water": "300 kr/mån",
+      "garbage": "150 kr/mån"
     }
   },
   "location": {
     "area": "Östermalm",
-    "transport": ["tunnelbana 5 min", "buss"],
-    "amenities": ["Karlaplan", "Östermalms saluhall"],
-    "schools": ["Högstadiet", "Gymnasium"]
+    "subarea": "stadskärnan",
+    "transport": ["tunnelbana 5 min till Karlaplan", "buss 2 min", "cykel 10 min till city"],
+    "amenities": ["Karlaplan", "Östermalms saluhall", "Djurgården", "Vasaparken"],
+    "schools": ["Högstadiet 300m", "Gymnasium 500m"],
+    "services": ["ICA 200m", "Apotek 150m", "Systembolaget 300m"],
+    "character": "lugn gata med villaområden, nära citypuls"
   },
-  "unique_features": ["takhöjd 2.8m", "eldstad", "originaldetaljer"],
+  "unique_features": ["takhöjd 2.8m med originalstuckatur", "eldstad i vardagsrum", "bevarade originaldetaljer", "inglasad balkong", "genomgående planlösning"],
+  "legal_info": {
+    "leasehold": null,
+    "planning_area": "bostadsområde",
+    "building_permit": "bygglov 1930"
+  },
   "platform": "hemnet/booli"
 }
 `;
 
 // Steg 2: Skriv final text baserat på disposition
-const TEXT_PROMPT = `
+
+// --- HEMNET FORMAT (snabb scanning, USP-fokuserat) ---
+const HEMNET_TEXT_PROMPT = `
 # KRITISKA REGLER (BRYT ALDRIG DESSA)
 
 1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
 2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
-3. DELA UPP I 4-5 STYCKEN med \\n\\n mellan varje stycke
-4. MINST 250 ORD – skriv utförligt om varje rum
+3. DELA UPP I 4-5 KORTA STYCKEN med \\n\\n mellan varje stycke
+4. 300-400 ORD – tätstyckad och lätt att skanna
 5. HITTA ALDRIG PÅ – använd bara fakta från dispositionen
 
 # DIN UPPGIFT
 
-Skriv en objektbeskrivning för Hemnet baserat på den strukturerade dispositionen nedan. Texten ska kunna publiceras direkt utan redigering.
+Skriv en objektbeskrivning för HEMNET. Fokus på USP (Unique Selling Points) och snabb scanning. Texten ska kunna publiceras direkt utan redigering.
 
-# STRUKTUR (följ exakt)
+# STRUKTUR (Hemnet - tätstyckad)
 
-STYCKE 1 - ÖPPNING: Adress + fastighetens karaktär + första intryck (2-3 meningar)
-STYCKE 2 - RUM: Beskriv vardagsrum, kök, sovrum med konkreta detaljer (4-5 meningar)
-STYCKE 3 - BADRUM/DETALJER: Badrum, balkong, förvaring, material (2-3 meningar)
-STYCKE 4 - FÖRENING/FASTIGHET: Avgift, ekonomi, renoveringar (2-3 meningar)
-STYCKE 5 - LÄGE: Närområde, kommunikationer, skolor (2-3 meningar)
+STYCKE 1 - ÖPPNING: Adress + 2-3 starka USP (takhöjd, läge, karaktär)
+STYCKE 2 - RUM: Genomgående beskrivning av alla rum med materialdetaljer
+STYCKE 3 - FÖRENING: Endast RENOVERINGAR och byggnadsfakta (INGA ekonomiska detaljer)
+STYCKE 4 - LÄGE: Närområde + kommunikationer (exakta avstånd)
+STYCKE 5 - SAMMANFATTNING: Varför detta objekt är unikt
 
-# EXEMPEL PÅ KORREKT TEXT
+# HEMNET-SKRIVSTIL
 
-"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna ljusa trea om 62 kvadratmeter. Lägenheten på tredje våningen har en takhöjd om 2,8 meter som ger rummen en generös känsla.
+- Korta, direkta meningar
+- Fokus på USP: takhöjd, originaldetaljer, läge
+- Använd siffror och fakta: "2.8m takhöjd", "5 min till tbana"
+- Inga långa berättelser – bara relevanta fakta
+- Mobilanpassad – lätt att skanna
+- **VIKTIGT:** Inkludera INGA ekonomiska detaljer (avgift, belåning, fond) – dessa visas i separata fält på Hemnet
 
-Vardagsrummet har fönster mot gatan och rymmer både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och generös bänkyta. Sovrummet vetter mot gården och har plats för dubbelsäng och garderob.
+# EXEMPEL HEMNET
 
-Badrummet är helkaklat med golvvärme. Balkongen i sydvästläge ger sol från eftermiddagen.
+"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna trea om 62 kvm med imponerande 2.8m takhöjd och originalstuckatur.
 
-Föreningen har stabil ekonomi. Avgiften är 4 200 kr per månad.
+Genomgående planlösning med parkettgolv i ek. Vardagsrum med eldstad och fönster mot gata. Kök 2022 med marmor bänkskiva och Siemens vitvaror. Sovrum mot lugn gård med garderober. Badrum med kakel, golvvärme och dusch.
 
-Karlavägen ligger centralt med närhet till Karlaplan och tunnelbana."
+Fastigheten genomgick stambyte 2019 och fönsterbyte 2021. Byggnaden från 1930-talet har välbevarad karaktär med originaldetaljer.
+
+Läget är optimalt: 5 min till Karlaplans tunnelbana, 300m till ICA, promenadavstånd till Östermalms saluhall och Vasaparken.
+
+Kombinationen av högt i tak, originaldetaljer och citynära läge gör detta till ett unikt objekt på Östermalm."
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3", "✓ Punkt 4", "✓ Punkt 5"],
+  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
+  "analysis": {
+    "target_group": "Vem passar bostaden för",
+    "area_advantage": "Områdets styrkor",
+    "pricing_factors": "Prishöjande faktorer"
+  },
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Info som saknas i rådata"],
+  "pro_tips": ["Tips till mäklaren"]
+}
+`;
+
+// --- BOOLI/EGEN SIDA FORMAT (berättande, livsstil) ---
+const BOOLI_TEXT_PROMPT = `
+# KRITISKA REGLER (BRYT ALDRIG DESSA)
+
+1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
+2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
+3. DELA UPP I 6-8 STYCKEN med \\n\\n mellan varje stycke
+4. 450-600+ ORD – berättande och utförlig
+5. HITTA ALDRIG PÅ – använd bara fakta från dispositionen
+
+# DIN UPPGIFT
+
+Skriv en objektbeskrivning för BOOLI/egen sida. Fokus på livsstil, känsla och berättelse. Texten ska kunna publiceras direkt utan redigering.
+
+# STRUKTUR (Booli/egen sida - berättande)
+
+STYCKE 1 - ÖPPNING: Adress + atmosfär + historisk kontext
+STYCKE 2 - HELHETSINTRYCK: Första känslan när man kliver in
+STYCKE 3 - VARDAGSRUM: Sociala ytor, ljus, eldstad, sällskapsliv
+STYCKE 4 - KÖK & SOVRUM: Privatliv, material, morgonsol, kvällsro
+STYCKE 5 - BADRUM & BALKONG: Spa-känsla, uteliv, årstider
+STYCKE 6 - FÖRENING & EKONOMI: Trygghet, investering, framtid
+STYCKE 7 - LÄGE & LIVSSTIL: Vad området erbjuder, dagliglivet
+STYCKE 8 - AVSLUTNING: Visionen, livet här, framtidsdrömmen
+
+# BOOLI-SKRIVSTIL
+
+- Berättande ton: "Här vaknar du till..."
+- Känslor och sinnesintryck
+- Beskriv livsstil: "morgonkaffe på balkongen", "kvällsbrasan"
+- Mer detaljer om material och hantverk
+- Fokus på VAD man kan GÖRA i bostaden
+- **VIKTIGT:** Inkludera ekonomiska detaljer (avgift, belåning, fond) för trygghet och investeringsperspektiv
+
+# EXEMPEL BOOLI/EGEN SIDA
+
+"På Karlavägen 112, i en av Östermalms mest eftertraktade 30-talsfastigheter, ligger denna trea om 62 kvadratmeter där takhöjden på 2.8 meter och den bevarade originalstuckaturen omedelbart tar andan ur en.
+
+Här kliver man in i en värld av sekelskiftescharm mött modern komfort. De genomgående sociala ytorna bjuder in till både vardagsmys och festliga tillställningar. Parkettgolvet i ek ekar av historia medan de vita väggarna skapa en perfekt bakgrund för konst och personliga prägel.
+
+Vardagsrummet är hjärtat i hemmet med sin eldstad i marmor och de stora fönsterpartierna som fångar både morgonsol och kvällsljus. Här samlas familjen för filmkvällar eller vänner för middagar. Den öna planlösningen mot köket gör att matlagningen blir en del av sällskapet.
+
+Köket från 2022 är en dröm för den matglada med sin marmor bänkskiva och integrerade Siemens vitvaror. Här lagas det söndagsmiddagar medan gästerna sätter sig vid matplatsen med utsikt över den lugna innergården. Sovrummet vetter mot samma tysta gård och erbjuder en fristad från stadens puls.
+
+Badrummet är ett eget spa med kakel i dämpade toner, golvvärme och en dusch där man kan starta dagen med energi. Den inglasade balkongen i sydväst blir förlängningen av vardagsrummet – här intas morgonkaffet i solen, här avslutas dagen med ett glas vin och utsikt över gårdens grönska.
+
+Föreningen BRF Solhemmet är ett tryggt kapital med bara 15% belåning och hela 2.3 miljoner i underhållsfond. Stambytet 2019 och fönsterbytet 2021 garanterar ett underhållsfritt boende i många år framöver.
+
+Läget är otroligt – fem minuter till Karlaplans tunnelbana, tre minuter till ICA och promenadavstånd till allt som gör Östermalm till Östermalm. Ändå är gatan lugn och innergården en oas av grön ro.
+
+Detta är mer än en lägenhet – det är en livsstil. Här kan du inreda, leva och växa. Här kan du bjuda hem vänner, njuta av stillheten och ha hela Stockholm utanför dörren. Detta är ditt nya hem."
 
 # OUTPUT FORMAT (JSON)
 
@@ -976,14 +1089,18 @@ ${platform === "hemnet" ? `
       // Steg 2: Skriv final text baserat på disposition
       console.log("[Step 2] Writing final text based on disposition...");
       
+      // Välj rätt prompt baserat på plattform
+      const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT;
+      console.log(`[Step 2] Using ${platform.toUpperCase()} prompt...`);
+      
       const textMessages = [
         {
           role: "system" as const,
-          content: TEXT_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: selectedPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user" as const,
-          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET (minst 250-350 ord)" : "BOOLI/EGEN SIDA (minst 400-500 ord)"}`,
+          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}`,
         },
       ];
 
