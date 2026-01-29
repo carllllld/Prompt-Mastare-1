@@ -190,13 +190,13 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   return violations;
 }
 
-function validateOptimizationResult(result: any): string[] {
+function validateOptimizationResult(result: any, platform: string = "hemnet"): string[] {
   const violations: string[] = [];
   if (typeof result?.improvedPrompt === "string") {
-    violations.push(...findRuleViolations(result.improvedPrompt));
+    violations.push(...findRuleViolations(result.improvedPrompt, platform));
   }
   if (typeof result?.socialCopy === "string") {
-    violations.push(...findRuleViolations(result.socialCopy));
+    violations.push(...findRuleViolations(result.socialCopy, platform));
   }
   return Array.from(new Set(violations));
 }
@@ -925,116 +925,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         },
       ];
 
-      const dispositionCompletion = await openai.chat completions.create({
-        model: "gpt-4o",
-        messages: dispositionMessages,
-        max_tokens: 2000,
-        temperature: 0.1, // Låg temperatur för faktaextrahering
-        response_format: { type: "json_object" },
-      });
-
-      const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
-      const disposition = JSON.parse(extractFirstJsonObject(dispositionText));
-      console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
-
-      // Steg 2: Skriv final text baserat på disposition
-      console.log("[Step 2] Writing final text based on disposition...");
-      
-      // Välj rätt prompt baserat på plattform
-      const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT;
-      console.log(`[Step 2] Using ${platform.toUpperCase()} prompt...`);
-      
-      const textMessages = [
-        {
-          role: "system" as const,
-          content: selectedPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}`,
-        },
-      ];
-
-      const textCompletion = await openai.chat completions.create({
-        model: "gpt-4o",
-        messages: textMessages,
-        max_tokens: 4000,
-        temperature: 0.4,
-        response_format: { type: "json_object" },
-      });
-
-      const textResultText = textCompletion.choices[0]?.message?.content || "{}";
-      let result: any = JSON.parse(extractFirstJsonObject(textResultText));
-
-      // Validering och retries för text-steget
-      let violations = validateOptimizationResult(result);
-      console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
-      
-      // Retry loop - max 3 attempts
-      let attempts = 0;
-      while (violations.length > 0 && attempts < 2) {
-        attempts++;
-        console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
-        
-        const retryCompletion = await openai.chat completions.create({
-          model: "gpt-4o",
-          messages: [
-            ...textMessages,
-            {
-              role: "user" as const,
-              content:
-                `STOPP! Du använde FÖRBJUDNA ord/fraser: ${violations.join(", ")}.\n\n` +
-                "REGLER:\n" +
-                "1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n" +
-                "2. Ersätt VARJE klysch med KONKRET fakta från dispositionen\n" +
-                "3. Om du inte har fakta – TA BORT meningen helt\n" +
-                "4. Skriv som en toppmäklare, inte som en AI\n\n" +
-                "Returnera ENDAST JSON med omskriven text.",
-            },
-          ],
-          max_tokens: 4000,
-          temperature: 0.2,
-          response_format: { type: "json_object" },
-        });
-
-        const retryText = retryCompletion.choices[0]?.message?.content || "{}";
-        result = JSON.parse(extractFirstJsonObject(retryText));
-        violations = validateOptimizationResult(result);
-        console.log(`[AI Validation] After retry ${attempts} violations:`, violations.length > 0 ? violations : "NONE");
-      }
-      
-      if (violations.length > 0) {
-        console.warn("[AI Validation] WARNING: Still has violations after retries:", violations);
-      }
-
-      // POST-PROCESSING: Rensa bort förbjudna fraser och lägg till stycken
-      if (result.improvedPrompt) {
-        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
-        result.improvedPrompt = addParagraphs(result.improvedPrompt);
-      }
-      if (result.socialCopy) {
-        result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
-      }
-      console.log("[Post-processing] Text cleaned and paragraphs added");
-
-      // === 2-STEGS GENERATION ===
-      
-      // Steg 1: Extrahera fakta och skapa disposition
-      console.log("[Step 1] Extracting facts and creating disposition...");
-      
-      const dispositionMessages = [
-        {
-          role: "system" as const,
-          content: DISPOSITION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: `RÅDATA: ${prompt}`,
-        },
-      ];
-
       const dispositionCompletion = await openai.chat.completions.create({
-        model,
+        model: "gpt-4o",
         messages: dispositionMessages,
         max_tokens: 2000,
         temperature: 0.1, // Låg temperatur för faktaextrahering
@@ -1064,7 +956,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       ];
 
       const textCompletion = await openai.chat.completions.create({
-        model,
+        model: "gpt-4o",
         messages: textMessages,
         max_tokens: 4000,
         temperature: 0.4,
@@ -1075,7 +967,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let result: any = JSON.parse(extractFirstJsonObject(textResultText));
 
       // Validering och retries för text-steget
-      let violations = validateOptimizationResult(result);
+      let violations = validateOptimizationResult(result, platform);
       console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
       // Retry loop - max 3 attempts
@@ -1085,7 +977,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
         
         const retryCompletion = await openai.chat.completions.create({
-          model,
+          model: "gpt-4o",
           messages: [
             ...textMessages,
             {
@@ -1107,7 +999,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
         const retryText = retryCompletion.choices[0]?.message?.content || "{}";
         result = JSON.parse(extractFirstJsonObject(retryText));
-        violations = validateOptimizationResult(result);
+        violations = validateOptimizationResult(result, platform);
         console.log(`[AI Validation] After retry ${attempts} violations:`, violations.length > 0 ? violations : "NONE");
       }
       
