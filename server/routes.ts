@@ -1038,8 +1038,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         improvedPrompt: result.improvedPrompt || prompt,
         highlights: result.highlights || [],
         analysis: result.analysis || {},
-        improvements: result.improvements || [],
-        suggestions: result.suggestions || [],
+        improvements: result.missing_info || [],
+        suggestions: result.pro_tips || [],
         socialCopy: result.socialCopy || null
       });
     } catch (err: any) {
