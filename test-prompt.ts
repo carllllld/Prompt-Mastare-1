@@ -37,54 +37,110 @@ Extrahera ALLA relevanta fakta från rådata och skapa en strukturerad dispositi
     "rooms": 3,
     "floor": "3 av 5",
     "year_built": "1930-tal",
-    "renovations": ["kök 2022", "badrum 2020"],
-    "materials": ["parkett", "kakel", "marmor"],
+    "renovations": ["kök 2022", "badrum 2020", "fönster 2021"],
+    "materials": {
+      "floors": "parkettgolv i ek",
+      "walls": "målade väggar, originalsnickerier",
+      "kitchen": "marmor bänkskiva",
+      "bathroom": "kakel och klinker",
+      "windows": "träfönster med 3-glas",
+      "doors": "originaldörrar med höga socklar"
+    },
     "balcony": {
       "exists": true,
-      "direction": "sydväst"
-    }
+      "direction": "sydväst",
+      "size": "8 kvm",
+      "type": "inglasad balkong"
+    },
+    "windows": {
+      "description": "stora fönsterpartier med djupa nischer",
+      "directions": ["mot gata", "mot gård"],
+      "special": "överljus i vardagsrum"
+    },
+    "ceiling_height": "2.8 meter",
+    "layout": "genomgående planlösning, sovrum i fil",
+    "storage": ["garderob i sovrum", "förråd i källare 4 kvm"],
+    "heating": "fjärrvärme, golvvärme badrum",
+    "ventilation": "FTX-ventilation"
   },
   "economics": {
     "price": 4500000,
     "fee": 4200,
     "association": {
       "name": "BRF Solhemmet",
-      "status": "stabil ekonomi, låg belåning",
-      "renovations": "stambytt 2019"
+      "status": "stabil ekonomi, låg belåning 15%",
+      "renovations": "stambytt 2019, fönsterbytte 2021",
+      "fund": "underhållsfond 2.3 MSEK",
+      "insurance": "försäkring ingår i avgiften"
+    },
+    "running_costs": {
+      "heating": "1200 kr/år",
+      "water": "300 kr/mån",
+      "garbage": "150 kr/mån"
     }
   },
   "location": {
     "area": "Östermalm",
-    "transport": ["tunnelbana 5 min", "buss"],
-    "amenities": ["Karlaplan", "Östermalms saluhall"],
-    "schools": ["Högstadiet", "Gymnasium"]
+    "subarea": "stadskärnan",
+    "transport": ["tunnelbana 5 min till Karlaplan", "buss 2 min", "cykel 10 min till city"],
+    "amenities": ["Karlaplan", "Östermalms saluhall", "Djurgården", "Vasaparken"],
+    "schools": ["Högstadiet 300m", "Gymnasium 500m"],
+    "services": ["ICA 200m", "Apotek 150m", "Systembolaget 300m"],
+    "character": "lugn gata med villaområden, nära citypuls"
   },
-  "unique_features": ["takhöjd 2.8m", "eldstad", "originaldetaljer"],
+  "unique_features": ["takhöjd 2.8m med originalstuckatur", "eldstad i vardagsrum", "bevarade originaldetaljer", "inglasad balkong", "genomgående planlösning"],
+  "legal_info": {
+    "leasehold": null,
+    "planning_area": "bostadsområde",
+    "building_permit": "bygglov 1930"
+  },
   "platform": "hemnet/booli"
 }
 `;
 
-// Steg 2: Skriv final text baserat på disposition
-const TEXT_PROMPT = `
+// --- HEMNET FORMAT (snabb scanning, USP-fokuserat) ---
+const HEMNET_TEXT_PROMPT = `
 # KRITISKA REGLER (BRYT ALDRIG DESSA)
 
 1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
 2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
-3. DELA UPP I 4-5 STYCKEN med \\n\\n mellan varje stycke
-4. MINST 250 ORD – skriv utförligt om varje rum
+3. DELA UPP I 4-5 KORTA STYCKEN med \\n\\n mellan varje stycke
+4. 300-400 ORD – tätstyckad och lätt att skanna
 5. HITTA ALDRIG PÅ – använd bara fakta från dispositionen
 
 # DIN UPPGIFT
 
-Skriv en objektbeskrivning för Hemnet baserat på den strukturerade dispositionen nedan. Texten ska kunna publiceras direkt utan redigering.
+Skriv en objektbeskrivning för HEMNET. Fokus på USP (Unique Selling Points) och snabb scanning.
 
-# STRUKTUR (följ exakt)
+# OUTPUT FORMAT (JSON)
 
-STYCKE 1 - ÖPPNING: Adress + fastighetens karaktär + första intryck (2-3 meningar)
-STYCKE 2 - RUM: Beskriv vardagsrum, kök, sovrum med konkreta detaljer (4-5 meningar)
-STYCKE 3 - BADRUM/DETALJER: Badrum, balkong, förvaring, material (2-3 meningar)
-STYCKE 4 - FÖRENING/FASTIGHET: Avgift, ekonomi, renoveringar (2-3 meningar)
-STYCKE 5 - LÄGE: Närområde, kommunikationer, skolor (2-3 meningar)
+{
+  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3", "✓ Punkt 4", "✓ Punkt 5"],
+  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
+  "analysis": {
+    "target_group": "Vem passar bostaden för",
+    "area_advantage": "Områdets styrkor",
+    "pricing_factors": "Prishöjande faktorer"
+  },
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Info som saknas i rådata"],
+  "pro_tips": ["Tips till mäklaren"]
+}
+`;
+
+// --- BOOLI/EGEN SIDA FORMAT (berättande, livsstil) ---
+const BOOLI_TEXT_PROMPT = `
+# KRITISKA REGLER (BRYT ALDRIG DESSA)
+
+1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
+2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
+3. DELA UPP I 6-8 STYCKEN med \\n\\n mellan varje stycke
+4. 450-600+ ORD – berättande och utförlig
+5. HITTA ALDRIG PÅ – använd bara fakta från dispositionen
+
+# DIN UPPGIFT
+
+Skriv en objektbeskrivning för BOOLI/egen sida. Fokus på livsstil, känsla och berättelse.
 
 # OUTPUT FORMAT (JSON)
 
@@ -158,16 +214,20 @@ async function testPrompt(testCase: typeof testCases[0]) {
     // === STEG 2: Skriv final text baserat på disposition ===
     console.log("\n[STEG 2] Skriver final text...");
     
+    // Välj rätt prompt baserat på plattform
+    const selectedPrompt = testCase.platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT;
+    console.log(`[STEG 2] Using ${testCase.platform.toUpperCase()} prompt...`);
+    
     const textCompletion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: TEXT_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: selectedPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user",
-          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${testCase.platform === "hemnet" ? "HEMNET (minst 250-350 ord)" : "BOOLI/EGEN SIDA (minst 400-500 ord)"}`,
+          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${testCase.platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}`,
         },
       ],
       max_tokens: 4000,
