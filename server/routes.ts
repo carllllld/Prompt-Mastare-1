@@ -942,7 +942,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
       // Välj rätt prompt baserat på plattform
       const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT;
-      console.log(`[Step 2] Using ${platform.toUpperCase()} prompt...`);
+      console.log("[Step 2] Using " + platform.toUpperCase() + " prompt...");
       
       const textMessages = [
         {
@@ -951,7 +951,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         },
         {
           role: "user" as const,
-          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}`,
+          content: "DISPOSITION: " + JSON.stringify(disposition, null, 2) + "\n\nPLATTFORM: " + (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
         },
       ];
 
@@ -982,14 +982,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             ...textMessages,
             {
               role: "user" as const,
-              content:
-                `STOPP! Du använde FÖRBJUDNA ord/fraser: ${violations.join(", ")}.\n\n` +
-                "REGLER:\n" +
-                "1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n" +
-                "2. Ersätt VARJE klysch med KONKRET fakta från dispositionen\n" +
-                "3. Om du inte har fakta – TA BORT meningen helt\n" +
-                "4. Skriv som en toppmäklare, inte som en AI\n\n" +
-                "Returnera ENDAST JSON med omskriven text.",
+              content: "STOPP! Du använde FÖRBJUDNA ord/fraser: " + violations.join(", ") + ".\n\nREGLER:\n1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n2. Ersätt VARJE klysch med KONKRET fakta från dispositionen\n3. Om du inte har fakta – TA BORT meningen helt\n4. Skriv som en toppmäklare, inte som en AI\n\nReturnera ENDAST JSON med omskriven text.",
             },
           ],
           max_tokens: 4000,
@@ -1000,7 +993,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const retryText = retryCompletion.choices[0]?.message?.content || "{}";
         result = JSON.parse(extractFirstJsonObject(retryText));
         violations = validateOptimizationResult(result, platform);
-        console.log(`[AI Validation] After retry ${attempts} violations:`, violations.length > 0 ? violations : "NONE");
+        console.log("[AI Validation] After retry " + attempts + " violations:", violations.length > 0 ? violations : "NONE");
       }
       
       if (violations.length > 0) {
@@ -1026,11 +1019,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           improvedPrompt: result.improvedPrompt || prompt,
           category: type,
           improvements: [
-            result.analysis?.identified_epoch ? `Epok: ${result.analysis.identified_epoch}` : null,
-            result.analysis?.target_group ? `Målgrupp: ${result.analysis.target_group}` : null,
-            result.analysis?.area_advantage ? `Område: ${result.analysis.area_advantage}` : null,
-            result.analysis?.pricing_factors ? `Prisfaktorer: ${result.analysis.pricing_factors}` : null,
-            result.analysis?.association_status ? `Förening: ${result.analysis.association_status}` : null,
+            result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
+            result.analysis?.target_group ? "Målgrupp: " + result.analysis.target_group : null,
+            result.analysis?.area_advantage ? "Område: " + result.analysis.area_advantage : null,
+            result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
+            result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
           ].filter(Boolean) as string[],
           suggestions: result.pro_tips || [],
           socialCopy: result.socialCopy || null,
@@ -1044,8 +1037,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         improvedPrompt: result.improvedPrompt || prompt,
         highlights: result.highlights || [],
         analysis: result.analysis || {},
-        improvements: result.missing_info || [],
-        suggestions: result.pro_tips || [],
+        improvements: result.improvements || [],
+        suggestions: result.suggestions || [],
         socialCopy: result.socialCopy || null
       });
     } catch (err: any) {
