@@ -668,6 +668,7 @@ Tänk dig de middagar du kommer att bjuda in, de morgnar du vaknar till med en k
 
 // Expertversion för pro-användare
 
+const BOOLI_EXPERT_PROMPT = `
 // ... rest of the code remains the same ...
 - Målgrupp: Unga yrkesverksamma, tech-branschen
 - Säljargument: Vattennära nyproduktion, Göteborgs framtid, gång till tech-jobb
