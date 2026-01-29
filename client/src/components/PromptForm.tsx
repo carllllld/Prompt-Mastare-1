@@ -3,7 +3,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout, DollarSign } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout, DollarSign, Sun, Wind, Car, Bath, Sofa } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -22,13 +24,34 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
       size: "",
       rooms: "",
       floor: "",
-      elevator: "",
       lotSize: "",
       price: "",
       fee: "", // Avgift för bostadsrätt
       buildYear: "", // Byggår
       features: "",
       platform: "hemnet", // Standardval
+      // SMARTA FÄLT - MINIMAL INPUT
+      balcony: "",
+      balconyDirection: "",
+      renovation: "",
+      condition: "",
+      heating: "",
+      parking: "",
+      storage: "",
+      hasElevator: false,
+      association: "",
+      // NYA PRO-FÄLT
+      buildYearPro: "",
+      energyClass: "",
+      floorType: "",
+      kitchenType: "",
+      bathroomType: "",
+      windows: "",
+      view: "",
+      neighborhood: "",
+      transport: "",
+      yearBuilt: "",
+      specialFeatures: [],
     },
   });
 
@@ -249,30 +272,579 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           )}
         />
 
-        {/* FRITEXT: BESKRIVNING */}
+        {/* SMARTA KOLUMNER - MINIMAL INPUT */}
+        <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <FormLabel className="!text-slate-700 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> Snabbval (klicka på det som gäller):
+          </FormLabel>
+
+          {/* RAD 1: BALKONG & VÄDERSTRECK */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="balcony"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs flex items-center gap-1">
+                    <Sun className="w-3 h-3" /> Balkong/Uteplats
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="inga">Ingen balkong</SelectItem>
+                      <SelectItem value="vanlig">Vanlig balkong</SelectItem>
+                      <SelectItem value="stor">Stor balkong</SelectItem>
+                      <SelectItem value="inglasad">Inglasad balkong</SelectItem>
+                      <SelectItem value="terrass">Terrass</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="balconyDirection"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs flex items-center gap-1">
+                    <Wind className="w-3 h-3" /> Väderstreck
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="syd">Syd (solkigast)</SelectItem>
+                      <SelectItem value="sydvast">Sydväst (kvällssol)</SelectItem>
+                      <SelectItem value="vast">Väst</SelectItem>
+                      <SelectItem value="ost">Öst (morgonsol)</SelectItem>
+                      <SelectItem value="norr">Norr (skuggigt)</SelectItem>
+                      <SelectItem value="genom">Genomgående (flera)</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 2: RENOVERING & SKICK */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="renovation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Renoveringar</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="inga">Inga renoveringar</SelectItem>
+                      <SelectItem value="kok">Kök nytt</SelectItem>
+                      <SelectItem value="badrum">Badrum nytt</SelectItem>
+                      <SelectItem value="kokbad">Kök & badrum nya</SelectItem>
+                      <SelectItem value="total">Totalrenoverad</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="condition"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Skick</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="bra">Bra skick</SelectItem>
+                      <SelectItem value="mycketbra">Mycket bra skick</SelectItem>
+                      <SelectItem value="nyskick">Nyskick</SelectItem>
+                      <SelectItem value="original">Originalskick</SelectItem>
+                      <SelectItem value="renoveringsobjekt">Renoveringsobjekt</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 3: BYGGÅR & ENERGIKLASS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="buildYearPro"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Byggår/Epok</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="nybyggd">Nybyggd (2020+)</SelectItem>
+                      <SelectItem value="2000s">2000-tal</SelectItem>
+                      <SelectItem value="1990s">1990-tal</SelectItem>
+                      <SelectItem value="1980s">1980-tal</SelectItem>
+                      <SelectItem value="1970s">1970-tal (Miljonprogram)</SelectItem>
+                      <SelectItem value="1960s">1960-tal</SelectItem>
+                      <SelectItem value="1950s">1950-tal</SelectItem>
+                      <SelectItem value="sekelskifte">Sekelskifte (1900-1930)</SelectItem>
+                      <SelectItem value="1800s">1800-tal</SelectItem>
+                      <SelectItem value="karaktar">Karaktärsfastighet</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="energyClass"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Energiklass</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="A">A (Bäst)</SelectItem>
+                      <SelectItem value="B">B</SelectItem>
+                      <SelectItem value="C">C</SelectItem>
+                      <SelectItem value="D">D</SelectItem>
+                      <SelectItem value="E">E</SelectItem>
+                      <SelectItem value="F">F</SelectItem>
+                      <SelectItem value="G">G</SelectItem>
+                      <SelectItem value="okand">Okänd</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 4: GOLV & FÖNSTER */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="floorType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Golv</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="parkett">Parkett</SelectItem>
+                      <SelectItem value="ekparkett">Ekparkett</SelectItem>
+                      <SelectItem value="laminat">Laminat</SelectItem>
+                      <SelectItem value="klinker">Klinker</SelectItem>
+                      <SelectItem value="kakel">Kakel</SelectItem>
+                      <SelectItem value="marmor">Marmor</SelectItem>
+                      <SelectItem value="betsgolv">Betsgolv</SelectItem>
+                      <SelectItem value="vinyl">Vinyl</SelectItem>
+                      <SelectItem value="sten">Stengolv</SelectItem>
+                      <SelectItem value="blandat">Blandat</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="windows"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Fönster</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="tra">Träfönster</SelectItem>
+                      <SelectItem value="tra3">Trä 3-glas</SelectItem>
+                      <SelectItem value="aluminium">Aluminiumfönster</SelectItem>
+                      <SelectItem value="plast">Plastfönster</SelectItem>
+                      <SelectItem value="genom">Genomgående</SelectItem>
+                      <SelectItem value="stora">Stora fönster</SelectItem>
+                      <SelectItem value="valv">Valvfönster</SelectItem>
+                      <SelectItem value="skytte">Skyttfönster</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 5: KÖK & BADRUM */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="kitchenType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Kök</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="kok">Standardkök</SelectItem>
+                      <SelectItem value="kokkok">Kökskök</SelectItem>
+                      <SelectItem value="oppet">Öppet kök</SelectItem>
+                      <SelectItem value="design">Designkök</SelectItem>
+                      <SelectItem value="hustill">Hushållskök</SelectItem>
+                      <SelectItem value="studio">Studiokök</SelectItem>
+                      <SelectItem value="galley">Galleykök</SelectItem>
+                      <SelectItem value="kokisland">Kök-ö</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="bathroomType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Badrum</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="standard">Standardbadrum</SelectItem>
+                      <SelectItem value="modernt">Modernt badrum</SelectItem>
+                      <SelectItem value="golvvarme">Golvvärme</SelectItem>
+                      <SelectItem value="dusch">Duschbadrum</SelectItem>
+                      <SelectItem value="badkar">Badkar</SelectItem>
+                      <SelectItem value="baddusch">Badkar & dusch</SelectItem>
+                      <SelectItem value="gastwc">Gäst-WC</SelectItem>
+                      <SelectItem value="dubbel">Dubbel badrum</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 6: UTSIKT & OMRADE */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="view"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Utsikt</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="inga">Ingen särskild utsikt</SelectItem>
+                      <SelectItem value="gard">Trädgård</SelectItem>
+                      <SelectItem value="innergard">Innergård</SelectItem>
+                      <SelectItem value="park">Park</SelectItem>
+                      <SelectItem value="sjo">Sjöutsikt</SelectItem>
+                      <SelectItem value="vattensidan">Vattensidan</SelectItem>
+                      <SelectItem value="berg">Bergsutsikt</SelectItem>
+                      <SelectItem value="stad">Stadsvy</SelectItem>
+                      <SelectItem value="fri">Fri utsikt</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="neighborhood"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Område</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="centrum">Centrum</SelectItem>
+                      <SelectItem value="stadskarn">Stadskärna</SelectItem>
+                      <SelectItem value="residential">Bostadsområde</SelectItem>
+                      <SelectItem value="familjevanligt">Familjevänligt</SelectItem>
+                      <SelectItem value="lugnt">Lugnt område</SelectItem>
+                      <SelectItem value="livligt">Livligt område</SelectItem>
+                      <SelectItem value="exklusivt">Exklusivt område</SelectItem>
+                      <SelectItem value="natur">Nära natur</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 7: TRANSPORT & FÖRENING */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="transport"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Kommunikation</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="tunnelbana">Tunnelbana (nära)</SelectItem>
+                      <SelectItem value="tunnelbana5">Tunnelbana (5 min)</SelectItem>
+                      <SelectItem value="tunnelbana10">Tunnelbana (10 min)</SelectItem>
+                      <SelectItem value="buss">Buss (nära)</SelectItem>
+                      <SelectItem value="pendeltag">Pendeltåg</SelectItem>
+                      <SelectItem value="motorvag">Motorväg (nära)</SelectItem>
+                      <SelectItem value="cykel">Cykelavstånd</SelectItem>
+                      <SelectItem value="gata">Gatupptag</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="association"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Förening</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="skuldfri">Skuldfri</SelectItem>
+                      <SelectItem value="lanskuldlag">Låg skuldsättning</SelectItem>
+                      <SelectItem value="stabil">Stabil ekonomi</SelectItem>
+                      <SelectItem value="planerad">Planerad renovering</SelectItem>
+                      <SelectItem value="ny">Ny förening</SelectItem>
+                      <SelectItem value="okand">Okänd status</SelectItem>
+                      <SelectItem value="hyreshus">Hyreshus</SelectItem>
+                      <SelectItem value="samfallighet">Samfällighetsförening</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RAD 8: SPECIAL FEATURES - CHECKBOXES */}
+          <div className="space-y-3">
+            <FormLabel className="!text-slate-700 font-bold text-xs">Extra detaljer:</FormLabel>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <FormField
+                control={form.control}
+                name="hasElevator"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Hiss</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Öppen spis</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Golvvärme</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Balkong i väst</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Originaldetaljer</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Takhöjd >3m</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Gästlägenhet</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="mt-1"
+                      />
+                    </FormControl>
+                    <FormLabel className="text-xs font-normal">Fiber</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* MINIMAL FRITEXT - ENDAST OM NÖDVÄNDIGT */}
         <FormField
           control={form.control}
           name="features"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="!text-slate-700 font-bold">Övrig information till AI:n</FormLabel>
+              <FormLabel className="!text-slate-700 font-bold">Övrig info (frivilligt)</FormLabel>
               <FormControl>
                 <Textarea 
                   {...field} 
-                  className="!bg-white !text-black border-slate-300 min-h-[140px] leading-relaxed focus:border-indigo-500 transition-all" 
-                  placeholder={`Skriv allt annat som AI:n behöver veta, t.ex:
+                  className="!bg-white !text-black border-slate-300 min-h-[80px] leading-relaxed focus:border-indigo-500 transition-all" 
+                  placeholder={`Endast om något saknas ovan:
 
-• Balkong/uteplats (väderstreck, storlek)
-• Renoveringar (kök 2022, badrum 2020, stambytt)
-• Material (parkett, kakel, marmor)
-• Ljusförhållanden (genomgående, fönster i flera väderstreck)
-• Förening (skuldfri, stabil ekonomi, planerade renoveringar)
 • Unika detaljer (öppen spis, takhöjd, originaldetaljer)
+• Speciella material (marmor, ekparkett, designkök)
 • Närområde (tunnelbana, skola, park)`} 
                 />
               </FormControl>
-              <p className="text-[11px] text-amber-600 font-medium mt-2">
-                ⚠️ Juridiskt viktigt för bostadsrätt: avgift, andelstal, pantsättning, föreningens skuld
+              <p className="text-[11px] text-slate-400 italic mt-2">
+                De flesta detaljer är redan ifyllda via kolumnerna ovan!
               </p>
             </FormItem>
           )}
