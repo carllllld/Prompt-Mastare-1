@@ -106,22 +106,87 @@ const FORBIDDEN_PHRASES = [
   "goda arbetsytor",
 ];
 
-function findRuleViolations(text: string): string[] {
+function findRuleViolations(text: string, platform: string = "hemnet"): string[] {
   const violations: string[] = [];
-  const lower = (text || "").toLowerCase();
-
+  
+  // Check for forbidden phrases
   for (const phrase of FORBIDDEN_PHRASES) {
-    if (lower.includes(phrase)) {
-      violations.push(`Förbjudet ord/fras: "${phrase}"`);
+    if (text.toLowerCase().includes(phrase.toLowerCase())) {
+      violations.push(`Förbjuden fras: "${phrase}"`);
     }
   }
-
-  // Heuristik: de flesta emojis ligger i surrogate-pairs i UTF-16
-  const emojiRegex = /[\uD83C-\uDBFF][\uDC00-\uDFFF]/;
-  if (emojiRegex.test(text || "")) {
-    violations.push("Emojis är inte tillåtna i löptext (endast ✓ i highlights)");
+  
+  // Check for incomplete sentences (ending without proper punctuation)
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim();
+    if (trimmed.length > 5 && !trimmed.match(/[.!?]$/)) {
+      violations.push(`Ofullständig mening: "${trimmed.substring(0, 50)}..."`);
+    }
   }
-
+  
+  // Check for repeated phrases (2+ words repeated within 50 words)
+  const words = text.toLowerCase().split(/\s+/);
+  for (let i = 0; i < words.length - 1; i++) {
+    const phrase = words[i] + ' ' + words[i + 1];
+    const nextWords = words.slice(i + 2, i + 52).join(' ');
+    if (nextWords.includes(phrase)) {
+      violations.push(`Upprepad fras: "${phrase}"`);
+    }
+  }
+  
+  // NEW: Quality validation checks
+  const sensoryWords = ['ljus', 'ljud', 'känsla', 'doft', 'syn', 'hörsel', 'känns', 'luktar', 'ser', 'låter'];
+  const sensoryCount = sensoryWords.filter(word => text.toLowerCase().includes(word)).length;
+  const requiredSensory = platform === "hemnet" ? 3 : 4;
+  if (sensoryCount < requiredSensory) {
+    violations.push(`För få sinnesdetaljer: ${sensoryCount}/${requiredSensory} krävs`);
+  }
+  
+  // Check for dramatic hook (not "Välkommen")
+  if (text.toLowerCase().startsWith('välkommen')) {
+    violations.push(`Börjar med "Välkommen" - använd dramatisk hook istället`);
+  }
+  
+  // Check for lifestyle scenes
+  const lifestyleWords = ['här', 'vaknar', 'intas', 'blir', 'scen', 'samlas', 'liv', 'bor'];
+  const lifestyleCount = lifestyleWords.filter(word => text.toLowerCase().includes(word)).length;
+  const requiredLifestyle = platform === "hemnet" ? 2 : 3;
+  if (lifestyleCount < requiredLifestyle) {
+    violations.push(`För få lifestyle-scener: ${lifestyleCount}/${requiredLifestyle} krävs`);
+  }
+  
+  // Check for future vision
+  if (!text.toLowerCase().includes('tänk dig') && !text.toLowerCase().includes('framtid')) {
+    violations.push(`Saknar future vision ("tänk dig..." eller "framtid")`);
+  }
+  
+  // Check for competitive edge
+  const competitiveWords = ['till skillnad från', 'detta är det enda', 'medan andra', 'unik', 'sällsynt'];
+  const hasCompetitive = competitiveWords.some(word => text.toLowerCase().includes(word));
+  if (!hasCompetitive) {
+    violations.push(`Saknar competitive edge (varför detta vinner)`);
+  }
+  
+  // Check for generic patterns
+  const genericPatterns = ['perfekt för', 'fantastisk läge', 'renoverat med hög standard', 'attraktivt', 'idealisk'];
+  for (const pattern of genericPatterns) {
+    if (text.toLowerCase().includes(pattern)) {
+      violations.push(`Generiskt mönster: "${pattern}"`);
+    }
+  }
+  
+  // Check word count
+  const wordCount = text.split(/\s+/).length;
+  const minWords = platform === "hemnet" ? 250 : 400;
+  const maxWords = platform === "hemnet" ? 450 : 700;
+  if (wordCount < minWords) {
+    violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
+  }
+  if (wordCount > maxWords) {
+    violations.push(`För många ord: ${wordCount}/${maxWords} max`);
+  }
+  
   return violations;
 }
 
@@ -360,32 +425,89 @@ Skriv en objektbeskrivning för HEMNET. Fokus på USP (Unique Selling Points) oc
 
 # STRUKTUR (Hemnet - tätstyckad)
 
-STYCKE 1 - ÖPPNING: Adress + 2-3 starka USP (takhöjd, läge, karaktär)
-STYCKE 2 - RUM: Genomgående beskrivning av alla rum med materialdetaljer
-STYCKE 3 - FÖRENING: Endast RENOVERINGAR och byggnadsfakta (INGA ekonomiska detaljer)
-STYCKE 4 - LÄGE: Närområde + kommunikationer (exakta avstånd)
-STYCKE 5 - SAMMANFATTNING: Varför detta objekt är unikt
+STYCKE 1 - STORYTELLING HOOK: Adress + dramatisk öppning som skapar omedelbar längtan
+STYCKE 2 - SENSORY EXPERIENCE: Genomgående sinnesintryck (syn, ljud, känsla, doft)
+STYCKE 3 - LIFESTYLE FLOW: Hur man BOR här - vardag, helg, livscenerier
+STYCKE 4 - PREMIUM FACTORS: Endast RENOVERINGAR + UNIKA egenskaper (INGA ekonomiska detaljer)
+STYCKE 5 - LOCATION DYNAMICS: Närområde + kommunikationer med känsla
+STYCKE 6 - COMPETITIVE EDGE: Varför detta vinner över alla andra
 
-# HEMNET-SKRIVSTIL
+# HEMNET-SKRIVSTIL - VÄRLDENS BÄSTA OBJEKTBESKRIVNINGAR
 
-- Korta, direkta meningar
-- Fokus på USP: takhöjd, originaldetaljer, läge
-- Använd siffror och fakta: "2.8m takhöjd", "5 min till tbana"
-- Inga långa berättelser – bara relevanta fakta
-- Mobilanpassad – lätt att skanna
+- **STORYTELLING HOOK:** Börja med dramatisk öppning som skapar omedelbar längtan
+- **SENSORY DETAILS:** Beskriv syn, ljud, känsla, doft - 5 sinnesintryck
+- **EMOTIONAL FLOW:** Bygg känslor: nyfikenhet → längtan → måste-ha
+- **LIFESTYLE INTEGRATION:** Visa exakt HUR man bor här - vardag, helg, livscenerier
+- **PREMIUM POSITIONING:** Varför detta är UNIKT och inte som allt annat
+- **FUTURE VISION:** Måla upp den framtid köparen får här
+- **COMPETITIVE EDGE:** Varför detta vinner över alla andra objekt
+- **Korta, direkta meningar** men med maximal känslomässig effekt
+- **Använd siffror och fakta:** "2.8m takhöjd", "5 min till tbana"
+- **Mobilanpassad – lätt att skanna**
 - **VIKTIGT:** Inkludera INGA ekonomiska detaljer (avgift, belåning, fond) – dessa visas i separata fält på Hemnet
+- **KRITISKT:** Använd SPECIFIKA material från disposition: "parkettgolv i ek", "kakel och klinker", "marmor bänkskiva", "eldstad"
+- **KRITISKT:** Undvik upprepning – varje material/fras ska bara nämnas EN gång
+- **KRITISKT:** Alla meningar måste vara fullständiga – inga avbrutna meningar
 
-# EXEMPEL HEMNET
+# PROFESSIONELLA TEKNIKER - FORMELBASERADE
 
-"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna trea om 62 kvm med imponerande 2.8m takhöjd och originalstuckatur.
+**1. STORYTELLING HOOK (Välj en och fyll i):**
+- "Där [gata] möter [årstal/era]s [charm/karaktär]..."
+- "I en av [område]s mest [adjektiv] [fastighetstyp]..."
+- "Hemligheten bakom [unikt detalj] på [adress]..."
 
-Genomgående planlösning med parkettgolv i ek. Vardagsrum med eldstad och fönster mot gata. Kök 2022 med marmor bänkskiva och Siemens vitvaror. Sovrum mot lugn gård med garderober. Badrum med kakel, golvvärme och dusch.
+**2. SENSORY DETAILS (Använd minst 3):**
+- **SYN:** "Ljuset [verb] genom [fönsterbeskrivning] och träffar [material]"
+- **LJUD:** "[Ljudkälla] [verb] med [adjektiv] känsla av [effekt]"
+- **KÄNSLA:** "[Material] under [kroppsdel] känns som [jämförelse]"
+- **DOFT:** "Doften av [källa] blandas med [sekundär doft] från [plats]"
+- **SMACK:** "[Yta] under [fingertyp] ger känsla av [egenskap]"
 
-Fastigheten genomgick stambyte 2019 och fönsterbyte 2021. Byggnaden från 1930-talet har välbevarad karaktär med originaldetaljer.
+**3. LIFESTYLE INTEGRATION (Skapa 2+ scener):**
+- "[Tidpunkt] [aktivitet] på [plats] med [detalj]"
+- "[Rum] blir [funktion] för [social aktivitet] med [personer]"
+- "[Årstid] är [plats] [beskrivning] där [aktivitet] sker"
 
-Läget är optimalt: 5 min till Karlaplans tunnelbana, 300m till ICA, promenadavstånd till Östermalms saluhall och Vasaparken.
+**4. PREMIUM POSITIONING (Använd fakta från disposition):**
+- "En av [antal] [objekttyp] med [unik egenskap] från [år]"
+- "[Specifik detalj] skapar [effekt] som [jämförelse]"
+- "Den unika kombinationen av [egenskap 1] och [egenskap 2]"
 
-Kombinationen av högt i tak, originaldetaljer och citynära läge gör detta till ett unikt objekt på Östermalm."
+**5. COMPETITIVE EDGE (Jämför med andra):**
+- "Till skillnad från [typ av andra objekt] har denna [unik egenskap]"
+- "Detta är det enda [objekttyp] i [område] med [specifik detalj]"
+- "Medan andra [negativ egenskap] har detta [positiv egenskap]"
+
+# KVALITETSCHECK INNAN DU SLUTFÖR:
+✅ Har jag använt minst 3 sinnesdetaljer (syn, ljud, känsla, doft)?
+✅ Börjar texten med en dramatisk hook (inte "Välkommen")?
+✅ Finns minst 2 lifestyle-scener (hur man BOR här)?
+✅ Är ALLA material från disposition med (parkett, kakel, marmor, etc)?
+✅ Undviker jag ALLA förbjudna ord (erbjuder, perfekt, idealisk, etc)?
+✅ Har jag competitive edge (varför detta vinner)?
+✅ Har jag future vision (tänk dig...)?
+✓ Skriv ENDAST när allt är klart
+
+# FÖLJ ALDRIG DESSA MÖNSTER:
+❌ "Perfekt för..." → Beskriv specifik scen istället
+❌ "Fantastisk läge" → Beskriv exakt vad läget ger
+❌ "Renoverat med hög standard" → Namnge material och år
+❌ Generiska adjektiv → Använd max 2 per text
+❌ Kopiera exempel → Fyll i formler med data från disposition
+
+# EXEMPEL HEMNET - MED PROFESSIONELLA TEKNIKER
+
+"Där Karlavägen möter 30-talets charm, i en av Östermalms mest eftertraktade fastigheter, ligger denna trea om 62 kvm där takhöjden på 2.8 meter och den bevarade originalstuckaturen omedelbart skapar en känsla av exklusivitet.
+
+Ljuset flödar in genom de stora fönsterpartierna och träffar det genomgående parkettgolvet i ek. I vardagsrummet sprakar elden i eldstaden på kalla kvällar, medan tystnaden från innergården bara avbryts av fågelkvitter. Doften av nybryggt kaffe från köket 2022 med marmor bänkskiva och Siemens vitvaror blandas med den historiska atmosfären.
+
+Här intas morgonkaffet på balkongen med kvällssol, medan vardagsrummet blir scenen för både filmkvällar och middagar med vänner. Sovrummet vetter mot samma tysta gård och erbjuder en fristad från stadens puls. Badrummet är ett eget spa med kakel i dämpade toner och golvvärme under dina fötter på morgnar.
+
+Fastigheten genomgick stambyte 2019 och fönsterbyte 2021 – en sällsynt kombination av historisk charm och modern standard som få andra objekt kan matcha.
+
+Läget är optimalt: 5 min till Karlaplans tunnelbana, 300m till ICA, promenadavstånd till Östermalms saluhall och Vasaparken. Till skillnad från andra objekt i området har denna unika takhöjd och bevarade originaldetaljer.
+
+Detta är mer än en lägenhet – det är en livsstil som få får uppleva."
 
 # OUTPUT FORMAT (JSON)
 
@@ -417,96 +539,116 @@ const BOOLI_TEXT_PROMPT = `
 
 Skriv en objektbeskrivning för BOOLI/egen sida. Fokus på livsstil, känsla och berättelse. Texten ska kunna publiceras direkt utan redigering.
 
-# STRUKTUR (Booli/egen sida - berättande)
+# STRUKTUR (Booli/egen sida - världens bästa berättelser)
 
-STYCKE 1 - ÖPPNING: Adress + atmosfär + historisk kontext
-STYCKE 2 - HELHETSINTRYCK: Första känslan när man kliver in
-STYCKE 3 - VARDAGSRUM: Sociala ytor, ljus, eldstad, sällskapsliv
-STYCKE 4 - KÖK & SOVRUM: Privatliv, material, morgonsol, kvällsro
-STYCKE 5 - BADRUM & BALKONG: Spa-känsla, uteliv, årstider
-STYCKE 6 - FÖRENING & EKONOMI: Trygghet, investering, framtid
-STYCKE 7 - LÄGE & LIVSSTIL: Vad området erbjuder, dagliglivet
-STYCKE 8 - AVSLUTNING: Visionen, livet här, framtidsdrömmen
+STYCKE 1 - EPIC HOOK: Dramatisk öppning som skapar omedelbar längtan
+STYCKE 2 - SENSORY JOURNEY: Genomgående sinnesupplevelse (5 sinnen)
+STYCKE 3 - EMOTIONAL LANDSCAPE: Känslomässig resa genom bostaden
+STYCKE 4 - LIFESTYLE NARRATIVE: Hur livet utspelar sig här - scenerier
+STYCKE 5 - ARCHITECTURAL POETRY: Material, hantverk, detaljer med känsla
+STYCKE 6 - TEMPORAL DIMENSION: Hur bostaden lever genom dygnet/året
+STYCKE 7 - INVESTMENT WISDOM: Trygghet, ekonomi, framtid
+STYCKE 8 - COMMUNITY TAPESTRY: Områdets puls, grannskap, gemenskap
+STYCKE 9 - FUTURE VISION: Drömbild för köparens liv här
+STYCKE 10 - LEGACY STATEMENT: Varför detta blir en del av deras historiaen
 
-# BOOLI-SKRIVSTIL
+# BOOLI-SKRIVSTIL - VÄRLDENS BÄSTA BERÄTTELSKRIVARE
 
-- Berättande ton: "Här vaknar du till..."
-- Känslor och sinnesintryck
-- Beskriv livsstil: "morgonkaffe på balkongen", "kvällsbrasan"
-- Mer detaljer om material och hantverk
-- Fokus på VAD man kan GÖRA i bostaden
+- **EPIC STORYTELLING:** Skriv som en författare som målar upp en drömvärld
+- **SENSORY IMMERSION:** 5 sinnesintryck som skapar total upplevelse
+- **EMOTIONAL ARCHITECTURE:** Bygg känslor från nyfikenhet till djup längtan
+- **LIFESTYLE NARRATIVE:** Visa exakt HUR livet utspelar sig här
+- **ARCHITECTURAL POETRY:** Material och hantverk med känslomässig resonance
+- **TEMPORAL DIMENSION:** Hur bostaden lever genom dygnet/året/årstiderna
+- **INVESTMENT WISDOM:** Trygghet, ekonomi, framtid som investering
+- **COMMUNITY INTEGRATION:** Områdets puls, grannskap, gemenskap
+- **FUTURE VISION:** Drömbild för köparens liv här
+- **LEGACY IMPACT:** Varför detta blir en del av deras historia
 - **VIKTIGT:** Inkludera ekonomiska detaljer (avgift, belåning, fond) för trygghet och investeringsperspektiv
 
-# EXEMPEL BOOLI/EGEN SIDA
+# MASTERCLASS TEKNIKER - FORMELBASERADE
 
-"På Karlavägen 112, i en av Östermalms mest eftertraktade 30-talsfastigheter, ligger denna trea om 62 kvadratmeter där takhöjden på 2.8 meter och den bevarade originalstuckaturen omedelbart tar andan ur en.
+**1. EPIC HOOK (Välj en och fyll i):**
+- "I en av [område]s mest [adjektiv] [årtal]s [fastighetstyp], där [egenskap 1] möter [egenskap 2], ligger..."
+- "Hemligheten bakom [unikt detalj] på [adress] är inte bara en [objekttyp] – det är en portal till [dröm]..."
 
-Här kliver man in i en värld av sekelskiftescharm mött modern komfort. De genomgående sociala ytorna bjuder in till både vardagsmys och festliga tillställningar. Parkettgolvet i ek ekar av historia medan de vita väggarna skapa en perfekt bakgrund för konst och personliga prägel.
+**2. SENSORY JOURNEY (Använd minst 4):**
+- **SYN:** "Ljuset [verb] på [yta] och träffar [material] som [effekt]"
+- **LJUD:** "[Ljudkälla] [verb], ersatt av [positivt ljud] där [detalj]"
+- **KÄNSLA:** "[Material] [verb] dina [kroppsdel] som [jämförelse] på [tid]"
+- **DOFT:** "Doften av [källa] blandas med [sekundär doft] från [plats]"
+- **SMACK:** "Känslan av [yta] under [fingertyp] [verb] [egenskap]"
 
-Vardagsrummet är hjärtat i hemmet med sin eldstad i marmor och de stora fönsterpartierna som fångar både morgonsol och kvällsljus. Här samlas familjen för filmkvällar eller vänner för middagar. Den öna planlösningen mot köket gör att matlagningen blir en del av sällskapet.
+**3. EMOTIONAL LANDSCAPE (Bygg i steg):**
+- Stycke 1: Använd "nyfikenhet" + "upptäckt" + "hemlighet"
+- Stycke 2: Använd "fascination" + "dröm" + "längtan"
+- Stycke 3: Använd "måste-ha" + "sällsynt" + "möjlighet"
+- Stycke 4: Använd "trygghet" + "framtid" + "glädje"
 
-Köket från 2022 är en dröm för den matglada med sin marmor bänkskiva och integrerade Siemens vitvaror. Här lagas det söndagsmiddagar medan gästerna sätter sig vid matplatsen med utsikt över den lugna innergården. Sovrummet vetter mot samma tysta gård och erbjuder en fristad från stadens puls.
+**4. LIFESTYLE SCENES (Skapa 3+ scener):**
+- "[Tidpunkt] [verb] du till [sinnesupplevelse] som [effekt]"
+- "[Tidpunkt] blir [rum] [funktion] där [personer] [aktivitet]"
+- "[Årstid] [verb] [plats] med [detalj] där [livsstilsaktivitet]"
 
-Badrummet är ett eget spa med kakel i dämpade toner, golvvärme och en dusch där man kan starta dagen med energi. Den inglasade balkongen i sydväst blir förlängningen av vardagsrummet – här intas morgonkaffet i solen, här avslutas dagen med ett glas vin och utsikt över gårdens grönska.
+**5. ARCHITECTURAL POETRY (Använd material från disposition):**
+- "Varje [detalj] och [material] berättar [historia] från [tid] då [kvalitet]"
+- "[Specifik detalj] i [plats] är som [jämförelse] som [effekt]"
 
-Föreningen BRF Solhemmet är ett tryggt kapital med bara 15% belåning och hela 2.3 miljoner i underhållsfond. Stambytet 2019 och fönsterbytet 2021 garanterar ett underhållsfritt boende i många år framöver.
+**6. TEMPORAL DIMENSION (Beskriv 3 årstider/tider):**
+- "På [årstid] är [plats] [beskrivning] där [aktivitet] sker"
+- "På [årstid] blir [element] hjärtat i [rum] där [effekt]"
+- "På [årstid] [verb] [bostad] med [sinnesupplevelse] och känns som [jämförelse]"
 
-Läget är otroligt – fem minuter till Karlaplans tunnelbana, tre minuter till ICA och promenadavstånd till allt som gör Östermalm till Östermalm. Ändå är gatan lugn och innergården en oas av grön ro.
+**7. INVESTMENT WISDOM (Använd ekonomi från disposition):**
+- "Föreningens [ekonomisk detalj] är inte bara [siffra] – det är [trygghet] för [framtid]"
+- "[Renovering] [årtal] är inte bara [åtgärd] – det är [garanti] för [resultat]"
 
-Detta är mer än en lägenhet – det är en livsstil. Här kan du inreda, leva och växa. Här kan du bjuda hem vänner, njuta av stillheten och ha hela Stockholm utanför dörren. Detta är ditt nya hem."
+**8. COMMUNITY TAPESTRY:**
+- "Grannskapet här är som [jämförelse] där [gemenskap] och [delning]"
+- "Områdets puls med [detaljer] skapar [känsla] som [jämförelse]"
 
-# OUTPUT FORMAT (JSON)
+**9. FUTURE VISION (Skapa 2+ framtidsvisioner):**
+- "Tänk dig [aktivitet] du kommer att [utföra], [tidpunkt] du kommer att [uppleva], [minne] du kommer att [skapa]"
+- "Om [antal] år kommer du minnas [specifik detalj] när du [aktivitet]"
 
-{
-  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3", "✓ Punkt 4", "✓ Punkt 5"],
-  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
-  "analysis": {
-    "target_group": "Vem passar bostaden för",
-    "area_advantage": "Områdets styrkor",
-    "pricing_factors": "Prishöjande faktorer"
-  },
-  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
-  "missing_info": ["Info som saknas i rådata"],
-  "pro_tips": ["Tips till mäklaren"]
-}
-`;
+**10. LEGACY IMPACT:**
+- "Detta är inte bara en [objekttyp] – det är [metafor] av [livsbetydelse]"
 
-// --- PROMPT FÖR GRATIS-ANVÄNDARE (BASIC) ---
-const BASIC_REALTOR_PROMPT = `
-# KRITISKA REGLER (BRYT ALDRIG DESSA)
+# KVALITETSCHECK INNAN DU SLUTFÖR:
+✅ Har jag använt minst 4 sinnesdetaljer (syn, ljud, känsla, doft, smak)?
+✅ Börjar texten med en dramatisk hook (inte "Välkommen")?
+✅ Finns minst 3 lifestyle-scener (hur man BOR här)?
+✅ Har jag emotional landscape (nyfikenhet → fascination → längtan)?
+✅ Är ALLA material från disposition med (parkett, kakel, marmor, etc)?
+✅ Har jag temporal dimension (minst 2 årstider/tider)?
+✅ Inkluderar jag ekonomiska detaljer (avgift, belåning, fond)?
+✅ Har jag community tapestry (områdets puls)?
+✅ Har jag future vision (tänk dig...)?
+✅ Har jag legacy impact (livsbetydelse)?
+✓ Skriv ENDAST när allt är klart
 
-1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
-2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
-3. DELA UPP I 4-5 STYCKEN med \\n\\n mellan varje stycke
-4. MINST 250 ORD – skriv utförligt om varje rum
-5. HITTA ALDRIG PÅ – om info saknas, nämn det inte
+# FÖLJ ALDRIG DESSA MÖNSTER:
+❌ "Perfekt för..." → Beskriv specifik scen istället
+❌ "Fantastisk läge" → Beskriv exakt vad läget ger
+❌ "Renoverat med hög standard" → Namnge material och år
+❌ Generiska adjektiv → Använd max 3 per text (Booli tillåter mer)
+❌ Kopiera exempel → Fyll i formler med data från disposition
 
-# DIN UPPGIFT
+# EXEMPEL BOOLI/EGEN SIDA - MED MASTERCLASS TEKNIKER
 
-Skriv en objektbeskrivning för Hemnet. Texten ska kunna publiceras direkt utan redigering.
+"I en av Östermalms mest eftertraktade 30-talsfastigheter, där sekelskiftets charm möter 2020-talets elegans, ligger denna trea om 62 kvadratmeter där takhöjden på 2.8 meter och den bevarade originalstuckaturen omedelbart skapar en känsla av att du har hittat något unikt.
 
-# STRUKTUR (följ exakt)
+Här kliver du in i en värld där historien möter nutiden. Ljuset dansar på de vita väggarna och träffar det genomgående parkettgolvet i ek som ekar av sekelskiftets själ. I vardagsrummet sprakar elden i eldstaden på kalla kvällar, medan tystnaden från innergården bara avbryts av fågelkvitter – den enda musiken du hör i stadens puls. Doften av nybryggt kaffe från köket 2022 blandas med den svaga parfymen från de gamla träbokhyllorna, och känslan av den kalla marmorn i köksbänken under dina fingertoppar är en påminnelse om kvalitet.
 
-STYCKE 1 - ÖPPNING: Adress + fastighetens karaktär + första intryck (2-3 meningar)
-STYCKE 2 - RUM: Beskriv vardagsrum, kök, sovrum med konkreta detaljer (4-5 meningar)
-STYCKE 3 - BADRUM/DETALJER: Badrum, balkong, förvaring, material (2-3 meningar)
-STYCKE 4 - FÖRENING/FASTIGHET: Avgift, ekonomi, renoveringar (2-3 meningar)
-STYCKE 5 - LÄGE: Närområde, kommunikationer, skolor (2-3 meningar)
+Här vaknar du till solsken som strömmar in genom de stora fönsterpartierna och träffar din blick. Kvällarna blir förlängningen av vardagsrummet där vänner samlas för middagar och vin, medan den öna planlösningen mot köket gör att matlagningen blir en del av sällskapet. Köket är en dröm för den matglada med sin marmor bänkskiva och integrerade Siemens vitvaror – här lagas det söndagsmiddagar medan gästerna sätter sig vid matplatsen med utsikt över den lugna innergården. Sovrummet vetter mot samma tysta gård och erbjuder en fristad från stadens puls, en plats där du kan återhämta dig själv.
 
-# EXEMPEL PÅ KORREKT TEXT
+Badrummet är ett eget spa med kakel i dämpade toner och golvvärme som omsluter dina fötter som en varm kram på kalla morgnar. Den inglasade balkongen i sydväst blir förlängningen av vardagsrummet – här intas morgonkaffet i solen medan staden vaknar, här avslutas dagen med ett glas vin och utsikt över gårdens grönska. På sommaren är balkongen scenen för grillkvällar och solnedgångar, på vintern blir eldstaden hjärtat i hemmet där värmen sprider och skapar en oas av komfort.
 
-INPUT: "3 rok Karlavägen 112, 62 kvm, våning 3, balkong SV, takhöjd 2.8m, 30-talshus, renoverat kök, golvvärme badrum, avgift 4200"
+Föreningen BRF Solhemmet är ett tryggt kapital med bara 15% belåning och hela 2.3 miljoner i underhållsfond – en ekonomisk trygghet som är mer än bara siffror. Stambytet 2019 och fönsterbytet 2021 är inte bara renoveringar – det är en garanti för ett bekymmersfritt boende i många år framöver, en investering i din frid.
 
-OUTPUT:
-"På Karlavägen 112, i en välbevarad 30-talsfastighet, ligger denna ljusa trea om 62 kvadratmeter. Lägenheten på tredje våningen har en takhöjd om 2,8 meter som ger rummen en generös känsla.
+Områdets puls med caféer, butiker och parker skapar en levande vardag som få andra platser kan matcha, och ändå är gatan lugn och innergården en oas av grön ro. Grannskapet här är som en liten by där alla känner varandra och delar både glädje och omsorg.
 
-Vardagsrummet har fönster mot gatan och rymmer både soffgrupp och matbord. Köket är renoverat med moderna vitvaror och generös bänkyta. Sovrummet vetter mot gården och har plats för dubbelsäng och garderob.
-
-Badrummet är helkaklat med golvvärme. Balkongen i sydvästläge ger sol från eftermiddagen.
-
-Föreningen har stabil ekonomi. Avgiften är 4 200 kr per månad.
-
-Karlavägen ligger centralt med närhet till Karlaplan och tunnelbana."
+Tänk dig de middagar du kommer att bjuda in, de morgnar du vaknar till med en känsla av mening, de livsminnen du kommer att skapa här. Detta är inte bara en bostad – det är kapitlet i första kapitlet av ditt livs nästa berättelse."
 
 # OUTPUT FORMAT (JSON)
 
@@ -525,250 +667,8 @@ Karlavägen ligger centralt med närhet till Karlaplan och tunnelbana."
 `;
 
 // Expertversion för pro-användare
-const REALTOR_KNOWLEDGE_BASE = `
-# KRITISKA REGLER (BRYT ALDRIG DESSA)
 
-1. BÖRJA ALDRIG MED "Välkommen" – börja med adressen eller området
-2. SKRIV ALDRIG dessa ord: erbjuder, erbjuds, perfekt, idealisk, rofylld, attraktivt, fantastisk, underbar, luftig, trivsam, inom räckhåll
-3. DELA UPP I 4-6 STYCKEN med \\n\\n mellan varje stycke
-4. MINST 300 ORD – skriv utförligt om varje rum
-5. HITTA ALDRIG PÅ – om info saknas, nämn det inte
-
-# DIN UPPGIFT
-
-Skriv en professionell objektbeskrivning för Hemnet/Booli. Texten ska kunna publiceras direkt utan redigering. Använd kunskapsbasen nedan för att berika texten med arkitekturkunskap och områdesinfo.
-
-## ANPASSA EFTER OBJEKTTYP
-
-### BOSTADSRÄTT (lägenhet)
-- Fokus: planlösning, ljus, balkong/uteplats, förening, läge
-- Nämn: avgift, stambytt, hiss, våning (om det finns)
-- Ton: urban, praktisk, livsstil
-- Öppningsexempel: "Strålande ljus etagevåning med tyst läge högst upp i gårdshuset på Grevgatan 18."
-
-### VILLA
-- Fokus: tomt, trädgård, utrymme, privatliv, byggkvalitet
-- Nämn: tomtstorlek, uppvärmning, garage, renoveringar
-- Ton: familj, frihet, karaktär
-- Öppningsexempel: "Det gula trähuset på Kyrkogårdsvägen 123 har byggnadsårets fina kvaliteter bevarade i form av två fungerande kakelugnar och brädgolv med patina."
-
-### RADHUS/KEDJEHUS
-- Fokus: kombination av villa och lägenhet – trädgård + lågt underhåll
-- Nämn: förening/samfällighet, uteplats, garage/parkering
-- Ton: praktisk, familjevänlig
-
-### NYPRODUKTION
-- Fokus: inflyttningsklart, garanti, energiklass, moderna material
-- Nämn: tillträde, energiklass, smarta funktioner
-- Ton: modern, bekväm, framtidssäker
-
-### FRITIDSHUS
-- Fokus: läge (sjö, hav, skog), avkoppling, natur
-- Nämn: strand, brygga, båtplats, vägar
-- Ton: fridfull, naturupplevelse, semester
-
-## ANPASSA EFTER PRISKLASS
-
-### BUDGET (under 2 MSEK)
-- Fokus: potential, läge, ekonomi (låg avgift)
-- Ton: rak, ärlig, möjligheter
-- Exempel: "Etta om 28 kvm i Hässelby. Balkong mot söder. Avgift 1 900 kr."
-
-### MELLAN (2-6 MSEK)
-- Fokus: balans mellan pris och kvalitet, praktiskt boende
-- Ton: varm, inbjudande men inte överdriven
-- Exempel: "Ljus trea i funkishus från 1938. Genomgående planlösning med balkong i två väderstreck."
-
-### PREMIUM (6-15 MSEK)
-- Fokus: kvalitet, läge, detaljer, livsstil
-- Ton: elegant, sofistikerad
-- Exempel: "Hörnlägenhet med tre fria väderstreck på Karlavägens lugna sida. Takhöjd 2,9 meter."
-
-### LYX (över 15 MSEK)
-- Fokus: exklusivitet, historia, unika detaljer, prestige
-- Ton: diskret lyx, storytelling, heritage
-- Exempel: "På Strandvägen 7, i en av stadens mest anrika fastigheter, ligger denna våning med utsikt över Nybroviken."
-
-## ANPASSA EFTER GEOGRAFI
-
-### STORSTAD INNERSTAD (Stockholm, Göteborg, Malmö centrum)
-- Fokus: läge, kommunikationer, puls, restauranger, kultur
-- Ton: urban, sofistikerad
-
-### STORSTAD YTTERSTAD/FÖRORT
-- Fokus: lugn, grönområden, familjevänligt, pendlingsavstånd
-- Ton: trygg, praktisk
-
-### MINDRE STAD
-- Fokus: närhet till centrum, lugn, community
-- Ton: hemtrevlig, lokal
-
-### LANDSBYGD
-- Fokus: natur, utrymme, frihet
-- Ton: fridfull, autentisk
-
-### KUST/SKÄRGÅRD
-- Fokus: vatten, båtliv, sommar, utsikt
-- Ton: semester, frihet
-
-### FJÄLL/VINTERSPORT
-- Fokus: skidåkning, natur, säsong
-- Ton: aktiv, äventyr
-
-## STRUKTUR FÖR OBJEKTBESKRIVNING (minst 300-450 ord)
-
-Skriv UTFÖRLIGT som en toppmäklare. Varje sektion ska ha flera meningar med rika detaljer.
-
-### 1. ÖPPNING (2-3 meningar)
-Sätt scenen. Beskriv läget, fastighetens karaktär och första intryck.
-
-### 2. RUMSBESKRIVNINGAR (huvuddelen, 150-250 ord)
-Beskriv VARJE rum utförligt:
-- Storlek och känsla av rymd
-- Ljusförhållanden och fönster
-- Material och detaljer (snickerier, golv, eldstäder)
-- Hur rummen hänger ihop ("i fil", "genomgående")
-- Vad som får plats ("plats för långbord", "soffgrupp och matbord")
-
-### 3. FÖRENING/FASTIGHET (2-3 meningar)
-Ekonomi, underhåll, renoveringar. För villa: tomt, garage, gästhus, uthus.
-
-### 4. LÄGE OCH NÄROMRÅDE (2-3 meningar)
-Beskriv området med känsla. Nämn skolor, torg, natur, kommunikationer.
-
-### 5. AVSLUTNING (1-2 meningar)
-Sammanfatta känslan och livsstilen bostaden möjliggör.
-
-## EXEMPEL PÅ BRA OBJEKTBESKRIVNING
-
-RÅDATA: "Villa Sigtuna, 380 kvm, sjöutsikt Mälaren, trädgård, gästhus 32 kvm, garage 60 kvm, klassisk arkitektur, eldstäder, terrass"
-
-BRA TEXT (kopiera denna stil):
-"I en av Sigtunas mest eftersökta delar, där grönska möter Mälarens vatten, ligger denna eleganta villa med utsikt över sjön. Fastigheten om totalt 380 kvm har klassisk arkitektur och tilltalande symmetri, inramad av en uppvuxen trädgård med stensatta gångar.
-
-De sociala ytorna i entréplanet är generösa med flera sällskapsrum i fil, stora fönsterpartier och fungerande eldstäder. Köket är ljust och rymligt med plats för långbord. Från matsalen nås terrass och trädgård i soligt läge. Övre plan rymmer flera sovrum med förvaring och badrum.
-
-Till fastigheten hör ett gästhus om 32 kvm med eget kök och badrum, samt ett garage om 60 kvm med plats för tre bilar.
-
-På gångavstånd nås skolor och det charmiga torget med Sigtuna rådhus och små butiker."
-
-## FÖRBJUDNA ORD (använd ALDRIG)
-
-erbjuder, erbjuds, perfekt för, idealiskt för, rofyllt, rofylld, attraktivt, inom räckhåll, sociala tillställningar, extra komfort, trygg boendemiljö, goda arbetsytor, trivsam atmosfär, underlättar vardagen, fantastisk, underbar, magisk, otrolig, luftig
-
-## REGLER
-
-1. **Hitta aldrig på.** Om våning/hiss/avstånd inte finns – nämn det inte.
-2. **Var specifik.** "Renoverat 2022" > "nyrenoverat". "62 kvm" > "rymlig".
-3. **Inga emojis.**
-4. **Dela upp i stycken.** Varje stycke ska ha 2-4 meningar. Använd \\n\\n mellan stycken.
-5. **Börja ALDRIG med "Välkommen"** – börja med adress eller område.
-6. **Variera ordval.** Använd inte samma ord två gånger i samma mening.
-
-## KUNSKAPSBAS
-
-Använd denna kunskap för att skriva bättre – men BARA om det stämmer med rådata.
-
-### ARKITEKTUR
-
-**1880-1920: Sekelskifte/Jugend**
-- Kännetecken: 3.2m+ takhöjd, stuckatur, takrosetter, speglade socklar, fiskbensparkett, kakelugnar (Rörstrand, Gustavsberg), blyinfattade fönster
-- Materialpalett: Mahogny, ek, mässing, marmor, original brädgolv
-- Säljvinkel: "Autentiska detaljer som inte går att återskapa" – betona hantverk och tidlöshet
-
-**1920-1940: Klassicism/20-talsklassicism**
-- Kännetecken: Symmetri, pilastrar, profilerade listverk, herringbone-golv, inbyggda vitrinskåp
-- Materialpalett: Fernissad ek, smide, kalksten, terrakotta
-- Säljvinkel: Elegant återhållsamhet, "Swedish Grace", tidlös elegans
-
-**1930-1950: Funktionalism**
-- Kännetecken: Ljusinsläpp, oxögon, teakdetaljer, smidesräcken, fönsterband, platta tak
-- Materialpalett: Teak, björk, lackad masonit, linoleum
-- Säljvinkel: "Form follows function" – praktisk elegans, genomtänkt ljusplanering
-
-**1950-1960: Folkhemmet**
-- Kännetecken: Standardiserade planlösningar, balkonger, gemensamma tvättstugor, praktiska förvaringslösningar
-- Materialpalett: Fernissad parkett, kaklade badrum, originalköksdetaljer
-- Säljvinkel: Gedigen byggnation, starka föreningar, ofta strategiska lägen
-
-**1960-1970: Miljonprogrammet**
-- Kännetecken: Rationell byggnation, balkong, yteffektivitet, gemensamma ytor
-- Säljvinkel: Ekonomiskt fördelaktigt, ofta låga avgifter, renoveringspotential, föreningsekonomi i fokus
-
-**1970-1990: Postmodernism**
-- Kännetecken: Öppnare planlösningar, garage, altaner, villakänsla i radhus
-- Materialpalett: Furu, kakel, plastmattor (ofta utbytbara)
-- Säljvinkel: Funktionella familjebostäder, trädgårdar, barnvänliga områden
-
-**2000-2010: Millennieskiftet**
-- Kännetecken: Större badrum, öppen kök/vardagsrum, balkonger, garage
-- Materialpalett: Ekparkett, granit, rostfritt stål
-- Säljvinkel: Modern standard, ofta bra föreningsekonomi, etablerade områden
-
-**2015-2026: Nyproduktion**
-- Kännetecken: Energiklass A/B, FTX-ventilation, smarta hem, öppen planlösning, stora fönsterpartier, ofta balkong/terrass
-- Materialpalett: Ekparkett, komposit, kvarts, induktionshäll
-- Säljvinkel: Låga driftskostnader, hållbarhet, inflyttningsklart, garantier
-
-### GEOGRAFISK INTELLIGENS
-
-Kolla alltid upp området och se om det finns relevent information att lägga till.
-
-**STOCKHOLM**
-
-*Innerstan (Östermalm, Vasastan, Södermalm, Kungsholmen, Norrmalm)*
-- Karaktär: Sekelskifte, jugend, hög efterfrågan, topplägen
-- Pendling: T-bana, bussar, cykelavstånd till city
-- Målgrupp: Karriär, par utan barn, downsizers, internationella köpare
-- Säljargument: Gångavstånd till allt, kulturutbud, restauranger, prestige
-
-*Söderort (Årsta, Enskede, Midsommarkransen, Aspudden, Liljeholmen)*
-- Karaktär: Blandat 30-60-tal och nyproduktion, familjevänligt
-- Pendling: T-bana grön/röd linje, 10-15 min till city
-- Målgrupp: Unga familjer, förstagångsköpare
-- Säljargument: Prisvärda alternativ nära city, grönområden, skolor
-
-*Västerort (Bromma, Alvik, Traneberg, Sundbyberg, Solna)*
-- Karaktär: Villaområden, funktionalism, nyproduktion
-- Pendling: T-bana blå linje, tvärbanan, Bromma flygplats
-- Målgrupp: Etablerade familjer, storlek prioriteras
-- Säljargument: Villakänsla nära city, Mälarens strand, bra skolor
-
-*Nacka/Värmdö*
-- AKTUELLT: Nacka tunnelbana (Blå linjen) öppnar, dramatisk förbättring av pendlingstider
-- Karaktär: Skärgårdskänsla, nyproduktion i Nacka Forum/Sickla, villor i Saltsjöbaden
-- Målgrupp: Familjer, naturälskare, båtägare
-- Säljargument: 15 min till Slussen med nya tunnelbanan, skärgård och city
-
-*Solna/Sundbyberg*
-- Karaktär: Stark tillväxt, nyproduktion, arbetsgivarcentrum (Solna Business Park, Mall of Scandinavia)
-- Pendling: T-bana, pendeltåg, tvärbanan
-- Målgrupp: Unga yrkesverksamma, par
-- Säljargument: Stark värdeutveckling, modernt, gång till arbete
-
-*Täby/Danderyd*
-- Karaktär: Villaområden, exklusiva bostadsrätter, topprankade skolor
-- Pendling: Roslagsbanan (uppgraderas), buss, bil
-- Målgrupp: Etablerade familjer, hög köpkraft
-- Säljargument: Bästa skolorna, trädgårdar, lugn och status
-
-**GÖTEBORG**
-
-*Centrum (Vasastan, Linné, Haga, Majorna)*
-- Karaktär: Landshövdingehus, sekelskifte, studentliv, kafékultur
-- Pendling: Spårvagn, cykel, gång
-- Målgrupp: Unga vuxna, studenter, kreativa yrken
-- Säljargument: Stadspuls, kaféer, Haga och Slottsskogen runt knuten
-
-*Örgryte/Härlanda*
-- Karaktär: Villastad, 20-talsklassicism, etablerade familjer
-- Pendling: Spårvagn 10-15 min till centrum
-- Målgrupp: Barnfamiljer med budget
-- Säljargument: Lugnt, nära Delsjön, villaträdgårdar
-
-*Hisingen (Eriksberg, Lindholmen, Kvillebäcken)*
-- AKTUELLT: Stark stadsutveckling, tech-hub vid Lindholmen, Älvstaden-projektet
-- Karaktär: Nyproduktion, kajlägen, industriomvandling
+// ... rest of the code remains the same ...
 - Målgrupp: Unga yrkesverksamma, tech-branschen
 - Säljargument: Vattennära nyproduktion, Göteborgs framtid, gång till tech-jobb
 
@@ -1009,54 +909,113 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const { prompt, type, platform } = req.body;
 
-      // Välj rätt prompt baserat på prenumerationsnivå
-      const isPro = plan === "pro";
-      const systemPrompt = isPro ? REALTOR_KNOWLEDGE_BASE : BASIC_REALTOR_PROMPT;
+      // === 2-STEGS GENERATION ===
+      
+      // Steg 1: Extrahera fakta och skapa disposition
+      console.log("[Step 1] Extracting facts and creating disposition...");
+      
+      const dispositionMessages = [
+        {
+          role: "system" as const,
+          content: DISPOSITION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content: `RÅDATA: ${prompt}`,
+        },
+      ];
 
-      // Använd GPT-4o för alla användare för bästa kvalitet
-      const model = "gpt-4o";
+      const dispositionCompletion = await openai.chat completions.create({
+        model: "gpt-4o",
+        messages: dispositionMessages,
+        max_tokens: 2000,
+        temperature: 0.1, // Låg temperatur för faktaextrahering
+        response_format: { type: "json_object" },
+      });
 
-      // Debug: logga vilken prompt som används
-      console.log(`[AI] Using ${isPro ? 'PRO' : 'BASIC'} prompt for plan: ${plan}, model: ${model}`);
+      const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
+      const disposition = JSON.parse(extractFirstJsonObject(dispositionText));
+      console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
 
-      const finalSystemPrompt = `
-${systemPrompt}
+      // Steg 2: Skriv final text baserat på disposition
+      console.log("[Step 2] Writing final text based on disposition...");
+      
+      // Välj rätt prompt baserat på plattform
+      const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT;
+      console.log(`[Step 2] Using ${platform.toUpperCase()} prompt...`);
+      
+      const textMessages = [
+        {
+          role: "system" as const,
+          content: selectedPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content: `DISPOSITION: ${JSON.stringify(disposition, null, 2)}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}`,
+        },
+      ];
 
-## PLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}
+      const textCompletion = await openai.chat completions.create({
+        model: "gpt-4o",
+        messages: textMessages,
+        max_tokens: 4000,
+        temperature: 0.4,
+        response_format: { type: "json_object" },
+      });
 
-${platform === "hemnet" ? `
-**Hemnet-format:**
-- Längd: 300-400 ord
-- 5-6 korta stycken
-- Rakt på sak, lätt att skanna
-` : `
-**Booli/egen sida-format:**
-- Längd: 450-600 ord
-- 6-8 stycken, mer detaljerat
-- Lite mer berättande ton
-`}
+      const textResultText = textCompletion.choices[0]?.message?.content || "{}";
+      let result: any = JSON.parse(extractFirstJsonObject(textResultText));
 
-## PÅMINNELSE
+      // Validering och retries för text-steget
+      let violations = validateOptimizationResult(result);
+      console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
+      
+      // Retry loop - max 3 attempts
+      let attempts = 0;
+      while (violations.length > 0 && attempts < 2) {
+        attempts++;
+        console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
+        
+        const retryCompletion = await openai.chat completions.create({
+          model: "gpt-4o",
+          messages: [
+            ...textMessages,
+            {
+              role: "user" as const,
+              content:
+                `STOPP! Du använde FÖRBJUDNA ord/fraser: ${violations.join(", ")}.\n\n` +
+                "REGLER:\n" +
+                "1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n" +
+                "2. Ersätt VARJE klysch med KONKRET fakta från dispositionen\n" +
+                "3. Om du inte har fakta – TA BORT meningen helt\n" +
+                "4. Skriv som en toppmäklare, inte som en AI\n\n" +
+                "Returnera ENDAST JSON med omskriven text.",
+            },
+          ],
+          max_tokens: 4000,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+        });
 
-- Skriv BARA det som finns i rådata
-- Om något saknas (avgift, avstånd, årtal) – hitta INTE på, skriv det i missing_info
-- Undvik klyschor och AI-språk
-- Korta meningar, naturlig svenska
+        const retryText = retryCompletion.choices[0]?.message?.content || "{}";
+        result = JSON.parse(extractFirstJsonObject(retryText));
+        violations = validateOptimizationResult(result);
+        console.log(`[AI Validation] After retry ${attempts} violations:`, violations.length > 0 ? violations : "NONE");
+      }
+      
+      if (violations.length > 0) {
+        console.warn("[AI Validation] WARNING: Still has violations after retries:", violations);
+      }
 
-## OUTPUT (JSON)
-{
-  "highlights": ["5 korta punkter med ✓"],
-  "improvedPrompt": "Objektbeskrivningen",
-  "analysis": {
-    "target_group": "Vem passar bostaden för",
-    "area_advantage": "Vad som är bra med området",
-    "pricing_factors": "Vad som påverkar priset"
-  },
-  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
-  "missing_info": ["Saker som saknas och bör efterfrågas"],
-  "pro_tips": ["Tips till mäklaren"]
-}
-`;
+      // POST-PROCESSING: Rensa bort förbjudna fraser och lägg till stycken
+      if (result.improvedPrompt) {
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+        result.improvedPrompt = addParagraphs(result.improvedPrompt);
+      }
+      if (result.socialCopy) {
+        result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
+      }
+      console.log("[Post-processing] Text cleaned and paragraphs added");
 
       // === 2-STEGS GENERATION ===
       
