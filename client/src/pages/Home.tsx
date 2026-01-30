@@ -30,6 +30,12 @@ export default function Home() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const handleSubmit = (data: { prompt: string; type: string; platform: string }) => {
+    // Kräv inloggning
+    if (!isAuthenticated) {
+      setAuthModalOpen(true);
+      return;
+    }
+    
     mutate(data, {
       onSuccess: (data) => {
         setResult(data);

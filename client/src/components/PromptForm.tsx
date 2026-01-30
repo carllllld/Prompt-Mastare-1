@@ -294,7 +294,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="inga">Ingen balkong</SelectItem>
                       <SelectItem value="vanlig">Vanlig balkong</SelectItem>
                       <SelectItem value="stor">Stor balkong</SelectItem>
@@ -321,7 +321,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="syd">Syd (solkigast)</SelectItem>
                       <SelectItem value="sydvast">Sydväst (kvällssol)</SelectItem>
                       <SelectItem value="vast">Väst</SelectItem>
@@ -350,7 +350,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="inga">Inga renoveringar</SelectItem>
                       <SelectItem value="kok">Kök nytt</SelectItem>
                       <SelectItem value="badrum">Badrum nytt</SelectItem>
@@ -375,7 +375,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="bra">Bra skick</SelectItem>
                       <SelectItem value="mycketbra">Mycket bra skick</SelectItem>
                       <SelectItem value="nyskick">Nyskick</SelectItem>
@@ -403,7 +403,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="nybyggd">Nybyggd (2020+)</SelectItem>
                       <SelectItem value="2000s">2000-tal</SelectItem>
                       <SelectItem value="1990s">1990-tal</SelectItem>
@@ -433,7 +433,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="A">A (Bäst)</SelectItem>
                       <SelectItem value="B">B</SelectItem>
                       <SelectItem value="C">C</SelectItem>
@@ -464,7 +464,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="parkett">Parkett</SelectItem>
                       <SelectItem value="ekparkett">Ekparkett</SelectItem>
                       <SelectItem value="laminat">Laminat</SelectItem>
@@ -494,7 +494,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="tra">Träfönster</SelectItem>
                       <SelectItem value="tra3">Trä 3-glas</SelectItem>
                       <SelectItem value="aluminium">Aluminiumfönster</SelectItem>
@@ -525,7 +525,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="kok">Standardkök</SelectItem>
                       <SelectItem value="kokkok">Kökskök</SelectItem>
                       <SelectItem value="oppet">Öppet kök</SelectItem>
@@ -553,7 +553,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="standard">Standardbadrum</SelectItem>
                       <SelectItem value="modernt">Modernt badrum</SelectItem>
                       <SelectItem value="golvvarme">Golvvärme</SelectItem>
@@ -584,7 +584,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="inga">Ingen särskild utsikt</SelectItem>
                       <SelectItem value="gard">Trädgård</SelectItem>
                       <SelectItem value="innergard">Innergård</SelectItem>
@@ -613,7 +613,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="centrum">Centrum</SelectItem>
                       <SelectItem value="stadskarn">Stadskärna</SelectItem>
                       <SelectItem value="residential">Bostadsområde</SelectItem>
@@ -644,7 +644,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="tunnelbana">Tunnelbana (nära)</SelectItem>
                       <SelectItem value="tunnelbana5">Tunnelbana (5 min)</SelectItem>
                       <SelectItem value="tunnelbana10">Tunnelbana (10 min)</SelectItem>
@@ -672,7 +672,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper">
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="skuldfri">Skuldfri</SelectItem>
                       <SelectItem value="lanskuldlag">Låg skuldsättning</SelectItem>
                       <SelectItem value="stabil">Stabil ekonomi</SelectItem>
@@ -705,7 +705,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Hiss</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Hiss</FormLabel>
                   </FormItem>
                 )}
               />
@@ -721,7 +721,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Öppen spis</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Öppen spis</FormLabel>
                   </FormItem>
                 )}
               />
@@ -737,7 +737,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Golvvärme</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Golvvärme</FormLabel>
                   </FormItem>
                 )}
               />
@@ -753,7 +753,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Balkong i väst</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Balkong i väst</FormLabel>
                   </FormItem>
                 )}
               />
@@ -769,7 +769,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Originaldetaljer</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Originaldetaljer</FormLabel>
                   </FormItem>
                 )}
               />
@@ -785,7 +785,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Takhöjd &gt;3m</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Takhöjd &gt;3m</FormLabel>
                   </FormItem>
                 )}
               />
@@ -801,7 +801,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Gästlägenhet</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Gästlägenhet</FormLabel>
                   </FormItem>
                 )}
               />
@@ -817,7 +817,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
                       />
                     </FormControl>
-                    <FormLabel className="text-xs font-normal">Fiber</FormLabel>
+                    <FormLabel className="text-xs font-normal !text-black">Fiber</FormLabel>
                   </FormItem>
                 )}
               />

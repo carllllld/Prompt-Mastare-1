@@ -862,15 +862,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      const sessionId = req.sessionID;
-      const usage = await storage.getSessionUsage(sessionId);
-      const monthlyLimit = PLAN_LIMITS.free;
-
       res.json({
         plan: "free",
-        promptsUsedToday: usage.promptsUsedToday,
-        promptsRemaining: Math.max(0, monthlyLimit - usage.promptsUsedToday),
-        monthlyLimit,
+        promptsUsedToday: 0,
+        promptsRemaining: PLAN_LIMITS.free,
+        monthlyLimit: PLAN_LIMITS.free,
         isLoggedIn: false,
         resetTime: resetTime.toISOString(),
       });
@@ -881,24 +877,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // Optimize endpoint
-  app.post("/api/optimize", async (req, res) => {
+  app.post("/api/optimize", requireAuth, async (req, res) => {
     try {
-      const userId = req.session?.userId;
-      const sessionId = req.sessionID;
-
-      let plan: PlanType = "free";
-      let promptsUsedToday = 0;
-
-      if (userId) {
-        const user = await storage.getUserById(userId);
-        if (user) {
-          plan = (user.plan as PlanType) || "free";
-          promptsUsedToday = user.promptsUsedToday || 0;
-        }
-      } else {
-        const usage = await storage.getSessionUsage(sessionId);
-        promptsUsedToday = usage.promptsUsedToday;
-      }
+      const user = (req as any).user as User;
+      const plan = (user.plan as PlanType) || "free";
+      const promptsUsedToday = user.promptsUsedToday || 0;
 
       const monthlyLimit = PLAN_LIMITS[plan];
       if (promptsUsedToday >= monthlyLimit) {
@@ -1012,26 +995,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       console.log("[Post-processing] Text cleaned and paragraphs added");
 
       // Increment usage
-      if (userId) {
-        await storage.incrementUserPrompts(userId);
-        await storage.createOptimization({
-          userId,
-          originalPrompt: prompt,
-          improvedPrompt: result.improvedPrompt || prompt,
-          category: type,
-          improvements: [
-            result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
-            result.analysis?.target_group ? "Målgrupp: " + result.analysis.target_group : null,
-            result.analysis?.area_advantage ? "Område: " + result.analysis.area_advantage : null,
-            result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
-            result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
-          ].filter(Boolean) as string[],
-          suggestions: result.pro_tips || [],
-          socialCopy: result.socialCopy || null,
-        });
-      } else {
-        await storage.incrementSessionPrompts(sessionId);
-      }
+      await storage.incrementUserPrompts(user.id);
+      await storage.createOptimization({
+        userId: user.id,
+        originalPrompt: prompt,
+        improvedPrompt: result.improvedPrompt || prompt,
+        category: type,
+        improvements: [
+          result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
+          result.analysis?.target_group ? "Målgrupp: " + result.analysis.target_group : null,
+          result.analysis?.area_advantage ? "Område: " + result.analysis.area_advantage : null,
+          result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
+          result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
+        ].filter(Boolean) as string[],
+        suggestions: result.pro_tips || [],
+        socialCopy: result.socialCopy || null,
+      });
 
       res.json({
         originalPrompt: prompt,

@@ -23,9 +23,6 @@ export interface IStorage {
   // Usage methods
   incrementUserPrompts(userId: string): Promise<void>;
   resetUserPromptsIfNewDay(user: User): Promise<User>;
-  // Session usage methods (for anonymous users)
-  getSessionUsage(sessionId: string): Promise<{ promptsUsedToday: number }>;
-  incrementSessionPrompts(sessionId: string): Promise<void>;
   // Subscription methods
   upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
@@ -115,11 +112,16 @@ export class DatabaseStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
     const lastReset = user.lastResetDate ? String(user.lastResetDate) : '';
 
-    if (lastReset !== today) {
+    // For all users, reset monthly (30 days after creation or last reset)
+    const createdAt = new Date(user.createdAt || user.lastResetDate || today);
+    const thirtyDaysLater = new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const resetDate = thirtyDaysLater.toISOString().split('T')[0];
+    
+    if (lastReset !== resetDate && new Date() >= thirtyDaysLater) {
       const [updated] = await db.update(users)
         .set({ 
           promptsUsedToday: 0, 
-          lastResetDate: today 
+          lastResetDate: resetDate 
         })
         .where(eq(users.id, user.id))
         .returning();
@@ -203,46 +205,6 @@ export class DatabaseStorage implements IStorage {
   async deleteAllOptimizations(userId: string): Promise<void> {
     await db.delete(optimizations)
       .where(eq(optimizations.userId, userId));
-  }
-
-  async getSessionUsage(sessionId: string): Promise<{ promptsUsedToday: number }> {
-    const today = new Date().toISOString().split('T')[0];
-    const result = await db.select().from(sessionUsage).where(eq(sessionUsage.sessionId, sessionId));
-
-    if (!result[0]) {
-      return { promptsUsedToday: 0 };
-    }
-
-    let lastReset = '';
-    if (result[0].lastResetDate) {
-      lastReset = String(result[0].lastResetDate).split('T')[0];
-    }
-
-    if (lastReset !== today) {
-      await db.update(sessionUsage)
-        .set({ promptsUsedToday: 0, lastResetDate: today })
-        .where(eq(sessionUsage.sessionId, sessionId));
-      return { promptsUsedToday: 0 };
-    }
-
-    return { promptsUsedToday: result[0].promptsUsedToday };
-  }
-
-  async incrementSessionPrompts(sessionId: string): Promise<void> {
-    const today = new Date().toISOString().split('T')[0];
-    const result = await db.select().from(sessionUsage).where(eq(sessionUsage.sessionId, sessionId));
-
-    if (!result[0]) {
-      await db.insert(sessionUsage).values({
-        sessionId,
-        promptsUsedToday: 1,
-        lastResetDate: today,
-      });
-    } else {
-      await db.update(sessionUsage)
-        .set({ promptsUsedToday: sql`${sessionUsage.promptsUsedToday} + 1` })
-        .where(eq(sessionUsage.sessionId, sessionId));
-    }
   }
 
   async updateUserProfile(userId: string, data: { displayName?: string; avatarColor?: string }): Promise<User | null> {
