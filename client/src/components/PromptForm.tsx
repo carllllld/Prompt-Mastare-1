@@ -338,10 +338,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="stor">Stor balkong</SelectItem>
                       <SelectItem value="inglasad">Inglasad balkong</SelectItem>
                       <SelectItem value="terrass">Terrass</SelectItem>
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -373,10 +371,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="ost">Öst (morgonsol)</SelectItem>
                       <SelectItem value="norr">Norr (skuggigt)</SelectItem>
                       <SelectItem value="genom">Genomgående (flera)</SelectItem>
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -387,7 +383,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -396,7 +391,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -424,10 +418,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -438,7 +430,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -447,7 +438,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -472,10 +462,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -486,7 +474,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -495,7 +482,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -534,10 +520,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="sekelskifte">Sekelskifte (1900-1930)</SelectItem>
                       <SelectItem value="1800s">1800-tal</SelectItem>
                       <SelectItem value="karaktar">KaraktÃ¤rsfastighet</SelectItem>
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -562,10 +546,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -576,7 +558,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -585,7 +566,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -613,10 +593,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -627,7 +605,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -636,7 +613,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -661,10 +637,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -675,7 +649,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -684,7 +657,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -712,10 +684,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -726,7 +696,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -735,7 +704,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -760,10 +728,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -774,7 +740,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -783,7 +748,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -811,10 +775,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -825,7 +787,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -834,7 +795,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -859,10 +819,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -873,7 +831,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -882,7 +839,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -910,10 +866,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -924,7 +878,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -933,7 +886,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -958,10 +910,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
                     </SelectContent>
                   </Select>
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -972,7 +922,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   )}
                 </FormItem>
               )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
@@ -981,7 +930,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       />
                     </FormControl>
                   )}
-                  {field.value === "annat" && (
                     <FormControl>
                       <Input 
                         {...field} 
