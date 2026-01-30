@@ -356,7 +356,37 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="balconyDirection".*?</Select>
+              name="balconyDirection" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs flex items-center gap-1">
+                    <Wind className="w-3 h-3" /> Väderstreck
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="soder">Söder (soligt)</SelectItem>
+                      <SelectItem value="vast">Väst (kvällssol)</SelectItem>
+                      <SelectItem value="ost">Öst (morgonsol)</SelectItem>
+                      <SelectItem value="norr">Norr (skuggigt)</SelectItem>
+                      <SelectItem value="genom">Genomgående (flera)</SelectItem>
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in väderstreck..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -384,7 +414,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="renovation".*?</Select>
+              name="renovation" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Renovering</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in renovering..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -409,7 +462,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="condition".*?</Select>
+              name="condition" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">condition</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in condition..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -476,7 +552,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="energyClass".*?</Select>
+              name="energyClass" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">energyClass</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in energyClass..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -504,7 +603,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="floorType".*?</Select>
+              name="floorType" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">floorType</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in floorType..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -529,7 +651,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="windows".*?</Select>
+              name="windows" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">windows</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in windows..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -557,7 +702,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="kitchenType".*?</Select>
+              name="kitchenType" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">kitchenType</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in kitchenType..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -582,7 +750,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="bathroomType".*?</Select>
+              name="bathroomType" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">bathroomType</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in bathroomType..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -610,7 +801,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="view".*?</Select>
+              name="view" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">view</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in view..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -635,7 +849,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="neighborhood".*?</Select>
+              name="neighborhood" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">neighborhood</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in neighborhood..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -663,7 +900,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="transport".*?</Select>
+              name="transport" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">transport</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in transport..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -688,7 +948,30 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
             <FormField
               control={form.control}
-              name="association".*?</Select>
+              name="association" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">association</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="annat">Annan (skriv in)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {field.value === "annat" && (
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        className="!bg-white !text-black border-slate-300 h-10 mt-2" 
+                        placeholder="Skriv in association..."
+                      />
+                    </FormControl>
+                  )}
+                </FormItem>
+              )}
                   {field.value === "annat" && (
                     <FormControl>
                       <Input 
@@ -894,6 +1177,9 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
     </Form>
   );
 }
+
+
+
 
 
 
