@@ -164,10 +164,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               <FormItem>
                 <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5" /> Adress
-                </FormLabel>
-
+                <FormControl>
+                  <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. Riddargatan 12' />
+                </FormControl>
               </FormItem>
-            )}
           <FormField
             control={form.control}
             name="size"
@@ -178,10 +178,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 </FormLabel>
 
               </FormItem>
-            )}
-        </div>
-
-        {/* PRIS */}
+                <FormControl>
+                  <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 65' />
+                </FormControl>
+              </FormItem>
         <FormField
           control={form.control}
           name="price"
