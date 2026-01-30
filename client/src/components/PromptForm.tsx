@@ -165,7 +165,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
                   <MapPin className="w-3.5 h-3.5" /> Adress
                 </FormLabel>
-                </FormControl>
+
               </FormItem>
             )}
           <FormField
@@ -176,7 +176,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
                   <Maximize className="w-3.5 h-3.5" /> Boarea (kvm)
                 </FormLabel>
-                </FormControl>
+
               </FormItem>
             )}
         </div>
@@ -190,7 +190,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
                 <DollarSign className="w-3.5 h-3.5" /> Pris (kr)
               </FormLabel>
-              </FormControl>
+
               <p className="text-[11px] text-slate-400 italic leading-snug mt-1">
                 * Priset anv√§nds av AI:n f√∂r att v√§lja r√§tt ton och stil (STANDARD/PREMIUM/EXKLUSIVT), √§ven om det d√∂ljs i Hemnet-l√§get.
               </p>
@@ -205,7 +205,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Antal rum</FormLabel>
-                </FormControl>
+
               </FormItem>
             )}
 
@@ -217,7 +217,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Avgift (kr/m√•n)</FormLabel>
-                    </FormControl>
+
                   </FormItem>
                 )}
               <FormField
@@ -226,7 +226,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="!text-slate-700 font-bold text-xs uppercase">V√•ning</FormLabel>
-                    </FormControl>
+
                   </FormItem>
                 )}
             </>
@@ -239,7 +239,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <FormLabel className="!text-slate-700 font-bold text-xs uppercase flex items-center gap-1">
                     <Trees className="w-3 h-3" /> Tomtarea (kvm)
                   </FormLabel>
-                  </FormControl>
+
                 </FormItem>
               )}
           )}
@@ -308,7 +308,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V√§lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="inga">Ingen balkong</SelectItem>
                       <SelectItem value="vanlig">Vanlig balkong</SelectItem>
@@ -317,7 +317,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="terrass">Terrass</SelectItem>
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -333,7 +333,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="soder">Sˆder (soligt)</SelectItem>
                       <SelectItem value="vast">V‰st (kv‰llssol)</SelectItem>
@@ -342,13 +342,13 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="genom">GenomgÂende (flera)</SelectItem>
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -365,17 +365,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -389,17 +389,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -417,7 +417,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V√§lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="nybyggd">Nybyggd (2020+)</SelectItem>
                       <SelectItem value="2000s">2000-tal</SelectItem>
@@ -431,7 +431,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="karaktar">Karakt√§rsfastighet</SelectItem>
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -445,17 +445,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -472,17 +472,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -496,17 +496,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -523,17 +523,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -547,17 +547,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -574,17 +574,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -598,17 +598,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -625,17 +625,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -649,17 +649,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
-                    </FormControl>
+
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
-                    </FormControl>
+
                   )}
-                    </FormControl>
+
                   )}
                 </FormItem>
               )}
@@ -678,7 +678,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">Hiss</FormLabel>
                   </FormItem>
                 )}
@@ -691,7 +691,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">√ñppen spis</FormLabel>
                   </FormItem>
                 )}
@@ -704,7 +704,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">Golvv√§rme</FormLabel>
                   </FormItem>
                 )}
@@ -717,7 +717,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">Balkong i v√§st</FormLabel>
                   </FormItem>
                 )}
@@ -730,7 +730,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">Originaldetaljer</FormLabel>
                   </FormItem>
                 )}
@@ -743,7 +743,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">Takh√∂jd &gt;3m</FormLabel>
                   </FormItem>
                 )}
@@ -756,7 +756,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">G√§stl√§genhet</FormLabel>
                   </FormItem>
                 )}
@@ -769,7 +769,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-                    </FormControl>
+
                     <FormLabel className="text-xs font-normal !text-black">Fiber</FormLabel>
                   </FormItem>
                 )}
@@ -791,7 +791,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 ‚Ä¢ Speciella material (marmor, ekparkett, designk√∂k)
 ‚Ä¢ Egna observationer (s√§rskild utsikt, unika l√∂sningar)
 ‚Ä¢ N√§romr√•de (tunnelbana, skola, park, kommunikation)`} 
-                </FormControl>
+
                 <p className="text-[11px] text-slate-400 italic mt-2">
                   De flesta detaljer √§r redan ifyllda via kolumnerna ovan!
                 </p>
