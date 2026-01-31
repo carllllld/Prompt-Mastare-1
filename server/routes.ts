@@ -407,144 +407,113 @@ Rådata innehåller vanligtvis: adress, typ, kvm, rum, våning, balkong, materia
 }
 `;
 
-// Steg 2: Skriv final text baserat på disposition
+// Steg 2: Skapa plan/checklista som steg 3 måste följa
+const PLAN_PROMPT = `
+# UPPGIFT
 
-// --- HEMNET FORMAT (professionell svensk mäklarstandard) ---
-const HEMNET_TEXT_PROMPT = `
-# DU ÄR EN ERFAREN SVENSK FASTIGHETSMÄKLARE
-
-Du har 15+ års erfarenhet av att skriva objektbeskrivningar som säljer. Du vet exakt vad köpare letar efter och hur man presenterar en bostad professionellt. Dina texter är:
-- Juridiskt korrekta enligt Fastighetsmäklarlagen
-- Informativa med ALL nödvändig fakta
-- Säljande utan att vara överdrivna eller vilseledande
-- Skrivna på korrekt, professionell svenska
-
-# JURIDISKA KRAV (OBLIGATORISKT)
-
-1. **ALDRIG VILSELEDANDE:** Överdriva inte egenskaper. "Stor balkong" endast om den faktiskt är stor (>6 kvm)
-2. **KORREKT TERMINOLOGI:** Använd rätt mäklartermer (boarea, biarea, avgift, etc.)
-3. **INGA GARANTIER:** Skriv aldrig "garanterat", "säkert", "alltid" om framtida värden
-4. **FAKTABASERAT:** Alla påståenden måste kunna styrkas av dispositionen
-5. **BALANSERAT:** Nämn både fördelar och eventuella nackdelar (t.ex. renoveringsbehov) ärligt
+Du ska skapa en tydlig plan för objektbeskrivningen utifrån DISPOSITIONEN.
+Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som steg 3 kan följa utan att behöva en lång regelprompt.
 
 # KRITISKA REGLER
 
-1. BÖRJA ALDRIG MED "Välkommen" – börja med adress, läge eller bostadens karaktär
-2. SKRIV ALDRIG: erbjuder, perfekt, idealisk, fantastisk, underbar, magisk, drömboende, unik möjlighet
-3. DELA UPP I 5-7 STYCKEN med \\n\\n mellan varje
-4. 350-500 ORD – professionellt och informativt
-5. HITTA ALDRIG PÅ – använd ENDAST fakta från dispositionen
-
-# OBLIGATORISK INFORMATION (inkludera ALLTID om tillgängligt)
-
-**GRUNDFAKTA (första stycket):**
-- Bostadstyp och storlek (kvm)
-- Antal rum
-- Våningsplan och hiss (om lägenhet)
-- Byggår eller epok
-- Adress/läge
-
-**BOSTADENS EGENSKAPER:**
-- Planlösning (genomgående, hörnlägenhet, etc.)
-- Ljusförhållanden och väderstreck
-- Golvmaterial
-- Kök (typ, utrustning, renoveringsår)
-- Badrum (antal, standard, renoveringsår)
-- Balkong/uteplats (storlek, väderstreck)
-- Förvaring (garderober, förråd)
-
-**SKICK OCH RENOVERINGAR:**
-- Generellt skick
-- Genomförda renoveringar med årtal
-- Eventuellt renoveringsbehov (var ärlig)
-
-**FÖRENING (bostadsrätt):**
-- Föreningens namn
-- Månadsavgift
-- Vad som ingår i avgiften
-- Föreningens ekonomi (om känd)
-- Planerade renoveringar
-
-**LÄGE OCH KOMMUNIKATIONER:**
-- Närområde med konkreta avstånd
-- Kollektivtrafik med gångtid
-- Service (matbutik, skola, etc.)
-- Områdets karaktär
-
-# STRUKTUR FÖR PROFESSIONELL OBJEKTBESKRIVNING
-
-**STYCKE 1 - INTRODUKTION:**
-Kort, slagkraftig presentation med grundfakta. Adress, typ, storlek, våning, byggår.
-
-**STYCKE 2 - PLANLÖSNING & LJUS:**
-Beskriv hur bostaden är disponerad. Ljusinsläpp, väderstreck, rumskänsla.
-
-**STYCKE 3 - RUM FÖR RUM:**
-Gå igenom de viktigaste rummen: vardagsrum, kök, sovrum, badrum. Nämn material och standard.
-
-**STYCKE 4 - BALKONG/UTEPLATS:**
-Om balkong finns: storlek, väderstreck, utsikt. Beskriv hur den kan användas.
-
-**STYCKE 5 - SKICK & RENOVERINGAR:**
-Vad som är renoverat och när. Var ärlig om eventuellt renoveringsbehov.
-
-**STYCKE 6 - FÖRENING & EKONOMI (bostadsrätt):**
-Avgift, vad som ingår, föreningens status. Gemensamma utrymmen.
-
-**STYCKE 7 - LÄGE & KOMMUNIKATIONER:**
-Närområde, kollektivtrafik, service. Avsluta med varför detta läge är bra.
-
-# SKRIVSTIL - PROFESSIONELL SVENSK MÄKLARE
-
-- **Saklig men engagerande** – inte torr, inte överdriven
-- **Konkreta fakta** – "3-glasfönster från 2021" istället för "fina fönster"
-- **Naturlig svenska** – undvik mäklarklyschor och AI-fraser
-- **Aktiv röst** – "Köket har" istället för "I köket finns"
-- **Variera meningslängd** – blanda korta och längre meningar
-- **Undvik upprepning** – varje detalj nämns endast en gång
-
-# FÖRBJUDNA FRASER (använd ALDRIG)
-
-- "Välkommen till/hem till"
-- "Här erbjuds/finns möjlighet"
-- "Perfekt för den som"
-- "Fantastisk/underbar/magisk"
-- "Unik möjlighet/chans"
-- "Missa inte"
-- "Drömboende/drömlägenhet"
-- "Hjärtat i hemmet"
-- "Inom räckhåll"
-- "Attraktivt läge"
-
-# EXEMPEL - PROFESSIONELL OBJEKTBESKRIVNING
-
-"På Karlavägen 45, i en välbevarad 1920-talsfastighet med hiss, ligger denna ljusa tvåa om 58 kvm på fjärde våningen. Lägenheten har genomgående planlösning med fönster åt både gata och gård.
-
-Vardagsrummet vetter mot den lugna innergården och har bevarade originaldetaljer som stuckatur och höga golvsocklar. Parkettgolv i ek löper genom hela bostaden. De stora fönstren i söderläge ger gott om naturligt ljus under större delen av dagen.
-
-Köket renoverades 2022 och har nu vita luckor, bänkskiva i komposit och integrerade vitvaror från Siemens. Matplats finns vid fönstret mot gården. Badrummet är helkaklat med dusch och tvättmaskin, renoverat 2020 med golvvärme.
-
-Balkongen på 6 kvm i västerläge nås från vardagsrummet och ger kvällssol från eftermiddagen. Här finns plats för både sittgrupp och växter.
-
-Lägenheten är i gott skick överlag. Sovrummet skulle kunna fräschas upp med ny målning.
-
-Föreningen BRF Karlahem bildades 1985 och har god ekonomi med låg belåning. Månadsavgiften på 4 200 kr inkluderar värme, vatten och kabel-TV. Stambytet genomfördes 2019. I fastigheten finns tvättstuga och cykelrum.
-
-Läget vid Karlaplan ger närhet till tunnelbana (3 min), Östermalms saluhall (10 min promenad) och Humlegården. ICA och apotek finns inom 200 meter."
+1. HITTA ALDRIG PÅ – använd bara fakta som finns i dispositionen
+2. Om fakta saknas: skriv in det i missing_info (och planera inte in det i texten)
+3. Håll planen kort, konkret och kontrollerbar
+4. Anpassa ordantal och upplägg efter PLATTFORM (HEMNET eller BOOLI/EGEN SIDA)
 
 # OUTPUT FORMAT (JSON)
 
 {
-  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3", "✓ Punkt 4", "✓ Punkt 5"],
-  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
+  "platform": "hemnet" | "booli",
+  "tone": "professionell svensk mäklare, saklig och engagerande",
+  "word_target": {
+    "min": 0,
+    "max": 0
+  },
+  "paragraph_outline": [
+    {
+      "id": "p1",
+      "goal": "Vad stycket ska uppnå",
+      "must_include": ["exakta faktapunkter som MÅSTE med om de finns"],
+      "do_not_include": ["fakta som inte ska vara här"],
+      "allowed_flair": "max 1 kort känslodetalj, men endast om den stöds av fakta"
+    }
+  ],
+  "must_include_global": ["lista med obligatoriska fakta över hela texten"],
+  "forbidden_words": ["ord/fraser som absolut inte får användas"],
+  "claims": [
+    {
+      "claim": "kort påstående som får förekomma i text",
+      "evidence_path": "JSONPath-liknande sökväg i dispositionen, t.ex. property.size",
+      "evidence_value": "värdet från dispositionen"
+    }
+  ],
+  "missing_info": ["fakta som saknas men som normalt behövs för komplett annons"],
+  "risk_notes": ["varningar: överdrifter, oklara uppgifter, juridiska risker"]
+}
+`;
+
+// Steg 2: Skriv final text baserat på disposition
+
+// --- HEMNET FORMAT: steg 3 (skrivare) ---
+const HEMNET_TEXT_PROMPT = `
+# UPPGIFT
+
+Skriv objektbeskrivningen för HEMNET baserat på DISPOSITION och PLAN.
+
+# KRITISKA REGLER
+
+1. Följ PLANENS paragraph_outline exakt (ordning, vad som måste med per stycke)
+2. Använd bara fakta som finns i DISPOSITIONEN
+3. Använd INTE ord/fraser i PLAN.forbidden_words
+4. Håll dig inom PLAN.word_target
+5. Om något saknas i dispositionen: skriv inte om det (lägg istället i missing_info i output)
+6. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "highlights": ["✓ ..."],
+  "improvedPrompt": "Text med stycken separerade av \\n\\n",
   "analysis": {
-    "target_group": "Vem passar bostaden för",
-    "area_advantage": "Områdets styrkor",
-    "pricing_factors": "Prishöjande faktorer"
+    "target_group": "...",
+    "area_advantage": "...",
+    "pricing_factors": "..."
   },
   "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
-  "missing_info": ["Info som saknas i rådata för komplett beskrivning"],
-  "pro_tips": ["Tips till mäklaren för att förbättra annonsen"]
+  "missing_info": ["Info som saknas i rådata"],
+  "pro_tips": ["Tips till mäklaren"]
+}
+`;
+
+// --- BOOLI/EGEN SIDA: steg 3 (skrivare) ---
+const BOOLI_TEXT_PROMPT_WRITER = `
+# UPPGIFT
+
+Skriv objektbeskrivningen för BOOLI/EGEN SIDA baserat på DISPOSITION och PLAN.
+
+# KRITISKA REGLER
+
+1. Följ PLANENS paragraph_outline exakt (ordning, vad som måste med per stycke)
+2. Använd bara fakta som finns i DISPOSITIONEN
+3. Använd INTE ord/fraser i PLAN.forbidden_words
+4. Håll dig inom PLAN.word_target
+5. Om något saknas i dispositionen: skriv inte om det (lägg istället i missing_info i output)
+6. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "highlights": ["✓ ..."],
+  "improvedPrompt": "Text med stycken separerade av \\n\\n",
+  "analysis": {
+    "target_group": "...",
+    "area_advantage": "...",
+    "pricing_factors": "..."
+  },
+  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
+  "missing_info": ["Info som saknas i rådata"],
+  "pro_tips": ["Tips till mäklaren"]
 }
 `;
 
@@ -944,12 +913,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const disposition = JSON.parse(extractFirstJsonObject(dispositionText));
       console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
 
-      // Steg 2: Skriv final text baserat på disposition
-      console.log("[Step 2] Writing final text based on disposition...");
-      
+      // Steg 2: Skapa plan/checklista
+      console.log("[Step 2] Creating plan/checklist...");
+
+      const planMessages = [
+        {
+          role: "system" as const,
+          content: PLAN_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content:
+            "DISPOSITION: " +
+            JSON.stringify(disposition, null, 2) +
+            "\n\nPLATTFORM: " +
+            (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
+        },
+      ];
+
+      const planCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: planMessages,
+        max_tokens: 1400,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+      });
+
+      const planText = planCompletion.choices[0]?.message?.content || "{}";
+      const generationPlan = JSON.parse(extractFirstJsonObject(planText));
+      console.log("[Step 2] Plan created:", JSON.stringify(generationPlan, null, 2));
+
+      // Steg 3: Skriv final text baserat på disposition + plan
+      console.log("[Step 3] Writing final text based on disposition + plan...");
+
       // Välj rätt prompt baserat på plattform
-      const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT;
-      console.log("[Step 2] Using " + platform.toUpperCase() + " prompt...");
+      const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
+      console.log("[Step 3] Using " + platform.toUpperCase() + " writer prompt...");
       
       const textMessages = [
         {
@@ -958,7 +957,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         },
         {
           role: "user" as const,
-          content: "DISPOSITION: " + JSON.stringify(disposition, null, 2) + "\n\nPLATTFORM: " + (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
+          content:
+            "DISPOSITION: " +
+            JSON.stringify(disposition, null, 2) +
+            "\n\nPLAN: " +
+            JSON.stringify(generationPlan, null, 2) +
+            "\n\nPLATTFORM: " +
+            (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
         },
       ];
 
