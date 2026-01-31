@@ -181,7 +181,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <FormControl>
                   <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 65' />
                 </FormControl>
-              </FormItem>
+            )}
         <FormField
           control={form.control}
           name="price"
