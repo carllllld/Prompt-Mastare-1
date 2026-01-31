@@ -163,11 +163,14 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
-              <FormItem>
+                  <MapPin className="w-3.5 h-3.5" /> Adress
+                </FormLabel>
                 <FormControl>
-                  <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. Riddargatan 12' />
+                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. Riddargatan 12" />
                 </FormControl>
               </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="size"
@@ -176,12 +179,15 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
                   <Maximize className="w-3.5 h-3.5" /> Boarea (kvm)
                 </FormLabel>
-
-
                 <FormControl>
-                  <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 65' />
+                  <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. 65" />
                 </FormControl>
               </FormItem>
+            )}
+          />
+        </div>
+
+        {/* PRIS */}
         <FormField
           control={form.control}
           name="price"
@@ -190,12 +196,15 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
                 <DollarSign className="w-3.5 h-3.5" /> Pris (kr)
               </FormLabel>
-
               <FormControl>
-                <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 4 500 000' />
+                <Input {...field} className="!bg-white !text-black border-slate-300 h-12" placeholder="t.ex. 4 500 000" />
               </FormControl>
+              <p className="text-[11px] text-slate-400 italic leading-snug mt-1">
+                * Priset används av AI:n för att välja rätt ton och stil (STANDARD/PREMIUM/EXKLUSIVT), även om det döljs i Hemnet-läget.
+              </p>
             </FormItem>
           )}
+        />
 
         {/* SPECIFIKA FÄLT */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -204,10 +213,13 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             name="rooms"
             render={({ field }) => (
               <FormItem>
+                <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Antal rum</FormLabel>
                 <FormControl>
-                  <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 3' />
+                  <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="2.5" />
                 </FormControl>
               </FormItem>
+            )}
+          />
 
           {propertyType === "apartment" ? (
             <>
@@ -217,18 +229,24 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Avgift (kr/mån)</FormLabel>
-
+                    <FormControl>
+                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="4 200" />
+                    </FormControl>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="floor"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Våning</FormLabel>
-
+                    <FormControl>
+                      <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="3 av 5" />
+                    </FormControl>
                   </FormItem>
                 )}
+              />
             </>
           ) : (
             <FormField
@@ -239,9 +257,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <FormLabel className="!text-slate-700 font-bold text-xs uppercase flex items-center gap-1">
                     <Trees className="w-3 h-3" /> Tomtarea (kvm)
                   </FormLabel>
-
+                  <FormControl>
+                    <Input {...field} className="!bg-white !text-black border-slate-300 h-11" placeholder="t.ex. 1200" />
+                  </FormControl>
                 </FormItem>
               )}
+            />
           )}
         </div>
 
@@ -287,6 +308,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               </p>
             </FormItem>
           )}
+        />
 
         {/* SMARTA KOLUMNER - MINIMAL INPUT */}
         <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
@@ -305,11 +327,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <Sun className="w-3 h-3" /> Balkong/Uteplats
                   </FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
-                  />
-                </FormControl>
-              </FormItem>
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="inga">Ingen balkong</SelectItem>
                       <SelectItem value="vanlig">Vanlig balkong</SelectItem>
                       <SelectItem value="stor">Stor balkong</SelectItem>
@@ -317,23 +340,24 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="terrass">Terrass</SelectItem>
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
+            />
 
             <FormField
               control={form.control}
               name="balconyDirection" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs flex items-center gap-1">
+                    <Wind className="w-3 h-3" /> V�derstreck
                   </FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="soder">S�der (soligt)</SelectItem>
                       <SelectItem value="vast">V�st (kv�llssol)</SelectItem>
@@ -342,16 +366,13 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="genom">Genomg�ende (flera)</SelectItem>
                     </SelectContent>
                   </Select>
-
-                    </SelectContent>
-                  </Select>
-                  </FormControl>
-                </FormItem>
-                  )}
-
                   )}
                 </FormItem>
               )}
+                  )}
+                  )}
+              )}
+            />
           </div>
 
           {/* RAD 2: RENOVERING & SKICK */}
@@ -361,48 +382,44 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="renovation" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">Renovering</FormLabel>
-                  <FormLabel className='!text-slate-700 font-bold text-xs'>Renovering</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </SelectContent>
-                  </Select>
-                  </FormControl>
-                </FormItem>
-
-                  )}
-
                   )}
                 </FormItem>
               )}
+                  )}
+                  )}
+              )}
+            />
 
             <FormField
               control={form.control}
               name="condition" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">condition</FormLabel>
-                  <FormLabel className='!text-slate-700 font-bold text-xs'>condition</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                    </SelectContent>
-                  </Select>
-                  </FormControl>
-                </FormItem>
-
-                  )}
-
                   )}
                 </FormItem>
               )}
+                  )}
+                  )}
+              )}
+            />
           </div>
 
           {/* RAD 3: BYGGÅR & ENERGIKLASS */}
@@ -413,12 +430,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">Byggår/Epok</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="nybyggd">Nybyggd (2020+)</SelectItem>
                       <SelectItem value="2000s">2000-tal</SelectItem>
@@ -432,34 +449,32 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="karaktar">Karaktärsfastighet</SelectItem>
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
+            />
 
             <FormField
               control={form.control}
               name="energyClass" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='!text-slate-700 font-bold text-xs'>energyClass</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">energyClass</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  </FormControl>
-                </FormItem>
-                </FormItem>
-              )}
-
-                  )}
-
                   )}
                 </FormItem>
               )}
+                  )}
+                  )}
+              )}
+            />
           </div>
 
           {/* RAD 4: GOLV & FÖNSTER */}
@@ -469,50 +484,44 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="floorType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">floorType</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
 
             <FormField
               control={form.control}
               name="windows" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">windows</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
           </div>
 
           {/* RAD 5: KÖK & BADRUM */}
@@ -522,50 +531,44 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="kitchenType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">kitchenType</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
 
             <FormField
               control={form.control}
               name="bathroomType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">bathroomType</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
           </div>
 
           {/* RAD 6: UTSIKT & OMRADE */}
@@ -575,50 +578,44 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="view" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">view</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
 
             <FormField
               control={form.control}
               name="neighborhood" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">neighborhood</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
           </div>
 
           {/* RAD 7: TRANSPORT & FÖRENING */}
@@ -628,50 +625,44 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="transport" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">transport</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
 
             <FormField
               control={form.control}
               name="association" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">association</FormLabel>
-                  <FormControl>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V�lj..." />
                       </SelectTrigger>
-
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
                   )}
                 </FormItem>
               )}
-
                   )}
-
                   )}
-                </FormItem>
               )}
+            />
           </div>
 
           {/* RAD 8: SPECIAL FEATURES - CHECKBOXES */}
@@ -683,105 +674,129 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 name="hasElevator"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="mt-1"
-
-                    <FormLabel className="text-xs font-normal !text-black">Hiss</FormLabel>
                     <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        className='mt-1'
+                        className="mt-1"
                       />
                     </FormControl>
+                    <FormLabel className="text-xs font-normal !text-black">Hiss</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fireplace"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Öppen spis</FormLabel>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="floorHeating"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Golvvärme</FormLabel>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="balconyWest"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Balkong i väst</FormLabel>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="originalDetails"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Originaldetaljer</FormLabel>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="highCeiling"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Takhöjd &gt;3m</FormLabel>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="guestApartment"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Gästlägenhet</FormLabel>
                   </FormItem>
                 )}
+              />
               <FormField
                 control={form.control}
                 name="fiber"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                         className="mt-1"
-
+                      />
+                    </FormControl>
                     <FormLabel className="text-xs font-normal !text-black">Fiber</FormLabel>
                   </FormItem>
                 )}
+              />
             </div>
           </div>
 
@@ -789,10 +804,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <FormField
             control={form.control}
             name="features"
-                <FormLabel className='!text-slate-700 font-bold'>�vrig info (frivilligt)</FormLabel>
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="!text-slate-700 font-bold">Övrig info (frivilligt)</FormLabel>
                 <FormControl>
-                  <Textarea
                   <Textarea 
+                    {...field} 
                     className="!bg-white !text-black border-slate-300 min-h-[80px] leading-relaxed focus:border-indigo-500 transition-all placeholder:text-slate-500" 
                     placeholder={`Använd dropdowns ovan för vanliga detaljer. Skriv bara här om något saknas:
 
@@ -800,12 +817,14 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 • Speciella material (marmor, ekparkett, designkök)
 • Egna observationer (särskild utsikt, unika lösningar)
 • Närområde (tunnelbana, skola, park, kommunikation)`} 
-
+                  />
+                </FormControl>
                 <p className="text-[11px] text-slate-400 italic mt-2">
                   De flesta detaljer är redan ifyllda via kolumnerna ovan!
                 </p>
               </FormItem>
             )}
+          />
 
         <Button
           type="submit"
