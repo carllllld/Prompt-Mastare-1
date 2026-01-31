@@ -775,6 +775,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               </FormItem>
             )}
           />
+        </div>
 
         <Button
           type="submit"
