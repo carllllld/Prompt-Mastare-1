@@ -419,6 +419,8 @@ Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som st
 2. Om fakta saknas: skriv in det i missing_info (och planera inte in det i texten)
 3. Håll planen kort, konkret och kontrollerbar
 4. Anpassa ordantal och upplägg efter PLATTFORM (HEMNET eller BOOLI/EGEN SIDA)
+5. EVIDENCE-GATE: Varje sakpåstående som får förekomma i texten MÅSTE finnas som en post i claims med evidence_path + evidence_value från dispositionen
+6. HÖGRISK-PÅSTÅENDEN: Utsikt (t.ex. havsutsikt), eldstad/öppen spis, balkongtyp (inglasad), väderstreck och kommunikationstyp (pendeltåg/tunnelbana) får bara finnas i claims om det står explicit i dispositionen
 
 # OUTPUT FORMAT (JSON)
 
@@ -467,7 +469,8 @@ Skriv objektbeskrivningen för HEMNET baserat på DISPOSITION och PLAN.
 3. Använd INTE ord/fraser i PLAN.forbidden_words
 4. Håll dig inom PLAN.word_target
 5. Om något saknas i dispositionen: skriv inte om det (lägg istället i missing_info i output)
-6. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
+6. EVIDENCE-GATE: Alla konkreta sakpåståenden (t.ex. utsikt, balkongtyp, väderstreck, eldstad, material, kommunikationer, föreningens status/åtgärder) får bara skrivas om de finns i PLAN.claims. Om det inte finns i PLAN.claims: skriv det inte alls.
+7. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
 
 # OUTPUT FORMAT (JSON)
 
@@ -498,7 +501,8 @@ Skriv objektbeskrivningen för BOOLI/EGEN SIDA baserat på DISPOSITION och PLAN.
 3. Använd INTE ord/fraser i PLAN.forbidden_words
 4. Håll dig inom PLAN.word_target
 5. Om något saknas i dispositionen: skriv inte om det (lägg istället i missing_info i output)
-6. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
+6. EVIDENCE-GATE: Alla konkreta sakpåståenden (t.ex. utsikt, balkongtyp, väderstreck, eldstad, material, kommunikationer, föreningens status/åtgärder) får bara skrivas om de finns i PLAN.claims. Om det inte finns i PLAN.claims: skriv det inte alls.
+7. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
 
 # OUTPUT FORMAT (JSON)
 
