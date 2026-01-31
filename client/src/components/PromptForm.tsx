@@ -181,7 +181,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <FormControl>
                   <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 65' />
                 </FormControl>
-            )}
+              </FormItem>
         <FormField
           control={form.control}
           name="price"
@@ -191,9 +191,9 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <DollarSign className="w-3.5 h-3.5" /> Pris (kr)
               </FormLabel>
 
-              <p className="text-[11px] text-slate-400 italic leading-snug mt-1">
-                * Priset används av AI:n för att välja rätt ton och stil (STANDARD/PREMIUM/EXKLUSIVT), även om det döljs i Hemnet-läget.
-              </p>
+              <FormControl>
+                <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 4 500 000' />
+              </FormControl>
             </FormItem>
           )}
 
@@ -204,10 +204,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             name="rooms"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="!text-slate-700 font-bold text-xs uppercase">Antal rum</FormLabel>
-
+                <FormControl>
+                  <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 3' />
+                </FormControl>
               </FormItem>
-            )}
 
           {propertyType === "apartment" ? (
             <>
