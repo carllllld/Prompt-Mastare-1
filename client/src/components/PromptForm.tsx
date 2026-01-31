@@ -680,13 +680,13 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                         className="mt-1"
 
                     <FormLabel className="text-xs font-normal !text-black">Hiss</FormLabel>
-                  </FormItem>
-                )}
-              <FormField
-                control={form.control}
-                name="fireplace"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className='mt-1'
+                      />
+                    </FormControl>
                       <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
