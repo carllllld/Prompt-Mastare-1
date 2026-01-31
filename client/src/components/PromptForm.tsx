@@ -327,9 +327,9 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="balconyDirection" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs flex items-center gap-1">
-                    <Wind className="w-3 h-3" /> Väderstreck
                   </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
@@ -343,10 +343,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     </SelectContent>
                   </Select>
 
-                  )}
+                    </SelectContent>
+                  </Select>
+                  </FormControl>
                 </FormItem>
-              )}
-
                   )}
 
                   )}
