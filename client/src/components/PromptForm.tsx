@@ -163,7 +163,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="!text-slate-700 font-bold flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5" /> Adress
+              <FormItem>
                 <FormControl>
                   <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. Riddargatan 12' />
                 </FormControl>
@@ -177,7 +177,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <Maximize className="w-3.5 h-3.5" /> Boarea (kvm)
                 </FormLabel>
 
-              </FormItem>
+
                 <FormControl>
                   <Input {...field} className='!bg-white !text-black border-slate-300 h-12' placeholder='t.ex. 65' />
                 </FormControl>
