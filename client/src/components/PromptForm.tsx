@@ -393,6 +393,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="condition" render={({ field }) => (
@@ -454,15 +455,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">Energiklass</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="A">A (Bäst)</SelectItem>
-                      <SelectItem value="B">B</SelectItem>
-                      <SelectItem value="C">C</SelectItem>
-                      <SelectItem value="D">D</SelectItem>
-                      <SelectItem value="E">E</SelectItem>
-                      <SelectItem value="F">F</SelectItem>
-                      <SelectItem value="G">G (Sämst)</SelectItem>
-                    </SelectContent>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
@@ -482,15 +476,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           </div>
 
           {/* RAD 4: GOLV & FÃ–NSTER */}
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="parkett">Parkett</SelectItem>
-                      <SelectItem value="ekparkett">Ekparkett</SelectItem>
-                      <SelectItem value="laminat">Laminat</SelectItem>
-                      <SelectItem value="klinker">Klinker</SelectItem>
-                      <SelectItem value="sten">Sten/Marmor</SelectItem>
-                      <SelectItem value="tra">Trägolv</SelectItem>
-                      <SelectItem value="vinyl">Vinyl</SelectItem>
-                    </SelectContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
               control={form.control}
               name="floorType" render={({ field }) => (
                 <FormItem>
@@ -500,13 +487,13 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="3-glas">3-glas</SelectItem>
-                      <SelectItem value="2-glas">2-glas</SelectItem>
-                      <SelectItem value="sprojsade">Spröjsade</SelectItem>
-                      <SelectItem value="takfonster">Takfönster</SelectItem>
-                      <SelectItem value="bursprak">Burspråk</SelectItem>
-                    </SelectContent>
+                      <SelectItem value="parkett">Parkett</SelectItem>
+                      <SelectItem value="ekparkett">Ekparkett</SelectItem>
+                      <SelectItem value="laminat">Laminat</SelectItem>
+                      <SelectItem value="klinker">Klinker</SelectItem>
+                      <SelectItem value="tra">Trägolv</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -521,20 +508,14 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="oppet">Öppet kök</SelectItem>
-                      <SelectItem value="separat">Separat kök</SelectItem>
-                      <SelectItem value="kokso">Köksö</SelectItem>
-                      <SelectItem value="pentry">Pentry</SelectItem>
-                      <SelectItem value="designkok">Designkök</SelectItem>
-                    </SelectContent>
-                      <SelectItem value="kokso">Köksö</SelectItem>
-                      <SelectItem value="pentry">Pentry</SelectItem>
-                      <SelectItem value="designkok">Designkök</SelectItem>
-                    </SelectContent>
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="3-glas">3-glas</SelectItem>
+                      <SelectItem value="2-glas">2-glas</SelectItem>
+                      <SelectItem value="sprojsade">Spröjsade</SelectItem>
+                      <SelectItem value="takfonster">Takfönster</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -544,18 +525,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
 
           {/* RAD 5: KÃ–K & BADRUM */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="helkaklat">Helkaklat</SelectItem>
-                      <SelectItem value="dusch">Dusch</SelectItem>
-                      <SelectItem value="badkar">Badkar</SelectItem>
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="helkaklat">Helkaklat</SelectItem>
-                      <SelectItem value="dusch">Dusch</SelectItem>
-                      <SelectItem value="badkar">Badkar</SelectItem>
-                      <SelectItem value="tvattstuga">Tvättstuga</SelectItem>
-                      <SelectItem value="golvvarme">Med golvvärme</SelectItem>
-                    </SelectContent>
-                    </SelectContent>
+            <FormField
+              control={form.control}
               name="kitchenType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">Kökstyp</FormLabel>
@@ -566,18 +537,16 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="oppet">Öppet kök</SelectItem>
+                      <SelectItem value="separat">Separat kök</SelectItem>
+                      <SelectItem value="kokso">Köksö</SelectItem>
+                      <SelectItem value="pentry">Pentry</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
               )}
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="sjoutsikt">Sjöutsikt</SelectItem>
-                      <SelectItem value="havsutsikt">Havsutsikt</SelectItem>
-                      <SelectItem value="stadsutsikt">Stadsutsikt</SelectItem>
-                      <SelectItem value="parkutsikt">Parkutsikt</SelectItem>
-                      <SelectItem value="innergard">Innergård</SelectItem>
-                      <SelectItem value="oppen">Öppen utsikt</SelectItem>
-                    </SelectContent>
+            />
+
             <FormField
               control={form.control}
               name="bathroomType" render={({ field }) => (
@@ -588,13 +557,12 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="lugnt">Lugnt område</SelectItem>
-                      <SelectItem value="centralt">Centralt</SelectItem>
-                      <SelectItem value="familjevänligt">Familjevänligt</SelectItem>
-                      <SelectItem value="naturnara">Naturnära</SelectItem>
-                      <SelectItem value="studentomrade">Studentområde</SelectItem>
-                    </SelectContent>
+                      <SelectItem value="helkaklat">Helkaklat</SelectItem>
+                      <SelectItem value="dusch">Dusch</SelectItem>
+                      <SelectItem value="badkar">Badkar</SelectItem>
+                      <SelectItem value="tvattstuga">Tvättstuga</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -603,75 +571,53 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           </div>
 
           {/* RAD 6: UTSIKT & OMRADE */}
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="tunnelbana">Nära tunnelbana</SelectItem>
-                      <SelectItem value="pendeltag">Nära pendeltåg</SelectItem>
-                      <SelectItem value="buss">Nära buss</SelectItem>
-                      <SelectItem value="sparvagn">Nära spårvagn</SelectItem>
-                      <SelectItem value="bil">Bilberoende</SelectItem>
-                    </SelectContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
               control={form.control}
               name="view" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">Utsikt</FormLabel>
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="tunnelbana">Nära tunnelbana</SelectItem>
-                      <SelectItem value="pendeltag">Nära pendeltåg</SelectItem>
-                      <SelectItem value="buss">Nära buss</SelectItem>
-                      <SelectItem value="sparvagn">Nära spårvagn</SelectItem>
-                      <SelectItem value="bil">Bilberoende</SelectItem>
-                    </SelectContent>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="valskott">Välskött förening</SelectItem>
-                      <SelectItem value="nybildad">Nybildad förening</SelectItem>
-                      <SelectItem value="stor">Stor förening</SelectItem>
-                      <SelectItem value="liten">Liten förening</SelectItem>
-                      <SelectItem value="lag-avgift">Låg avgift</SelectItem>
-                    </SelectContent>
-                </FormItem>
-              )}
-            />
-
-                    <SelectContent position="popper" className="!bg-white !text-black">
-                      <SelectItem value="valskott">Välskött förening</SelectItem>
-                      <SelectItem value="nybildad">Nybildad förening</SelectItem>
-                      <SelectItem value="stor">Stor förening</SelectItem>
-                      <SelectItem value="liten">Liten förening</SelectItem>
-                      <SelectItem value="lag-avgift">Låg avgift</SelectItem>
-                    </SelectContent>
-              name="neighborhood" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="!text-slate-700 font-bold text-xs">Område</FormLabel>
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="sjoutsikt">Sjöutsikt</SelectItem>
                       <SelectItem value="havsutsikt">Havsutsikt</SelectItem>
                       <SelectItem value="stadsutsikt">Stadsutsikt</SelectItem>
                       <SelectItem value="parkutsikt">Parkutsikt</SelectItem>
                       <SelectItem value="innergard">Innergård</SelectItem>
-                      <SelectItem value="oppen">Öppen utsikt</SelectItem>
-                    </SelectContent>
-                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
-                        <SelectValue placeholder="Välj..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="neighborhood" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="!text-slate-700 font-bold text-xs">Område</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                        <SelectValue placeholder="Välj..." />
+                      </SelectTrigger>
+                    </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
                       <SelectItem value="lugnt">Lugnt område</SelectItem>
                       <SelectItem value="centralt">Centralt</SelectItem>
                       <SelectItem value="familjevanligt">Familjevänligt</SelectItem>
                       <SelectItem value="naturnara">Naturnära</SelectItem>
-                      <SelectItem value="studentomrade">Studentområde</SelectItem>
                     </SelectContent>
+                  </Select>
+                </FormItem>
+              )}
+            />
+          </div>
+
           {/* RAD 7: TRANSPORT & FÃ–RENING */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -686,6 +632,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="tunnelbana">Nära tunnelbana</SelectItem>
+                      <SelectItem value="pendeltag">Nära pendeltåg</SelectItem>
+                      <SelectItem value="buss">Nära buss</SelectItem>
+                      <SelectItem value="sparvagn">Nära spårvagn</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -704,6 +654,10 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent position="popper" className="!bg-white !text-black">
+                      <SelectItem value="valskott">Välskött förening</SelectItem>
+                      <SelectItem value="nybildad">Nybildad förening</SelectItem>
+                      <SelectItem value="stor">Stor förening</SelectItem>
+                      <SelectItem value="liten">Liten förening</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormItem>
