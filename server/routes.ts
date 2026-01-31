@@ -45,14 +45,6 @@ const FORBIDDEN_PHRASES = [
   " erbjuder ",
   " erbjuds ",
   
-  // "perfekt/idealisk" i alla former
-  "perfekt plats",
-  "perfekt för",
-  "idealisk plats",
-  "idealiskt för",
-  "idealt för",
-  " bra för ",
-  
   // Atmosfär/luftig-fraser
   "trivsam atmosfär",
   "härlig atmosfär",
@@ -183,7 +175,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   }
   
   // Check for generic patterns
-  const genericPatterns = ['perfekt för', 'fantastisk läge', 'renoverat med hög standard', 'attraktivt', 'idealisk'];
+  const genericPatterns = ['fantastisk läge', 'renoverat med hög standard', 'attraktivt', 'idealisk'];
   for (const pattern of genericPatterns) {
     if (text.toLowerCase().includes(pattern)) {
       violations.push(`Generiskt mönster: "${pattern}"`);
@@ -228,14 +220,6 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   // Erbjuder-varianter
   [" erbjuder ", " har "],
   [" erbjuds ", " finns "],
-  
-  // Perfekt/idealisk-varianter
-  ["perfekt plats för", "bra för"],
-  ["perfekt för", "bra för"],
-  ["idealisk plats för", "bra för"],
-  ["idealiskt för", "bra för"],
-  ["idealt för", "bra för"],
-  [" bra för ", " "],
   
   // Luftig/atmosfär
   ["luftig och inbjudande atmosfär", "generös rumskänsla"],
