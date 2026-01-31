@@ -413,7 +413,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">Bygg√•r/Epok</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V√§lj..." />
                       </SelectTrigger>
@@ -468,7 +469,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="floorType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">floorType</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -492,7 +494,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="windows" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">windows</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -519,7 +522,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="kitchenType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">kitchenType</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -543,7 +547,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="bathroomType" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">bathroomType</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -570,7 +575,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="view" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">view</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -594,7 +600,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="neighborhood" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">neighborhood</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -621,7 +628,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="transport" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">transport</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
@@ -645,7 +653,8 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               name="association" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="!text-slate-700 font-bold text-xs">association</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="V‰lj..." />
                       </SelectTrigger>
