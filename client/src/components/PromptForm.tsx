@@ -340,7 +340,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="terrass">Terrass</SelectItem>
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
               )}
             />
@@ -366,11 +365,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="genom">Genomgående (flera)</SelectItem>
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
@@ -391,11 +386,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
 
@@ -413,11 +404,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
@@ -449,7 +436,6 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                       <SelectItem value="karaktar">KaraktÃ¤rsfastighet</SelectItem>
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
               )}
             />
@@ -468,11 +454,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
@@ -493,11 +475,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
 
@@ -515,11 +493,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
@@ -540,11 +514,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
 
@@ -562,11 +532,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
@@ -587,11 +553,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
 
@@ -609,11 +571,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
@@ -634,11 +592,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
 
@@ -656,11 +610,7 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-                  )}
                 </FormItem>
-              )}
-                  )}
-                  )}
               )}
             />
           </div>
