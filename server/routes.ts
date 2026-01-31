@@ -40,6 +40,23 @@ const FORBIDDEN_PHRASES = [
   "kontakta oss",
   "för mer information",
   "och visning",
+  "i hjärtat av",
+  "hjärtat av",
+  "vilket gör det enkelt",
+  "vilket gör det smidigt",
+  "vilket gör det lätt",
+  "vilket ger en",
+  "ger en rymlig",
+  "ger en härlig",
+  "ger en luftig",
+  "rymlig känsla",
+  "härlig plats för",
+  "plats för avkoppling",
+  "njutning av",
+  "möjlighet att påverka",
+  "forma framtiden",
+  "för den som",
+  "vilket säkerställer",
   
   // "erbjuder" i alla former
   " erbjuder ",
@@ -421,6 +438,13 @@ Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som st
 4. Anpassa ordantal och upplägg efter PLATTFORM (HEMNET eller BOOLI/EGEN SIDA)
 5. EVIDENCE-GATE: Varje sakpåstående som får förekomma i texten MÅSTE finnas som en post i claims med evidence_path + evidence_value från dispositionen
 6. HÖGRISK-PÅSTÅENDEN: Utsikt (t.ex. havsutsikt), eldstad/öppen spis, balkongtyp (inglasad), väderstreck och kommunikationstyp (pendeltåg/tunnelbana) får bara finnas i claims om det står explicit i dispositionen
+7. ANTI-AI-MALL: forbidden_words måste innehålla en baslista med klassiska generiska fraser (plattformsspecifik). Writer kommer följa den listan strikt.
+
+# BASLISTA FÖRBJUDNA FRASER (lägg in i forbidden_words)
+
+För BOTH: "i hjärtat av", "hjärtat av", "vilket gör det enkelt", "vilket gör det smidigt", "vilket gör det lätt", "rymlig känsla", "härlig plats för", "plats för avkoppling", "njutning av", "möjlighet att påverka", "forma framtiden", "vilket säkerställer"
+
+För BOOLI/EGEN SIDA: lägg även in generiska bärfraser som ofta gör texten AI-mässig, t.ex. "för den som", "vilket ger en"
 
 # OUTPUT FORMAT (JSON)
 
