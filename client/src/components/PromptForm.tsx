@@ -307,9 +307,9 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
                         <SelectValue placeholder="Välj..." />
-                      </SelectTrigger>
-
-                    <SelectContent position="popper" className="!bg-white !text-black">
+                  />
+                </FormControl>
+              </FormItem>
                       <SelectItem value="inga">Ingen balkong</SelectItem>
                       <SelectItem value="vanlig">Vanlig balkong</SelectItem>
                       <SelectItem value="stor">Stor balkong</SelectItem>
@@ -789,9 +789,9 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
           <FormField
             control={form.control}
             name="features"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="!text-slate-700 font-bold">Övrig info (frivilligt)</FormLabel>
+                <FormLabel className='!text-slate-700 font-bold'>�vrig info (frivilligt)</FormLabel>
+                <FormControl>
+                  <Textarea
                   <Textarea 
                     className="!bg-white !text-black border-slate-300 min-h-[80px] leading-relaxed focus:border-indigo-500 transition-all placeholder:text-slate-500" 
                     placeholder={`Använd dropdowns ovan för vanliga detaljer. Skriv bara här om något saknas:
