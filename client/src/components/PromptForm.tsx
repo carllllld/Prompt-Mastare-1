@@ -440,17 +440,17 @@ export function PromptForm({ onSubmit, isPending, disabled }: PromptFormProps) {
               control={form.control}
               name="energyClass" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="!text-slate-700 font-bold text-xs">energyClass</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <SelectTrigger className="!bg-white !text-black border-slate-300 h-10">
+                  <FormLabel className='!text-slate-700 font-bold text-xs'>energyClass</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <SelectValue placeholder="Välj..." />
                       </SelectTrigger>
 
                     <SelectContent position="popper" className="!bg-white !text-black">
                     </SelectContent>
                   </Select>
-
-                  )}
+                  </FormControl>
+                </FormItem>
                 </FormItem>
               )}
 
