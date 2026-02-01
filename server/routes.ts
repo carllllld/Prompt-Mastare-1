@@ -348,6 +348,36 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["imponerande", ""],
   ["unik karaktär", "karaktär"],
   ["lugn atmosfär", ""],
+  
+  // === "VILKET"-KONSTRUKTIONER (vanlig AI-mönster) ===
+  ["vilket bidrar till en rymlig", "med rymlig"],
+  ["vilket bidrar till", "med"],
+  ["vilket gör det till en utmärkt", "och fungerar som"],
+  ["vilket gör det till ett", "och är ett"],
+  ["vilket gör det till", "och är"],
+  ["vilket passar den som söker", "för"],
+  ["vilket passar den som", "för"],
+  ["vilket underlättar pendling", "med enkel pendling"],
+  ["vilket underlättar", "med"],
+  ["vilket är uppskattat av många", ""],
+  ["vilket är uppskattat", ""],
+  
+  // === FLER AI-FRASER FRÅN GRANSKNING 2 ===
+  ["rymlig atmosfär", "rymd"],
+  ["med god isolering och energibesparing", ""],
+  ["med god isolering", ""],
+  ["sociala sammankomster", "umgänge"],
+  ["med behaglig temperatur året runt", ""],
+  ["behaglig temperatur", ""],
+  ["harmonisk livsstil", ""],
+  ["modern livsstil med alla bekvämligheter", ""],
+  ["modern livsstil", ""],
+  ["alla bekvämligheter", ""],
+  ["fridfull miljö", "lugnt läge"],
+  ["goda kommunikationsmöjligheter", "bra kommunikationer"],
+  ["kommunikationsmöjligheter", "kommunikationer"],
+  ["rekreation och avkoppling", "friluftsliv"],
+  ["karaktär och charm", "karaktär"],
 ];
 
 function cleanForbiddenPhrases(text: string): string {
