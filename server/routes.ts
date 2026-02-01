@@ -168,37 +168,17 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
     }
   }
   
-  // NEW: Quality validation checks
-  const sensoryWords = ['ljus', 'ljud', 'känsla', 'doft', 'syn', 'hörsel', 'känns', 'luktar', 'ser', 'låter'];
-  const sensoryCount = sensoryWords.filter(word => text.toLowerCase().includes(word)).length;
-  const requiredSensory = platform === "hemnet" ? 3 : 4;
-  if (sensoryCount < requiredSensory) {
-    violations.push(`För få sinnesdetaljer: ${sensoryCount}/${requiredSensory} krävs`);
-  }
-  
-  // Check for dramatic hook (not "Välkommen")
+  // Check for "Välkommen" opening (forbidden)
   if (text.toLowerCase().startsWith('välkommen')) {
-    violations.push(`Börjar med "Välkommen" - använd dramatisk hook istället`);
+    violations.push(`Börjar med "Välkommen" - börja med adress eller läge istället`);
   }
   
-  // Check for lifestyle scenes
-  const lifestyleWords = ['här', 'vaknar', 'intas', 'blir', 'scen', 'samlas', 'liv', 'bor'];
-  const lifestyleCount = lifestyleWords.filter(word => text.toLowerCase().includes(word)).length;
-  const requiredLifestyle = platform === "hemnet" ? 2 : 3;
-  if (lifestyleCount < requiredLifestyle) {
-    violations.push(`För få lifestyle-scener: ${lifestyleCount}/${requiredLifestyle} krävs`);
-  }
-  
-  // Check for future vision
-  if (!text.toLowerCase().includes('tänk dig') && !text.toLowerCase().includes('framtid')) {
-    violations.push(`Saknar future vision ("tänk dig..." eller "framtid")`);
-  }
-  
-  // Check for competitive edge
-  const competitiveWords = ['till skillnad från', 'detta är det enda', 'medan andra', 'unik', 'sällsynt'];
-  const hasCompetitive = competitiveWords.some(word => text.toLowerCase().includes(word));
-  if (!hasCompetitive) {
-    violations.push(`Saknar competitive edge (varför detta vinner)`);
+  // Check for AI-typical phrases that should not appear
+  const aiPhrases = ['tänk dig', 'föreställ dig', 'ljuset dansar', 'doften av', 'känslan av', 'sinnesupplevelse'];
+  for (const phrase of aiPhrases) {
+    if (text.toLowerCase().includes(phrase)) {
+      violations.push(`AI-typisk fras: "${phrase}" - skriv mer sakligt`);
+    }
   }
   
   // Check for generic patterns
@@ -211,8 +191,8 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   
   // Check word count
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 250 : 400;
-  const maxWords = platform === "hemnet" ? 450 : 700;
+  const minWords = platform === "hemnet" ? 200 : 300;
+  const maxWords = platform === "hemnet" ? 450 : 550;
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
   }
@@ -488,69 +468,151 @@ För BOOLI/EGEN SIDA: lägg även in generiska bärfraser som ofta gör texten A
 }
 `;
 
-// Steg 2: Skriv final text baserat på disposition
-
-// --- HEMNET FORMAT: steg 3 (skrivare) ---
+// --- HEMNET FORMAT: Enkel, riktig mäklarstil ---
 const HEMNET_TEXT_PROMPT = `
 # UPPGIFT
 
-Skriv objektbeskrivningen för HEMNET baserat på DISPOSITION och PLAN.
+Skriv en objektbeskrivning för Hemnet. Skriv som en erfaren svensk fastighetsmäklare - saklig, informativ och positiv.
+
+# STIL OCH TON
+
+- Skriv som en RIKTIG mäklare, INTE som en AI eller reklamtext
+- Saklig och informativ - beskriv vad som finns, inte känslor
+- Positiv men ärlig - lyft fram fördelar utan överdrifter
+- Konkret - använd siffror, material, årtal
+- Kort och tydlig - varje mening ska ge ny information
+- INGEN poetisk eller kreativ stil
+- INGA sinnesupplevelser eller känslomässiga resor
+
+# STRUKTUR (4-5 korta stycken, 250-400 ord)
+
+STYCKE 1: Kort intro med adress/läge och bostadens typ/storlek
+STYCKE 2: Planlösning och rum - beskriv hur bostaden är upplagd
+STYCKE 3: Standard och material - kök, badrum, golv, renoveringar
+STYCKE 4: Förening/fastighet - avgift, ekonomi, renoveringar (om bostadsrätt)
+STYCKE 5: Läge och kommunikationer - avstånd i meter/minuter
+
+# FÖRBJUDNA FRASER (använd ALDRIG)
+
+- "Välkommen" som öppning
+- "erbjuder", "erbjuds"
+- "perfekt för", "idealisk för"
+- "fantastisk", "underbar", "magisk", "otrolig"
+- "i hjärtat av", "hjärtat av"
+- "rofylld", "trivsam atmosfär"
+- "tänk dig...", "föreställ dig..."
+- "drömboende", "drömhem"
+- "unik möjlighet", "sällsynt tillfälle"
+- "vilket gör det enkelt", "vilket ger en"
+- Alla former av "sinnesupplevelser" eller "känslomässiga resor"
+
+# BRA MÄKLARSPRÅK (använd gärna)
+
+- "Lägenheten ligger på...", "Bostaden omfattar..."
+- "Köket är utrustat med...", "Badrummet har..."
+- "Föreningen har god ekonomi med..."
+- "Till bostaden hör...", "I anslutning finns..."
+- Konkreta avstånd: "5 minuters promenad till...", "300 meter till..."
 
 # KRITISKA REGLER
 
-1. Följ PLANENS paragraph_outline exakt (ordning, vad som måste med per stycke)
-2. Använd bara fakta som finns i DISPOSITIONEN
-3. Använd INTE ord/fraser i PLAN.forbidden_words
-4. Håll dig inom PLAN.word_target
-5. Om något saknas i dispositionen: skriv inte om det (lägg istället i missing_info i output)
-6. EVIDENCE-GATE: Alla konkreta sakpåståenden (t.ex. utsikt, balkongtyp, väderstreck, eldstad, material, kommunikationer, föreningens status/åtgärder) får bara skrivas om de finns i PLAN.claims. Om det inte finns i PLAN.claims: skriv det inte alls.
-7. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
+1. Använd ENDAST fakta från DISPOSITIONEN - hitta aldrig på
+2. Om något saknas i dispositionen: nämn det inte alls
+3. Inga garantier eller löften (juridiskt krav)
+4. Inga överdrifter eller superlativ
+5. Ekonomiska detaljer (avgift, pris) visas separat på Hemnet - nämn dem inte i texten
 
 # OUTPUT FORMAT (JSON)
 
 {
-  "highlights": ["✓ ..."],
-  "improvedPrompt": "Text med stycken separerade av \\n\\n",
+  "highlights": ["✓ Kort säljpunkt 1", "✓ Kort säljpunkt 2", "✓ Kort säljpunkt 3"],
+  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
   "analysis": {
-    "target_group": "...",
-    "area_advantage": "...",
-    "pricing_factors": "..."
+    "target_group": "Vilken köpargrupp passar bostaden",
+    "area_advantage": "Områdets främsta fördelar",
+    "pricing_factors": "Faktorer som påverkar priset positivt"
   },
-  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
-  "missing_info": ["Info som saknas i rådata"],
-  "pro_tips": ["Tips till mäklaren"]
+  "socialCopy": "Kort annonstext för sociala medier, max 280 tecken, ingen emoji",
+  "missing_info": ["Viktig info som saknas i rådata"],
+  "pro_tips": ["Praktiska tips till mäklaren"]
 }
 `;
 
-// --- BOOLI/EGEN SIDA: steg 3 (skrivare) ---
+// --- BOOLI/EGEN SIDA: Enkel, riktig mäklarstil (längre format) ---
 const BOOLI_TEXT_PROMPT_WRITER = `
 # UPPGIFT
 
-Skriv objektbeskrivningen för BOOLI/EGEN SIDA baserat på DISPOSITION och PLAN.
+Skriv en objektbeskrivning för Booli/egen hemsida. Skriv som en erfaren svensk fastighetsmäklare - saklig, informativ och positiv. Längre och mer detaljerad än Hemnet.
+
+# STIL OCH TON
+
+- Skriv som en RIKTIG mäklare, INTE som en AI eller reklamtext
+- Saklig och informativ - beskriv vad som finns, inte känslor
+- Positiv men ärlig - lyft fram fördelar utan överdrifter
+- Konkret - använd siffror, material, årtal
+- Varje mening ska ge ny information
+- INGEN poetisk eller kreativ stil
+- INGA sinnesupplevelser eller känslomässiga resor
+- INGA "tänk dig..." eller "föreställ dig..." fraser
+
+# STRUKTUR (5-7 stycken, 350-500 ord)
+
+STYCKE 1: Intro med adress/läge och bostadens typ/storlek
+STYCKE 2: Planlösning - hur bostaden är upplagd, rumsfördelning
+STYCKE 3: Vardagsrum och kök - material, utrustning, ljusförhållanden
+STYCKE 4: Sovrum och badrum - storlek, standard, material
+STYCKE 5: Balkong/uteplats och förvaring - om det finns
+STYCKE 6: Förening och ekonomi - avgift, ekonomisk status, genomförda renoveringar
+STYCKE 7: Läge och kommunikationer - avstånd, service, skolor
+
+# FÖRBJUDNA FRASER (använd ALDRIG)
+
+- "Välkommen" som öppning
+- "erbjuder", "erbjuds"
+- "perfekt för", "idealisk för"
+- "fantastisk", "underbar", "magisk", "otrolig"
+- "i hjärtat av", "hjärtat av"
+- "rofylld", "trivsam atmosfär", "härlig atmosfär"
+- "tänk dig...", "föreställ dig..."
+- "drömboende", "drömhem", "en sann pärla"
+- "unik möjlighet", "sällsynt tillfälle"
+- "vilket gör det enkelt", "vilket ger en"
+- "för den som", "den matlagningsintresserade"
+- "sinnesupplevelser", "känslomässiga resor"
+- "ljuset dansar", "doften av"
+- "portal till", "berättelse"
+
+# BRA MÄKLARSPRÅK (använd gärna)
+
+- "Lägenheten ligger på...", "Bostaden omfattar..."
+- "Köket är utrustat med...", "Badrummet har..."
+- "Föreningen har god ekonomi med..."
+- "Till bostaden hör...", "I anslutning finns..."
+- "Golven är av...", "Väggarna är..."
+- Konkreta avstånd: "5 minuters promenad till...", "300 meter till..."
+- Konkreta mått: "Vardagsrummet om 25 kvm...", "Balkong på 8 kvm..."
 
 # KRITISKA REGLER
 
-1. Följ PLANENS paragraph_outline exakt (ordning, vad som måste med per stycke)
-2. Använd bara fakta som finns i DISPOSITIONEN
-3. Använd INTE ord/fraser i PLAN.forbidden_words
-4. Håll dig inom PLAN.word_target
-5. Om något saknas i dispositionen: skriv inte om det (lägg istället i missing_info i output)
-6. EVIDENCE-GATE: Alla konkreta sakpåståenden (t.ex. utsikt, balkongtyp, väderstreck, eldstad, material, kommunikationer, föreningens status/åtgärder) får bara skrivas om de finns i PLAN.claims. Om det inte finns i PLAN.claims: skriv det inte alls.
-7. Stil: professionell svensk mäklare, saklig och engagerande, juridiskt korrekt (inga garantier, inga överdrifter)
+1. Använd ENDAST fakta från DISPOSITIONEN - hitta aldrig på
+2. Om något saknas i dispositionen: nämn det inte alls
+3. Inga garantier eller löften (juridiskt krav)
+4. Inga överdrifter eller superlativ
+5. Nämn ekonomiska detaljer (avgift, föreningens ekonomi) - det är relevant för Booli
 
 # OUTPUT FORMAT (JSON)
 
 {
-  "highlights": ["✓ ..."],
-  "improvedPrompt": "Text med stycken separerade av \\n\\n",
+  "highlights": ["✓ Kort säljpunkt 1", "✓ Kort säljpunkt 2", "✓ Kort säljpunkt 3"],
+  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
   "analysis": {
-    "target_group": "...",
-    "area_advantage": "...",
-    "pricing_factors": "..."
+    "target_group": "Vilken köpargrupp passar bostaden",
+    "area_advantage": "Områdets främsta fördelar",
+    "pricing_factors": "Faktorer som påverkar priset positivt"
   },
-  "socialCopy": "Kort text för sociala medier (max 280 tecken, ingen emoji)",
-  "missing_info": ["Info som saknas i rådata"],
-  "pro_tips": ["Tips till mäklaren"]
+  "socialCopy": "Kort annonstext för sociala medier, max 280 tecken, ingen emoji",
+  "missing_info": ["Viktig info som saknas i rådata"],
+  "pro_tips": ["Praktiska tips till mäklaren"]
 }
 `;
 
@@ -978,77 +1040,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
 
-      // Steg 2: Skapa plan/checklista
-      console.log("[Step 2] Creating plan/checklist...");
-
-      const planMessages = [
-        {
-          role: "system" as const,
-          content: PLAN_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content:
-            "DISPOSITION: " +
-            JSON.stringify(disposition, null, 2) +
-            "\n\nPLATTFORM: " +
-            (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
-        },
-      ];
-
-      const planCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: planMessages,
-        max_tokens: 1400,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-      });
-
-      const planText = planCompletion.choices[0]?.message?.content || "{}";
-      let generationPlan: any;
-      try {
-        generationPlan = safeJsonParse(planText);
-      } catch (e) {
-        console.warn("[Step 2] Plan JSON parse failed, retrying once...", e);
-        const planRetry = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system" as const,
-              content:
-                PLAN_PROMPT +
-                "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
-            },
-            {
-              role: "user" as const,
-              content:
-                "DISPOSITION: " +
-                JSON.stringify(disposition, null, 2) +
-                "\n\nPLATTFORM: " +
-                (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
-            },
-          ],
-          max_tokens: 1400,
-          temperature: 0.2,
-          response_format: { type: "json_object" },
-        });
-        const planRetryText = planRetry.choices[0]?.message?.content || "{}";
-        try {
-          generationPlan = safeJsonParse(planRetryText);
-        } catch (e2) {
-          return res.status(422).json({
-            message: "Kunde inte tolka plan (ogiltig JSON). Försök igen.",
-          });
-        }
-      }
-      console.log("[Step 2] Plan created:", JSON.stringify(generationPlan, null, 2));
-
-      // Steg 3: Skriv final text baserat på disposition + plan
-      console.log("[Step 3] Writing final text based on disposition + plan...");
+      // Steg 2: Skriv objektbeskrivning baserat på disposition
+      console.log("[Step 2] Writing property description based on disposition...");
 
       // Välj rätt prompt baserat på plattform
       const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
-      console.log("[Step 3] Using " + platform.toUpperCase() + " writer prompt...");
+      console.log("[Step 2] Using " + platform.toUpperCase() + " writer prompt...");
       
       const textMessages = [
         {
@@ -1060,8 +1057,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           content:
             "DISPOSITION: " +
             JSON.stringify(disposition, null, 2) +
-            "\n\nPLAN: " +
-            JSON.stringify(generationPlan, null, 2) +
             "\n\nPLATTFORM: " +
             (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
         },
@@ -1080,7 +1075,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       try {
         result = safeJsonParse(textResultText);
       } catch (e) {
-        console.warn("[Step 3] Text JSON parse failed, retrying once...", e);
+        console.warn("[Step 2] Text JSON parse failed, retrying once...", e);
         const textRetry = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
@@ -1095,8 +1090,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
               content:
                 "DISPOSITION: " +
                 JSON.stringify(disposition, null, 2) +
-                "\n\nPLAN: " +
-                JSON.stringify(generationPlan, null, 2) +
                 "\n\nPLATTFORM: " +
                 (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
             },
