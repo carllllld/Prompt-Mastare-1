@@ -21,6 +21,16 @@ function extractFirstJsonObject(text: string): string {
   return text.slice(start, end + 1);
 }
 
+function safeJsonParse(rawText: string): any {
+  const extracted = extractFirstJsonObject(rawText || "{}");
+  // Common model slip: trailing commas before } or ]
+  const sanitized = extracted
+    .replace(/,\s*([}\]])/g, "$1")
+    .replace(/\u0000/g, "")
+    .trim();
+  return JSON.parse(sanitized);
+}
+
 // Förbjudna fraser - AI-fraser som avslöjar genererad text
 // VIKTIGT: Använd KORTA fraser för att fånga alla varianter
 const FORBIDDEN_PHRASES = [
@@ -937,7 +947,35 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
 
       const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
-      const disposition = JSON.parse(extractFirstJsonObject(dispositionText));
+      let disposition: any;
+      try {
+        disposition = safeJsonParse(dispositionText);
+      } catch (e) {
+        console.warn("[Step 1] Disposition JSON parse failed, retrying once...", e);
+        const dispositionRetry = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system" as const,
+              content:
+                DISPOSITION_PROMPT +
+                "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
+            },
+            { role: "user" as const, content: `RÅDATA: ${prompt}` },
+          ],
+          max_tokens: 2000,
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+        const dispositionRetryText = dispositionRetry.choices[0]?.message?.content || "{}";
+        try {
+          disposition = safeJsonParse(dispositionRetryText);
+        } catch (e2) {
+          return res.status(422).json({
+            message: "Kunde inte tolka disposition (ogiltig JSON). Försök igen.",
+          });
+        }
+      }
       console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
 
       // Steg 2: Skapa plan/checklista
@@ -967,7 +1005,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
 
       const planText = planCompletion.choices[0]?.message?.content || "{}";
-      const generationPlan = JSON.parse(extractFirstJsonObject(planText));
+      let generationPlan: any;
+      try {
+        generationPlan = safeJsonParse(planText);
+      } catch (e) {
+        console.warn("[Step 2] Plan JSON parse failed, retrying once...", e);
+        const planRetry = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system" as const,
+              content:
+                PLAN_PROMPT +
+                "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
+            },
+            {
+              role: "user" as const,
+              content:
+                "DISPOSITION: " +
+                JSON.stringify(disposition, null, 2) +
+                "\n\nPLATTFORM: " +
+                (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
+            },
+          ],
+          max_tokens: 1400,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+        });
+        const planRetryText = planRetry.choices[0]?.message?.content || "{}";
+        try {
+          generationPlan = safeJsonParse(planRetryText);
+        } catch (e2) {
+          return res.status(422).json({
+            message: "Kunde inte tolka plan (ogiltig JSON). Försök igen.",
+          });
+        }
+      }
       console.log("[Step 2] Plan created:", JSON.stringify(generationPlan, null, 2));
 
       // Steg 3: Skriv final text baserat på disposition + plan
@@ -1003,7 +1076,44 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
 
       const textResultText = textCompletion.choices[0]?.message?.content || "{}";
-      let result: any = JSON.parse(extractFirstJsonObject(textResultText));
+      let result: any;
+      try {
+        result = safeJsonParse(textResultText);
+      } catch (e) {
+        console.warn("[Step 3] Text JSON parse failed, retrying once...", e);
+        const textRetry = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system" as const,
+              content:
+                selectedPrompt +
+                "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
+            },
+            {
+              role: "user" as const,
+              content:
+                "DISPOSITION: " +
+                JSON.stringify(disposition, null, 2) +
+                "\n\nPLAN: " +
+                JSON.stringify(generationPlan, null, 2) +
+                "\n\nPLATTFORM: " +
+                (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
+            },
+          ],
+          max_tokens: 4000,
+          temperature: 0.2,
+          response_format: { type: "json_object" },
+        });
+        const textRetryText = textRetry.choices[0]?.message?.content || "{}";
+        try {
+          result = safeJsonParse(textRetryText);
+        } catch (e2) {
+          return res.status(422).json({
+            message: "Kunde inte tolka textresultat (ogiltig JSON). Försök igen.",
+          });
+        }
+      }
 
       // Validering och retries för text-steget
       let violations = validateOptimizationResult(result, platform);
@@ -1044,7 +1154,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
 
         const retryText = retryCompletion.choices[0]?.message?.content || "{}";
-        result = JSON.parse(extractFirstJsonObject(retryText));
+        try {
+          result = safeJsonParse(retryText);
+        } catch (e) {
+          console.warn("[AI Validation] Retry JSON parse failed, continuing to next attempt...", e);
+          violations = ["Ogiltig JSON i modellens svar"]; 
+          continue;
+        }
         violations = validateOptimizationResult(result, platform);
         console.log("[AI Validation] After retry " + attempts + " violations:", violations.length > 0 ? violations : "NONE");
       }
