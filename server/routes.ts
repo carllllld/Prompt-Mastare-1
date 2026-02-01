@@ -186,7 +186,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
 function checkWordCount(text: string, platform: string): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 150 : 200;
+  const minWords = platform === "hemnet" ? 180 : 220;
   const maxWords = platform === "hemnet" ? 500 : 600;
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
@@ -212,44 +212,110 @@ function validateOptimizationResult(result: any, platform: string = "hemnet"): s
 
 // Post-processing: Rensa bort förbjudna fraser automatiskt
 // VIKTIGT: Längre fraser FÖRST så de matchas innan kortare
+// Detta eliminerar behovet av retries för de vanligaste AI-fraserna
 const PHRASE_REPLACEMENTS: [string, string][] = [
-  // Öppningar - ta bort helt
+  // === ÖPPNINGAR - ta bort helt ===
   ["välkommen till denna", ""],
   ["välkommen till", ""],
   ["välkommen hem till", ""],
   ["här möts du av", ""],
   ["här erbjuds", ""],
   
-  // Erbjuder-varianter
+  // === ERBJUDER-VARIANTER (vanligaste AI-frasen) ===
+  ["lägenheten erbjuder", "lägenheten har"],
+  ["bostaden erbjuder", "bostaden har"],
+  ["köket erbjuder", "köket har"],
+  ["badrummet erbjuder", "badrummet har"],
+  ["balkongen erbjuder", "balkongen har"],
+  ["området erbjuder", "området har"],
+  ["föreningen erbjuder", "föreningen har"],
   [" erbjuder ", " har "],
   [" erbjuds ", " finns "],
+  ["erbjuder", "har"],
+  ["erbjuds", "finns"],
   
-  // Luftig/atmosfär
-  ["luftig och inbjudande atmosfär", "generös rumskänsla"],
-  ["luftig atmosfär", "generös rumskänsla"],
+  // === "VILKET GER/GÖR" - vanlig AI-konstruktion ===
+  ["vilket gör det enkelt att ta sig", "med nära till"],
+  ["vilket gör det enkelt", ""],
+  ["vilket ger en luftig", "med"],
+  ["vilket ger en", "med"],
+  ["vilket ger", "med"],
+  ["som ger en", "med"],
+  
+  // === "FÖR DEN SOM" - vanlig AI-fras ===
+  ["perfekt för den som", "passar"],
+  ["idealisk för den som", "passar"],
+  ["för den matlagningsintresserade", ""],
+  ["för den som uppskattar", ""],
+  ["för den som gillar", ""],
+  ["för den som vill", ""],
+  ["för den som söker", ""],
+  ["för den som", ""],
+  ["perfekt för", "passar"],
+  ["idealisk för", "passar"],
+  
+  // === KONTAKT/CTA - ta bort helt ===
+  ["kontakta oss för visning", ""],
+  ["kontakta oss", ""],
+  ["tveka inte att höra av dig", ""],
+  ["tveka inte", ""],
+  ["boka visning", ""],
+  ["hör av dig", ""],
+  
+  // === PLATS-KLYSCHOR ===
+  ["i hjärtat av stockholm", "centralt i stockholm"],
+  ["i hjärtat av", "centralt i"],
+  ["hjärtat av", "centrala"],
+  ["stadens puls", "stadskärnan"],
+  ["mitt i pulsen", "centralt"],
+  
+  // === DRÖM-ORD ===
+  ["drömboende", "bostad"],
+  ["drömhem", "hem"],
+  ["drömlägenhet", "lägenhet"],
+  ["en sann pärla", ""],
+  ["en riktig pärla", ""],
+  
+  // === LUFTIG/ATMOSFÄR ===
+  ["luftig och inbjudande atmosfär", ""],
+  ["luftig atmosfär", ""],
+  ["ger en luftig känsla", ""],
+  ["luftig känsla", ""],
   ["luftig", "rymlig"],
   ["inbjudande atmosfär", ""],
   ["trivsam atmosfär", ""],
   ["härlig atmosfär", ""],
   
-  // Rofylld
-  ["rofyllt läge", "tyst läge"],
+  // === ROFYLLD ===
+  ["rofyllt läge", "lugnt läge"],
   ["rofylld miljö", "lugn miljö"],
-  ["rofyllt", "tyst"],
+  ["rofyllt", "lugnt"],
   ["rofylld", "lugn"],
   
-  // Vardagen
-  ["vilket ger i vardagen", ""],
+  // === VARDAGEN ===
   ["underlättar vardagen", ""],
   ["bekvämlighet i vardagen", ""],
   ["i vardagen", ""],
   
-  // Attraktivt
+  // === ATTRAKTIVT ===
   ["attraktivt läge", "bra läge"],
   ["attraktivt med närhet", "nära"],
-  ["attraktivt", "bra"],
+  ["attraktivt", ""],
   
-  // Övrigt
+  // === SUPERLATIV ===
+  ["fantastisk utsikt", "fin utsikt"],
+  ["fantastiskt läge", "bra läge"],
+  ["fantastisk", "fin"],
+  ["underbar", "fin"],
+  ["magisk", ""],
+  ["otrolig", ""],
+  ["enastående", ""],
+  
+  // === ÖVRIGT ===
+  ["unik möjlighet", ""],
+  ["unik chans", ""],
+  ["sällsynt tillfälle", ""],
+  ["missa inte", ""],
   ["inom räckhåll", "i närheten"],
   ["sociala tillställningar", "middagar"],
   ["sociala sammanhang", "umgänge"],
@@ -259,14 +325,6 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["trygg boendeekonomi", "stabil ekonomi"],
   ["goda arbetsytor", "bänkyta"],
   ["gott om arbetsyta", "bänkyta"],
-  ["fantastisk", "fin"],
-  ["underbar", "fin"],
-  ["magisk", ""],
-  ["otrolig", ""],
-  ["unik möjlighet", ""],
-  ["unik chans", ""],
-  ["sällsynt tillfälle", ""],
-  ["missa inte", ""],
 ];
 
 function cleanForbiddenPhrases(text: string): string {
@@ -464,151 +522,110 @@ För BOOLI/EGEN SIDA: lägg även in generiska bärfraser som ofta gör texten A
 }
 `;
 
-// --- HEMNET FORMAT: Enkel, riktig mäklarstil ---
+// --- HEMNET FORMAT: Riktig mäklarstil med konkret exempel ---
 const HEMNET_TEXT_PROMPT = `
-# UPPGIFT
+Du är en erfaren svensk fastighetsmäklare. Skriv en objektbeskrivning för Hemnet baserat på DISPOSITIONEN.
 
-Skriv en objektbeskrivning för Hemnet. Skriv som en erfaren svensk fastighetsmäklare - saklig, informativ och positiv.
+KRAV: Minst 200 ord. Skriv 4-5 stycken. Nämn INTE avgift eller pris (visas separat på Hemnet).
 
-# STIL OCH TON
+===== EXEMPELTEXT (KOPIERA DENNA STIL EXAKT) =====
 
-- Skriv som en RIKTIG mäklare, INTE som en AI eller reklamtext
-- Saklig och informativ - beskriv vad som finns, inte känslor
-- Positiv men ärlig - lyft fram fördelar utan överdrifter
-- Konkret - använd siffror, material, årtal
-- Kort och tydlig - varje mening ska ge ny information
-- INGEN poetisk eller kreativ stil
-- INGA sinnesupplevelser eller känslomässiga resor
+Strandvägen 15, våning 2 av 4. En ljus trea om 78 kvm med balkong i söderläge.
 
-# STRUKTUR (4-5 korta stycken, 250-400 ord)
+Lägenheten har en praktisk planlösning med hall, vardagsrum, två sovrum, kök och badrum. Vardagsrummet har stora fönster mot gatan och takhöjd på 2,9 meter. Golven är av ekparkett som slipades 2020.
 
-STYCKE 1: Kort intro med adress/läge och bostadens typ/storlek
-STYCKE 2: Planlösning och rum - beskriv hur bostaden är upplagd
-STYCKE 3: Standard och material - kök, badrum, golv, renoveringar
-STYCKE 4: Förening/fastighet - avgift, ekonomi, renoveringar (om bostadsrätt)
-STYCKE 5: Läge och kommunikationer - avstånd i meter/minuter
+Köket har vita luckor, bänkskiva i sten och är utrustat med spis, ugn, kyl, frys och diskmaskin. Badrummet renoverades 2018 och har dusch, wc, handfat och tvättmaskin.
 
-# FÖRBJUDNA FRASER (använd ALDRIG)
+Det större sovrummet rymmer dubbelsäng och har platsbyggd garderob. Det mindre sovrummet passar som barnrum eller arbetsrum. Balkongen är inglasad och vetter mot söder.
 
-- "Välkommen" som öppning
-- "erbjuder", "erbjuds"
-- "perfekt för", "idealisk för"
-- "fantastisk", "underbar", "magisk", "otrolig"
-- "i hjärtat av", "hjärtat av"
-- "rofylld", "trivsam atmosfär"
-- "tänk dig...", "föreställ dig..."
-- "drömboende", "drömhem"
-- "unik möjlighet", "sällsynt tillfälle"
-- "vilket gör det enkelt", "vilket ger en"
-- Alla former av "sinnesupplevelser" eller "känslomässiga resor"
+Fastigheten är välskött med renoverad fasad och trapphus. Tunnelbana finns på 4 minuters gångavstånd och matbutik i samma kvarter.
 
-# BRA MÄKLARSPRÅK (använd gärna)
+===== SLUT PÅ EXEMPEL =====
 
-- "Lägenheten ligger på...", "Bostaden omfattar..."
-- "Köket är utrustat med...", "Badrummet har..."
-- "Föreningen har god ekonomi med..."
-- "Till bostaden hör...", "I anslutning finns..."
-- Konkreta avstånd: "5 minuters promenad till...", "300 meter till..."
+ABSOLUT FÖRBJUDNA ORD (om du använder dessa misslyckas du):
+- erbjuder, erbjuds, erbjuda
+- perfekt för, idealisk för, för den som
+- vilket gör det enkelt, vilket ger en
+- kontakta oss, tveka inte
+- stadens puls, i hjärtat av
+- drömboende, drömhem, luftig känsla
+- fantastisk, underbar, magisk
 
-# KRITISKA REGLER
+SKRIV SÅ HÄR:
+- "Lägenheten ligger på..." INTE "Välkommen till..."
+- "Köket har..." INTE "Köket erbjuder..."
+- "Nära tunnelbana" INTE "vilket gör det enkelt att ta sig runt"
 
-1. Använd ENDAST fakta från DISPOSITIONEN - hitta aldrig på
-2. Om något saknas i dispositionen: nämn det inte alls
-3. Inga garantier eller löften (juridiskt krav)
-4. Inga överdrifter eller superlativ
-5. Ekonomiska detaljer (avgift, pris) visas separat på Hemnet - nämn dem inte i texten
+REGLER:
+1. Minst 200 ord i improvedPrompt
+2. Använd BARA fakta från dispositionen
+3. Skriv konkret: "4 minuters gångavstånd", "78 kvm", "renoverat 2018"
+4. NÄMN INTE avgift eller pris
 
-# OUTPUT FORMAT (JSON)
-
+OUTPUT (JSON):
 {
-  "highlights": ["✓ Kort säljpunkt 1", "✓ Kort säljpunkt 2", "✓ Kort säljpunkt 3"],
-  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
-  "analysis": {
-    "target_group": "Vilken köpargrupp passar bostaden",
-    "area_advantage": "Områdets främsta fördelar",
-    "pricing_factors": "Faktorer som påverkar priset positivt"
-  },
-  "socialCopy": "Kort annonstext för sociala medier, max 280 tecken, ingen emoji",
-  "missing_info": ["Viktig info som saknas i rådata"],
-  "pro_tips": ["Praktiska tips till mäklaren"]
+  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3"],
+  "improvedPrompt": "Hela texten här med stycken separerade av \\n\\n",
+  "analysis": {"target_group": "...", "area_advantage": "...", "pricing_factors": "..."},
+  "socialCopy": "Kort text max 280 tecken",
+  "missing_info": ["..."],
+  "pro_tips": ["..."]
 }
 `;
 
-// --- BOOLI/EGEN SIDA: Enkel, riktig mäklarstil (längre format) ---
+// --- BOOLI/EGEN SIDA: Riktig mäklarstil med konkret exempel ---
 const BOOLI_TEXT_PROMPT_WRITER = `
-# UPPGIFT
+Du är en erfaren svensk fastighetsmäklare. Skriv en objektbeskrivning baserat på DISPOSITIONEN.
 
-Skriv en objektbeskrivning för Booli/egen hemsida. Skriv som en erfaren svensk fastighetsmäklare - saklig, informativ och positiv. Längre och mer detaljerad än Hemnet.
+KRAV: Minst 250 ord. Skriv 6-7 stycken.
 
-# STIL OCH TON
+===== EXEMPELTEXT (KOPIERA DENNA STIL EXAKT) =====
 
-- Skriv som en RIKTIG mäklare, INTE som en AI eller reklamtext
-- Saklig och informativ - beskriv vad som finns, inte känslor
-- Positiv men ärlig - lyft fram fördelar utan överdrifter
-- Konkret - använd siffror, material, årtal
-- Varje mening ska ge ny information
-- INGEN poetisk eller kreativ stil
-- INGA sinnesupplevelser eller känslomässiga resor
-- INGA "tänk dig..." eller "föreställ dig..." fraser
+Karlavägen 45, våning 4 av 5. En välplanerad tvåa om 58 kvm i klassisk 20-talsfastighet med bevarade originaldetaljer.
 
-# STRUKTUR (5-7 stycken, 350-500 ord)
+Lägenheten har en genomtänkt planlösning med hall, vardagsrum, sovrum, kök och badrum. Från hallen nås samtliga rum. Vardagsrummet om cirka 20 kvm har två fönster mot gården och takhöjd på 2,8 meter. Golven är av ekparkett genomgående.
 
-STYCKE 1: Intro med adress/läge och bostadens typ/storlek
-STYCKE 2: Planlösning - hur bostaden är upplagd, rumsfördelning
-STYCKE 3: Vardagsrum och kök - material, utrustning, ljusförhållanden
-STYCKE 4: Sovrum och badrum - storlek, standard, material
-STYCKE 5: Balkong/uteplats och förvaring - om det finns
-STYCKE 6: Förening och ekonomi - avgift, ekonomisk status, genomförda renoveringar
-STYCKE 7: Läge och kommunikationer - avstånd, service, skolor
+Köket är utrustat med spis, ugn, kyl, frys och diskmaskin. Bänkskivorna är av laminat och det finns gott om förvaring i över- och underskåp. Köket har fönster mot gården.
 
-# FÖRBJUDNA FRASER (använd ALDRIG)
+Sovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat och renoverat 2019 med dusch, wc och handfat. Tvättmaskin och torktumlare finns i lägenheten.
 
-- "Välkommen" som öppning
-- "erbjuder", "erbjuds"
-- "perfekt för", "idealisk för"
-- "fantastisk", "underbar", "magisk", "otrolig"
-- "i hjärtat av", "hjärtat av"
-- "rofylld", "trivsam atmosfär", "härlig atmosfär"
-- "tänk dig...", "föreställ dig..."
-- "drömboende", "drömhem", "en sann pärla"
-- "unik möjlighet", "sällsynt tillfälle"
-- "vilket gör det enkelt", "vilket ger en"
-- "för den som", "den matlagningsintresserade"
-- "sinnesupplevelser", "känslomässiga resor"
-- "ljuset dansar", "doften av"
-- "portal till", "berättelse"
+Balkongen på 4 kvm vetter mot väster med eftermiddags- och kvällssol. Föreningen har nyligen renoverat fasaden och taket. Månadsavgiften är 4 200 kr och inkluderar värme, vatten och kabel-tv.
 
-# BRA MÄKLARSPRÅK (använd gärna)
+Läget är centralt med tunnelbana på 3 minuters gångavstånd. Matbutiker, restauranger och Humlegården finns i närområdet.
 
-- "Lägenheten ligger på...", "Bostaden omfattar..."
-- "Köket är utrustat med...", "Badrummet har..."
-- "Föreningen har god ekonomi med..."
-- "Till bostaden hör...", "I anslutning finns..."
-- "Golven är av...", "Väggarna är..."
-- Konkreta avstånd: "5 minuters promenad till...", "300 meter till..."
-- Konkreta mått: "Vardagsrummet om 25 kvm...", "Balkong på 8 kvm..."
+===== SLUT PÅ EXEMPEL =====
 
-# KRITISKA REGLER
+ABSOLUT FÖRBJUDNA ORD OCH FRASER (om du använder dessa misslyckas du):
+- erbjuder, erbjuds, erbjuda
+- perfekt för, idealisk för
+- för den som
+- vilket gör det enkelt, vilket ger en
+- kontakta oss, tveka inte
+- stadens puls, i hjärtat av
+- drömboende, drömhem
+- luftig känsla, ger en luftig
+- fantastisk, underbar, magisk
 
-1. Använd ENDAST fakta från DISPOSITIONEN - hitta aldrig på
-2. Om något saknas i dispositionen: nämn det inte alls
-3. Inga garantier eller löften (juridiskt krav)
-4. Inga överdrifter eller superlativ
-5. Nämn ekonomiska detaljer (avgift, föreningens ekonomi) - det är relevant för Booli
+SKRIV SÅ HÄR (konkret och sakligt):
+- "Lägenheten ligger på..." INTE "Välkommen till..."
+- "Köket har..." INTE "Köket erbjuder..."
+- "Nära tunnelbana" INTE "vilket gör det enkelt att ta sig runt"
+- "Passar par eller singel" INTE "perfekt för den som..."
 
-# OUTPUT FORMAT (JSON)
+REGLER:
+1. Minst 250 ord i improvedPrompt
+2. Använd BARA fakta från dispositionen
+3. Skriv konkret: "3 minuters promenad", "4 500 kr/mån", "58 kvm"
+4. Varje stycke ska ha minst 2-3 meningar
 
+OUTPUT (JSON):
 {
-  "highlights": ["✓ Kort säljpunkt 1", "✓ Kort säljpunkt 2", "✓ Kort säljpunkt 3"],
-  "improvedPrompt": "Objektbeskrivningen med stycken separerade av \\n\\n",
-  "analysis": {
-    "target_group": "Vilken köpargrupp passar bostaden",
-    "area_advantage": "Områdets främsta fördelar",
-    "pricing_factors": "Faktorer som påverkar priset positivt"
-  },
-  "socialCopy": "Kort annonstext för sociala medier, max 280 tecken, ingen emoji",
-  "missing_info": ["Viktig info som saknas i rådata"],
-  "pro_tips": ["Praktiska tips till mäklaren"]
+  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3"],
+  "improvedPrompt": "Hela texten här med stycken separerade av \\n\\n",
+  "analysis": {"target_group": "...", "area_advantage": "...", "pricing_factors": "..."},
+  "socialCopy": "Kort text max 280 tecken",
+  "missing_info": ["..."],
+  "pro_tips": ["..."]
 }
 `;
 
@@ -1104,41 +1121,64 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      // Validering och retries för text-steget
+      // POST-PROCESSING FÖRST: Fixa vanliga AI-fraser automatiskt innan validering
+      // Detta eliminerar de flesta retries eftersom fraserna fixas direkt
+      if (result.improvedPrompt) {
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+      }
+      if (result.socialCopy) {
+        result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
+      }
+      console.log("[Post-processing] Automatic phrase cleanup done before validation");
+
+      // Validering - nu körs den på redan rensad text
       let violations = validateOptimizationResult(result, platform);
       console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
-      // Retry loop
-      // - Booli behöver ofta fler omtag för att undvika mallfraser
-      // - Vi vill ALDRIG returnera en text som fortfarande bryter mot reglerna
-      const maxAttempts = platform === "hemnet" ? 2 : 5;
+      // Retry loop - skickar befintlig text och ber AI:n BARA fixa specifika fel
+      const maxAttempts = platform === "hemnet" ? 2 : 4;
       let attempts = 0;
       while (violations.length > 0 && attempts < maxAttempts) {
         attempts++;
         console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
         
         const violationList = violations.map(v => `- ${v}`).join("\n");
+        const currentText = result.improvedPrompt || "";
 
         const retryCompletion = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
-            ...textMessages,
+            {
+              role: "system" as const,
+              content: `Du är en textredaktör. Din uppgift är att REDIGERA den befintliga texten och BARA fixa de specifika felen som listas. Ändra så lite som möjligt - behåll resten av texten exakt som den är.
+
+FÖRBJUDNA ORD som ALDRIG får finnas:
+- erbjuder, erbjuds, erbjuda
+- perfekt för, idealisk för, för den som
+- vilket gör det enkelt, vilket ger en
+- kontakta oss, tveka inte, stadens puls
+- i hjärtat av, drömboende, drömhem
+- luftig känsla, fantastisk, underbar, magisk
+
+Om texten är för kort: lägg till 2-3 meningar med konkreta fakta från dispositionen.
+Om texten har förbjudna fraser: ersätt BARA de fraserna med neutrala alternativ.
+
+Returnera JSON: {"improvedPrompt": "den redigerade texten", "highlights": [...], "analysis": {...}, "socialCopy": "...", "missing_info": [...], "pro_tips": [...]}`,
+            },
             {
               role: "user" as const,
               content:
-                "STOPP! Texten bryter mot kvalitetsreglerna. Du måste skriva om den.\n\n" +
-                "FEL SOM MÅSTE ÅTGÄRDAS (ta bort/skriv om):\n" +
+                "BEFINTLIG TEXT ATT REDIGERA:\n\n" +
+                currentText +
+                "\n\n---\n\nFEL ATT FIXA:\n" +
                 violationList +
-                "\n\nREGLER:\n" +
-                "1. Använd inga fraser som matchar listan ovan (de är förbjudna).\n" +
-                "2. Ersätt varje mallfras med KONKRET fakta från DISPOSITION/PLAN.\n" +
-                "3. Om du saknar fakta: TA BORT meningen helt (hitta inte på).\n" +
-                "4. Behåll säljig, professionell mäklar-svenska utan AI-klyschor.\n\n" +
-                "Returnera ENDAST JSON med omskriven text.",
+                "\n\n---\n\nDISPOSITION (för att lägga till fakta om texten är för kort):\n" +
+                JSON.stringify(disposition, null, 2) +
+                "\n\nFixa BARA felen ovan. Ändra så lite som möjligt av resten.",
             },
           ],
           max_tokens: 4000,
-          temperature: 0.2,
+          temperature: 0.1,
           response_format: { type: "json_object" },
         });
 
@@ -1163,15 +1203,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
 
-      // POST-PROCESSING: Rensa bort förbjudna fraser och lägg till stycken
+      // Lägg till stycken (cleanForbiddenPhrases körs redan före validering)
       if (result.improvedPrompt) {
-        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
         result.improvedPrompt = addParagraphs(result.improvedPrompt);
       }
-      if (result.socialCopy) {
-        result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
-      }
-      console.log("[Post-processing] Text cleaned and paragraphs added");
+      console.log("[Post-processing] Paragraphs added");
 
       // Increment usage
       await storage.incrementUserPrompts(user.id);
