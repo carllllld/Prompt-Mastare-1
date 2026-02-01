@@ -1213,6 +1213,15 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten", "highlights": [...],
           violations = ["Ogiltig JSON i modellens svar"]; 
           continue;
         }
+        
+        // VIKTIGT: Kör cleanForbiddenPhrases efter varje retry också
+        if (result.improvedPrompt) {
+          result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+        }
+        if (result.socialCopy) {
+          result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
+        }
+        
         violations = validateOptimizationResult(result, platform);
         console.log("[AI Validation] After retry " + attempts + " violations:", violations.length > 0 ? violations : "NONE");
       }
