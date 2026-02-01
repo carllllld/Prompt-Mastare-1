@@ -158,16 +158,6 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
     }
   }
   
-  // Check for repeated phrases (2+ words repeated within 50 words)
-  const words = text.toLowerCase().split(/\s+/);
-  for (let i = 0; i < words.length - 1; i++) {
-    const phrase = words[i] + ' ' + words[i + 1];
-    const nextWords = words.slice(i + 2, i + 52).join(' ');
-    if (nextWords.includes(phrase)) {
-      violations.push(`Upprepad fras: "${phrase}"`);
-    }
-  }
-  
   // Check for "Välkommen" opening (forbidden)
   if (text.toLowerCase().startsWith('välkommen')) {
     violations.push(`Börjar med "Välkommen" - börja med adress eller läge istället`);
@@ -189,17 +179,21 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
     }
   }
   
-  // Check word count
+  return violations;
+}
+
+// Separat funktion för ordräkning (endast för improvedPrompt)
+function checkWordCount(text: string, platform: string): string[] {
+  const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 200 : 300;
-  const maxWords = platform === "hemnet" ? 450 : 550;
+  const minWords = platform === "hemnet" ? 150 : 200;
+  const maxWords = platform === "hemnet" ? 500 : 600;
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
   }
   if (wordCount > maxWords) {
     violations.push(`För många ord: ${wordCount}/${maxWords} max`);
   }
-  
   return violations;
 }
 
@@ -207,7 +201,9 @@ function validateOptimizationResult(result: any, platform: string = "hemnet"): s
   const violations: string[] = [];
   if (typeof result?.improvedPrompt === "string") {
     violations.push(...findRuleViolations(result.improvedPrompt, platform));
+    violations.push(...checkWordCount(result.improvedPrompt, platform));
   }
+  // socialCopy valideras bara för förbjudna fraser, inte ordräkning
   if (typeof result?.socialCopy === "string") {
     violations.push(...findRuleViolations(result.socialCopy, platform));
   }
