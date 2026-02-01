@@ -1009,19 +1009,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let violations = validateOptimizationResult(result, platform);
       console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
-      // Retry loop - max 3 attempts
+      // Retry loop
+      // - Booli behöver ofta fler omtag för att undvika mallfraser
+      // - Vi vill ALDRIG returnera en text som fortfarande bryter mot reglerna
+      const maxAttempts = platform === "hemnet" ? 2 : 5;
       let attempts = 0;
-      while (violations.length > 0 && attempts < 2) {
+      while (violations.length > 0 && attempts < maxAttempts) {
         attempts++;
         console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
         
+        const violationList = violations.map(v => `- ${v}`).join("\n");
+
         const retryCompletion = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
             ...textMessages,
             {
               role: "user" as const,
-              content: "STOPP! Du använde FÖRBJUDNA ord/fraser: " + violations.join(", ") + ".\n\nREGLER:\n1. Skriv ALDRIG 'erbjuder', 'perfekt för', 'rofylld', 'attraktivt', 'inom räckhåll'\n2. Ersätt VARJE klysch med KONKRET fakta från dispositionen\n3. Om du inte har fakta – TA BORT meningen helt\n4. Skriv som en toppmäklare, inte som en AI\n\nReturnera ENDAST JSON med omskriven text.",
+              content:
+                "STOPP! Texten bryter mot kvalitetsreglerna. Du måste skriva om den.\n\n" +
+                "FEL SOM MÅSTE ÅTGÄRDAS (ta bort/skriv om):\n" +
+                violationList +
+                "\n\nREGLER:\n" +
+                "1. Använd inga fraser som matchar listan ovan (de är förbjudna).\n" +
+                "2. Ersätt varje mallfras med KONKRET fakta från DISPOSITION/PLAN.\n" +
+                "3. Om du saknar fakta: TA BORT meningen helt (hitta inte på).\n" +
+                "4. Behåll säljig, professionell mäklar-svenska utan AI-klyschor.\n\n" +
+                "Returnera ENDAST JSON med omskriven text.",
             },
           ],
           max_tokens: 4000,
@@ -1036,7 +1050,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       
       if (violations.length > 0) {
-        console.warn("[AI Validation] WARNING: Still has violations after retries:", violations);
+        console.warn("[AI Validation] ERROR: Still has violations after retries:", violations);
+        return res.status(422).json({
+          message:
+            "Kunde inte generera en text utan förbjudna mallfraser efter flera försök. Försök igen.",
+          violations,
+        });
       }
 
       // POST-PROCESSING: Rensa bort förbjudna fraser och lägg till stycken
