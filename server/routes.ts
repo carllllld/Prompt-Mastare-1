@@ -325,6 +325,29 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["trygg boendeekonomi", "stabil ekonomi"],
   ["goda arbetsytor", "bänkyta"],
   ["gott om arbetsyta", "bänkyta"],
+  
+  // === NYA FRASER FRÅN GRANSKNING ===
+  ["säker boendemiljö", ""],
+  ["stadens liv och rörelse", ""],
+  ["mitt i stadens liv", "centralt"],
+  ["njuta av eftermiddagssolen", "med eftermiddagssol"],
+  ["njuta av kvällssolen", "med kvällssol"],
+  ["njuta av", ""],
+  ["den vanliga balkongen", "balkongen"],
+  ["trevligt sällskap", ""],
+  ["med nära till runt", "med nära till"],
+  ["nära till runt i staden", "nära tunnelbana"],
+  ["med ett bekvämt boende med", "med"],
+  ["bekvämt boende", ""],
+  ["det finns möjlighet att uppdatera", ""],
+  ["om så önskas", ""],
+  ["efter egna önskemål", ""],
+  ["har potential för modernisering", "kan renoveras"],
+  ["potential för", ""],
+  ["imponerande takhöjd", "hög takhöjd"],
+  ["imponerande", ""],
+  ["unik karaktär", "karaktär"],
+  ["lugn atmosfär", ""],
 ];
 
 function cleanForbiddenPhrases(text: string): string {
