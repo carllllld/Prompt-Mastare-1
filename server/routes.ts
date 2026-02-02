@@ -165,6 +165,14 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
     if (/^\w{1,3}\s*[.!?]/.test(trimmed)) {
       violations.push(`Trasig mening (för kort fragment): "${trimmed.substring(0, 70)}"`);
     }
+    // Check for broken words (common patterns from AI output)
+    if (/\b(mgänge|medkel|ång|amiljer|törre|rbetspendlare)\b/i.test(trimmed)) {
+      violations.push(`Trasigt ord i mening: "${trimmed.substring(0, 70)}"`);
+    }
+    // Check for period followed by random capitalized word (common AI error)
+    if (/\.\s+[A-Z][a-z]{4,7}\s+[a-z]/.test(trimmed)) {
+      violations.push(`Trasig mening (punkt + slumpord): "${trimmed.substring(0, 70)}"`);
+    }
   }
   
   // Check for "Välkommen" opening (forbidden)
@@ -437,6 +445,24 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["moderna bekvämligheter", ""],
   ["moderna", ""],
   ["bekvämligheter", ""],
+  
+  // === FLER AI-FRASER FRÅN GRANSKNING 5 ===
+  ["högkvalitativa material och finish", "högkvalitativa material"],
+  ["material och finish", "material"],
+  ["klassiska charm", "karaktär"],
+  ["trevlig plats att vistas på", "bra plats"],
+  ["plats att vistas på", "plats"],
+  ["unik kombination av modern komfort och klassisk charm", ""],
+  ["kombination av modern komfort och klassisk charm", ""],
+  ["modern komfort och klassisk charm", ""],
+  ["utmärkt val", ""],
+  ["smidig pendling", "enkel pendling"],
+  ["med känsla av rymd", "med rymd"],
+  ["bidrar till husets klassiska charm", "ger karaktär"],
+  ["med extra utrymme", "med mer plats"],
+  ["medkel tillgång", "lättillgänglig"],
+  ["medkel", "lätt"],
+  ["stor fördel", "fördel"],
 ];
 
 function cleanForbiddenPhrases(text: string): string {
