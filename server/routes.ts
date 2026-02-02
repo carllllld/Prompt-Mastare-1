@@ -172,7 +172,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
 function checkWordCount(text: string, platform: string): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 150 : 150;
+  const minWords = platform === "hemnet" ? 180 : 200;
   const maxWords = platform === "hemnet" ? 500 : 600;
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
@@ -433,23 +433,46 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["medkel", "lätt"],
   ["stor fördel", "fördel"],
   
-  // === TRASIGA ORD SOM SKA RENSAS AUTOMATISKT ===
-  ["Mgänge", "möjligheter"],
-  ["Amiljer", "familjer"],
-  ["ång", "många"],
-  ["törre", "större"],
-  ["rbetspendlare", "arbetspendlare"],
-  ["medkel", "lätt"],
-  ["för .", ". "],
-];
+  ];
 
 function cleanForbiddenPhrases(text: string): string {
   if (!text) return text;
   let cleaned = text;
+  
+  // Först: Fixa trasiga ord som AI:n genererar (HELA ORD, inte delar)
+  const brokenWordFixes: [RegExp, string][] = [
+    [/\bmmångaa\b/gi, "många"],
+    [/\bgmångaavstånd\b/gi, "gångavstånd"],
+    [/\bVkoppling\b/gi, "Avkoppling"],
+    [/\bEnna\b/gi, "Denna"],
+    [/\bMgänge\b/gi, "umgänge"],
+    [/\bAmiljer\b/gi, "Familjer"],
+    [/\bamiljer\b/gi, "familjer"],
+    [/\bperfekt plats\b/gi, "bra plats"],
+    [/\bperfekt för\b/gi, "passar"],
+    [/\bmed mer plats \.\b/gi, "med mer plats."],
+    [/\bmed rymd och ljus\.\b/gi, "med god rymd."],
+    [/\bPriset \. Enna\b/gi, "Priset för denna"],
+    [/\bPriset \.\b/gi, "Priset för denna"],
+    [/\b\. Enna\b/gi, ". Denna"],
+    [/\bmed , med\b/gi, "med"],
+    [/\bmed rymd\b/gi, "med god rymd"],
+    [/\bmed mer plats \./gi, "med mer plats."],
+    [/\bär en perfekt plats \./gi, "passar bra."],
+    [/\bperfekt plats \./gi, "bra plats."],
+    [/\bFamiljer\./gi, "familjer."],
+  ];
+  
+  for (const [regex, replacement] of brokenWordFixes) {
+    cleaned = cleaned.replace(regex, replacement);
+  }
+  
+  // Sedan: Ersätt förbjudna fraser
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     const regex = new RegExp(phrase, "gi");
     cleaned = cleaned.replace(regex, replacement);
   }
+  
   // Ta bort dubbla mellanslag
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
   // Ta bort meningar som börjar med tomt efter ersättning
@@ -458,6 +481,10 @@ function cleanForbiddenPhrases(text: string): string {
   cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (match, letter) => `. ${letter.toUpperCase()}`);
   // Ta bort meningar som bara är ett ord eller tomma
   cleaned = cleaned.replace(/\.\s*\./g, ".");
+  // Fixa "Priset . Enna" -> "Priset för denna"
+  cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset för denna");
+  cleaned = cleaned.replace(/\. Enna/gi, ". Denna");
+  
   return cleaned;
 }
 
@@ -638,111 +665,86 @@ För BOOLI/EGEN SIDA: lägg även in generiska bärfraser som ofta gör texten A
 }
 `;
 
-// --- HEMNET FORMAT: Riktig mäklarstil med konkret exempel ---
+// --- HEMNET FORMAT: Professionell mäklarstil ---
 const HEMNET_TEXT_PROMPT = `
-Du är en erfaren svensk fastighetsmäklare. Skriv en objektbeskrivning för Hemnet baserat på DISPOSITIONEN.
+Du är en erfaren svensk fastighetsmäklare. Skriv en säljande men saklig objektbeskrivning.
 
-KRAV: Minst 200 ord. Skriv 4-5 stycken. Nämn INTE avgift eller pris (visas separat på Hemnet).
-
-===== EXEMPELTEXT (KOPIERA DENNA STIL EXAKT) =====
-
-Strandvägen 15, våning 2 av 4. En ljus trea om 78 kvm med balkong i söderläge.
-
-Lägenheten har en praktisk planlösning med hall, vardagsrum, två sovrum, kök och badrum. Vardagsrummet har stora fönster mot gatan och takhöjd på 2,9 meter. Golven är av ekparkett som slipades 2020.
-
-Köket har vita luckor, bänkskiva i sten och är utrustat med spis, ugn, kyl, frys och diskmaskin. Badrummet renoverades 2018 och har dusch, wc, handfat och tvättmaskin.
-
-Det större sovrummet rymmer dubbelsäng och har platsbyggd garderob. Det mindre sovrummet passar som barnrum eller arbetsrum. Balkongen är inglasad och vetter mot söder.
-
-Fastigheten är välskött med renoverad fasad och trapphus. Tunnelbana finns på 4 minuters gångavstånd och matbutik i samma kvarter.
-
-===== SLUT PÅ EXEMPEL =====
-
-ABSOLUT FÖRBJUDNA ORD (om du använder dessa misslyckas du):
-- erbjuder, erbjuds, erbjuda
-- perfekt för, idealisk för, för den som
-- vilket gör det enkelt, vilket ger en
-- kontakta oss, tveka inte
-- stadens puls, i hjärtat av
-- drömboende, drömhem, luftig känsla
-- fantastisk, underbar, magisk
+STRUKTUR (följ exakt):
+1. ÖPPNING: Adress + typ + storlek + rum (1 mening)
+2. PLANLÖSNING: Beskriv hur rummen ligger (2-3 meningar)
+3. KÖK: Material, vitvaror, renovering (2-3 meningar)
+4. BADRUM: Material, utrustning, renovering (1-2 meningar)
+5. SOVRUM: Storlek, garderober (1-2 meningar)
+6. BALKONG/UTEPLATS: Storlek, väderstreck (1-2 meningar)
+7. LÄGE: Avstånd till kommunikationer, service (2-3 meningar)
 
 SKRIV SÅ HÄR:
-- "Lägenheten ligger på..." INTE "Välkommen till..."
-- "Köket har..." INTE "Köket erbjuder..."
-- "Nära tunnelbana" INTE "vilket gör det enkelt att ta sig runt"
+- "Villan ligger i..." (inte "Välkommen till...")
+- "Köket har..." (inte "Köket erbjuder...")
+- "10 minuters gångavstånd" (inte "nära till")
+- Använd exakta mått och årtal
 
-REGLER:
-1. Minst 200 ord i improvedPrompt
-2. Använd BARA fakta från dispositionen
-3. Skriv konkret: "4 minuters gångavstånd", "78 kvm", "renoverat 2018"
-4. NÄMN INTE avgift eller pris
+FÖRBJUDNA ORD (använd ALDRIG):
+erbjuder, perfekt, idealisk, fantastisk, underbar, magisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det
+
+KRAV:
+- Minst 180 ord
+- Nämn INTE pris eller avgift
+- Använd BARA fakta från dispositionen
+- Skriv fullständiga meningar
 
 OUTPUT (JSON):
 {
-  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3"],
-  "improvedPrompt": "Hela texten här med stycken separerade av \\n\\n",
-  "analysis": {"target_group": "...", "area_advantage": "...", "pricing_factors": "..."},
-  "socialCopy": "Kort text max 280 tecken",
-  "missing_info": ["..."],
-  "pro_tips": ["..."]
+  "highlights": ["Viktig punkt 1", "Viktig punkt 2", "Viktig punkt 3"],
+  "improvedPrompt": "Texten med stycken separerade av \\n\\n",
+  "analysis": {"target_group": "Målgrupp", "area_advantage": "Lägesfördelar", "pricing_factors": "Värdehöjande"},
+  "socialCopy": "Kort text max 280 tecken utan emoji",
+  "missing_info": ["Saknad info"],
+  "pro_tips": ["Tips"]
 }
 `;
 
-// --- BOOLI/EGEN SIDA: Riktig mäklarstil med konkret exempel ---
+// --- BOOLI/EGEN SIDA: Professionell mäklarstil ---
 const BOOLI_TEXT_PROMPT_WRITER = `
-Du är en erfaren svensk fastighetsmäklare. Skriv en objektbeskrivning baserat på DISPOSITIONEN.
+Du är en erfaren svensk fastighetsmäklare. Skriv en säljande men saklig objektbeskrivning.
 
-KRAV: Minst 250 ord. Skriv 6-7 stycken.
+STRUKTUR (följ exakt):
+1. ÖPPNING: Adress + typ + storlek + rum + unik egenskap (1-2 meningar)
+2. PLANLÖSNING: Beskriv hur rummen ligger, ljusinsläpp, takhöjd (2-3 meningar)
+3. KÖK: Märke, material, vitvaror, renovering med årtal (2-3 meningar)
+4. BADRUM: Material, utrustning, renovering med årtal (2-3 meningar)
+5. SOVRUM: Antal, storlek, garderober, ljus (2-3 meningar)
+6. BALKONG/UTEPLATS: Storlek i kvm, väderstreck, användning (2-3 meningar)
+7. EXTRA: Uterum, förråd, parkering, andra utrymmen (1-2 meningar)
+8. FÖRENING/FASTIGHET: Renoveringar, ekonomi om relevant (1-2 meningar)
+9. LÄGE: Område, karaktär, avstånd till buss/tåg i minuter (2-3 meningar)
+10. PRIS: Ange utgångspris om det finns i dispositionen (1 mening)
 
-===== EXEMPELTEXT (KOPIERA DENNA STIL EXAKT) =====
+SKRIV SÅ HÄR:
+- "Villan ligger i Mörtnäs..." (inte "Välkommen till...")
+- "Köket är från Marbodal..." (inte "Köket erbjuder...")
+- "10 minuters gångavstånd till bussen" (inte "nära kommunikationer")
+- Använd exakta mått: "165 kvm", "takhöjd över 3 meter", "6 rum"
+- Använd exakta årtal: "renoverat 2023", "nybyggt uterum"
 
-Karlavägen 45, våning 4 av 5. En välplanerad tvåa om 58 kvm i klassisk 20-talsfastighet med bevarade originaldetaljer.
+FÖRBJUDNA ORD (använd ALDRIG dessa):
+erbjuder, perfekt, idealisk, fantastisk, underbar, magisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det, rymlig känsla, härlig plats
 
-Lägenheten har en genomtänkt planlösning med hall, vardagsrum, sovrum, kök och badrum. Från hallen nås samtliga rum. Vardagsrummet om cirka 20 kvm har två fönster mot gården och takhöjd på 2,8 meter. Golven är av ekparkett genomgående.
-
-Köket är utrustat med spis, ugn, kyl, frys och diskmaskin. Bänkskivorna är av laminat och det finns gott om förvaring i över- och underskåp. Köket har fönster mot gården.
-
-Sovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat och renoverat 2019 med dusch, wc och handfat. Tvättmaskin och torktumlare finns i lägenheten.
-
-Balkongen på 4 kvm vetter mot väster med eftermiddags- och kvällssol. Föreningen har nyligen renoverat fasaden och taket. Månadsavgiften är 4 200 kr och inkluderar värme, vatten och kabel-tv.
-
-Läget är centralt med tunnelbana på 3 minuters gångavstånd. Matbutiker, restauranger och Humlegården finns i närområdet.
-
-===== SLUT PÅ EXEMPEL =====
-
-ABSOLUT FÖRBJUDNA ORD OCH FRASER (om du använder dessa misslyckas du):
-- erbjuder, erbjuds, erbjuda
-- perfekt för, idealisk för
-- för den som
-- vilket gör det enkelt, vilket ger en
-- kontakta oss, tveka inte
-- stadens puls, i hjärtat av
-- drömboende, drömhem
-- luftig känsla, ger en luftig
-- fantastisk, underbar, magisk
-
-SKRIV SÅ HÄR (konkret och sakligt):
-- "Lägenheten ligger på..." INTE "Välkommen till..."
-- "Köket har..." INTE "Köket erbjuder..."
-- "Nära tunnelbana" INTE "vilket gör det enkelt att ta sig runt"
-- "Passar par eller singel" INTE "perfekt för den som..."
-
-REGLER:
-1. Minst 250 ord i improvedPrompt
-2. Använd BARA fakta från dispositionen
-3. Skriv konkret: "3 minuters promenad", "4 500 kr/mån", "58 kvm"
-4. Varje stycke ska ha minst 3-4 meningar
-5. Beskriv varje rum och yta mer detaljerat
+KRAV:
+- Minst 200 ord
+- Använd BARA fakta från dispositionen - hitta aldrig på
+- Skriv fullständiga meningar utan avbrott
+- Varje stycke ska ha 2-3 meningar
+- Separera stycken med \\n\\n
 
 OUTPUT (JSON):
 {
-  "highlights": ["✓ Punkt 1", "✓ Punkt 2", "✓ Punkt 3"],
-  "improvedPrompt": "Hela texten här med stycken separerade av \\n\\n",
-  "analysis": {"target_group": "...", "area_advantage": "...", "pricing_factors": "..."},
-  "socialCopy": "Kort text max 280 tecken",
-  "missing_info": ["..."],
-  "pro_tips": ["..."]
+  "highlights": ["Viktig punkt 1", "Viktig punkt 2", "Viktig punkt 3"],
+  "improvedPrompt": "Texten med stycken separerade av \\n\\n",
+  "analysis": {"target_group": "Målgrupp", "area_advantage": "Lägesfördelar", "pricing_factors": "Värdehöjande"},
+  "socialCopy": "Kort text max 280 tecken utan emoji",
+  "missing_info": ["Saknad info som behövs för komplett annons"],
+  "pro_tips": ["Tips till mäklaren"]
 }
 `;
 
@@ -1196,7 +1198,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         model: "gpt-4o",
         messages: textMessages,
         max_tokens: 4000,
-        temperature: 0.4,
+        temperature: 0.2,
         response_format: { type: "json_object" },
       });
 
