@@ -145,6 +145,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   // Check for incomplete/broken sentences
   // - Extract sentences WITH their punctuation so we can validate them correctly
   // - Catch cases like "ljus och ." or missing final punctuation
+  // - Catch cases like "passande . Ommarens" (punkt mitt i mening)
   const sentenceMatches = text.match(/[^.!?]+[.!?]/g) || [];
   const trailing = text.replace(/\s+/g, " ").trim();
   if (trailing.length > 0 && !/[.!?]$/.test(trailing)) {
@@ -155,6 +156,14 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
     if (trimmed.length < 6) continue;
     if (/\b(och|med|som)\s*[.!?]$/.test(trimmed)) {
       violations.push(`Trasig mening: "${trimmed.substring(0, 70)}"`);
+    }
+    // Check for sentences that end abruptly with period followed by non-capital letter
+    if (/\.\s+[a-zåäö]/.test(trimmed)) {
+      violations.push(`Trasig mening (punkt mitt i text): "${trimmed.substring(0, 70)}"`);
+    }
+    // Check for very short fragments followed by period
+    if (/^\w{1,3}\s*[.!?]/.test(trimmed)) {
+      violations.push(`Trasig mening (för kort fragment): "${trimmed.substring(0, 70)}"`);
     }
   }
   
@@ -412,6 +421,22 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["enhetlig och elegant känsla", ""],
   ["enhetlig och stilren känsla", ""],
   ["för .", ". "],
+  
+  // === FLER AI-FRASER FRÅN GRANSKNING 4 ===
+  ["tidslös och elegant känsla", ""],
+  ["släpper in rikligt med ljus", ""],
+  ["underlättar umgänge med familj och vänner", ""],
+  ["passande", "lämplig"],
+  ["en möjlighet att förvärva", ""],
+  ["unik kombination av tradition och modernitet", ""],
+  ["kombination av tradition och modernitet", ""],
+  ["tradition och modernitet", ""],
+  ["ett val för köpare", ""],
+  ["ett val för", ""],
+  ["historiska detaljer", "originaldetaljer"],
+  ["moderna bekvämligheter", ""],
+  ["moderna", ""],
+  ["bekvämligheter", ""],
 ];
 
 function cleanForbiddenPhrases(text: string): string {
