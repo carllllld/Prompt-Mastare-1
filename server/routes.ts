@@ -795,10 +795,18 @@ ANVÄND ALL KONTEXT NEDAN:
 
 # SKRIVREGLER
 1. Minst 180 ord
-2. Använd BARA fakta från dispositionen
+2. Använd ENDAST exakt fakta från dispositionen - INGET HITTA PÅ
 3. Börja med adressen
 4. Skriv fullständiga meningar
 5. Separera stycken med \\n\\n
+
+# VIKTIGT: INGET HITTA PÅ!
+- Använd ONLY material/märken som EXAKT nämns i dispositionen
+- Använd ONLY antal badrum/toaletter som EXAKT nämns i dispositionen  
+- Använd ONLY mått som EXAKT nämns i dispositionen
+- INTE hitta på "Siemens" om det står "vitvaror"
+- INTE hitta på "kvartskomposit" om det står "bänkskivor"
+- INTE hitta på antal toaletter om det inte står
 
 # FÖRBJUDNA FRASER (ANVÄND ALDRIG)
 erbjuder, erbjuds, perfekt, idealisk, fantastisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det, välkommen till
@@ -1627,17 +1635,22 @@ DISPOSITION: ${JSON.stringify(disposition, null, 2)}
 PLATTFORM: ${platform}
 
 # GRANSKNINGSKRITER
-1. JURIDISK KORREKTHET:
-   - Alla fakta måste vara korrekta och från dispositionen
+1. FAKTA-KONTROLL (KRITISKT):
+   - ALLA fakta måste finnas EXAKT i dispositionen
+   - INGA påhittade märken (t.ex. "Siemens" om det står "vitvaror")
+   - INGA påhittade material (t.ex. "kvartskomposit" om det står "bänkskivor")
+   - INGA påhittade antal (t.ex. "tre toaletter" om det inte står)
+
+2. JURIDISK KORREKTHET:
    - Inga överdrivna eller vilseledande påståenden
    - Följ FMI:s regler för objektbeskrivningar
 
-2. SPRÅKQUALITET:
+3. SPRÅKQUALITET:
    - Professionell mäklarstil utan AI-klyschor
    - Fullständiga meningar utan avbrott
    - Korrekt grammatik och stavning
 
-3. SÄLJSTYRKA:
+4. SÄLJSTYRKA:
    - Konkreta och säljande formuleringar
    - Relevant information för målgruppen
    - Bra flöde och struktur
