@@ -1514,44 +1514,84 @@ DISPOSITION: ${JSON.stringify(disposition, null, 2)}
       }
       console.log("[Step 2] Tone analysis completed:", JSON.stringify(toneAnalysis, null, 2));
 
-      // Steg 3: Exempelmatchning - välj bäst lämpade exempeltexter
-      console.log("[Step 3] Selecting best matching example texts...");
+      // Steg 3: AI-driven exempelgenerator - hitta bästa riktiga annonser
+      console.log("[Step 3] AI-driven example generator - finding best real estate descriptions...");
       
-      const exampleMatchingPrompt = `
+      const exampleGeneratorPrompt = `
 # UPPGIFT
 
-Välj de 3 bästa exempeltexterna från databasen som bäst matchar objektet. Använd tonalitetsanalysen för att hitta de mest relevanta exemplen.
+Du är en erfaren svensk fastighetsmäklare. Hitta de 3 BÄSTA befintliga objektbeskrivningarna från Hemnet/Booli som perfekta matchar detta objekt.
 
-# INPUT
+# INPUT OBJEKT
 DISPOSITION: ${JSON.stringify(disposition, null, 2)}
 TONALITETSANALYS: ${JSON.stringify(toneAnalysis, null, 2)}
 
-# EXEMPELDATABAS
-${JSON.stringify(EXAMPLE_DATABASE, null, 2)}
+# SÖKKRITER (hitta annonser med):
+- Samma objekttyp: ${disposition.property?.type || 'bostad'}
+- Samma prisklass: ${disposition.price ? `cirka ${Math.round(disposition.price / 1000000)}M kr` : 'okänt pris'}
+- Samma områdeskategori: ${toneAnalysis.tone_profile?.location_category || 'standard'}
+- Samma storleksklass: ${disposition.property?.size ? `${Math.round(disposition.property.size / 50) * 50} kvm` : 'okänd storlek'}
+- Högkvalitativa, professionella beskrivningar
+- Inga AI-klyschor eller generiska formuleringar
+
+# EXEMPEL PÅ BRA OBJEKTBESKRIVNINGAR (för referens):
+
+PREMIUM EXEMPEL - Villa Mörtnäs:
+"Ekorrvägen 10, Mörtnäs. En rymlig villa på 165 kvm med 6 rum i lugnt och naturnära område. Villan har ekparkettgolv och nyrenoverat kök från Marbodal 2023.
+
+Huset har en praktisk planlösning med socialt kök i öppen planlösning med vardagsrum. Köket har vitvaror från Siemens och bänkskivor i kvartskomposit. Det finns gott om förvaringsutrymmen i både kök och hall.
+
+Badrummet har badkar och golvvärme. Samtliga rum har ekparkettgolv och villan har en hög takhöjd på över 3 meter. De spröjsade fönstren bidrar till husets charm och karaktär.
+
+Det finns en härlig terrass i söderläge. Dessutom finns ett nybyggt uterum med TV-soffa och extra badrum. Uppvärmning sker via fjärrvärme.
+
+Fastigheten ligger i Mörtnäs med 10 minuters gångavstånd till bussen. Området är lugnt och naturnära med goda kommunikationer till centrala Värmdö."
+
+STANDARD EXEMPEL - Lägenhet Upplands Väsby:
+"Björkängsvägen 3, Upplands Väsby. En välplanerad trea om 85 kvm i barnvänligt område. Lägenheten har balkong i västerläge.
+
+Lägenheten har en social planlösning med hall, vardagsrum, kök, två sovrum och badrum. Köket är från 2018 med vitvaror från Bosch och god bänkyta.
+
+Vardagsrummet har plats för soffagrupp och matbord. Det finns utgång till balkongen på 6 kvm. Golven är av laminat i hela lägenheten.
+
+Badrummet är helkaklat med dusch, wc och handfat. Det finns tvättmaskin och torktumlare.
+
+Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pendeltåg tar 35 minuter till Stockholm."
 
 # OUTPUT FORMAT (JSON)
 {
+  "search_strategy": "hur du skulle söka på Hemnet/Booli",
   "selected_examples": [
     {
-      "text": "hela exempeltexten",
-      "metadata": {...},
+      "text": "hela exempeltexten från bästa annonsen",
+      "source": "Hemnet/Booli + länk/datum",
       "relevance_score": 0.95,
-      "match_reasons": ["anledning 1", "anledning 2"]
+      "match_reasons": ["exakt prisnivå", "samma område", "perfekt tonalitet", "samma storlek"],
+      "style_analysis": {
+        "writing_style": "professionell/sophisticated/casual",
+        "tone": "saklig/säljande/informativ",
+        "structure": "faktabaserad/berättande",
+        "unique_elements": ["specifika detaljer som gör den unik"]
+      }
     }
   ],
-  "selection_strategy": "hur exemplen valdes",
-  "writing_guidance": "specifik vägledning baserat på valda exempel"
+  "writing_guidance": {
+    "target_tone": "exakt tonalitet att använda",
+    "key_phrases": ["fraser som fungerar bra"],
+    "structure_template": "hur texten ska struktureras",
+    "avoid_elements": ["vad som ska undvikas"]
+  }
 }
 `;
 
       const exampleMessages = [
         {
           role: "system" as const,
-          content: exampleMatchingPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: exampleGeneratorPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user" as const,
-          content: "Välj de 3 bästa exempeltexterna för detta objekt.",
+          content: "Hitta de 3 bästa objektbeskrivningarna från Hemnet/Booli för detta objekt.",
         },
       ];
 
