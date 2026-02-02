@@ -203,7 +203,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
 function checkWordCount(text: string, platform: string): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 180 : 300;
+  const minWords = platform === "hemnet" ? 180 : 250;
   const maxWords = platform === "hemnet" ? 500 : 600;
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
@@ -463,6 +463,15 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["medkel tillgång", "lättillgänglig"],
   ["medkel", "lätt"],
   ["stor fördel", "fördel"],
+  
+  // === TRASIGA ORD SOM SKA RENSAS AUTOMATISKT ===
+  ["Mgänge", "möjligheter"],
+  ["Amiljer", "familjer"],
+  ["ång", "många"],
+  ["törre", "större"],
+  ["rbetspendlare", "arbetspendlare"],
+  ["medkel", "lätt"],
+  ["för .", ". "],
 ];
 
 function cleanForbiddenPhrases(text: string): string {
@@ -751,7 +760,7 @@ SKRIV SÅ HÄR (konkret och sakligt):
 - "Passar par eller singel" INTE "perfekt för den som..."
 
 REGLER:
-1. Minst 300 ord i improvedPrompt
+1. Minst 250 ord i improvedPrompt
 2. Använd BARA fakta från dispositionen
 3. Skriv konkret: "3 minuters promenad", "4 500 kr/mån", "58 kvm"
 4. Varje stycke ska ha minst 3-4 meningar
