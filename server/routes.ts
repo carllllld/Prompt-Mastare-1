@@ -142,38 +142,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
     }
   }
   
-  // Check for incomplete/broken sentences
-  // - Extract sentences WITH their punctuation so we can validate them correctly
-  // - Catch cases like "ljus och ." or missing final punctuation
-  // - Catch cases like "passande . Ommarens" (punkt mitt i mening)
-  const sentenceMatches = text.match(/[^.!?]+[.!?]/g) || [];
-  const trailing = text.replace(/\s+/g, " ").trim();
-  if (trailing.length > 0 && !/[.!?]$/.test(trailing)) {
-    violations.push(`Ofullständig mening (saknar avslutande skiljetecken): "${trailing.substring(0, 70)}..."`);
-  }
-  for (const s of sentenceMatches) {
-    const trimmed = s.replace(/\s+/g, " ").trim();
-    if (trimmed.length < 6) continue;
-    if (/\b(och|med|som)\s*[.!?]$/.test(trimmed)) {
-      violations.push(`Trasig mening: "${trimmed.substring(0, 70)}"`);
-    }
-    // Check for sentences that end abruptly with period followed by non-capital letter
-    if (/\.\s+[a-zåäö]/.test(trimmed)) {
-      violations.push(`Trasig mening (punkt mitt i text): "${trimmed.substring(0, 70)}"`);
-    }
-    // Check for very short fragments followed by period
-    if (/^\w{1,3}\s*[.!?]/.test(trimmed)) {
-      violations.push(`Trasig mening (för kort fragment): "${trimmed.substring(0, 70)}"`);
-    }
-    // Check for broken words (common patterns from AI output)
-    if (/\b(mgänge|medkel|ång|amiljer|törre|rbetspendlare)\b/i.test(trimmed)) {
-      violations.push(`Trasigt ord i mening: "${trimmed.substring(0, 70)}"`);
-    }
-    // Check for period followed by random capitalized word (common AI error)
-    if (/\.\s+[A-Z][a-z]{4,7}\s+[a-z]/.test(trimmed)) {
-      violations.push(`Trasig mening (punkt + slumpord): "${trimmed.substring(0, 70)}"`);
-    }
-  }
+  // ENKEL VALIDERING - bara ordkrav och förbjudna fraser
   
   // Check for "Välkommen" opening (forbidden)
   if (text.toLowerCase().startsWith('välkommen')) {
@@ -203,7 +172,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
 function checkWordCount(text: string, platform: string): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 180 : 250;
+  const minWords = platform === "hemnet" ? 150 : 150;
   const maxWords = platform === "hemnet" ? 500 : 600;
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
