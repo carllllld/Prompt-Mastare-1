@@ -1617,14 +1617,81 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
       }
       console.log("[Step 3] Example selection completed:", JSON.stringify(exampleSelection, null, 2));
 
-      // Steg 4: Skriv objektbeskrivning baserat på disposition + tonalitet + exempel
-      console.log("[Step 4] Writing property description with full context...");
+      // Steg 4A: Planering - skapa skrivplan baserat på fakta och exempel
+      console.log("[Step 4A] Creating writing plan based on facts and examples...");
+      
+      const planningPrompt = `
+# UPPGIFT
+Skapa en kortfattad skrivplan för objektbeskrivningen baserat på fakta och exempel.
+
+# INPUT
+DISPOSITION: ${JSON.stringify(disposition, null, 2)}
+TONALITETSANALYS: ${JSON.stringify(toneAnalysis, null, 2)}
+EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
+
+# OUTPUT FORMAT (JSON)
+{
+  "writing_plan": [
+    "1. Öppning: Adress + typ + unik egenskap",
+    "2. Planlösning: Rum och material",
+    "3. Kök: Märke och renovering",
+    "4. Badrum: Utrustning och detaljer",
+    "5. Läge: Områdesbeskrivning"
+  ],
+  "key_selling_points": ["3-5 viktigaste försäljningsargumenten"],
+  "tone_guidance": "konkret tonalitetsinstruktion",
+  "structure_template": "hur texten ska struktureras"
+}
+`;
+
+      const planningMessages = [
+        {
+          role: "system" as const,
+          content: planningPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content: "Skapa skrivplan för detta objekt.",
+        },
+      ];
+
+      const planningCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: planningMessages,
+        max_tokens: 500,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+      });
+
+      const planningText = planningCompletion.choices[0]?.message?.content || "{}";
+      let writingPlan: any;
+      try {
+        writingPlan = safeJsonParse(planningText);
+      } catch (e) {
+        console.warn("[Step 4A] Planning JSON parse failed, using default...", e);
+        writingPlan = {
+          writing_plan: [
+            "1. Öppning: Adress och objekttyp",
+            "2. Planlösning: Rum och ytor",
+            "3. Kök och badrum",
+            "4. Övriga detaljer",
+            "5. Läge och område"
+          ],
+          key_selling_points: ["Bra läge", "Välskött"],
+          tone_guidance: "Professionell och informativ",
+          structure_template: "Faktabaserad"
+        };
+      }
+      console.log("[Step 4A] Writing plan created:", JSON.stringify(writingPlan, null, 2));
+
+      // Steg 4B: Textgenerering - skriv text enligt skrivplan
+      console.log("[Step 4B] Generating text based on writing plan...");
 
       // A/B-testning: generera två versioner
       const promptA = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
       const promptB = platform === "hemnet" ? HEMNET_TEXT_PROMPT_B : BOOLI_TEXT_PROMPT_WRITER;
       
-      console.log("[Step 4] Generating version A...");
+      console.log("[Step 4B] Generating version A...");
       const textMessagesA = [
         {
           role: "system" as const,
@@ -1635,17 +1702,18 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
           content:
             "DISPOSITION: " +
             JSON.stringify(disposition, null, 2) +
-            "\n\nTONALITETSANALYS: " +
+            "\n\nSKRIVPLAN: " +
+            JSON.stringify(writingPlan, null, 2) +
+            "\n\nTONALITET: " +
             JSON.stringify(toneAnalysis, null, 2) +
-            "\n\nEXEMPELMATCHNING: " +
-            JSON.stringify(exampleSelection, null, 2) +
             "\n\nPLATTFORM: " +
             (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA") +
-            "\n\nANPASSA texten efter ALL kontext:\n" +
-            "1. Använd exakt samma stil som de valda EXEMPELTEXTERNA\n" +
-            "2. Följ tonalitetsanalysen för målgruppen och prisnivån\n" +
-            "3. Använd bara fakta från dispositionen\n" +
-            "4. Skriv som en erfaren mäklare med 15 års erfarenhet",
+            "\n\nANPASSA texten efter skrivplanen:\n" +
+            "1. Följ skrivplanen exakt\n" +
+            "2. Använd bara fakta från disposition\n" +
+            "3. Följ tonalitetsguiden\n" +
+            "4. Minst 180 ord\n" +
+            "5. Skriv som en erfaren mäklare",
         },
       ];
 
@@ -1662,11 +1730,11 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
       try {
         resultA = safeJsonParse(textA);
       } catch (e) {
-        console.warn("[Step 4] Version A JSON parse failed, using fallback...", e);
+        console.warn("[Step 4B] Version A JSON parse failed, using fallback...", e);
         resultA = { improvedPrompt: "Text kunde inte genereras" };
       }
 
-      console.log("[Step 4] Generating version B...");
+      console.log("[Step 4B] Generating version B...");
       const textMessagesB = [
         {
           role: "system" as const,
@@ -1677,17 +1745,18 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
           content:
             "DISPOSITION: " +
             JSON.stringify(disposition, null, 2) +
-            "\n\nTONALITETSANALYS: " +
+            "\n\nSKRIVPLAN: " +
+            JSON.stringify(writingPlan, null, 2) +
+            "\n\nTONALITET: " +
             JSON.stringify(toneAnalysis, null, 2) +
-            "\n\nEXEMPELMATCHNING: " +
-            JSON.stringify(exampleSelection, null, 2) +
             "\n\nPLATTFORM: " +
             (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA") +
-            "\n\nANPASSA texten efter ALL kontext:\n" +
-            "1. Använd exakt samma stil som de valda EXEMPELTEXTERNA\n" +
-            "2. Följ tonalitetsanalysen för målgruppen och prisnivån\n" +
-            "3. Använd bara fakta från dispositionen\n" +
-            "4. Skriv som en erfaren mäklare med 15 års erfarenhet",
+            "\n\nANPASSA texten efter skrivplanen:\n" +
+            "1. Följ skrivplanen exakt\n" +
+            "2. Använd bara fakta från disposition\n" +
+            "3. Följ tonalitetsguiden\n" +
+            "4. Minst 180 ord\n" +
+            "5. Skriv som en erfaren mäklare",
         },
       ];
 
@@ -1704,13 +1773,13 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
       try {
         resultB = safeJsonParse(textB);
       } catch (e) {
-        console.warn("[Step 4] Version B JSON parse failed, using fallback...", e);
+        console.warn("[Step 4B] Version B JSON parse failed, using fallback...", e);
         resultB = { improvedPrompt: "Text kunde inte genereras" };
       }
 
       // Välj bästa version (för nu används A, men kan bytas till B baserat på preferens)
       let result = resultA;
-      console.log("[Step 4] Selected version A as primary");
+      console.log("[Step 4B] Selected version A as primary");
       
       // Lägg till B-versionen för A/B-testning
       result.abTestResults = {
@@ -1719,7 +1788,16 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
         selectedVersion: "A"
       };
       
-      console.log("[AI Generation] Generated text:", result.improvedPrompt?.substring(0, 200) + "...");
+      // Lägg till skrivplanen i resultatet
+      result.writingPlan = writingPlan;
+      
+      console.log("[Step 4B] Generated text:", result.improvedPrompt?.substring(0, 200) + "...");
+      
+      // Post-processing - rensa förbjudna fraser
+      if (result.improvedPrompt) {
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+      }
+      if (result.socialCopy) {
         result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
       }
       console.log("[Post-processing] Automatic phrase cleanup done before validation");
