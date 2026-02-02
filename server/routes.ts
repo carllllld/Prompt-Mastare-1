@@ -72,6 +72,23 @@ const FORBIDDEN_PHRASES = [
   " erbjuder ",
   " erbjuds ",
   
+  // NYA AI-KLYSCHOR FRÅN OUTPUT-ANALYS
+  "erbjuder en bra plats",
+  "erbjuder en perfekt",
+  "erbjuder en fantastisk",
+  "skapar en",
+  "skapar en miljö",
+  "skapar en avkopplande",
+  "är ett bra val",
+  "är ett bra val för",
+  "är en perfekt plats",
+  "är en bra plats",
+  "är en bra plats för",
+  "vilket ger ytterligare",
+  "vilket ger ytterligare utrymme",
+  "den södervända placeringen",
+  "den södervända placeringen ger",
+  
   // Atmosfär/luftig-fraser
   "trivsam atmosfär",
   "härlig atmosfär",
@@ -253,7 +270,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["i hjärtat av", "centralt i"],
   ["hjärtat av", "centrala"],
   ["stadens puls", "stadskärnan"],
-  ["mitt i pulsen", "centralt"],
+  ["mitt i stadens liv", "centralt"],
   
   // === DRÖM-ORD ===
   ["drömboende", "bostad"],
@@ -767,75 +784,24 @@ const EXAMPLE_DATABASE = {
   ]
 };
 
-// --- HEMNET FORMAT: Exempelbaserad mäklarstil med exempeldatabas ---
+// --- HEMNET FORMAT: 5-STEGS PIPELINE - KORREKT ARKITEKTUR ---
 const HEMNET_TEXT_PROMPT = `
-Du är en svensk fastighetsmäklare med 15 års erfarenhet. Skriv en objektbeskrivning för Hemnet baserat på DISPOSITIONEN.
+Du är en svensk fastighetsmäklare med 15 års erfarenhet. Skriv en objektbeskrivning för Hemnet.
 
-# TONALITET OCH STIL
-Använd samma stil som de medföljande EXEMPELTEXTERNA: professionell, saklig men säljande. Konkreta fakta, exakta mått, inga överdrifter.
+ANVÄND ALL KONTEXT NEDAN:
+- DISPOSITION: Fakta om objektet
+- TONALITETSANALYS: Målgrupp och stil
+- EXEMPELMATCHNING: Bäst lämpade exempeltexter
 
-# EXEMPELTEXTER (studera dessa noggrant)
+# SKRIVREGLER
+1. Minst 180 ord
+2. Använd BARA fakta från dispositionen
+3. Börja med adressen
+4. Skriv fullständiga meningar
+5. Separera stycken med \\n\\n
 
-EXEMPEL 1 - Premium Östermalm:
-"Karlavägen 45, våning 4 av 5. En välplanerad tvåa om 58 kvm i klassisk 20-talsfastighet med bevarade originaldetaljer.
-
-Lägenheten har en genomtänkt planlösning med hall, vardagsrum, sovrum, kök och badrum. Från hallen nås samtliga rum. Vardagsrummet om cirka 20 kvm har två fönster mot gården och takhöjd på 2,8 meter. Golven är av ekparkett genomgående.
-
-Köket är utrustat med spis, ugn, kyl, frys och diskmaskin. Bänkskivorna är av laminat och det finns gott om förvaring i över- och underskåp. Köket har fönster mot gården.
-
-Sovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat och renoverat 2019 med dusch, wc och handfat. Tvättmaskin och torktumlare finns i lägenheten.
-
-Balkongen på 4 kvm vetter mot väster med eftermiddags- och kvällssol. Föreningen har nyligen renoverat fasaden och taket.
-
-Läget är centralt med tunnelbana på 3 minuters gångavstånd. Matbutiker, restauranger och Humlegården finns i närområdet."
-
-EXEMPEL 2 - Villa Naturnära:
-"Ekorrvägen 10, Mörtnäs. En rymlig villa på 165 kvm med 6 rum i lugnt och naturnära område. Villan har ekparkettgolv och nyrenoverat kök från Marbodal 2023.
-
-Huset har en praktisk planlösning med socialt kök i öppen planlösning med vardagsrum. Köket har vitvaror från Siemens och bänkskivor i kvartskomposit. Det finns gott om förvaringsutrymmen i både kök och hall.
-
-Badrummet har badkar och golvvärme. Samtliga rum har ekparkettgolv och villan har en hög takhöjd på över 3 meter. De spröjsade fönstren bidrar till husets charm och karaktär.
-
-Det finns en härlig terrass i söderläge. Dessutom finns ett nybyggt uterum med TV-soffa och extra badrum. Uppvärmning sker via fjärrvärme.
-
-Fastigheten ligger i Mörtnäs med 10 minuters gångavstånd till bussen. Området är lugnt och naturnära med goda kommunikationer till centrala Värmdö."
-
-EXEMPEL 3 - Radhus Familje:
-"Solnavägen 23, Solna. Ett välplanerat radhus på 120 kvm med 4 rum och kök i barnvänligt område.
-
-Radhuset har en social planlösning med kök och vardagsrum i öppen planlösning på bottenvåningen. Köket är från IKEA och renoverat 2021 med vitvaror från Bosch. Det finns utgång till trädgården från vardagsrummet.
-
-På övervåningen finns tre sovrum och ett badrum. Huvudsovrummet har walk-in-closet. Badrummet är helkaklat med dusch och wc. Golven är av laminat i hela huset.
-
-Trädgården är lättskött med gräsmatta och uteplats i söderläge. Det finns ett förråd på 10 kvm och carport med plats för två bilar.
-
-Läget är lugnt med promenadavstånd till skolor, förskolor och mataffär. Det tar 15 minuter med bil till Stockholm city."
-
-# STRUKTUR (följ exakt som exemplen)
-1. ÖPPNING: Adress + typ + storlek + rum + unik egenskap (1 mening)
-2. PLANLÖSNING: Hur rummen ligger, material, ljusinsläpp (2-3 meningar)
-3. KÖK: Märke, material, vitvaror, renovering med årtal (2-3 meningar)
-4. BADRUM: Material, utrustning, renovering med årtal (1-2 meningar)
-5. SOVRUM: Antal, storlek, garderober (1-2 meningar)
-6. BALKONG/UTEPLATS: Storlek, väderstreck, användning (1-2 meningar)
-7. LÄGE: Område, avstånd till kommunikationer, service (2-3 meningar)
-
-# SKRIVREGLER (som i exemplen)
-- Börja med adress: "Karlavägen 45..."
-- Använd exakta mått: "58 kvm", "2,8 meter", "4 kvm"
-- Använd exakta årtal: "renoverad 2019", "nyrenoverat 2023"
-- Använd exakta avstånd: "3 minuters gångavstånd", "10 minuters gångavstånd"
-- Nämn märken: "Marbodal", "Siemens", "Bosch"
-
-# FÖRBJUDNA ORD (använd ALDRIG)
-erbjuder, erbjuds, perfekt, idealisk, fantastisk, underbar, magisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det, välkommen till
-
-# KRAV
-- Minst 180 ord
-- Nämn INTE pris eller avgift
-- Använd BARA fakta från dispositionen
-- Skriv fullständiga meningar
-- Separera stycken med \\n\\n
+# FÖRBJUDNA FRASER (ANVÄND ALDRIG)
+erbjuder, erbjuds, perfekt, idealisk, fantastisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det, välkommen till
 
 OUTPUT (JSON):
 {
