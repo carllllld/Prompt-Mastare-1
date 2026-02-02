@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { PromptForm } from "@/components/PromptForm";
+import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
@@ -129,7 +129,7 @@ export default function Home() {
               </div>
             )}
 
-            <PromptForm 
+            <PromptFormProfessional 
               onSubmit={handleSubmit} 
               isPending={isPending} 
               disabled={userStatus?.promptsRemaining === 0}
