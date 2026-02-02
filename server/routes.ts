@@ -781,6 +781,54 @@ const EXAMPLE_DATABASE = {
       text: "Kyrkogatan 8, Västerås. En praktisk etta om 34 kvm i centralt läge. Lägenheten är nymålad 2023.\n\nLägenheten har en öppen planlösning med kök i samma rum som vardagsrum. Köket har spis, kyl och frys. Det finns gott om förvaring i väggskåp.\n\nGolvet är av laminat och väggarna är målade i ljusa färger. Fönstren är nya och ger ett bra ljusinsläpp.\n\nI badrummet finns dusch, wc och handfat. Det är helkaklat och renoverat 2022.\n\nLäget är centralt med 5 minuters gångavstånd till tågstation och city. Nära till mataffär och service.",
       metadata: { price_level: "budget", area: "Västerås", type: "lägenhet", rooms: 1, size: 34 }
     }
+  ],
+  
+  // Standard - Mellanklass
+  standard_suburban: [
+    {
+      text: "Björkängsvägen 3, Upplands Väsby. En välplanerad trea om 85 kvm i barnvänligt område. Lägenheten har balkong i västerläge.\n\nLägenheten har en social planlösning med hall, vardagsrum, kök, två sovrum och badrum. Köket är från 2018 med vitvaror från Bosch och god bänkyta.\n\nVardagsrummet har plats för soffagrupp och matbord. Det finns utgång till balkongen på 6 kvm. Golven är av laminat i hela lägenheten.\n\nBadrummet är helkaklat med dusch, wc och handfat. Det finns tvättmaskin och torktumlare.\n\nLäget är lugnt med 300 meter till skola och förskola. Kommunikationer med pendeltåg tar 35 minuter till Stockholm.",
+      metadata: { price_level: "standard", area: "Upplands Väsby", type: "lägenhet", rooms: 3, size: 85 }
+    },
+    {
+      text: "Ekbacksvägen 12, Sollentuna. En radhuslägenhet om 110 kvm med 4 rum och egen ingång. Bostaden har en liten trädgård.\n\nRadhuset har två plan. Nederplan har hall, kök, vardagsrum och badrum. Överplan har tre sovrum.\n\nKöket är renoverat 2020 med vitvaror från Electrolux och öppen planlösning till vardagsrummet. Det finns utgång till trädgården.\n\nBadrummet nere är helkaklat med dusch och wc. Övervåningen har ett extra wc.\n\nTomten är 150 kvm med gräsmatta och uteplats. Läget är lugnt med 10 minuters gångavstånd till tågstation.",
+      metadata: { price_level: "standard", area: "Sollentuna", type: "radhus", rooms: 4, size: 110 }
+    }
+  ],
+  
+  // Luxury - Exklusivt
+  luxury_waterfront: [
+    {
+      text: "Strandpromenaden 1, Saltsjöbaden. En exklusiv villa på 280 kvm med sjötomt och privat brygga. Villan har panoramautsikt över Baggensfjärden.\n\nHuset har tre plan med totalt sju rum. Bottenvåningen har ett stort kök från Kvänum med matplats för 12 personer. Det finns also ett vardagsrum med öppen spis.\n\nÖvervåningen har fyra sovrum varav två med eget badrum. Huvudsovrummet har walk-in-closet och utgång till balkong med sjöutsikt.\n Tomten är 1200 kvm med ängar ner till vattnet. Det finns en 25 meter lång brygga och boeplatser för två båtar.\n\nLäget är exklusivt i Saltsjöbaden med 5 minuter till Saltsjöbadens station. Nära till golfbana och tennisclub.",
+      metadata: { price_level: "luxury", area: "Saltsjöbaden", type: "villa", rooms: 7, size: 280 }
+    },
+    {
+      text: "Karlavägen 88, Stockholm. En penthouselägenhet om 220 kvm med takterrass på 80 kvm. Lägenheten har 360-gradersutsikt över Stockholm.\n\nLägenheten har en öppen planlösning med kök från 2022. Köket har vitvaror från Gaggenau och en 8 meter lång köksö.\n\nVardagsrummet har 5 meter i takhöjd och stora fönsterpartier. Det finns tre sovrum varav ett med egen terrass.\n\nBadrummen är helkaklade med marmor och golvvärme. Det finns två gästrum och ett kontor.\n\nFastigheten har hiss direkt till lägenheten. Läget är centralt på Östermalm med 2 minuter till Humlegården.",
+      metadata: { price_level: "luxury", area: "Östermalm", type: "lägenhet", rooms: 4, size: 220 }
+    }
+  ],
+  
+  // New Build - Nya bostäder
+  new_build: [
+    {
+      text: "Nya Gatan 5, Hammarby Sjöstad. En nybyggd tvåa om 62 kvm med balkong i söderläge. Inflyttning 2024.\n\nLägenheten har en modern planlösning med kök i öppen planlösning med vardagsrum. Köket har vitvaror från Miele och integrerade vitvaruskåp.\n\nGolven är av ekparkett och väggarna är målade i neutrala färger. Fönstren är energisnåla med 3-glas.\n\nBadrummet är helkaklat med dusch, wc och handfat. Det finns tvättmaskin och torktumlare.\n\nFastigheten har cykelförråd och övernattningslägenhet. Läget är populärt i Hammarby Sjöstad med 200 meter till tvärbanan.",
+      metadata: { price_level: "premium", area: "Hammarby Sjöstad", type: "lägenhet", rooms: 2, size: 62 }
+    },
+    {
+      text: "Solhöjden 3, Täby. En nybyggd villa på 185 kvm med 5 rum och carport. Byggår 2023.\n\nVillan har en modern arkitektur med stora fönsterpartier och öppen planlösning. Köket har vitvaror från Siemens och stenbänkskiva.\n\nHuset har tre sovrum på övervåningen och ett familjerum. Det finns två badrum varav ett med badkar.\n\nTomten är 600 kvm med stenlagd uteplats och gräsmatta. Det finns carport med plats för två bilar och förråd.\n\nLäget är barnvänligt i Täby med 500 meter till skola. Det tar 20 minuter med bil till Stockholm.",
+      metadata: { price_level: "premium", area: "Täby", type: "villa", rooms: 5, size: 185 }
+    }
+  ],
+  
+  // Urban - Citylägenheter
+  urban_city: [
+    {
+      text: "Drottninggatan 25, Norrmalm. En etta om 42 kvm i centrala Stockholm. Lägenheten har höga fönster och trägolv.\n\nLägenheten har en öppen planlösning med kök i samma rum som vardagsrum. Köket har spis, kyl, frys och diskmaskin.\n\nGolvet är av originalparkett från 1910. Väggarna är målade i ljusa färger. Fönstren är stora och ger gott om ljus.\n\nBadrummet är helkaklat med dusch och wc. Det är nyrenoverat 2022.\n\nLäget är centralt med 3 minuter till T-Centralen. Nära till restauranger, butiker och Hötorget.",
+      metadata: { price_level: "premium", area: "Norrmalm", type: "lägenhet", rooms: 1, size: 42 }
+    },
+    {
+      text: "Vasagatan 18, Vasastan. En tvåa om 68 kvm med klassiska detaljer. Lägenheten har balkong mot innergården.\n\nLägenheten har en genomtänkt planlösning med hall, vardagsrum, sovrum, kök och badrum. Från hallen nås samtliga rum.\n\nVardagsrummet har en öppen spis och stora fönster mot gården. Köket har vitvaror och gott om förvaring.\n\nSovrummet rymmer dubbelsäng och har inbyggda garderober. Badrummet är renoverat 2020 med dusch och wc.\n\nLäget är centralt med 5 minuter till Odenplan. Nära till Vasaparken och Stadsbiblioteket.",
+      metadata: { price_level: "premium", area: "Vasastan", type: "lägenhet", rooms: 2, size: 68 }
+    }
   ]
 };
 
@@ -807,6 +855,60 @@ ANVÄND ALL KONTEXT NEDAN:
 - INTE hitta på "Siemens" om det står "vitvaror"
 - INTE hitta på "kvartskomposit" om det står "bänkskivor"
 - INTE hitta på antal toaletter om det inte står
+- INTE hitta på byggår om det inte står
+- INTE hitta på takhöjd om det inte står
+- INTE hitta på balkongstorlek om det inte står
+- INTE hitta på uppvärmningssystem om det inte står
+- INTE hitta på tomtstorlek om det inte står
+- INTE hitta på antal våningar om det inte står
+- INTE hitta på golvmaterial om det inte står
+- INTE hitta på fönsterplacering om det inte står
+
+# FÖRBJUDNA FRASER (ANVÄND ALDRIG)
+erbjuder, erbjuds, perfekt, idealisk, fantastisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det, välkommen till
+
+OUTPUT (JSON):
+{
+  "highlights": ["Viktig punkt 1", "Viktig punkt 2", "Viktig punkt 3"],
+  "improvedPrompt": "Texten med stycken separerade av \\n\\n",
+  "analysis": {"target_group": "Målgrupp", "area_advantage": "Lägesfördelar", "pricing_factors": "Värdehöjande"},
+  "socialCopy": "Kort text max 280 tecken utan emoji",
+  "missing_info": ["Saknad info"],
+  "pro_tips": ["Tips"]
+}
+`;
+
+// --- HEMNET FORMAT: VARIANT B (för A/B-testning) ---
+const HEMNET_TEXT_PROMPT_B = `
+Du är en svensk fastighetsmäklare med 15 års erfarenhet. Skriv en objektbeskrivning för Hemnet.
+
+ANVÄND ALL KONTEXT NEDAN:
+- DISPOSITION: Fakta om objektet
+- TONALITETSANALYS: Målgrupp och stil
+- EXEMPELMATCHNING: Bäst lämpade exempeltexter
+
+# SKRIVREGLER (Variant B - mer berättande)
+1. Minst 180 ord
+2. Använd ENDAST exakt fakta från dispositionen - INGET HITTA PÅ
+3. Börja med en berättande inledning om läget
+4. Skriv fullständiga meningar
+5. Separera stycken med \\n\\n
+
+# VIKTIGT: INGET HITTA PÅ!
+- Använd ONLY material/märken som EXAKT nämns i dispositionen
+- Använd ONLY antal badrum/toaletter som EXAKT nämns i dispositionen  
+- Använd ONLY mått som EXAKT nämns i dispositionen
+- INTE hitta på "Siemens" om det står "vitvaror"
+- INTE hitta på "kvartskomposit" om det står "bänkskivor"
+- INTE hitta på antal toaletter om det inte står
+- INTE hitta på byggår om det inte står
+- INTE hitta på takhöjd om det inte står
+- INTE hitta på balkongstorlek om det inte står
+- INTE hitta på uppvärmningssystem om det inte står
+- INTE hitta på tomtstorlek om det inte står
+- INTE hitta på antal våningar om det inte står
+- INTE hitta på golvmaterial om det inte står
+- INTE hitta på fönsterplacering om det inte står
 
 # FÖRBJUDNA FRASER (ANVÄND ALDRIG)
 erbjuder, erbjuds, perfekt, idealisk, fantastisk, drömboende, luftig känsla, i hjärtat av, stadens puls, för den som, vilket gör det, välkommen till
@@ -1350,12 +1452,25 @@ DISPOSITION: ${JSON.stringify(disposition, null, 2)}
 {
   "tone_profile": {
     "price_category": "budget/standard/premium/luxury",
-    "location_category": "suburban/urban/city_center/waterfront",
-    "property_category": "apartment/villa/radhouse/new_build",
-    "target_audience": "first_time_buyers/families/established/downsizers/investors",
-    "writing_style": "casual/professional/sophisticated/luxury",
+    "location_category": "suburban/urban/city_center/waterfront/nature",
+    "property_category": "apartment/villa/radhouse/new_build/townhouse",
+    "target_audience": "first_time_buyers/young_families/established_families/empty_nesters/investors/downsizers",
+    "writing_style": "casual/professional/sophisticated/luxury/minimalist",
+    "emotional_tone": "warm/neutral/formal/enthusiastic",
+    "focus_areas": ["investment_potential", "family_living", "lifestyle", "convenience", "nature", "city_life"],
     "key_selling_points": ["3-5 viktigaste försäljningsargument"],
-    "local_context": "geografisk kontext och områdets karaktär"
+    "local_context": "geografisk kontext och områdets karaktär",
+    "demographic_profile": {
+      "age_group": "20-35/35-50/50-65/65+",
+      "income_level": "low/medium/high/very_high",
+      "lifestyle": "active/calm/social/quiet",
+      "priorities": ["price", "location", "size", "quality", "amenities"]
+    },
+    "market_positioning": {
+      "competitiveness": "low/medium/high",
+      "uniqueness": "common/unique/rare",
+      "urgency": "low/medium/high"
+    }
   }
 }
 `;
@@ -1465,14 +1580,15 @@ ${JSON.stringify(EXAMPLE_DATABASE, null, 2)}
       // Steg 4: Skriv objektbeskrivning baserat på disposition + tonalitet + exempel
       console.log("[Step 4] Writing property description with full context...");
 
-      // Välj rätt prompt baserat på plattform
-      const selectedPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
-      console.log("[Step 2] Using " + platform.toUpperCase() + " writer prompt...");
+      // A/B-testning: generera två versioner
+      const promptA = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
+      const promptB = platform === "hemnet" ? HEMNET_TEXT_PROMPT_B : BOOLI_TEXT_PROMPT_WRITER;
       
-      const textMessages = [
+      console.log("[Step 4] Generating version A...");
+      const textMessagesA = [
         {
           role: "system" as const,
-          content: selectedPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: promptA + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user" as const,
@@ -1493,58 +1609,77 @@ ${JSON.stringify(EXAMPLE_DATABASE, null, 2)}
         },
       ];
 
-      const textCompletion = await openai.chat.completions.create({
+      const textCompletionA = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: textMessages,
+        messages: textMessagesA,
         max_tokens: 4000,
         temperature: 0.2,
         response_format: { type: "json_object" },
       });
 
-      const textResultText = textCompletion.choices[0]?.message?.content || "{}";
-      let result: any;
+      const textA = textCompletionA.choices[0]?.message?.content || "{}";
+      let resultA: any;
       try {
-        result = safeJsonParse(textResultText);
+        resultA = safeJsonParse(textA);
       } catch (e) {
-        console.warn("[Step 2] Text JSON parse failed, retrying once...", e);
-        const textRetry = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system" as const,
-              content:
-                selectedPrompt +
-                "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
-            },
-            {
-              role: "user" as const,
-              content:
-                "DISPOSITION: " +
-                JSON.stringify(disposition, null, 2) +
-                "\n\nPLATTFORM: " +
-                (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"),
-            },
-          ],
-          max_tokens: 4000,
-          temperature: 0.2,
-          response_format: { type: "json_object" },
-        });
-        const textRetryText = textRetry.choices[0]?.message?.content || "{}";
-        try {
-          result = safeJsonParse(textRetryText);
-        } catch (e2) {
-          return res.status(422).json({
-            message: "Kunde inte tolka textresultat (ogiltig JSON). Försök igen.",
-          });
-        }
+        console.warn("[Step 4] Version A JSON parse failed, using fallback...", e);
+        resultA = { improvedPrompt: "Text kunde inte genereras" };
       }
 
-      // POST-PROCESSING FÖRST: Fixa vanliga AI-fraser automatiskt innan validering
-      // Detta eliminerar de flesta retries eftersom fraserna fixas direkt
-      if (result.improvedPrompt) {
-        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+      console.log("[Step 4] Generating version B...");
+      const textMessagesB = [
+        {
+          role: "system" as const,
+          content: promptB + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content:
+            "DISPOSITION: " +
+            JSON.stringify(disposition, null, 2) +
+            "\n\nTONALITETSANALYS: " +
+            JSON.stringify(toneAnalysis, null, 2) +
+            "\n\nEXEMPELMATCHNING: " +
+            JSON.stringify(exampleSelection, null, 2) +
+            "\n\nPLATTFORM: " +
+            (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA") +
+            "\n\nANPASSA texten efter ALL kontext:\n" +
+            "1. Använd exakt samma stil som de valda EXEMPELTEXTERNA\n" +
+            "2. Följ tonalitetsanalysen för målgruppen och prisnivån\n" +
+            "3. Använd bara fakta från dispositionen\n" +
+            "4. Skriv som en erfaren mäklare med 15 års erfarenhet",
+        },
+      ];
+
+      const textCompletionB = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: textMessagesB,
+        max_tokens: 4000,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+      });
+
+      const textB = textCompletionB.choices[0]?.message?.content || "{}";
+      let resultB: any;
+      try {
+        resultB = safeJsonParse(textB);
+      } catch (e) {
+        console.warn("[Step 4] Version B JSON parse failed, using fallback...", e);
+        resultB = { improvedPrompt: "Text kunde inte genereras" };
       }
-      if (result.socialCopy) {
+
+      // Välj bästa version (för nu används A, men kan bytas till B baserat på preferens)
+      let result = resultA;
+      console.log("[Step 4] Selected version A as primary");
+      
+      // Lägg till B-versionen för A/B-testning
+      result.abTestResults = {
+        versionA: resultA,
+        versionB: resultB,
+        selectedVersion: "A"
+      };
+      
+      console.log("[AI Generation] Generated text:", result.improvedPrompt?.substring(0, 200) + "...");
         result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
       }
       console.log("[Post-processing] Automatic phrase cleanup done before validation");
@@ -1641,16 +1776,21 @@ PLATTFORM: ${platform}
    - INGA påhittade material (t.ex. "kvartskomposit" om det står "bänkskivor")
    - INGA påhittade antal (t.ex. "tre toaletter" om det inte står)
 
-2. JURIDISK KORREKTHET:
+2. PLAGIATKONTROLL:
+   - Kontrollera att texten är unik och inte kopierad från befintliga annonser
+   - Identifierar eventuella uppenbara kopieringar från exempeltexter
+   - Säkerställ att formuleringar är originala
+
+3. JURIDISK KORREKTHET:
    - Inga överdrivna eller vilseledande påståenden
    - Följ FMI:s regler för objektbeskrivningar
 
-3. SPRÅKQUALITET:
+4. SPRÅKQUALITET:
    - Professionell mäklarstil utan AI-klyschor
    - Fullständiga meningar utan avbrott
    - Korrekt grammatik och stavning
 
-4. SÄLJSTYRKA:
+5. SÄLJSTYRKA:
    - Konkreta och säljande formuleringar
    - Relevant information för målgruppen
    - Bra flöde och struktur
@@ -1661,16 +1801,29 @@ PLATTFORM: ${platform}
   "legal_compliance": "passed/failed",
   "language_quality": "excellent/good/fair/poor",
   "sales_effectiveness": "high/medium/low",
+  "plagiat_check": "passed/failed",
+  "fact_check": "passed/failed",
   "issues_found": [
     {
-      "type": "legal/language/sales",
+      "type": "legal/language/sales/plagiat/fact",
       "severity": "high/medium/low",
       "description": "beskrivning av problemet",
       "suggestion": "förslag på förbättring"
     }
   ],
   "final_text": "eventuellt korrigerad text om stora fel",
-  "approval": "approved/needs_revision"
+  "approval": "approved/needs_revision",
+  "broker_feedback": {
+    "strengths": ["3-5 styrkor i texten"],
+    "improvements": ["2-3 förslag på förbättringar"],
+    "market_appeal": "high/medium/low",
+    "target_group_match": "excellent/good/fair/poor"
+  },
+  "optimization_suggestions": {
+    "add_details": ["specifika detaljer som kan läggas till"],
+    "remove_phrases": ["fraser som kan tas bort"],
+    "rephrase": ["meningar som kan formuleras om"]
+  }
 }
 `;
 
