@@ -394,7 +394,7 @@ export default function Home() {
                   <ul className="space-y-3 text-sm text-slate-600">
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 2 objektbeskrivningar per månad</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o-mini (Grundläggande AI)</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 250-350 ord per beskrivning</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 200-300 ord per beskrivning</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Klyschfri garanti</li>
                   </ul>
                   <Button variant="outline" className="w-full" disabled>

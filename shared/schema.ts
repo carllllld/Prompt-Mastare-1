@@ -67,7 +67,7 @@ export const PLAN_LIMITS = {
 
 // Ordgränser för objektbeskrivningar
 export const WORD_LIMITS = {
-  free: { min: 250, max: 350 },
+  free: { min: 200, max: 300 },
   pro: { min: 200, max: 600, default: { min: 350, max: 450 } },
 } as const;
 
