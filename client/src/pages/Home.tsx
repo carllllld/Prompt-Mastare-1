@@ -55,7 +55,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen !bg-white !text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen !bg-white !text-slate-900 flex flex-col" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
       {/* NAVIGATION */}
       <nav className="border-b border-slate-200 !bg-white sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -254,7 +254,7 @@ export default function Home() {
                 </div>
                 <CardContent className="p-8 md:p-12">
                   <div className="prose prose-slate max-w-none">
-                    <p className="whitespace-pre-wrap leading-[1.8] text-slate-800 text-lg md:text-xl font-serif">
+                    <p className="whitespace-pre-wrap leading-[1.8] text-slate-800 text-lg md:text-xl" style={{ fontFamily: 'Georgia, serif' }}>
                       {result.improvedPrompt}
                     </p>
                   </div>
@@ -316,10 +316,10 @@ export default function Home() {
         </section>
 
         {/* PRO EXAMPLE SECTION */}
-        <section className="py-24 bg-gradient-to-b from-indigo-50 to-white border-t border-slate-200">
+        <section className="py-24 bg-gradient-to-b from-gray-50 to-white border-t border-slate-200">
           <div className="max-w-5xl mx-auto px-6">
             <div className="text-center mb-12">
-              <Badge className="mb-4 bg-indigo-600 text-white px-4 py-1">Pro-kvalitet</Badge>
+              <Badge className="mb-4 bg-gray-800 text-white px-4 py-1">Pro-kvalitet</Badge>
               <h2 className="text-3xl font-bold !text-slate-900 mb-4">Se skillnaden med Pro</h2>
               <p className="text-slate-600 max-w-2xl mx-auto">
                 Pro-användare får expertkvalitet med djup analys, arkitekturhistoria och marknadspsykologi. 
@@ -327,8 +327,8 @@ export default function Home() {
               </p>
             </div>
             
-            <Card className="border-2 border-indigo-600 shadow-2xl">
-              <div className="bg-indigo-600 text-white px-8 py-4 flex items-center gap-2">
+            <Card className="border-2 border-gray-800 shadow-2xl">
+              <div className="bg-gray-800 text-white px-8 py-4 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
                 <span className="font-bold">Pro Objektbeskrivning - Exempel</span>
               </div>

@@ -68,24 +68,29 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Link href="/">
-            <Button variant="ghost" size="icon" data-testid="button-back-home">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2">
-            <History className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-semibold">Din Historik</h1>
+    <div className="min-h-screen !bg-white !text-slate-900 flex flex-col" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+      <nav className="border-b border-slate-200 !bg-white sticky top-0 z-50">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-gray-800" data-testid="button-back-home">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Tillbaka
+              </Button>
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="bg-gray-800 p-1.5 rounded-lg text-white">
+                <History className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-lg !text-slate-900">Historik</span>
+            </div>
           </div>
-          <Badge variant="outline" className="ml-auto">
+          <Badge className="bg-gray-100 text-gray-700 border-gray-300">
             <Clock className="h-3 w-3 mr-1" />
             Sparas i 30 dagar
           </Badge>
         </div>
-      </header>
+      </nav>
 
       <main className="container mx-auto px-4 py-8">
         {!history || history.length === 0 ? (
@@ -146,12 +151,12 @@ export default function HistoryPage() {
                     <div className="space-y-4">
                       <div>
                         <h4 className="font-semibold text-sm text-primary mb-2 uppercase tracking-wider">Objektbeskrivning</h4>
-                        <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{item.improvedPrompt}</p>
+                        <p className="text-slate-700 whitespace-pre-wrap leading-relaxed" style={{ fontFamily: 'Georgia, serif' }}>{item.improvedPrompt}</p>
                       </div>
                       {item.socialCopy && (
-                        <div className="bg-indigo-50/50 p-4 rounded-lg border border-indigo-100">
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-sm text-indigo-800">Social Media</h4>
+                            <h4 className="font-semibold text-sm text-gray-800">Social Media</h4>
                             <Button
                               variant="ghost"
                               size="sm"
