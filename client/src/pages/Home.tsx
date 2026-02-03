@@ -133,6 +133,7 @@ export default function Home() {
               onSubmit={handleSubmit} 
               isPending={isPending} 
               disabled={userStatus?.promptsRemaining === 0}
+              isPro={userStatus?.plan === "pro"}
             />
           </Card>
 
@@ -379,7 +380,7 @@ export default function Home() {
               Börja gratis och uppgradera när du behöver mer. Pro ger dig expertkvalitet som ovan. 
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* FREE */}
               <Card className="relative overflow-hidden border-slate-200 !bg-white">
                 <CardHeader className="pb-4">
@@ -391,7 +392,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ul className="space-y-3 text-sm text-slate-600">
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 1 objektbeskrivning per månad</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 2 objektbeskrivningar per månad</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o-mini (Grundläggande AI)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 250-350 ord per beskrivning</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Klyschfri garanti</li>
@@ -403,8 +404,8 @@ export default function Home() {
               </Card>
 
               {/* PRO */}
-              <Card className="relative overflow-hidden border-2 border-indigo-600 !bg-white shadow-xl">
-                <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+              <Card className="relative overflow-hidden border-2 border-gray-800 !bg-white shadow-xl">
+                <div className="absolute top-0 right-0 bg-gray-800 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
                   POPULÄR
                 </div>
                 <CardHeader className="pb-4">
@@ -418,14 +419,14 @@ export default function Home() {
                   <ul className="space-y-3 text-sm text-slate-600">
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 20 objektbeskrivningar per månad</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Expert AI)</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 400+ ord per beskrivning</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Välj textlängd (200-600 ord)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Arkitekturhistoria & marknadspsykologi</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Geografisk intelligens (Stockholm/Göteborg/Malmö)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team samarbete</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Prioriterad support</li>
                   </ul>
                   <Button 
-                    className="w-full bg-indigo-600 hover:bg-indigo-700"
+                    className="w-full bg-gray-800 hover:bg-gray-900"
                     onClick={() => {
                       if (!isAuthenticated) {
                         setAuthModalOpen(true);

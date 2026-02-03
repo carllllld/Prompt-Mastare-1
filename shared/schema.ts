@@ -26,6 +26,8 @@ export const optimizeRequestSchema = z.object({
   prompt: z.string().min(1, "Please enter a prompt to optimize"),
   type: z.string().default("General"),
   platform: z.string().default("general"),
+  wordCountMin: z.number().optional(),
+  wordCountMax: z.number().optional(),
 });
 
 export const optimizeResponseSchema = z.object({
@@ -45,7 +47,7 @@ export const optimizeResponseSchema = z.object({
 });
 
 export const userStatusSchema = z.object({
-  plan: z.enum(["free", "basic", "pro"]),
+  plan: z.enum(["free", "pro"]),
   promptsUsedToday: z.number(),
   promptsRemaining: z.number(),
   monthlyLimit: z.number(),
@@ -60,19 +62,17 @@ export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
   free: 2,
-  basic: 20,
   pro: 20,
 } as const;
 
-export const CHARACTER_LIMITS = {
-  free: 500,
-  basic: 1000,
-  pro: 2000,
+// Ordgränser för objektbeskrivningar
+export const WORD_LIMITS = {
+  free: { min: 250, max: 350 },
+  pro: { min: 200, max: 600, default: { min: 350, max: 450 } },
 } as const;
 
 export const PLAN_PRICES = {
-  basic: { amount: 399, currency: "usd", display: "$3.99" },
-  pro: { amount: 699, currency: "usd", display: "$6.99" },
+  pro: { amount: 19900, currency: "sek", display: "199kr" },
 } as const;
 
-export type PlanType = "free" | "basic" | "pro";
+export type PlanType = "free" | "pro";
