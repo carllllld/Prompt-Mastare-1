@@ -60,10 +60,10 @@ export default function Home() {
       <nav className="border-b border-slate-200 !bg-white sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
+            <div className="bg-gray-800 p-1.5 rounded-lg text-white">
               <HomeIcon className="w-5 h-5" />
             </div>
-            <span className="font-bold text-lg !text-slate-900">Mäklartexter <span className="text-indigo-600">För Fastighetsmäklare</span></span>
+            <span className="font-bold text-lg !text-slate-900">Mäklartexter <span className="text-gray-600">För Fastighetsmäklare</span></span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -86,7 +86,7 @@ export default function Home() {
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => setAuthModalOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6 transition-all">
+              <Button onClick={() => setAuthModalOpen(true)} className="bg-gray-800 hover:bg-gray-900 text-white rounded-full px-6 transition-all">
                 Logga in
               </Button>
             )}
@@ -98,11 +98,11 @@ export default function Home() {
         {/* HERO SECTION */}
         <section className="py-20 !bg-slate-50 border-b border-slate-200 text-center">
           <div className="max-w-4xl mx-auto px-6">
-            <Badge className="mb-6 bg-indigo-100 text-indigo-700 border-indigo-200 px-4 py-1 rounded-full uppercase tracking-widest text-[10px] font-bold">
-              Specialbyggd AI för svenska fastighetsmäklare
+            <Badge className="mb-6 bg-gray-100 text-gray-700 border-gray-300 px-4 py-1 rounded-full uppercase tracking-widest text-[10px] font-bold">
+              Professionellt verktyg för svenska fastighetsmäklare
             </Badge>
             <h1 className="text-4xl md:text-6xl font-black !text-slate-900 tracking-tight mb-6">
-              Sälj bostaden med <span className="text-indigo-600">rätt ord.</span>
+              Sälj bostaden med <span className="text-gray-800">rätt ord.</span>
             </h1>
             <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
               Vår AI analyserar arkitektur, område och målgrupp för att skapa en perfekt objektbeskrivning.
@@ -122,7 +122,7 @@ export default function Home() {
                   </span>
                 </div>
                 {userStatus.plan !== "pro" && (
-                  <button onClick={() => startCheckout("pro")} className="text-xs font-black text-indigo-600 uppercase tracking-wider hover:underline">
+                  <button onClick={() => startCheckout("pro")} className="text-xs font-black text-gray-800 uppercase tracking-wider hover:underline">
                     Uppgradera
                   </button>
                 )}
