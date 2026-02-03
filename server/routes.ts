@@ -3,7 +3,7 @@ import type { Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import OpenAI from "openai";
-import { optimizeRequestSchema, PLAN_LIMITS, type PlanType, type User } from "@shared/schema";
+import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, type PlanType, type User } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
 
@@ -1379,7 +1379,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
 
-      const { prompt, type, platform } = req.body;
+      const { prompt, type, platform, wordCountMin, wordCountMax } = req.body;
+
+      // Bestäm AI-modell baserat på plan
+      const aiModel = plan === "pro" ? "gpt-4o" : "gpt-4o-mini";
+      
+      // Bestäm ordgränser baserat på plan
+      let targetWordMin: number;
+      let targetWordMax: number;
+      
+      if (plan === "pro" && wordCountMin && wordCountMax) {
+        // Pro-användare kan välja eget intervall (inom gränser)
+        targetWordMin = Math.max(WORD_LIMITS.pro.min, Math.min(wordCountMin, WORD_LIMITS.pro.max));
+        targetWordMax = Math.max(WORD_LIMITS.pro.min, Math.min(wordCountMax, WORD_LIMITS.pro.max));
+      } else if (plan === "pro") {
+        // Pro-användare utan val får default
+        targetWordMin = WORD_LIMITS.pro.default.min;
+        targetWordMax = WORD_LIMITS.pro.default.max;
+      } else {
+        // Free-användare får fast intervall
+        targetWordMin = WORD_LIMITS.free.min;
+        targetWordMax = WORD_LIMITS.free.max;
+      }
+      
+      console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
 
       // === 3-STEGS GENERATION ===
       
@@ -1398,7 +1421,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       ];
 
       const dispositionCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: dispositionMessages,
         max_tokens: 2000,
         temperature: 0.1, // Låg temperatur för faktaextrahering
@@ -1412,7 +1435,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       } catch (e) {
         console.warn("[Step 1] Disposition JSON parse failed, retrying once...", e);
         const dispositionRetry = await openai.chat.completions.create({
-          model: "gpt-4o",
+          model: aiModel,
           messages: [
             {
               role: "system" as const,
@@ -1487,7 +1510,7 @@ DISPOSITION: ${JSON.stringify(disposition, null, 2)}
       ];
 
       const toneCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: toneMessages,
         max_tokens: 1000,
         temperature: 0.1,
@@ -1596,7 +1619,7 @@ Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pen
       ];
 
       const exampleCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: exampleMessages,
         max_tokens: 2000,
         temperature: 0.1,
@@ -1656,7 +1679,7 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
       ];
 
       const planningCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: planningMessages,
         max_tokens: 500,
         temperature: 0.1,
@@ -1712,13 +1735,13 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
             "1. Följ skrivplanen exakt\n" +
             "2. Använd bara fakta från disposition\n" +
             "3. Följ tonalitetsguiden\n" +
-            "4. Minst 180 ord\n" +
+            `4. Skriv ${targetWordMin}-${targetWordMax} ord\n` +
             "5. Skriv som en erfaren mäklare",
         },
       ];
 
       const textCompletionA = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: textMessagesA,
         max_tokens: 4000,
         temperature: 0.2,
@@ -1755,13 +1778,13 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
             "1. Följ skrivplanen exakt\n" +
             "2. Använd bara fakta från disposition\n" +
             "3. Följ tonalitetsguiden\n" +
-            "4. Minst 180 ord\n" +
+            `4. Skriv ${targetWordMin}-${targetWordMax} ord\n` +
             "5. Skriv som en erfaren mäklare",
         },
       ];
 
       const textCompletionB = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: textMessagesB,
         max_tokens: 4000,
         temperature: 0.2,
@@ -1817,7 +1840,7 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
         const currentText = result.improvedPrompt || "";
 
         const retryCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
+          model: aiModel,
           messages: [
             {
               role: "system" as const,
@@ -1957,7 +1980,7 @@ PLATTFORM: ${platform}
       ];
 
       const qualityCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: aiModel,
         messages: qualityMessages,
         max_tokens: 1500,
         temperature: 0.1,

@@ -127,9 +127,11 @@ const SERVICES = [
   "Skola", "Förskola", "Matbutik", "Apotek", "Vårdcentral", "Tågstation", "Tunnelbana", "Buss"
 ];
 
-export function PromptFormProfessional({ onSubmit, isPending, disabled }: PromptFormProps) {
+export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = false }: PromptFormProps) {
   const [activeTab, setActiveTab] = useState("basic");
   const [expandedSections, setExpandedSections] = useState<string[]>(["basic", "rooms"]);
+  const [wordCountMin, setWordCountMin] = useState(350);
+  const [wordCountMax, setWordCountMax] = useState(450);
   
   const form = useForm<PropertyFormData>({
     defaultValues: {
@@ -275,7 +277,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled }: Prompt
     onSubmit({ 
       prompt: disposition, 
       type: values.propertyType, 
-      platform: values.platform 
+      platform: values.platform,
+      ...(isPro && { wordCountMin, wordCountMax })
     });
   };
 
@@ -822,6 +825,51 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled }: Prompt
           </CardContent>
         </Card>
 
+        {/* Pro: Ordintervall-väljare */}
+        {isPro && (
+          <Card className="border-gray-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="w-4 h-4 text-gray-600" />
+                Textlängd (Pro)
+              </CardTitle>
+              <CardDescription>
+                Välj hur lång objektbeskrivningen ska vara (200-600 ord)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Minst antal ord</label>
+                  <Select value={String(wordCountMin)} onValueChange={(v) => setWordCountMin(Number(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[200, 250, 300, 350, 400, 450, 500].map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Max antal ord</label>
+                  <Select value={String(wordCountMax)} onValueChange={(v) => setWordCountMax(Number(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[300, 350, 400, 450, 500, 550, 600].map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Submit */}
         <Button 
           type="submit" 
@@ -847,7 +895,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled }: Prompt
 }
 
 interface PromptFormProps {
-  onSubmit: (data: { prompt: string; type: "apartment" | "house" | "townhouse" | "villa"; platform: "hemnet" | "booli" | "general" }) => void;
+  onSubmit: (data: { prompt: string; type: "apartment" | "house" | "townhouse" | "villa"; platform: "hemnet" | "booli" | "general"; wordCountMin?: number; wordCountMax?: number }) => void;
   isPending: boolean;
   disabled?: boolean;
+  isPro?: boolean;
 }
