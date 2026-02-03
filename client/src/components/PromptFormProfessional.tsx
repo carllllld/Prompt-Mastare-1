@@ -281,9 +281,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled }: Prompt
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-6 font-sans">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border border-gray-200">
             <TabsTrigger value="basic">Grundinfo</TabsTrigger>
             <TabsTrigger value="rooms">Rum & Planlösning</TabsTrigger>
             <TabsTrigger value="details">Detaljer</TabsTrigger>
@@ -825,7 +825,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled }: Prompt
         {/* Submit */}
         <Button 
           type="submit" 
-          className="w-full" 
+          className="w-full bg-gray-800 hover:bg-gray-900 text-white" 
           disabled={isPending || disabled}
           size="lg"
         >
