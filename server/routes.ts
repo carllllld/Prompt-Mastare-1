@@ -1379,10 +1379,43 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
 
-      const { prompt, type, platform, wordCountMin, wordCountMax } = req.body;
+      const { prompt, type, platform, wordCountMin, wordCountMax, imageUrls } = req.body;
 
       // Bestäm AI-modell baserat på plan
       const aiModel = plan === "pro" ? "gpt-4o" : "gpt-4o-mini";
+      
+      // Bildanalys om bilder finns
+      let imageAnalysis = "";
+      if (imageUrls && imageUrls.length > 0) {
+        console.log(`[Image Analysis] Analyzing ${imageUrls.length} images...`);
+        
+        const imageMessages = [
+          {
+            role: "system" as const,
+            content: "Du är en expert på att analysera fastighetsbilder. Beskriv vad du ser i bilderna: rum, material, stil, skick, ljusförhållanden, utsikt, och andra relevanta detaljer för en fastighetsbeskrivning. Var specifik och faktabaserad."
+          },
+          {
+            role: "user" as const,
+            content: [
+              { type: "text" as const, text: "Analysera dessa fastighetsbilder och beskriv vad du ser:" },
+              ...imageUrls.slice(0, 5).map((url: string) => ({
+                type: "image_url" as const,
+                image_url: { url }
+              }))
+            ]
+          }
+        ];
+
+        const imageCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: imageMessages,
+          max_tokens: 1000,
+          temperature: 0.3,
+        });
+
+        imageAnalysis = imageCompletion.choices[0]?.message?.content || "";
+        console.log(`[Image Analysis] Completed: ${imageAnalysis.substring(0, 100)}...`);
+      }
       
       // Bestäm ordgränser baserat på plan
       let targetWordMin: number;
@@ -1416,7 +1449,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         },
         {
           role: "user" as const,
-          content: `RÅDATA: ${prompt}`,
+          content: `RÅDATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}`,
         },
       ];
 
@@ -2047,6 +2080,60 @@ PLATTFORM: ${platform}
         socialCopy: result.socialCopy || null,
       });
 
+      // AI-förbättringsanalys (körs efter textgenerering)
+      let improvementSuggestions = undefined;
+      if (plan === "pro") {
+        console.log("[Improvement Analysis] Analyzing generated text for improvements...");
+        
+        const improvementPrompt = `Analysera denna objektbeskrivning och ge förbättringsförslag:
+
+OBJEKTBESKRIVNING:
+${result.improvedPrompt}
+
+MÅLGRUPP: ${result.analysis?.target_group || "Okänd"}
+
+Ge feedback på:
+1. Ton och språk - passar det målgruppen?
+2. Målgruppsanpassning - hur väl passar texten målgruppen?
+3. Saknade element - vad skulle kunna förbättra texten?
+4. Styrkor - vad är bra med texten?
+
+Svara med JSON i formatet:
+{
+  "tone": "beskrivning av ton och om den passar",
+  "target_audience_fit": "hur väl texten passar målgruppen",
+  "missing_elements": ["element 1", "element 2"],
+  "strengths": ["styrka 1", "styrka 2"]
+}`;
+
+        const improvementMessages = [
+          {
+            role: "system" as const,
+            content: "Du är en expert på fastighetstexter och marknadsföring. Ge konstruktiv feedback.",
+          },
+          {
+            role: "user" as const,
+            content: improvementPrompt,
+          },
+        ];
+
+        try {
+          const improvementCompletion = await openai.chat.completions.create({
+            model: aiModel,
+            messages: improvementMessages,
+            max_tokens: 800,
+            temperature: 0.3,
+            response_format: { type: "json_object" },
+          });
+
+          const improvementText = improvementCompletion.choices[0]?.message?.content || "{}";
+          improvementSuggestions = safeJsonParse(improvementText);
+          console.log("[Improvement Analysis] Completed");
+        } catch (e) {
+          console.warn("[Improvement Analysis] Failed, skipping...", e);
+        }
+      }
+
       res.json({
         originalPrompt: prompt,
         improvedPrompt: result.improvedPrompt || prompt,
@@ -2054,7 +2141,10 @@ PLATTFORM: ${platform}
         analysis: result.analysis || {},
         improvements: result.missing_info || [],
         suggestions: result.pro_tips || [],
-        socialCopy: result.socialCopy || null
+        pro_tips: result.pro_tips || [],
+        critical_gaps: result.critical_gaps || [],
+        socialCopy: result.socialCopy || null,
+        improvement_suggestions: improvementSuggestions
       });
     } catch (err: any) {
       console.error("Optimize error:", err);

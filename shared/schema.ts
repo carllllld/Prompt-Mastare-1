@@ -28,6 +28,7 @@ export const optimizeRequestSchema = z.object({
   platform: z.string().default("general"),
   wordCountMin: z.number().optional(),
   wordCountMax: z.number().optional(),
+  imageUrls: z.array(z.string()).optional(),
 });
 
 export const optimizeResponseSchema = z.object({
@@ -44,6 +45,14 @@ export const optimizeResponseSchema = z.object({
   socialCopy: z.string().optional().nullable(),
   improvements: z.array(z.string()),
   suggestions: z.array(z.string()),
+  pro_tips: z.array(z.string()).optional(),
+  critical_gaps: z.array(z.string()).optional(),
+  improvement_suggestions: z.object({
+    tone: z.string().optional(),
+    target_audience_fit: z.string().optional(),
+    missing_elements: z.array(z.string()).optional(),
+    strengths: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 export const userStatusSchema = z.object({

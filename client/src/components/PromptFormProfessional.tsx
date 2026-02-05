@@ -132,6 +132,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [expandedSections, setExpandedSections] = useState<string[]>(["basic", "rooms"]);
   const [wordCountMin, setWordCountMin] = useState(350);
   const [wordCountMax, setWordCountMax] = useState(450);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   
   const form = useForm<PropertyFormData>({
     defaultValues: {
@@ -278,7 +279,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       prompt: disposition, 
       type: values.propertyType, 
       platform: values.platform,
-      ...(isPro && { wordCountMin, wordCountMax })
+      ...(isPro && { wordCountMin, wordCountMax }),
+      ...(uploadedImages.length > 0 && { imageUrls: uploadedImages })
     });
   };
 
@@ -471,6 +473,64 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       </FormItem>
                     )}
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* BILDUPPLADDNING */}
+            <Card className="border-gray-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="w-4 h-4 text-gray-600" />
+                  Objektbilder (Valfritt)
+                </CardTitle>
+                <CardDescription>
+                  Ladda upp bilder så analyserar AI:n dem för att förbättra beskrivningen
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      id="image-upload"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        files.forEach(file => {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setUploadedImages(prev => [...prev, reader.result as string]);
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                      }}
+                    />
+                    <label htmlFor="image-upload" className="cursor-pointer">
+                      <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm text-gray-600 font-medium">Klicka för att ladda upp bilder</p>
+                      <p className="text-xs text-gray-400 mt-1">PNG, JPG upp till 10MB</p>
+                    </label>
+                  </div>
+                  
+                  {uploadedImages.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3">
+                      {uploadedImages.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={img} alt={`Upload ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
+                          <button
+                            type="button"
+                            onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
