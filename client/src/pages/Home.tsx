@@ -269,20 +269,75 @@ export default function Home() {
                 </CardContent>
               </Card>
 
+              {/* AI FÖRBÄTTRINGSANALYS (PRO) */}
+              {result.improvement_suggestions && (
+                <Card className="bg-gradient-to-r from-purple-50 to-white border-purple-200 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Sparkles className="w-5 h-5 text-purple-600" />
+                      AI Förbättringsanalys
+                    </CardTitle>
+                    <CardDescription>Expertfeedback på din genererade text</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {result.improvement_suggestions.tone && (
+                      <div>
+                        <h4 className="font-bold text-sm text-purple-900 mb-1">Ton & Språk</h4>
+                        <p className="text-sm text-slate-600">{result.improvement_suggestions.tone}</p>
+                      </div>
+                    )}
+                    {result.improvement_suggestions.target_audience_fit && (
+                      <div>
+                        <h4 className="font-bold text-sm text-purple-900 mb-1">Målgruppsanpassning</h4>
+                        <p className="text-sm text-slate-600">{result.improvement_suggestions.target_audience_fit}</p>
+                      </div>
+                    )}
+                    {result.improvement_suggestions.strengths && result.improvement_suggestions.strengths.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-sm text-green-700 mb-2">Styrkor</h4>
+                        <ul className="space-y-1">
+                          {result.improvement_suggestions.strengths.map((strength: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                              <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                              {strength}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {result.improvement_suggestions.missing_elements && result.improvement_suggestions.missing_elements.length > 0 && (
+                      <div>
+                        <h4 className="font-bold text-sm text-amber-700 mb-2">Förbättringsmöjligheter</h4>
+                        <ul className="space-y-1">
+                          {result.improvement_suggestions.missing_elements.map((element: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                              <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                              {element}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
               {/* PRO TIPS BOXAR */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {result.pro_tips?.map((tip: string, i: number) => (
-                  <div key={i} className="bg-white border-2 border-indigo-600 p-6 rounded-2xl shadow-xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Zap className="w-12 h-12 text-indigo-600" />
+              {result.pro_tips && result.pro_tips.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {result.pro_tips.map((tip: string, i: number) => (
+                    <div key={i} className="bg-white border-2 border-indigo-600 p-6 rounded-2xl shadow-xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Zap className="w-12 h-12 text-indigo-600" />
+                      </div>
+                      <div className="text-[10px] font-black text-indigo-600 uppercase mb-2">Pro Tip #{i+1}</div>
+                      <p className="text-sm font-bold text-slate-800 leading-snug">
+                        {tip}
+                      </p>
                     </div>
-                    <div className="text-[10px] font-black text-indigo-600 uppercase mb-2">Pro Tip #{i+1}</div>
-                    <p className="text-sm font-bold text-slate-800 leading-snug">
-                      {tip}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex justify-center pt-10">
                 <Button variant="outline" onClick={() => setResult(null)} className="rounded-full px-8 py-6 border-slate-200 text-slate-500 hover:text-indigo-600 transition-all">
