@@ -30,7 +30,7 @@ export default function Home() {
   const [result, setResult] = useState<any | null>(null); // Använder any här för att stödja den nya utökade JSON-strukturen
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  const handleSubmit = (data: { prompt: string; type: string; platform: string }) => {
+  const handleSubmit = (data: { prompt: string; type: string; platform: string; wordCountMin?: number; wordCountMax?: number }) => {
     // Kräv inloggning
     if (!isAuthenticated) {
       setAuthModalOpen(true);
@@ -130,6 +130,7 @@ export default function Home() {
               </div>
             )}
 
+            {/* Debug: userStatus = {JSON.stringify(userStatus)} */}
             <PromptFormProfessional 
               onSubmit={handleSubmit} 
               isPending={isPending} 
