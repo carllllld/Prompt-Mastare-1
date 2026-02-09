@@ -485,8 +485,8 @@ export default function Home() {
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Välj textlängd (200-600 ord)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Bildanalys med AI</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> AI-textassistent (förbättra delar)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Konkurrentanalys & positionering</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Arkitekturhistoria & marknadspsykologi</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Geografisk intelligens (Sto/Göteborg/Malmö)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team samarbete</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Prioriterad support</li>
                   </ul>

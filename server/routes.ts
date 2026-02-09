@@ -186,11 +186,14 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
 }
 
 // Separat funktion för ordräkning (endast för improvedPrompt)
-function checkWordCount(text: string, platform: string): string[] {
+function checkWordCount(text: string, platform: string, targetMin?: number, targetMax?: number): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  const minWords = platform === "hemnet" ? 180 : 200;
-  const maxWords = platform === "hemnet" ? 500 : 600;
+  
+  // Använd användarens valda längd om den finns, annars plattformens standard
+  const minWords = targetMin || (platform === "hemnet" ? 180 : 200);
+  const maxWords = targetMax || (platform === "hemnet" ? 500 : 600);
+  
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
   }
@@ -200,11 +203,11 @@ function checkWordCount(text: string, platform: string): string[] {
   return violations;
 }
 
-function validateOptimizationResult(result: any, platform: string = "hemnet"): string[] {
+function validateOptimizationResult(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number): string[] {
   const violations: string[] = [];
   if (typeof result?.improvedPrompt === "string") {
     violations.push(...findRuleViolations(result.improvedPrompt, platform));
-    violations.push(...checkWordCount(result.improvedPrompt, platform));
+    violations.push(...checkWordCount(result.improvedPrompt, platform, targetMin, targetMax));
   }
   // socialCopy valideras bara för förbjudna fraser, inte ordräkning
   if (typeof result?.socialCopy === "string") {
@@ -1383,6 +1386,54 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Bestäm AI-modell baserat på plan
       const aiModel = plan === "pro" ? "gpt-4o" : "gpt-4o-mini";
+
+      // Konkurrentanalys (Pro-funktion)
+      let competitorAnalysis = "";
+      if (plan === "pro") {
+        console.log(`[Competitor Analysis] Analyzing market position...`);
+        
+        // Extrahera grundläggande info från prompten för analys
+        const propertyInfo = {
+          area: prompt.match(/i\s+([A-Za-z-]+)/i)?.[1] || "okänt område",
+          type: type || "lägenhet",
+          price: prompt.match(/(\d+\s*(?:k|tk|m|mn|kr))/i)?.[1] || "ej specificerat"
+        };
+
+        const competitorMessages = [
+          {
+            role: "system" as const,
+            content: `Du är en expert på svensk fastighetsmarknad. Analysera konkurrensläget för ett objekt och ge konkreta råd för hur det ska positioneras för att sticka ut. Var realistisk och baserad på faktiska marknadsförhållanden.`
+          },
+          {
+            role: "user" as const,
+            content: `Analysera detta objekt och ge konkreta positioningstips:
+
+OBJEKTINFO:
+- Område: ${propertyInfo.area}
+- Typ: ${propertyInfo.type}
+- Pris: ${propertyInfo.price}
+- Originalbeskrivning: ${prompt}
+
+Ge mig:
+1. Vanliga klyschor och svaga formuleringar som konkurrenterna använder (undvik dessa)
+2. Unika säljpunkter som konkurrenterna sällan nämner (fokusera på dessa)
+3. Positioneringstips för att sticka ut i mängden
+4. Specifika detaljer som är värda att lyfta fram
+
+Svara kortfattat och konkret.`
+          }
+        ];
+
+        const competitorCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: competitorMessages,
+          max_tokens: 800,
+          temperature: 0.3,
+        });
+
+        competitorAnalysis = competitorCompletion.choices[0]?.message?.content || "";
+        console.log(`[Competitor Analysis] Completed: ${competitorAnalysis.substring(0, 100)}...`);
+      }
       
       // Bildanalys om bilder finns
       let imageAnalysis = "";
@@ -1449,7 +1500,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         },
         {
           role: "user" as const,
-          content: `RÅDATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}`,
+          content: `RÅDATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}`,
         },
       ];
 
@@ -1859,7 +1910,7 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
       console.log("[Post-processing] Automatic phrase cleanup done before validation");
 
       // Validering - nu körs den på redan rensad text
-      let violations = validateOptimizationResult(result, platform);
+      let violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
       console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
       // Retry loop - skickar befintlig text och ber AI:n BARA fixa specifika fel
@@ -1926,7 +1977,7 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten", "highlights": [...],
           result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
         }
         
-        violations = validateOptimizationResult(result, platform);
+        violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
         console.log("[AI Validation] After retry " + attempts + " violations:", violations.length > 0 ? violations : "NONE");
       }
       
