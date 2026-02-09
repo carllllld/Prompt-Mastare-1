@@ -483,9 +483,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="w-4 h-4 text-gray-600" />
                   Objektbilder (Valfritt)
+                  {isPro && <Badge className="bg-purple-100 text-purple-700 text-xs">Pro</Badge>}
                 </CardTitle>
                 <CardDescription>
-                  Ladda upp bilder så analyserar AI:n dem för att förbättra beskrivningen
+                  {isPro 
+                    ? "Ladda upp bilder så analyserar AI:n dem för att förbättra beskrivningen"
+                    : "Bildanalys är en Pro-funktion. Uppgradera för att använda."}
                 </CardDescription>
               </CardHeader>
               <CardContent>

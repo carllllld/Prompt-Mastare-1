@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { AuthModal } from "@/components/AuthModal";
+import { TextImprovement } from "@/components/TextImprovement";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
@@ -269,6 +270,13 @@ export default function Home() {
                 </CardContent>
               </Card>
 
+              {/* TEXTFÖRBÄTTRING - AI-ASSISTENT */}
+              <TextImprovement 
+                fullText={result.improvedPrompt} 
+                isPro={userStatus?.plan === "pro"}
+                onTextUpdate={(newText) => setResult(prev => prev ? {...prev, improvedPrompt: newText} : null)}
+              />
+
               {/* AI FÖRBÄTTRINGSANALYS (PRO) */}
               {result.improvement_suggestions && (
                 <Card className="bg-gradient-to-r from-purple-50 to-white border-purple-200 shadow-lg">
@@ -475,8 +483,10 @@ export default function Home() {
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> 20 objektbeskrivningar per månad</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> GPT-4o (Expert AI)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Välj textlängd (200-600 ord)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Bildanalys med AI</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> AI-textassistent (förbättra delar)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Arkitekturhistoria & marknadspsykologi</li>
-                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Geografisk intelligens (Stockholm/Göteborg/Malmö)</li>
+                    <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Geografisk intelligens (Sto/Göteborg/Malmö)</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Team samarbete</li>
                     <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Prioriterad support</li>
                   </ul>
@@ -498,6 +508,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+
       </main>
 
       <footer className="!bg-white border-t border-slate-200 py-12">
