@@ -1386,8 +1386,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
       // Bildanalys om bilder finns
       let imageAnalysis = "";
-      if (imageUrls && imageUrls.length > 0) {
-        console.log(`[Image Analysis] Analyzing ${imageUrls.length} images...`);
+      if (imageUrls && imageUrls.length > 0 && plan === "pro") {
+        console.log(`[Image Analysis] Analyzing ${imageUrls.length} images (Pro feature)...`);
         
         const imageMessages = [
           {
@@ -2688,6 +2688,79 @@ Svara med JSON i formatet:
     } catch (err: any) {
       console.error("Admin set-plan error:", err);
       res.status(500).json({ message: err.message || "Failed to set user plan" });
+    }
+  });
+
+  // TEXTFÖRBÄTTRING - AI-assistent för att skriva om delar av texten
+  app.post("/api/improve-text", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { originalText, selectedText, improvementType, context } = req.body;
+
+      if (!selectedText || !improvementType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const plan = user.plan;
+      if (plan !== "pro") {
+        return res.status(403).json({ message: "Denna funktion är endast för Pro-användare" });
+      }
+
+      console.log(`[Text Improvement] Improving text with type: ${improvementType}`);
+
+      const improvementPrompts = {
+        more_descriptive: `Gör denna text mer beskrivande och levande för fastighetsmäklare. Använd sensoriska detaljer och skapa en starkare bild för läsaren. Behåll den faktiska informationen.`,
+        more_selling: `Gör denna text mer säljande och övertygande. Fokusera på fördelar för köparen, skapa brådska och framhäva unika värden. Använd mäklarbranschens bästa praxis.`,
+        more_formal: `Gör denna text mer formell och professionell. Använd korrekta fastighetstermer och en ton som passar för högkvalitativa objekt.`,
+        more_warm: `Gör denna text mer personlig och inbjudande. Skapa en känsla av hem och välbefinnande utan att förlora professionaliteten.`,
+        fix_claims: `Förbättra denna text genom att ersätta klyschor och svaga påståenden med konkreta fakta och starka argument. Använd mäklarbranschen kunskaper.`
+      };
+
+      const prompt = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
+
+      const messages = [
+        {
+          role: "system" as const,
+          content: `Du är en expert på svenska fastighetstexter med 15 års erfarenhet som mäklare. Du kan allt om svensk fastighetslagstiftning, marknadspsykologi och effektiva säljstrategier. Dina texter är alltid klyschfria, faktabaserade och säljande.
+
+KONTEXT: ${context || 'Ingen extra kontext'}
+
+ORIGINALTEXT: ${originalText}
+
+VALD TEXT ATT FÖRBÄTTRA: ${selectedText}
+
+${prompt}
+
+Svara ENDAST med den förbättrade texten, inga förklaringar.`
+        },
+        {
+          role: "user" as const,
+          content: selectedText
+        }
+      ];
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: messages,
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+
+      const improvedText = completion.choices[0]?.message?.content || selectedText;
+
+      res.json({
+        originalText: selectedText,
+        improvedText: improvedText.trim(),
+        improvementType: improvementType
+      });
+
+    } catch (err: any) {
+      console.error("Text improvement error:", err);
+      res.status(500).json({ message: err.message || "Textförbättring misslyckades" });
     }
   });
 
