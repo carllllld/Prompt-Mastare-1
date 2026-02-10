@@ -191,6 +191,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   };
 
   const onLocalSubmit = (values: PropertyFormData) => {
+    console.log("[Form Debug] onLocalSubmit called with:", values);
+    
     // Bygg en professionell disposition för AI:n
     let disposition = `OBJEKTDISPOSITION\n\n`;
     disposition += `=== GRUNDINFORMATION ===\n`;
