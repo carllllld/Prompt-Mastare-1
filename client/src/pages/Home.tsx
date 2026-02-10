@@ -31,12 +31,17 @@ export default function Home() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const handleSubmit = (data: { prompt: string; type: string; platform: string; wordCountMin?: number; wordCountMax?: number }) => {
+    console.log("[Home Debug] handleSubmit called with:", data);
+    console.log("[Home Debug] isAuthenticated:", isAuthenticated);
+    
     // Kräv inloggning
     if (!isAuthenticated) {
+      console.log("[Home Debug] Not authenticated, opening auth modal");
       setAuthModalOpen(true);
       return;
     }
     
+    console.log("[Home Debug] Calling mutate with data");
     mutate(data, {
       onSuccess: (data) => {
         setResult(data);
