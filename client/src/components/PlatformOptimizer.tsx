@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Copy, Globe, Loader2, Sparkles } from "lucide-react";
 
@@ -86,7 +85,7 @@ export function PlatformOptimizer({ fullText, propertyInfo, isPro }: PlatformOpt
             <p className="text-sm text-purple-700 mb-4">
               Skapa optimerade versioner för Hemnet, Booli, Instagram och Facebook
             </p>
-            <Badge className="bg-purple-100 text-purple-700">Pro-funktion</Badge>
+            <div className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md font-semibold">Pro-funktion</div>
           </div>
         </CardContent>
       </Card>
@@ -99,7 +98,7 @@ export function PlatformOptimizer({ fullText, propertyInfo, isPro }: PlatformOpt
         <CardTitle className="flex items-center gap-2 text-lg">
           <Globe className="w-5 h-5 text-purple-600" />
           Plattformsoptimering
-          <Badge className="bg-purple-100 text-purple-700 text-xs">Pro</Badge>
+          <div className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md font-semibold">Pro</div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -166,9 +165,9 @@ export function PlatformOptimizer({ fullText, propertyInfo, isPro }: PlatformOpt
                         <p className="text-xs text-purple-700">{info.description}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Badge className={info.badge}>
+                        <div className={`text-xs px-2 py-1 rounded-md font-semibold ${info.badge}`}>
                           {text.split(' ').length} ord
-                        </Badge>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
