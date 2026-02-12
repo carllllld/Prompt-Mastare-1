@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Optimization } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Loader2, History, ArrowLeft, Trash2, Copy, Clock } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -85,10 +84,10 @@ export default function HistoryPage() {
               <span className="font-bold text-lg !text-slate-900">Historik</span>
             </div>
           </div>
-          <Badge className="bg-gray-100 text-gray-700 border-gray-300">
+          <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-md font-semibold">
             <Clock className="h-3 w-3 mr-1" />
             Sparas i 30 dagar
-          </Badge>
+          </div>
         </div>
       </nav>
 
@@ -115,18 +114,24 @@ export default function HistoryPage() {
                   <CardHeader className="bg-slate-50/50 pb-3">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <Badge variant={item.category === "apartment" ? "default" : "secondary"}>
+                        <div className={`text-xs px-2 py-1 rounded-md font-semibold ${
+                          item.category === "apartment" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-secondary text-secondary-foreground"
+                        }`}>
                           {item.category === "apartment" ? "Lägenhet" : "Villa"}
-                        </Badge>
+                        </div>
                         <span className="text-sm text-muted-foreground">
                           {new Date(item.createdAt!).toLocaleDateString('sv-SE')}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={daysLeft <= 7 ? "text-orange-600 border-orange-200" : ""}>
+                        <div className={`text-xs px-2 py-1 rounded-md font-semibold border ${
+                          daysLeft <= 7 ? "text-orange-600 border-orange-200" : "border-gray-300"
+                        }`}>
                           <Clock className="h-3 w-3 mr-1" />
                           {daysLeft} dagar kvar
-                        </Badge>
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"

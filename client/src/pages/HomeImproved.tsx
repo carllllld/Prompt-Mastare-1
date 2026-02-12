@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -274,7 +273,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold">Professionell objektbeskrivning</h3>
-                      <p className="text-gray-300 text-sm">Optimerad för {result.platform === "hemnet" ? "Hemnet" : "Booli/Egen sida"}</p>
+                      <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-md font-semibold">{prompt.status}</div> för {result.platform === "hemnet" ? "Hemnet" : "Booli/Egen sida"}</p>
                     </div>
                   </div>
                   <Button 

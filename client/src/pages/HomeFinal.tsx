@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -103,9 +102,7 @@ export default function Home() {
         {/* HERO SECTION */}
         <section className="py-20 bg-gray-50 border-b border-gray-200 text-center">
           <div className="max-w-4xl mx-auto px-6">
-            <Badge className="mb-6 bg-gray-100 text-gray-700 border-gray-300 px-4 py-1 text-xs font-bold">
-              Professionellt verktyg för svenska fastighetsmäklare
-            </Badge>
+            <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-md font-semibold">Professionellt verktyg för svenska fastighetsmäklare</div>
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 tracking-tight mb-6">
               Sälj bostaden med <span className="text-gray-800">rätt ord.</span>
             </h1>
