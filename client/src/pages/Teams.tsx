@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, FileText, ArrowLeft, Copy, Lock, Trash2 } from "lucide-react";
@@ -394,9 +393,13 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                             {prompt.title}
                           </CardTitle>
                           <div className="flex items-center gap-1">
-                            <Badge variant={prompt.status === "optimized" ? "default" : "secondary"} className="text-xs">
+                            <div className={`text-xs px-2 py-1 rounded-md font-semibold ${
+                              prompt.status === "optimized" 
+                                ? "bg-primary text-primary-foreground" 
+                                : "bg-secondary text-secondary-foreground"
+                            }`}>
                               {prompt.status}
-                            </Badge>
+                            </div>
                             <Button
                               variant="ghost"
                               size="icon"
