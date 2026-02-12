@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { 
   Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout, 
@@ -485,7 +484,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Sparkles className="w-4 h-4 text-gray-600" />
                   Objektbilder (Valfritt)
-                  {isPro && <Badge className="bg-purple-100 text-purple-700 text-xs">Pro</Badge>}
+                  {isPro && <div className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md font-semibold">Pro</div>}
                 </CardTitle>
                 <CardDescription>
                   {isPro 
