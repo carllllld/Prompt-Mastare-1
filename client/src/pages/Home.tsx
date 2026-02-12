@@ -573,5 +573,3 @@ export default function Home() {
     </div>
   );
 }
-/ /   B u i l d   t r i g g e r  
- 
