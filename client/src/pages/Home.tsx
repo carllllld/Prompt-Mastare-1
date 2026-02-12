@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
@@ -11,12 +11,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { 
   Loader2, HomeIcon, LogOut, Sparkles, TrendingUp, Clock, 
   FileText, Zap, ArrowRight, Star, Users, BarChart3, Building2,
-  Compass, Blueprint, Hammer, Palette, Eye, Target, Brain,
-  Layers, Grid3x3, Move3D, Maximize2, Minimize2, RotateCw
+  Compass, Blueprint, Hammer, Palette, Eye, Target, Brain
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,25 +27,6 @@ export default function Home() {
   const [result, setResult] = useState<any | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState<number | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isGenerating, setIsGenerating] = useState(false);
-  const canvasRef = useRef<HTMLDivElement>(null);
-
-  // Mouse tracking for 3D effects
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (canvasRef.current) {
-        const rect = canvasRef.current.getBoundingClientRect();
-        setMousePosition({
-          x: ((e.clientX - rect.left) / rect.width - 0.5) * 20,
-          y: ((e.clientY - rect.top) / rect.height - 0.5) * 20
-        });
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
 
   const handleSubmit = (data: { prompt: string; type: string; platform: string; wordCountMin?: number; wordCountMax?: number }) => {
     console.log("[Home Debug] handleSubmit called with:", data);
@@ -59,16 +38,13 @@ export default function Home() {
       return;
     }
     
-    setIsGenerating(true);
     console.log("[Home Debug] Calling mutate with data");
     mutate(data, {
       onSuccess: (data) => {
         setResult(data);
-        setIsGenerating(false);
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
       },
       onError: (error: any) => {
-        setIsGenerating(false);
         toast({
           title: "Ett fel uppstod",
           description: error?.message || "Kunde inte generera text.",
@@ -84,32 +60,28 @@ export default function Home() {
       icon: Building2, 
       desc: "Sofistikerad stadslägenhet",
       quick: "Vasastan, 2 rum, 78m², balkong",
-      color: "from-blue-600 to-cyan-500",
-      pattern: "grid"
+      color: "from-blue-600 to-cyan-500"
     },
     { 
       name: "Suburban Dream Home", 
       icon: HomeIcon, 
       desc: "Familjevänligt villaområde",
       quick: "Bromma, 4 rum, 145m², trädgård",
-      color: "from-emerald-600 to-teal-500",
-      pattern: "dots"
+      color: "from-emerald-600 to-teal-500"
     },
     { 
       name: "Charming Townhouse", 
-      icon: Grid3x3, 
+      icon: Compass, 
       desc: "Perfekt mellanting",
       quick: "Solna, 3 rum, 95m², 2 plan",
-      color: "from-purple-600 to-pink-500",
-      pattern: "lines"
+      color: "from-purple-600 to-pink-500"
     },
     { 
       name: "Weekend Retreat", 
-      icon: Compass, 
+      icon: Eye, 
       desc: "Avkoppling i naturen",
       quick: "Värmdö, 2 rum, 55m², sjönära",
-      color: "from-orange-600 to-red-500",
-      pattern: "waves"
+      color: "from-orange-600 to-red-500"
     }
   ];
 
@@ -150,12 +122,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 opacity-20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5QzkyQUMiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzR2LTRoLTJ2NGgtNHYyaDR2NGgydi00aDR2LTJoLTR6bTAtMzBWMGgtMnY0aC00djJoNHY0aDJWNmg0VjRoLTR6TTYgMzR2LTRINHY0SDB2Mmg0djRoMnYtNGg0djJINHp6TTYgNFYwSDR2NEgwdjJoNHY0aDJWNmg0VjRINnoiLz48L2c+PC9nPjwvc3ZnPg==')]"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent"></div>
-      </div>
-
       {/* Premium Navigation */}
       <nav className="relative z-50 border-b border-white/10 backdrop-blur-xl bg-slate-900/80">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -190,10 +156,6 @@ export default function Home() {
                     <BarChart3 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                     <span>Analytics</span>
                   </Link>
-                  <Link href="/blueprint" className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors group">
-                    <Layers className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    <span>Blueprint</span>
-                  </Link>
                 </div>
               )}
             </div>
@@ -206,10 +168,7 @@ export default function Home() {
               ) : isAuthenticated ? (
                 <div className="flex items-center gap-4">
                   <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl border border-white/10">
-                    <div className="relative">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                      <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping"></div>
-                    </div>
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                     <div className="text-right">
                       <div className="text-sm font-semibold text-white">{userStatus?.promptsRemaining}</div>
                       <div className="text-xs text-slate-400">kvar</div>
@@ -241,7 +200,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section with 3D Effects */}
+      {/* Hero Section */}
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           {/* Main Hero */}
@@ -329,9 +288,6 @@ export default function Home() {
                           : 'bg-slate-800/30 border-white/10 hover:border-white/20 hover:bg-slate-800/50'
                       }`}
                       onClick={() => setActiveTemplate(i)}
-                      style={{
-                        backgroundImage: activeTemplate === i ? `url('data:image/svg+xml,%3Csvg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23ffffff" fill-opacity="0.05"%3E%3Cpath d="M0 40L40 0H20L0 20M40 40V20L20 40"/%3E%3C/g%3E%3C/svg%3E')` : 'none'
-                      }}
                     >
                       <div className="flex items-start gap-4">
                         <div className={`w-12 h-12 bg-gradient-to-br ${template.color} rounded-xl flex items-center justify-center shadow-lg ${activeTemplate === i ? 'scale-110' : ''} transition-transform`}>
@@ -367,12 +323,6 @@ export default function Home() {
                     <Hammer className="w-4 h-4 text-white" />
                   </div>
                   <span>AI Text Generator</span>
-                  {isGenerating && (
-                    <div className="flex items-center gap-2 text-sm text-blue-400">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
-                      <span>Generating...</span>
-                    </div>
-                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
