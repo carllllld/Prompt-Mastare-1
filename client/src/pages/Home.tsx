@@ -179,16 +179,74 @@ export default function Home() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full">
+              <div className="space-y-6">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="w-8 h-8 text-gray-400" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-700 mb-2">Resultat visas här</h3>
-                  <p className="text-sm text-slate-500">
-                    Fyll i formuläret och klicka "Generera" för att skapa objektbeskrivning
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Uppgradera till Pro</h3>
+                  <p className="text-sm text-slate-600 mb-6">
+                    Få expertkvalitet med AI-analys, längre texter och avancerade funktioner
                   </p>
+                  <Button 
+                    className="bg-gray-800 hover:bg-gray-900 text-white"
+                    onClick={() => startCheckout("pro")}
+                  >
+                    Uppgradera till Pro - 199kr/mån
+                  </Button>
                 </div>
+
+                {/* PRO EXAMPLE */}
+                <Card className="border-2 border-gray-800 shadow-xl">
+                  <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="font-bold text-sm">Pro-exempel</span>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <h4 className="font-bold mb-1 text-slate-700">Highlights:</h4>
+                        <ul className="list-none space-y-1 text-xs text-slate-600">
+                          <li>✓ Skuldfri förening med 2.3 MSEK i fond</li>
+                          <li>✓ Balkong i sydväst med kvällssol</li>
+                          <li>✓ 5 min till Odenplan tunnelbana</li>
+                        </ul>
+                      </div>
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="text-xs leading-relaxed text-slate-600">
+                          1912 års jugendarkitektur möter modern design i denna karaktärsfulla hörnlägenhet. 
+                          Med 3.2 meters takhöjd och bevarad originalstuckatur erbjuder denna tvåa om 58 kvm 
+                          en unik kombination av sekelskiftescharm och nutida komfort...
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* HOW TO USE */}
+                <Card className="border-slate-200">
+                  <div className="p-4">
+                    <h4 className="font-bold text-slate-900 mb-3">Så här fungerar det:</h4>
+                    <div className="space-y-3 text-sm text-slate-600">
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">1</div>
+                        <p><strong>Fyll i formuläret</strong> - Adress, pris, yta, rum, byggår</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">2</div>
+                        <p><strong>Välj plattform & längd</strong> - Hemnet/Booli, 200-600 ord</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">3</div>
+                        <p><strong>Klicka "Generera"</strong> - AI skapar professionell text</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">4</div>
+                        <p><strong>Kopiera & anpassa</strong> - Klipp ut och använd direkt</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </div>
             )}
           </div>
@@ -237,83 +295,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      {/* PRO UPGRADE PROMPT */}
-      {!result && userStatus?.plan !== "pro" && (
-        <div className="hidden lg:block lg:w-1/2 border-l border-slate-200 p-6 overflow-y-auto">
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Uppgradera till Pro</h3>
-              <p className="text-sm text-slate-600 mb-6">
-                Få expertkvalitet med AI-analys, längre texter och avancerade funktioner
-              </p>
-              <Button 
-                className="bg-gray-800 hover:bg-gray-900 text-white"
-                onClick={() => startCheckout("pro")}
-              >
-                Uppgradera till Pro - 199kr/mån
-              </Button>
-            </div>
-
-            {/* PRO EXAMPLE */}
-            <Card className="border-2 border-gray-800 shadow-xl">
-              <div className="bg-gray-800 text-white px-4 py-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                <span className="font-bold text-sm">Pro-exempel</span>
-              </div>
-              <CardContent className="p-4">
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <h4 className="font-bold mb-1 text-slate-700">Highlights:</h4>
-                    <ul className="list-none space-y-1 text-xs text-slate-600">
-                      <li>✓ Skuldfri förening med 2.3 MSEK i fond</li>
-                      <li>✓ Balkong i sydväst med kvällssol</li>
-                      <li>✓ 5 min till Odenplan tunnelbana</li>
-                    </ul>
-                  </div>
-                  <div className="pt-2 border-t border-slate-100">
-                    <p className="text-xs leading-relaxed text-slate-600">
-                      1912 års jugendarkitektur möter modern design i denna karaktärsfulla hörnlägenhet. 
-                      Med 3.2 meters takhöjd och bevarad originalstuckatur erbjuder denna tvåa om 58 kvm 
-                      en unik kombination av sekelskiftescharm och nutida komfort...
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* HOW TO USE */}
-            <Card className="border-slate-200">
-              <div className="p-4">
-                <h4 className="font-bold text-slate-900 mb-3">Så här fungerar det:</h4>
-                <div className="space-y-3 text-sm text-slate-600">
-                  <div className="flex gap-3">
-                    <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">1</div>
-                    <p><strong>Fyll i formuläret</strong> - Adress, pris, yta, rum, byggår</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">2</div>
-                    <p><strong>Välj plattform & längd</strong> - Hemnet/Booli, 200-600 ord</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">3</div>
-                    <p><strong>Klicka "Generera"</strong> - AI skapar professionell text</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0">4</div>
-                    <p><strong>Kopiera & anpassa</strong> - Klipp ut och använd direkt</p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      </main>
 
       {/* FOOTER */}
       <footer className="bg-white border-t border-slate-200 py-8 flex-shrink-0">
