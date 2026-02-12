@@ -64,18 +64,27 @@ export default function Home() {
             <span className="font-bold text-base text-slate-900">Mäklartexter</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             {authLoading ? (
               <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
             ) : isAuthenticated ? (
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-slate-500 hidden sm:block">{user?.email}</span>
+              <div className="flex items-center gap-4">
+                <Link href="/history" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block">
+                  Historik
+                </Link>
+                {user?.plan === "pro" && (
+                  <Link href="/teams" className="text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors hidden sm:block">
+                    Teams
+                  </Link>
+                )}
+                <span className="text-sm font-medium text-slate-400 hidden sm:block">|</span>
+                <span className="text-sm font-medium text-slate-500 hidden sm:block">{user?.email}</span>
                 <Button variant="ghost" size="sm" onClick={() => logout()} className="text-slate-600 hover:text-indigo-600 px-3 py-1 text-xs">
                   <LogOut className="w-3 h-3 mr-1" /> Logga ut
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => setAuthModalOpen(true)} className="bg-gray-800 hover:bg-gray-900 text-white rounded-full px-4 py-1 text-sm transition-all">
+              <Button onClick={() => setAuthModalOpen(true)} className="bg-gray-800 hover:bg-gray-900 text-white rounded-full px-6 py-2 text-sm transition-all">
                 Logga in
               </Button>
             )}
@@ -303,6 +312,33 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      </main>
+
+      {/* FOOTER */}
+      <footer className="bg-white border-t border-slate-200 py-8 flex-shrink-0">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2 text-slate-600">
+              <HomeIcon className="w-4 h-4" />
+              <span className="font-bold text-sm">Mäklartexter</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-xs text-slate-500">Professionella objektbeskrivningar med AI</span>
+            </div>
+            <div className="flex items-center gap-6 text-xs text-slate-400">
+              <span>&copy; {new Date().getFullYear()} Mäklartexter</span>
+              <span>•</span>
+              <Link href="/history" className="hover:text-slate-600 transition-colors">Historik</Link>
+              {user?.plan === "pro" && (
+                <>
+                  <span>•</span>
+                  <Link href="/teams" className="hover:text-slate-600 transition-colors">Teams</Link>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </footer>
 
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
