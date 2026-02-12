@@ -310,6 +310,7 @@ export default function PromptEditor() {
                 )}
               </Button>
             )}
+            </div>
           </div>
         </div>
       </header>
