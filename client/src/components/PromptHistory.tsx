@@ -1,6 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -119,7 +118,7 @@ export function PromptHistory() {
             <History className="w-5 h-5" />
           </div>
           <h3 className="text-lg font-bold text-white">Objektbeskrivningar</h3>
-          <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30">Pro</Badge>
+          <div className="bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs px-2 py-1 rounded-md font-semibold">Pro</div>
         </div>
         <Button
           size="icon"
@@ -191,9 +190,9 @@ export function PromptHistory() {
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs bg-white/5 text-white/60 border-white/10">
+                  <div className="text-xs bg-white/5 text-white/60 border border-white/10 px-2 py-1 rounded-md font-semibold">
                     {item.category}
-                  </Badge>
+                  </div>
                   <span className="text-xs text-white/40 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {formatDate(item.createdAt)}
