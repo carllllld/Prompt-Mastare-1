@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowRight, FileText, GitCompare, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -136,18 +135,18 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-white/50">Original:</span>
-              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.originalWords} words</Badge>
+              <div className="bg-white/10 text-white/70 text-xs px-2 py-1 rounded-md font-semibold">{stats.originalWords} words</div>
             </div>
             <ArrowRight className="w-4 h-4 text-white/30" />
             <div className="flex items-center gap-2">
               <span className="text-white/50">Improved:</span>
-              <Badge variant="secondary" className="bg-white/10 text-white/70">{stats.improvedWords} words</Badge>
+              <div className="bg-white/10 text-white/70 text-xs px-2 py-1 rounded-md font-semibold">{stats.improvedWords} words</div>
             </div>
-            <Badge 
-              className={stats.wordDiff > 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white/70"}
-            >
+            <div className={`text-xs px-2 py-1 rounded-md font-semibold border ${
+              stats.wordDiff > 0 ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-white/10 text-white/70"
+            }`}>
               {stats.wordDiff > 0 ? "+" : ""}{stats.wordDiff} words ({stats.percentChange > 0 ? "+" : ""}{stats.percentChange}%)
-            </Badge>
+            </div>
           </div>
         </div>
 
@@ -203,14 +202,14 @@ export function PromptCompare({ original, improved }: PromptCompareProps) {
             <p className="text-sm font-medium text-white/60 mb-3">Key changes:</p>
             <div className="flex flex-wrap gap-2">
               {added.map((word, i) => (
-                <Badge key={`add-${i}`} className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                <div key={`add-${i}`} className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs px-2 py-1 rounded-md font-semibold">
                   + {word}
-                </Badge>
+                </div>
               ))}
               {removed.map((word, i) => (
-                <Badge key={`rem-${i}`} className="bg-red-500/20 text-red-400 border-red-500/30 line-through">
+                <div key={`rem-${i}`} className="bg-red-500/20 text-red-400 border border-red-500/30 line-through text-xs px-2 py-1 rounded-md font-semibold">
                   {word}
-                </Badge>
+                </div>
               ))}
             </div>
           </div>
