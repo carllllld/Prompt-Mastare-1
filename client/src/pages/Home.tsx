@@ -152,7 +152,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 opacity-20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5QzkyQUMiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzR2LTRoLTJ2NGgtNHYyaDR2NGgydi00aDR2LTJoLTR6bTAtMzBWMGgtMnY0aC00djJoNHY0aDJWNmg0VjRoLTR6TTYgMzR2LTRINHY0SDB2Mmg0djRoMnYtNGg0djJINHp6TTYgNFYwSDR2NEgwdjJoNHY0aDJWNmg0VjRINnoiLz48L2c+PC9nPjwvc3ZnPg==')]"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/50 to-transparent"></div>
       </div>
 
@@ -250,7 +250,7 @@ export default function Home() {
               <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full border border-blue-500/30 backdrop-blur-sm">
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-blue-300">AI-Precision Engine v3.0</span>
-                <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none text-xs">BETA</Badge>
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none text-xs px-3 py-1 rounded-full font-semibold">BETA</div>
               </div>
               
               <div className="space-y-4">
@@ -469,7 +469,7 @@ export default function Home() {
                       <TextImprovement 
                         fullText={result.improvedPrompt} 
                         isPro={true}
-                        onTextUpdate={(newText) => setResult(prev => prev ? {...prev, improvedPrompt: newText} : null)}
+                        onTextUpdate={(newText: string) => setResult((prev: any) => prev ? {...prev, improvedPrompt: newText} : null)}
                       />
                     </CardContent>
                   </Card>
@@ -500,7 +500,7 @@ export default function Home() {
                           <div className="font-bold text-white text-lg mb-1">Professional Engine</div>
                           <div className="text-sm text-slate-400">Unlock full AI potential</div>
                         </div>
-                        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none">PRO</Badge>
+                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none px-3 py-1 rounded-full font-semibold text-xs">PRO</div>
                       </div>
                       
                       <div className="grid grid-cols-1 gap-3 mb-6">
