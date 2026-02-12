@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, Edit3, Check, X } from "lucide-react";
 
 interface TextImprovementProps {
@@ -87,7 +86,7 @@ export function TextImprovement({ fullText, isPro, onTextUpdate }: TextImproveme
             <p className="text-sm text-purple-700 mb-4">
               Välj delar av texten att förbättra med AI-assistenten
             </p>
-            <Badge className="bg-purple-100 text-purple-700">Pro-funktion</Badge>
+            <div className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md font-semibold">Pro-funktion</div>
           </div>
         </CardContent>
       </Card>
@@ -100,7 +99,7 @@ export function TextImprovement({ fullText, isPro, onTextUpdate }: TextImproveme
         <CardTitle className="flex items-center gap-2 text-lg">
           <Edit3 className="w-5 h-5 text-purple-600" />
           AI-textassistent
-          <Badge className="bg-purple-100 text-purple-700 text-xs">Pro</Badge>
+          <div className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md font-semibold">Pro</div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
