@@ -28,7 +28,7 @@ export default function Home() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState<number | null>(null);
 
-  const handleSubmit = (data: { prompt: string; type: string; platform: string; wordCountMin?: number; wordCountMax?: number }) => {
+  const handleSubmit = (data: any) => {
     console.log("[Home Debug] handleSubmit called with:", data);
     console.log("[Home Debug] isAuthenticated:", isAuthenticated);
     
@@ -48,7 +48,7 @@ export default function Home() {
         toast({
           title: "Ett fel uppstod",
           description: error?.message || "Kunde inte generera text.",
-          variant: "destructive",
+          variant: "destructive" as any,
         });
       },
     });
@@ -419,7 +419,7 @@ export default function Home() {
                       <TextImprovement 
                         fullText={result.improvedPrompt} 
                         isPro={true}
-                        onTextUpdate={(newText: string) => setResult((prev: any) => prev ? {...prev, improvedPrompt: newText} : null)}
+                        onTextUpdate={(newText: any) => setResult((prev: any) => prev ? {...prev, improvedPrompt: newText} : null)}
                       />
                     </CardContent>
                   </Card>
