@@ -8,7 +8,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -263,18 +262,6 @@ export default function PromptEditor() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-xl font-semibold flex items-center gap-2">
-                {prompt.isLocked && <Lock className="h-4 w-4 text-orange-500" />}
-                {prompt.title}
-              </h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="secondary" className="text-xs">{prompt.status}</Badge>
-                {isConnected && <span className="text-green-500 text-xs">Live</span>}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
             {otherViewers.length > 0 && (
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
