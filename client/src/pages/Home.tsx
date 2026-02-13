@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { 
   Loader2, HomeIcon, LogOut, Sparkles, TrendingUp, Clock, 
   FileText, Zap, ArrowRight, Star, Users, BarChart3, Building2,
-  Compass, Blueprint, Hammer, Palette, Eye, Target, Brain
+  Compass, Hammer, Palette, Eye, Target, Brain
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -131,7 +131,7 @@ export default function Home() {
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
                   <div className="relative bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl text-white shadow-2xl">
-                    <Blueprint className="w-6 h-6" />
+                    <FileText className="w-6 h-6" />
                   </div>
                 </div>
                 <div>
@@ -273,7 +273,7 @@ export default function Home() {
                 <CardHeader className="border-b border-white/10">
                   <CardTitle className="flex items-center gap-3 text-xl">
                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                      <Blueprint className="w-4 h-4 text-white" />
+                      <FileText className="w-4 h-4 text-white" />
                     </div>
                     <span>Property Blueprints</span>
                   </CardTitle>
@@ -503,7 +503,7 @@ export default function Home() {
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Blueprint className="w-5 h-5 text-white" />
+                  <FileText className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <span className="font-bold text-xl text-white">Mäklartexter</span>
