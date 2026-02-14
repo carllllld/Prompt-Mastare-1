@@ -1,397 +1,314 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
+import { ResultSection } from "@/components/ResultSection";
 import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
+import { useStripeCheckout } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  Loader2, LogOut, Sparkles, FileText, Zap, ArrowRight, Home, Building2, MapPin, 
-  TrendingUp, Star, Shield, Clock, Users, BarChart3, Target, Brain, CheckCircle,
-  Lightbulb, Zap as ZapIcon, Award, Compass, Eye, Heart
+import { type OptimizeResponse } from "@shared/schema";
+import {
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus } = useUserStatus();
+  const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'create' | 'history'>('create');
 
   const handleSubmit = (data: any) => {
     if (!isAuthenticated) {
       setAuthModalOpen(true);
       return;
     }
-    
     mutate(data, {
-      onSuccess: (data) => {
-        setResult(data);
+      onSuccess: (res: OptimizeResponse) => {
+        setResult(res);
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
       },
       onError: (error: any) => {
-        toast({
-          title: "Ett fel uppstod",
-          description: error?.message || "Kunde inte generera text.",
-        });
+        if (error.limitReached) {
+          toast({
+            title: "Dagskvot uppnådd",
+            description: "Uppgradera till Pro för fler beskrivningar.",
+          });
+        } else {
+          toast({
+            title: "Något gick fel",
+            description: error?.message || "Kunde inte generera text.",
+          });
+        }
       },
     });
   };
 
-  // Unique features that showcase our AI capabilities
-  const uniqueFeatures = [
-    {
-      icon: Brain,
-      title: "Kreativ Språkmodul",
-      description: "Omvandlar komplexa fastighetsbeskrivningar till engagerande berättelser"
-    },
-    {
-      icon: Target,
-      title: "Psykologisk Triggers",
-      description: "Använder beprövade säljtekniker för att maximera intresse"
-    },
-    {
-      icon: Compass,
-      title: "Lokal Marknadsinsikt",
-      description: "Anpassar texter efter specifika områden och demografi"
-    },
-    {
-      icon: Award,
-      title: "SEO-Optimering",
-      description: "Integrerar sökord som maximerar synlighet online"
-    }
-  ];
-
-  const stats = [
-    { label: "AI-modeller", value: "15+", icon: Brain, color: "text-violet-600" },
-    { label: "Språkstöd", value: "12", icon: Heart, color: "text-pink-600" },
-    { label: "Konvertering", value: "89%", icon: TrendingUp, color: "text-emerald-600" },
-    { label: "Kundnöjd", value: "4.8/5", icon: Star, color: "text-amber-600" }
-  ];
+  const plan = userStatus?.plan || "free";
+  const remaining = userStatus?.promptsRemaining ?? 0;
+  const limit = userStatus?.monthlyLimit ?? 2;
+  const used = userStatus?.promptsUsedToday ?? 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-      {/* Unique Navigation */}
-      <nav className="border-b border-indigo-100 bg-white/90 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                <div className="relative bg-gradient-to-r from-violet-600 to-indigo-600 p-3 rounded-xl">
-                  <Lightbulb className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
-                </div>
-              </div>
-              <div>
-                <span className="font-bold text-xl text-gray-900">TextAI Pro</span>
-                <div className="text-sm text-indigo-600 font-medium">Fastighetstexter 2.0</div>
-              </div>
-            </div>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
 
-            <div className="flex items-center gap-4">
-              {authLoading ? (
-                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
-                </div>
-              ) : isAuthenticated ? (
-                <div className="flex items-center gap-4">
-                  <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold text-gray-900">{userStatus?.promptsRemaining || 0}</div>
-                      <div className="text-xs text-indigo-600 font-medium">kvar</div>
-                    </div>
-                  </div>
-                  <div className="hidden sm:block text-right">
-                    <div className="text-sm font-medium text-gray-900">{user?.email}</div>
-                    <div className="text-xs text-indigo-600 font-semibold capitalize">{userStatus?.plan || 'Free'}</div>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => logout()} 
-                    className="text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={() => setAuthModalOpen(true)} 
-                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                  >
-                    <ZapIcon className="w-4 h-4 mr-2" />
-                    Starta AI
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    className="border-indigo-300 text-indigo-700 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Se demo
-                  </Button>
-                </div>
-              )}
+      {/* ── NAV ── */}
+      <header className="sticky top-0 z-50 border-b" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 no-underline">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
+              <FileText className="w-4 h-4 text-white" />
             </div>
-          </div>
-        </div>
-      </nav>
+            <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+              OptiPrompt
+            </span>
+          </Link>
 
-      {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Tab Navigation */}
-            <div className="flex gap-2 p-1 bg-white rounded-xl shadow-lg w-fit">
-              <button
-                onClick={() => setActiveTab('create')}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === 'create' 
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' 
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <FileText className="w-4 h-4 mr-2 inline" />
-                Skapa text
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  activeTab === 'history' 
-                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' 
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <Clock className="w-4 h-4 mr-2 inline" />
-                Historik
-              </button>
-            </div>
-
-            {activeTab === 'create' && (
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            {authLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+            ) : isAuthenticated ? (
               <>
-                {/* Unique Hero */}
-                <div className="text-center space-y-6">
-                  <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-violet-100 to-indigo-100 rounded-full">
-                    <Sparkles className="w-5 h-5 text-violet-600" />
-                    <span className="text-sm font-medium text-violet-800">AI med kreativt tänkande</span>
-                  </div>
-                  
-                  <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                    <span className="block">Snabbare, bättre, mer</span>
-                    <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">kreativ</span>
-                    <span className="block">fastighetstexter</span>
-                  </h1>
-                  <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-                    Vår unika AI kombinerar språkmodulering med psykologiska triggers 
-                    för att skapa fastighetstexter som inte bara beskriver utan säljer.
-                  </p>
+                {/* Usage pill */}
+                <div className="hidden sm:flex items-center gap-2 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0EDE6", color: "#4B5563" }}>
+                  <span className="font-medium" style={{ color: "#2D6A4F" }}>{remaining}</span>
+                  <span className="text-xs">/</span>
+                  <span className="text-xs">{limit} idag</span>
                 </div>
 
-                {/* Form Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Form */}
-                  <div>
-                    <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-violet-50/30">
-                      <CardHeader className="border-b border-indigo-200 bg-white">
-                        <CardTitle className="flex items-center gap-3 text-xl">
-                          <div className="w-10 h-10 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                            <Brain className="w-5 h-5 text-white" />
-                          </div>
-                          <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Kreativ AI-motor</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-6">
-                        {userStatus && (
-                          <div className="mb-6 p-4 bg-gradient-to-r from-violet-50 to-indigo-50 rounded-xl border border-indigo-200">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                                <div className="text-sm font-medium text-gray-900">{userStatus.promptsRemaining} kreativa texter kvar</div>
-                              </div>
-                              <div className="text-xs text-indigo-600 font-semibold capitalize">{userStatus.plan}</div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <PromptFormProfessional 
-                          onSubmit={handleSubmit}
-                          isPending={isPending}
-                        />
-                      </CardContent>
-                    </Card>
-                  </div>
+                {/* History link */}
+                <Link href="/history">
+                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-sm">Historik</span>
+                  </Button>
+                </Link>
 
-                  {/* Results */}
-                  <div>
-                    {result ? (
-                      <Card className="border-0 shadow-2xl bg-gradient-to-br from-emerald-50 to-green-50">
-                        <CardHeader className="border-b border-emerald-200 bg-white">
-                          <CardTitle className="flex items-center gap-3 text-xl">
-                            <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-green-600 rounded-xl flex items-center justify-center">
-                              <CheckCircle className="w-5 h-5 text-white" />
-                            </div>
-                            <span className="text-emerald-600">Kreativ mästerverk!</span>
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-6">
-                          <div className="bg-white rounded-xl p-6 mb-6 border border-emerald-200">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Din kreativa text</h3>
-                            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                {result.improved || "Kreativ text genererad!"}
-                              </p>
-                            </div>
-                            
-                            <div className="flex gap-4">
-                              <Button 
-                                onClick={() => {
-                                  const text = result.improved || "";
-                                  navigator.clipboard.writeText(text);
-                                  toast({
-                                    title: "Kopierat!",
-                                    description: "Texten har kopierats till urklipp.",
-                                  });
-                                }}
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              >
-                                <FileText className="w-4 h-4 mr-2" />
-                                Kopiera kreativitet
-                              </Button>
-                              <Button 
-                                variant="outline"
-                                onClick={() => setResult(null)}
-                                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                              >
-                                Skapa ny
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <Card className="border-0 shadow-2xl bg-gradient-to-br from-gray-50 to-slate-100">
-                        <CardContent className="p-12 text-center">
-                          <div className="w-20 h-20 bg-gradient-to-r from-violet-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <Brain className="w-10 h-10 text-violet-600" />
-                          </div>
-                          <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-                            {isAuthenticated ? "Redo för kreativitet?" : "Upptäck din kreativ potential"}
-                          </h3>
-                          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                            {isAuthenticated 
-                              ? "Fyll i formuläret för att låta vår AI skapa något unikt."
-                              : "Logga in för att upptäcka kraften i AI-driven fastighetstexter."
-                            }
-                          </p>
-                          {!isAuthenticated && (
-                            <Button 
-                              onClick={() => setAuthModalOpen(true)}
-                              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                            >
-                              <Sparkles className="w-5 h-5 mr-2" />
-                              Börja skapa
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
+                {/* Pro badge or upgrade */}
+                {plan === "pro" ? (
+                  <div className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#D4AF37", color: "#fff" }}>
+                    <Crown className="w-3 h-3" />
+                    Pro
                   </div>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => startCheckout("pro")}
+                    disabled={isCheckoutPending}
+                    className="text-xs font-medium gap-1"
+                    style={{ background: "#2D6A4F", color: "#fff" }}
+                  >
+                    {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />}
+                    Uppgradera
+                  </Button>
+                )}
+
+                {/* User email + logout */}
+                <div className="hidden md:flex items-center gap-2 pl-3 border-l" style={{ borderColor: "#E8E5DE" }}>
+                  <span className="text-xs text-gray-500 max-w-[140px] truncate">{user?.email}</span>
+                  <button onClick={() => logout()} className="text-gray-400 hover:text-red-500 transition-colors">
+                    <LogOut className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </>
+            ) : (
+              <Button
+                onClick={() => setAuthModalOpen(true)}
+                size="sm"
+                className="text-sm font-medium"
+                style={{ background: "#2D6A4F", color: "#fff" }}
+              >
+                Logga in
+              </Button>
             )}
-
-            {activeTab === 'history' && (
-              <Card className="border-0 shadow-2xl bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-xl">
-                    <Clock className="w-6 h-6 text-indigo-600" />
-                    <span>Historik</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-12 text-center">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Inga tidigare kreativa texter</h3>
-                  <p className="text-gray-600">Dina unika fastighetstexter kommer att visas här</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Unique Features */}
-            <Card className="border-0 shadow-2xl bg-white">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-gray-900">Vår unika fördelar</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                {uniqueFeatures.map((feature, index) => (
-                  <div key={index} className="flex gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-violet-100 to-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <feature.icon className="w-6 h-6 text-violet-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">{feature.title}</h4>
-                      <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Stats */}
-            <Card className="border-0 shadow-2xl bg-gradient-to-r from-violet-600 to-indigo-600">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold text-white">AI-plattform i siffror</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {stats.map((stat, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-white/10 rounded-xl backdrop-blur-sm">
-                      <div className="flex items-center gap-3">
-                        <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                        <span className="text-white font-medium">{stat.label}</span>
-                      </div>
-                      <span className="text-2xl font-bold text-white">{stat.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* CTA */}
-            <Card className="border-0 shadow-2xl bg-white">
-              <CardContent className="p-6 text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Börja din kreativa resa idag</h3>
-                <p className="text-gray-600 mb-6">Gå med tusentals kreativa mäklare som redan använder vår unika AI</p>
-                <Button 
-                  onClick={() => setAuthModalOpen(true)}
-                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-6 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
-                >
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Starta kreativ AI
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* ── MAIN ── */}
+      <main className="max-w-6xl mx-auto px-6 py-10">
+
+        {/* Hero — only when no result is showing */}
+        {!result && (
+          <div className="mb-10 max-w-2xl">
+            <h1 className="text-3xl sm:text-4xl leading-snug mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+              Skriv objektbeskrivningar som säljer
+            </h1>
+            <p className="text-base leading-relaxed" style={{ color: "#6B7280" }}>
+              Fyll i fastighetsdata nedan. AI:n genererar en professionell annonstext
+              redo för Hemnet, Booli eller din egen hemsida.
+            </p>
+          </div>
+        )}
+
+        {/* Limit warning */}
+        {isAuthenticated && remaining === 0 && !result && (
+          <div className="mb-8 flex items-center gap-4 p-4 rounded-lg border" style={{ background: "#FFF7ED", borderColor: "#FDBA74" }}>
+            <div className="flex-1">
+              <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar idag</p>
+              <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
+                {plan === "free"
+                  ? "Uppgradera till Pro för 20 beskrivningar per dag."
+                  : `Nästa reset: ${userStatus?.resetTime || "imorgon"}`}
+              </p>
+            </div>
+            {plan === "free" && (
+              <Button
+                size="sm"
+                onClick={() => startCheckout("pro")}
+                disabled={isCheckoutPending}
+                className="shrink-0 text-xs font-medium"
+                style={{ background: "#2D6A4F", color: "#fff" }}
+              >
+                Uppgradera till Pro
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+          {/* ── LEFT: Form ── */}
+          <div className={result ? "lg:col-span-2" : "lg:col-span-3"}>
+            <div className="bg-white rounded-xl border p-6 sm:p-8" style={{ borderColor: "#E8E5DE" }}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+                  Fastighetsdata
+                </h2>
+                {isAuthenticated && (
+                  <span className="text-xs px-2 py-0.5 rounded" style={{ background: "#F0EDE6", color: "#6B7280" }}>
+                    {remaining} kvar idag
+                  </span>
+                )}
+              </div>
+              <PromptFormProfessional
+                onSubmit={handleSubmit}
+                isPending={isPending}
+                disabled={isAuthenticated && remaining === 0}
+                isPro={plan === "pro"}
+              />
+            </div>
+          </div>
+
+          {/* ── RIGHT: Result or placeholder ── */}
+          <div className={result ? "lg:col-span-3" : "lg:col-span-2"}>
+            {result ? (
+              <ResultSection
+                result={result}
+                onNewPrompt={() => setResult(null)}
+              />
+            ) : (
+              <div className="space-y-6">
+                {/* Preview card */}
+                <div className="bg-white rounded-xl border p-6 sm:p-8" style={{ borderColor: "#E8E5DE" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                      Så här funkar det
+                    </span>
+                  </div>
+                  <ol className="space-y-4">
+                    {[
+                      { step: "1", text: "Fyll i fastighetens data i formuläret" },
+                      { step: "2", text: "Välj plattform — Hemnet, Booli eller allmän" },
+                      { step: "3", text: "AI:n genererar en komplett objektbeskrivning" },
+                      { step: "4", text: "Kopiera texten direkt till din annons" },
+                    ].map((item) => (
+                      <li key={item.step} className="flex items-start gap-3">
+                        <span
+                          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{ background: "#E8F5E9", color: "#2D6A4F" }}
+                        >
+                          {item.step}
+                        </span>
+                        <span className="text-sm leading-relaxed pt-0.5" style={{ color: "#4B5563" }}>
+                          {item.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* Upgrade CTA — only for free users */}
+                {isAuthenticated && plan === "free" && (
+                  <div className="rounded-xl border p-6" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                    <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+                      Behöver du fler beskrivningar?
+                    </h3>
+                    <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
+                      Pro ger dig 20 beskrivningar per dag, prioriterad AI och längre texter.
+                    </p>
+                    <ul className="space-y-2 mb-5">
+                      {["20 beskrivningar / dag", "Längre & mer detaljerade texter", "Social media-texter inkluderade", "Prioriterad AI-bearbetning"].map((f) => (
+                        <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
+                          <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      onClick={() => startCheckout("pro")}
+                      disabled={isCheckoutPending}
+                      className="w-full font-medium"
+                      style={{ background: "#2D6A4F", color: "#fff" }}
+                    >
+                      {isCheckoutPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Crown className="w-4 h-4 mr-2" />
+                      )}
+                      Uppgradera till Pro
+                    </Button>
+                  </div>
+                )}
+
+                {/* Not logged in CTA */}
+                {!isAuthenticated && (
+                  <div className="rounded-xl border p-6 text-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                    <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+                      Skapa ett konto gratis
+                    </h3>
+                    <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
+                      Få 2 kostnadsfria objektbeskrivningar varje dag.
+                    </p>
+                    <Button
+                      onClick={() => setAuthModalOpen(true)}
+                      className="font-medium"
+                      style={{ background: "#2D6A4F", color: "#fff" }}
+                    >
+                      Kom igång — det är gratis
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* ── FOOTER ── */}
+      <footer className="border-t mt-16 py-8" style={{ borderColor: "#E8E5DE" }}>
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
+          <span>© {new Date().getFullYear()} OptiPrompt</span>
+          <div className="flex gap-4">
+            <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>
+            <Link href="/teams" className="hover:underline" style={{ color: "#9CA3AF" }}>Teams</Link>
+          </div>
+        </div>
+      </footer>
 
       {/* Auth Modal */}
-      <AuthModal 
-        open={authModalOpen} 
-        onOpenChange={setAuthModalOpen} 
-      />
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }
