@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { useStripeCheckout } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   Loader2, LogOut, Sparkles, 
@@ -18,7 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus } = useUserStatus();
-  const { mutate: startCheckout } = useStripeCheckout();
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<any | null>(null);
@@ -46,7 +43,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      {/* Simple Navigation */}
+      {/* Navigation */}
       <nav className="border-b border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -69,11 +66,11 @@ export default function Home() {
                 <div className="flex items-center gap-4">
                   <div className="hidden sm:flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <div className="text-sm font-medium text-gray-900">{userStatus?.promptsRemaining}</div>
+                    <div className="text-sm font-medium text-gray-900">{userStatus?.promptsRemaining || 0}</div>
                   </div>
                   <div className="hidden sm:block text-right">
                     <div className="text-sm font-medium text-gray-900">{user?.email}</div>
-                    <div className="text-xs text-gray-500">{userStatus?.plan}</div>
+                    <div className="text-xs text-gray-500">{userStatus?.plan || 'free'}</div>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -97,7 +94,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Main Content - Full Height */}
+      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-4xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -119,14 +116,16 @@ export default function Home() {
                 <Button 
                   size="lg" 
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-medium"
-                  onClick={() => document.getElementById('main-form')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => {
+                    const form = document.getElementById('main-form');
+                    if (form) {
+                      form.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                 >
                   <Zap className="w-5 h-5 mr-2" />
                   Börja skapa
                   <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50">
-                  Se exempel
                 </Button>
               </div>
 
@@ -156,13 +155,20 @@ export default function Home() {
                   
                   <div className="bg-gray-50 rounded-lg p-6 mb-6">
                     <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {result.improved}
+                      {result.improved || "Text genererad!"}
                     </p>
                   </div>
                   
                   <div className="flex gap-4">
                     <Button 
-                      onClick={() => navigator.clipboard.writeText(result.improved || "")}
+                      onClick={() => {
+                        const text = result.improved || "";
+                        navigator.clipboard.writeText(text);
+                        toast({
+                          title: "Kopierat!",
+                          description: "Texten har kopierats till urklipp.",
+                        });
+                      }}
                       className="flex-1"
                     >
                       <FileText className="w-4 h-4 mr-2" />
