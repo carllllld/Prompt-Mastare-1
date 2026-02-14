@@ -635,7 +635,13 @@ För varje plats, lägg till:
     "layout": "genomgående planlösning, sovrum i fil",
     "storage": ["garderob i sovrum", "förråd i källare 4 kvm"],
     "heating": "fjärrvärme, golvvärme badrum",
-    "ventilation": "FTX-ventilation"
+    "ventilation": "FTX-ventilation",
+    "condition": "nyskick/mycket gott skick/gott skick/behöver renoveras",
+    "energy_class": "A/B/C/D/E/F/G",
+    "elevator": true,
+    "bedrooms": 2,
+    "parking": "garage, P-plats, carport",
+    "special_features": ["golvvärme i badrum", "öppen spis", "originaldetaljer", "takbjälkar"]
   },
   "economics": {
     "price": 4500000,
@@ -671,6 +677,7 @@ För varje plats, lägg till:
     "schools": ["Högstadiet 300m", "Gymnasium 500m"],
     "services": ["ICA 200m", "Apotek 150m", "Systembolaget 300m"],
     "nearby_areas": ["Djurgården", "Norrmalm", "Vasastan"],
+    "parking": "garage, P-plats i förening",
     "geographic_context": "Centralt Stockholm, exklusivt innerstadsområde"
   },
   "unique_features": ["takhöjd 2.8m med originalstuckatur", "eldstad i vardagsrum", "bevarade originaldetaljer", "inglasad balkong", "genomgående planlösning"],
