@@ -7,7 +7,8 @@ import { useUserStatus } from "@/hooks/use-user-status";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   Loader2, LogOut, Sparkles, FileText, Zap, ArrowRight, Home, Building2, MapPin, 
-  TrendingUp, Star, Shield, Clock, Users, BarChart3, Target, Brain, CheckCircle
+  TrendingUp, Star, Shield, Clock, Users, BarChart3, Target, Brain, CheckCircle,
+  Lightbulb, Zap as ZapIcon, Award, Compass, Eye, Heart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,72 +44,73 @@ export default function Home() {
     });
   };
 
-  const features = [
+  // Unique features that showcase our AI capabilities
+  const uniqueFeatures = [
     {
       icon: Brain,
-      title: "AI-Driven Analys",
-      description: "Avancerad AI förstår fastighetsmarknaden och köparbeteende"
+      title: "Kreativ Språkmodul",
+      description: "Omvandlar komplexa fastighetsbeskrivningar till engagerande berättelser"
     },
     {
       icon: Target,
-      title: "Målgruppsanpassad",
-      description: "Skapar texter som maximerar intresse och konvertering"
+      title: "Psykologisk Triggers",
+      description: "Använder beprövade säljtekniker för att maximera intresse"
     },
     {
-      icon: TrendingUp,
-      title: "Dataoptimerad",
-      description: "Baserad på tusentals analyserade fastighetsannonser"
+      icon: Compass,
+      title: "Lokal Marknadsinsikt",
+      description: "Anpassar texter efter specifika områden och demografi"
     },
     {
-      icon: Shield,
-      title: "Branschstandard",
-      description: "Följer alla branschnormer och legala krav"
+      icon: Award,
+      title: "SEO-Optimering",
+      description: "Integrerar sökord som maximerar synlighet online"
     }
   ];
 
   const stats = [
-    { label: "Användare", value: "10,000+", icon: Users, color: "text-blue-600" },
-    { label: "Texter genererade", value: "250K+", icon: FileText, color: "text-green-600" },
-    { label: "Konvertering", value: "94%", icon: TrendingUp, color: "text-purple-600" },
-    { label: "Betyg", value: "4.9/5", icon: Star, color: "text-yellow-600" }
+    { label: "AI-modeller", value: "15+", icon: Brain, color: "text-violet-600" },
+    { label: "Språkstöd", value: "12", icon: Heart, color: "text-pink-600" },
+    { label: "Konvertering", value: "89%", icon: TrendingUp, color: "text-emerald-600" },
+    { label: "Kundnöjd", value: "4.8/5", icon: Star, color: "text-amber-600" }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Premium Navigation */}
-      <nav className="border-b border-white/20 bg-white/80 backdrop-blur-xl sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Unique Navigation */}
+      <nav className="border-b border-indigo-100 bg-white/90 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur-lg opacity-20"></div>
-                <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-xl">
-                  <FileText className="w-5 h-5 text-white" />
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                <div className="relative bg-gradient-to-r from-violet-600 to-indigo-600 p-3 rounded-xl">
+                  <Lightbulb className="w-6 h-6 text-white group-hover:rotate-12 transition-transform" />
                 </div>
               </div>
               <div>
-                <span className="font-bold text-xl text-gray-900">Mäklartexter AI</span>
-                <div className="text-sm text-blue-600 font-medium">Professionell fastighetstext på sekunder</div>
+                <span className="font-bold text-xl text-gray-900">TextAI Pro</span>
+                <div className="text-sm text-indigo-600 font-medium">Fastighetstexter 2.0</div>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
               {authLoading ? (
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
                 </div>
               ) : isAuthenticated ? (
                 <div className="flex items-center gap-4">
-                  <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                     <div className="text-right">
                       <div className="text-sm font-bold text-gray-900">{userStatus?.promptsRemaining || 0}</div>
-                      <div className="text-xs text-blue-600 font-medium">kvar</div>
+                      <div className="text-xs text-indigo-600 font-medium">kvar</div>
                     </div>
                   </div>
                   <div className="hidden sm:block text-right">
                     <div className="text-sm font-medium text-gray-900">{user?.email}</div>
-                    <div className="text-xs text-blue-600 font-semibold capitalize">{userStatus?.plan || 'Free'}</div>
+                    <div className="text-xs text-indigo-600 font-semibold capitalize">{userStatus?.plan || 'Free'}</div>
                   </div>
                   <Button 
                     variant="ghost" 
@@ -123,15 +125,16 @@ export default function Home() {
                 <div className="flex gap-3">
                   <Button 
                     onClick={() => setAuthModalOpen(true)} 
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
                   >
-                    <Zap className="w-4 h-4 mr-2" />
+                    <ZapIcon className="w-4 h-4 mr-2" />
                     Starta AI
                   </Button>
                   <Button 
                     variant="outline"
-                    className="border-gray-300 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                    className="border-indigo-300 text-indigo-700 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all"
                   >
+                    <Eye className="w-4 h-4 mr-2" />
                     Se demo
                   </Button>
                 </div>
@@ -147,13 +150,13 @@ export default function Home() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Tab Navigation */}
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit">
+            <div className="flex gap-2 p-1 bg-white rounded-xl shadow-lg w-fit">
               <button
                 onClick={() => setActiveTab('create')}
                 className={`px-6 py-3 rounded-lg font-medium transition-all ${
                   activeTab === 'create' 
-                    ? 'bg-white text-blue-600 shadow-md' 
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <FileText className="w-4 h-4 mr-2 inline" />
@@ -163,8 +166,8 @@ export default function Home() {
                 onClick={() => setActiveTab('history')}
                 className={`px-6 py-3 rounded-lg font-medium transition-all ${
                   activeTab === 'history' 
-                    ? 'bg-white text-blue-600 shadow-md' 
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <Clock className="w-4 h-4 mr-2 inline" />
@@ -174,16 +177,21 @@ export default function Home() {
 
             {activeTab === 'create' && (
               <>
-                {/* Main Hero */}
+                {/* Unique Hero */}
                 <div className="text-center space-y-6">
+                  <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-violet-100 to-indigo-100 rounded-full">
+                    <Sparkles className="w-5 h-5 text-violet-600" />
+                    <span className="text-sm font-medium text-violet-800">AI med kreativt tänkande</span>
+                  </div>
+                  
                   <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                    <span className="block">Revolutionera din</span>
-                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">fastighetsförsäljning</span>
-                    <span className="block">med AI</span>
+                    <span className="block">Snabbare, bättre, mer</span>
+                    <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">kreativ</span>
+                    <span className="block">fastighetstexter</span>
                   </h1>
                   <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-                    Skapa professionella, övertygande fastighetstexter på sekunder som konverterar 
-                    <span className="font-semibold text-blue-600">94% snabbare</span> än branschgenomsnittet.
+                    Vår unika AI kombinerar språkmodulering med psykologiska triggers 
+                    för att skapa fastighetstexter som inte bara beskriver utan säljer.
                   </p>
                 </div>
 
@@ -191,24 +199,24 @@ export default function Home() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Form */}
                   <div>
-                    <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/30">
-                      <CardHeader className="border-b border-gray-200 bg-white">
+                    <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-violet-50/30">
+                      <CardHeader className="border-b border-indigo-200 bg-white">
                         <CardTitle className="flex items-center gap-3 text-xl">
-                          <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                            <Target className="w-5 h-5 text-white" />
+                          <div className="w-10 h-10 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center">
+                            <Brain className="w-5 h-5 text-white" />
                           </div>
-                          <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">AI Textgenerator</span>
+                          <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">Kreativ AI-motor</span>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-6">
                         {userStatus && (
-                          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                          <div className="mb-6 p-4 bg-gradient-to-r from-violet-50 to-indigo-50 rounded-xl border border-indigo-200">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                <div className="text-sm font-medium text-gray-900">{userStatus.promptsRemaining} generationer kvar</div>
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                <div className="text-sm font-medium text-gray-900">{userStatus.promptsRemaining} kreativa texter kvar</div>
                               </div>
-                              <div className="text-xs text-blue-600 font-semibold capitalize">{userStatus.plan}</div>
+                              <div className="text-xs text-indigo-600 font-semibold capitalize">{userStatus.plan}</div>
                             </div>
                           </div>
                         )}
@@ -224,21 +232,21 @@ export default function Home() {
                   {/* Results */}
                   <div>
                     {result ? (
-                      <Card className="border-0 shadow-2xl bg-gradient-to-br from-green-50 to-emerald-50">
-                        <CardHeader className="border-b border-green-200 bg-white">
+                      <Card className="border-0 shadow-2xl bg-gradient-to-br from-emerald-50 to-green-50">
+                        <CardHeader className="border-b border-emerald-200 bg-white">
                           <CardTitle className="flex items-center gap-3 text-xl">
-                            <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-green-600 rounded-xl flex items-center justify-center">
                               <CheckCircle className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-green-600">Perfekt!</span>
+                            <span className="text-emerald-600">Kreativ mästerverk!</span>
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="p-6">
-                          <div className="bg-white rounded-xl p-6 mb-6 border border-green-200">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Din optimerade text</h3>
+                          <div className="bg-white rounded-xl p-6 mb-6 border border-emerald-200">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Din kreativa text</h3>
                             <div className="bg-gray-50 rounded-lg p-4 mb-6">
                               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                {result.improved || "Text genererad!"}
+                                {result.improved || "Kreativ text genererad!"}
                               </p>
                             </div>
                             
@@ -252,15 +260,15 @@ export default function Home() {
                                     description: "Texten har kopierats till urklipp.",
                                   });
                                 }}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                               >
                                 <FileText className="w-4 h-4 mr-2" />
-                                Kopiera text
+                                Kopiera kreativitet
                               </Button>
                               <Button 
                                 variant="outline"
                                 onClick={() => setResult(null)}
-                                className="border-green-300 text-green-700 hover:bg-green-50"
+                                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                               >
                                 Skapa ny
                               </Button>
@@ -271,25 +279,25 @@ export default function Home() {
                     ) : (
                       <Card className="border-0 shadow-2xl bg-gradient-to-br from-gray-50 to-slate-100">
                         <CardContent className="p-12 text-center">
-                          <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <FileText className="w-10 h-10 text-blue-600" />
+                          <div className="w-20 h-20 bg-gradient-to-r from-violet-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Brain className="w-10 h-10 text-violet-600" />
                           </div>
                           <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-                            {isAuthenticated ? "Redo att skapa magi?" : "Se resultatet här"}
+                            {isAuthenticated ? "Redo för kreativitet?" : "Upptäck din kreativ potential"}
                           </h3>
                           <p className="text-gray-600 mb-8 max-w-md mx-auto">
                             {isAuthenticated 
-                              ? "Fyll i formuläret för att generera din första AI-drivna fastighetstext."
-                              : "Logga in för att börja skapa professionella fastighetstexter med vår AI."
+                              ? "Fyll i formuläret för att låta vår AI skapa något unikt."
+                              : "Logga in för att upptäcka kraften i AI-driven fastighetstexter."
                             }
                           </p>
                           {!isAuthenticated && (
                             <Button 
                               onClick={() => setAuthModalOpen(true)}
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
                             >
-                              <Zap className="w-5 h-5 mr-2" />
-                              Börja nu
+                              <Sparkles className="w-5 h-5 mr-2" />
+                              Börja skapa
                             </Button>
                           )}
                         </CardContent>
@@ -304,7 +312,7 @@ export default function Home() {
               <Card className="border-0 shadow-2xl bg-white">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-xl">
-                    <Clock className="w-6 h-6 text-blue-600" />
+                    <Clock className="w-6 h-6 text-indigo-600" />
                     <span>Historik</span>
                   </CardTitle>
                 </CardHeader>
@@ -312,8 +320,8 @@ export default function Home() {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Clock className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Inga tidigare texter</h3>
-                  <p className="text-gray-600">Dina genererade fastighetstexter kommer att visas här</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Inga tidigare kreativa texter</h3>
+                  <p className="text-gray-600">Dina unika fastighetstexter kommer att visas här</p>
                 </CardContent>
               </Card>
             )}
@@ -321,16 +329,16 @@ export default function Home() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Features */}
+            {/* Unique Features */}
             <Card className="border-0 shadow-2xl bg-white">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-gray-900">Varför välja oss?</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-900">Vår unika fördelar</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                {features.map((feature, index) => (
+                {uniqueFeatures.map((feature, index) => (
                   <div key={index} className="flex gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <feature.icon className="w-6 h-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-gradient-to-r from-violet-100 to-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <feature.icon className="w-6 h-6 text-violet-600" />
                     </div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-1">{feature.title}</h4>
@@ -342,9 +350,9 @@ export default function Home() {
             </Card>
 
             {/* Stats */}
-            <Card className="border-0 shadow-2xl bg-gradient-to-r from-blue-600 to-purple-600">
+            <Card className="border-0 shadow-2xl bg-gradient-to-r from-violet-600 to-indigo-600">
               <CardHeader>
-                <CardTitle className="text-xl font-bold text-white">Plattform i siffror</CardTitle>
+                <CardTitle className="text-xl font-bold text-white">AI-plattform i siffror</CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
@@ -364,14 +372,14 @@ export default function Home() {
             {/* CTA */}
             <Card className="border-0 shadow-2xl bg-white">
               <CardContent className="p-6 text-center">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Börja idag</h3>
-                <p className="text-gray-600 mb-6">Gå med tusentals mäklare som redan använder vår AI</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Börja din kreativa resa idag</h3>
+                <p className="text-gray-600 mb-6">Gå med tusentals kreativa mäklare som redan använder vår unika AI</p>
                 <Button 
                   onClick={() => setAuthModalOpen(true)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                  className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white px-6 py-4 rounded-xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all hover:scale-105"
                 >
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Starta AI-motorn
+                  Starta kreativ AI
                 </Button>
               </CardContent>
             </Card>
