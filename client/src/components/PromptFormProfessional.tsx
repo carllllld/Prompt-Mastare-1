@@ -1,108 +1,43 @@
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Building2, Home, Sparkles, Loader2, MapPin, Maximize, ArrowUpCircle, Trees, Layout, 
-  DollarSign, Sun, Wind, Car, Bath, Sofa, Bed, Utensils, Flame, Wifi, Shield, Package,
-  Plus, Minus, ChevronDown, ChevronUp, Info, Check, X
-} from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X } from "lucide-react";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
-
-interface Room {
-  id: string;
-  type: string;
-  size: string;
-  description: string;
-  features: string[];
-}
 
 interface PropertyFormData {
-  // Grundinformation
   propertyType: "apartment" | "house" | "townhouse" | "villa";
   address: string;
   area: string;
   price: string;
-  monthlyFee?: string;
-  
-  // Ytor
+  monthlyFee: string;
   livingArea: string;
-  lotArea?: string;
-  additionalArea?: string;
-  balconyArea?: string;
-  
-  // Rum & planlösning
   totalRooms: string;
   bedrooms: string;
-  rooms: Room[];
-  
-  // Byggnadsinformation
   buildYear: string;
-  renovationYear?: string;
   condition: string;
   energyClass: string;
-  operatingCost?: string;
-  
-  // Kök & badrum
-  kitchenDescription: string;
-  kitchenBrand?: string;
-  kitchenYear?: string;
-  bathrooms: number;
-  bathroomDescription: string;
-  
-  // Material & ytskikt
-  flooring: string;
-  walls: string;
-  windows: string;
-  doors: string;
-  
-  // Installationer & teknik
-  heating: string;
-  ventilation: string;
-  electrical: string;
-  broadband: string;
-  tv: string;
-  alarm: string;
-  
-  // Uteområden & parkering
-  garden?: string;
-  terrace?: string;
-  balcony?: string;
-  parking: string;
-  parkingType: string[];
-  storage?: string;
-  
-  // Läge & omgivning
-  floor?: string;
+  floor: string;
   elevator: boolean;
+  layoutDescription: string;
+  kitchenDescription: string;
+  bathroomDescription: string;
+  uniqueSellingPoints: string;
   view: string;
   neighborhood: string;
   transport: string;
-  services: string[];
-  
-  // Särskilda egenskaper
-  specialFeatures: string[];
-  uniqueSellingPoints: string[];
-  
-  // Övrigt
-  monthlyCost?: string;
-  otherInfo?: string;
-  
-  // Plattform
+  parking: string;
+  flooring: string;
+  heating: string;
+  lotArea: string;
+  balconyArea: string;
+  specialFeatures: string;
+  otherInfo: string;
   platform: "hemnet" | "booli" | "general";
 }
-
-const ROOM_TYPES = [
-  "Vardagsrum", "Kök", "Sovrum", "Badrum", "Hall", "Toalett", "Klädkammare", 
-  "Gästrum", "Kontor", "Bibliotek", "Matrum", "Tvättstuga", "Förråd", "Gym", "Hobbyrum"
-];
 
 const PROPERTY_CONDITIONS = [
   "Nytt", "Nyskick", "Mycket gott skick", "Gott skick", "Bra skick", "Behöver renoveras"
@@ -118,849 +53,595 @@ const FLOORING_TYPES = [
   "Ekparkett", "Laminat", "Klinker", "Vinyl", "Matta", "Träslager", "Stengolv", "Betong"
 ];
 
-const PARKING_TYPES = [
-  "Garage", "Carport", "P-plats", "Gästparkering", "Gatuparkering", "Ingen parkering"
-];
-
-const SERVICES = [
-  "Skola", "Förskola", "Matbutik", "Apotek", "Vårdcentral", "Tågstation", "Tunnelbana", "Buss"
-];
+interface PromptFormProps {
+  onSubmit: (data: {
+    prompt: string;
+    type: string;
+    platform: string;
+    wordCountMin?: number;
+    wordCountMax?: number;
+    imageUrls?: string[];
+  }) => void;
+  isPending: boolean;
+  disabled?: boolean;
+  isPro?: boolean;
+}
 
 export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = false }: PromptFormProps) {
-  const [activeTab, setActiveTab] = useState("basic");
-  const [expandedSections, setExpandedSections] = useState<string[]>(["basic", "rooms"]);
+  const [showDetails, setShowDetails] = useState(false);
   const [wordCountMin, setWordCountMin] = useState(350);
   const [wordCountMax, setWordCountMax] = useState(450);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-  
+
   const form = useForm<PropertyFormData>({
     defaultValues: {
       propertyType: "apartment",
       address: "",
       area: "",
       price: "",
+      monthlyFee: "",
       livingArea: "",
       totalRooms: "",
       bedrooms: "",
       buildYear: "",
       condition: "Gott skick",
       energyClass: "C",
-      bathrooms: 1,
-      bathroomDescription: "",
-      kitchenDescription: "",
-      flooring: "",
-      heating: "Fjärrvärme",
-      ventilation: "",
-      broadband: "Fiber",
-      parking: "",
-      parkingType: [],
+      floor: "",
       elevator: false,
+      layoutDescription: "",
+      kitchenDescription: "",
+      bathroomDescription: "",
+      uniqueSellingPoints: "",
       view: "",
       neighborhood: "",
       transport: "",
-      services: [],
-      specialFeatures: [],
-      uniqueSellingPoints: [],
-      rooms: [],
-      platform: "hemnet"
-    }
+      parking: "",
+      flooring: "",
+      heating: "Fjärrvärme",
+      lotArea: "",
+      balconyArea: "",
+      specialFeatures: "",
+      otherInfo: "",
+      platform: "hemnet",
+    },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "rooms"
-  });
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) 
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
-    );
-  };
-
-  const addRoom = () => {
-    append({
-      id: Date.now().toString(),
-      type: "Vardagsrum",
-      size: "",
-      description: "",
-      features: []
-    });
-  };
+  const selectedPlatform = form.watch("platform");
+  const selectedType = form.watch("propertyType");
 
   const onLocalSubmit = (values: PropertyFormData) => {
-    console.log("[Form Debug] onLocalSubmit called with:", values);
-    
-    // Bygg en professionell disposition för AI:n
-    let disposition = `OBJEKTDISPOSITION\n\n`;
-    disposition += `=== GRUNDINFORMATION ===\n`;
-    disposition += `Typ: ${values.propertyType === "apartment" ? "Lägenhet" : values.propertyType === "house" ? "Hus" : values.propertyType === "townhouse" ? "Radhus" : "Villa"}\n`;
-    disposition += `Adress: ${values.address}\n`;
-    disposition += `Område: ${values.area}\n`;
-    disposition += `Pris: ${values.price} kr\n`;
-    if (values.monthlyFee) disposition += `Avgift: ${values.monthlyFee} kr/mån\n`;
-    if (values.monthlyCost) disposition += `Driftskostnad: ${values.monthlyCost} kr/mån\n\n`;
+    const typeLabels: Record<string, string> = {
+      apartment: "Lägenhet", house: "Hus", townhouse: "Radhus", villa: "Villa",
+    };
 
-    disposition += `=== YTOR ===\n`;
-    disposition += `Boarea: ${values.livingArea} kvm\n`;
-    if (values.lotArea) disposition += `Tomtarea: ${values.lotArea} kvm\n`;
-    if (values.additionalArea) disposition += `Biarea: ${values.additionalArea} kvm\n`;
-    if (values.balconyArea) disposition += `Balkong: ${values.balconyArea} kvm\n`;
-    disposition += `Antal rum: ${values.totalRooms}\n`;
-    disposition += `Sovrum: ${values.bedrooms}\n\n`;
+    let d = "OBJEKTDISPOSITION\n\n";
 
-    disposition += `=== BYGGNAD ===\n`;
-    disposition += `Byggår: ${values.buildYear}\n`;
-    if (values.renovationYear) disposition += `Renoveringsår: ${values.renovationYear}\n`;
-    disposition += `Skick: ${values.condition}\n`;
-    disposition += `Energiklass: ${values.energyClass}\n`;
-    if (values.floor) disposition += `Våning: ${values.floor}\n`;
-    disposition += `Hiss: ${values.elevator ? "Ja" : "Nej"}\n\n`;
+    d += "=== GRUNDINFORMATION ===\n";
+    d += `Typ: ${typeLabels[values.propertyType] || values.propertyType}\n`;
+    if (values.address) d += `Adress: ${values.address}\n`;
+    if (values.area) d += `Område: ${values.area}\n`;
+    if (values.price) d += `Pris: ${values.price} kr\n`;
+    if (values.monthlyFee) d += `Avgift: ${values.monthlyFee} kr/mån\n`;
 
-    disposition += `=== RUM & PLANLÖSNING ===\n`;
-    values.rooms.forEach(room => {
-      disposition += `${room.type}: ${room.size}${room.size ? " kvm" : ""}\n`;
-      if (room.description) disposition += `  Beskrivning: ${room.description}\n`;
-      if (room.features.length > 0) disposition += `  Detaljer: ${room.features.join(", ")}\n`;
-    });
-    disposition += "\n";
+    d += "\n=== YTOR ===\n";
+    if (values.livingArea) d += `Boarea: ${values.livingArea} kvm\n`;
+    if (values.lotArea) d += `Tomtarea: ${values.lotArea} kvm\n`;
+    if (values.balconyArea) d += `Balkong: ${values.balconyArea} kvm\n`;
+    if (values.totalRooms) d += `Antal rum: ${values.totalRooms}\n`;
+    if (values.bedrooms) d += `Sovrum: ${values.bedrooms}\n`;
 
-    disposition += `=== KÖK ===\n`;
-    disposition += `${values.kitchenDescription}\n`;
-    if (values.kitchenBrand) disposition += `Märke: ${values.kitchenBrand}\n`;
-    if (values.kitchenYear) disposition += `Från: ${values.kitchenYear}\n\n`;
+    d += "\n=== BYGGNAD ===\n";
+    if (values.buildYear) d += `Byggår: ${values.buildYear}\n`;
+    if (values.condition) d += `Skick: ${values.condition}\n`;
+    if (values.energyClass) d += `Energiklass: ${values.energyClass}\n`;
+    if (values.floor) d += `Våning: ${values.floor}\n`;
+    d += `Hiss: ${values.elevator ? "Ja" : "Nej"}\n`;
 
-    disposition += `=== BADRUM ===\n`;
-    disposition += `Antal: ${values.bathrooms}\n`;
-    disposition += `${values.bathroomDescription}\n\n`;
-
-    disposition += `=== MATERIAL & YTSKIKT ===\n`;
-    disposition += `Golv: ${values.flooring}\n`;
-    if (values.walls) disposition += `Väggar: ${values.walls}\n`;
-    if (values.windows) disposition += `Fönster: ${values.windows}\n`;
-    if (values.doors) disposition += `Dörrar: ${values.doors}\n\n`;
-
-    disposition += `=== INSTALLATIONER ===\n`;
-    disposition += `Uppvärmning: ${values.heating}\n`;
-    if (values.ventilation) disposition += `Ventilation: ${values.ventilation}\n`;
-    if (values.electrical) disposition += `El: ${values.electrical}\n`;
-    disposition += `Bredband: ${values.broadband}\n`;
-    if (values.tv) disposition += `TV: ${values.tv}\n`;
-    if (values.alarm) disposition += `Larm: ${values.alarm}\n\n`;
-
-    disposition += `=== UTEOMRÅDEN ===\n`;
-    if (values.garden) disposition += `Trädgård: ${values.garden}\n`;
-    if (values.terrace) disposition += `Terrass: ${values.terrace}\n`;
-    if (values.balcony) disposition += `Balkong: ${values.balcony}\n`;
-    disposition += `Parkering: ${values.parking}\n`;
-    if (values.parkingType.length > 0) disposition += `Parkeringstyper: ${values.parkingType.join(", ")}\n`;
-    if (values.storage) disposition += `Förråd: ${values.storage}\n\n`;
-
-    disposition += `=== LÄGE & OMGEVNING ===\n`;
-    disposition += `Utsikt: ${values.view}\n`;
-    disposition += `Område: ${values.neighborhood}\n`;
-    disposition += `Kommunikationer: ${values.transport}\n`;
-    if (values.services.length > 0) disposition += `Tjänster i närheten: ${values.services.join(", ")}\n\n`;
-
-    disposition += `=== SÄRSKILDA EGENSKAPER ===\n`;
-    if (values.specialFeatures.length > 0) disposition += `${values.specialFeatures.join("\n")}\n`;
-    disposition += "\n";
-
-    disposition += `=== FÖRSÄLJNINGSARGUMENT ===\n`;
-    if (values.uniqueSellingPoints.length > 0) disposition += `${values.uniqueSellingPoints.join("\n")}\n`;
-    disposition += "\n";
-
-    if (values.otherInfo) {
-      disposition += `=== ÖVRIGT ===\n`;
-      disposition += `${values.otherInfo}\n\n`;
+    if (values.layoutDescription) {
+      d += "\n=== PLANLÖSNING & RUM ===\n";
+      d += `${values.layoutDescription}\n`;
     }
 
-    onSubmit({ 
-      prompt: disposition, 
-      type: values.propertyType, 
+    if (values.kitchenDescription) {
+      d += "\n=== KÖK ===\n";
+      d += `${values.kitchenDescription}\n`;
+    }
+
+    if (values.bathroomDescription) {
+      d += "\n=== BADRUM ===\n";
+      d += `${values.bathroomDescription}\n`;
+    }
+
+    d += "\n=== MATERIAL & TEKNIK ===\n";
+    if (values.flooring) d += `Golv: ${values.flooring}\n`;
+    if (values.heating) d += `Uppvärmning: ${values.heating}\n`;
+
+    if (values.view || values.neighborhood || values.transport || values.parking) {
+      d += "\n=== LÄGE & OMGIVNING ===\n";
+      if (values.view) d += `Utsikt: ${values.view}\n`;
+      if (values.neighborhood) d += `Område: ${values.neighborhood}\n`;
+      if (values.transport) d += `Kommunikationer: ${values.transport}\n`;
+      if (values.parking) d += `Parkering: ${values.parking}\n`;
+    }
+
+    if (values.uniqueSellingPoints) {
+      d += "\n=== FÖRSÄLJNINGSARGUMENT ===\n";
+      d += `${values.uniqueSellingPoints}\n`;
+    }
+
+    if (values.specialFeatures) {
+      d += "\n=== SÄRSKILDA EGENSKAPER ===\n";
+      d += `${values.specialFeatures}\n`;
+    }
+
+    if (values.otherInfo) {
+      d += "\n=== ÖVRIGT ===\n";
+      d += `${values.otherInfo}\n`;
+    }
+
+    onSubmit({
+      prompt: d,
+      type: values.propertyType,
       platform: values.platform,
       ...(isPro && { wordCountMin, wordCountMax }),
-      ...(uploadedImages.length > 0 && { imageUrls: uploadedImages })
+      ...(uploadedImages.length > 0 && { imageUrls: uploadedImages }),
     });
   };
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-6 font-sans">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-100 border border-gray-200">
-            <TabsTrigger value="basic">Grundinfo</TabsTrigger>
-            <TabsTrigger value="rooms">Rum & Planlösning</TabsTrigger>
-            <TabsTrigger value="details">Detaljer</TabsTrigger>
-            <TabsTrigger value="location">Läge</TabsTrigger>
-          </TabsList>
+      <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-0">
 
-          {/* GRUNDINFORMATION */}
-          <TabsContent value="basic" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Home className="w-5 h-5" />
-                  Grundinformation
-                </CardTitle>
-                <CardDescription>
-                  Grundläggande information om objektet
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="propertyType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Objekttyp</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Välj objekttyp" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="apartment">Lägenhet</SelectItem>
-                            <SelectItem value="house">Hus</SelectItem>
-                            <SelectItem value="townhouse">Radhus</SelectItem>
-                            <SelectItem value="villa">Villa</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+        {/* ── OBJEKTTYP (pills) ── */}
+        <div className="pb-5">
+          <label className="text-[11px] font-semibold uppercase tracking-wider block mb-2.5" style={{ color: "#9CA3AF" }}>
+            Objekttyp
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { value: "apartment" as const, label: "Lägenhet" },
+              { value: "house" as const, label: "Hus" },
+              { value: "townhouse" as const, label: "Radhus" },
+              { value: "villa" as const, label: "Villa" },
+            ]).map((t) => (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => form.setValue("propertyType", t.value)}
+                className="px-4 py-2 text-sm rounded-lg border transition-all font-medium"
+                style={{
+                  background: selectedType === t.value ? "#2D6A4F" : "#fff",
+                  color: selectedType === t.value ? "#fff" : "#4B5563",
+                  borderColor: selectedType === t.value ? "#2D6A4F" : "#E8E5DE",
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── GRUNDUPPGIFTER ── */}
+        <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
+            <FormField control={form.control} name="address" render={({ field }) => (
+              <FormItem className="col-span-2">
+                <FormLabel className="text-xs text-gray-500">Adress</FormLabel>
+                <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="area" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Område</FormLabel>
+                <FormControl><Input placeholder="Vasastan" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 mt-3">
+            <FormField control={form.control} name="price" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Pris (kr)</FormLabel>
+                <FormControl><Input type="number" placeholder="5 500 000" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="monthlyFee" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Avgift (kr/mån)</FormLabel>
+                <FormControl><Input type="number" placeholder="3 500" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="livingArea" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Boarea (kvm)</FormLabel>
+                <FormControl><Input type="number" placeholder="85" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mt-3">
+            <FormField control={form.control} name="totalRooms" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Rum</FormLabel>
+                <FormControl><Input type="number" placeholder="3" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="bedrooms" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Sovrum</FormLabel>
+                <FormControl><Input type="number" placeholder="2" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="buildYear" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="condition" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Skick</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger className="h-10"><SelectValue /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {PROPERTY_CONDITIONS.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+          </div>
+        </div>
+
+        {/* ── BESKRIV OBJEKTET ── */}
+        <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <label className="text-[11px] font-semibold uppercase tracking-wider block mb-3" style={{ color: "#9CA3AF" }}>
+            Beskriv objektet
+          </label>
+
+          <div className="space-y-3">
+            <FormField control={form.control} name="layoutDescription" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Planlösning & rum</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="T.ex: Öppen planlösning med kök och vardagsrum i söderläge. 2 sovrum varav det större har garderobsvägg. Rymlig hall med förvaring."
+                    {...field}
+                    className="min-h-[80px] resize-none text-sm"
                   />
+                </FormControl>
+              </FormItem>
+            )} />
 
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Adress</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Storgatan 1, 12345 Stockholm" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="area"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Område</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Vasastan" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Pris (kr)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Ex: 5500000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="monthlyFee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel> månadsavgift (kr)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Ex: 3500" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="livingArea"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Boarea (kvm)</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Ex: 85" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="totalRooms"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Antal rum</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Ex: 3" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="bedrooms"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sovrum</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Ex: 2" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="buildYear"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Byggår</FormLabel>
-                        <FormControl>
-                          <Input type="number" placeholder="Ex: 1998" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="condition"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Skick</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Välj skick" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PROPERTY_CONDITIONS.map(condition => (
-                              <SelectItem key={condition} value={condition}>{condition}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* BILDUPPLADDNING */}
-            <Card className="border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="w-4 h-4 text-gray-600" />
-                  Objektbilder (Valfritt)
-                  {isPro && <div className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-md font-semibold">Pro</div>}
-                </CardTitle>
-                <CardDescription>
-                  {isPro 
-                    ? "Ladda upp bilder så analyserar AI:n dem för att förbättra beskrivningen"
-                    : "Bildanalys är en Pro-funktion. Uppgradera för att använda."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      id="image-upload"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        files.forEach(file => {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setUploadedImages(prev => [...prev, reader.result as string]);
-                          };
-                          reader.readAsDataURL(file);
-                        });
-                      }}
-                    />
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                      <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm text-gray-600 font-medium">Klicka för att ladda upp bilder</p>
-                      <p className="text-xs text-gray-400 mt-1">PNG, JPG upp till 10MB</p>
-                    </label>
-                  </div>
-                  
-                  {uploadedImages.length > 0 && (
-                    <div className="grid grid-cols-3 gap-3">
-                      {uploadedImages.map((img, idx) => (
-                        <div key={idx} className="relative group">
-                          <img src={img} alt={`Upload ${idx + 1}`} className="w-full h-24 object-cover rounded-lg border border-gray-200" />
-                          <button
-                            type="button"
-                            onClick={() => setUploadedImages(prev => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* RUM & PLANLÖSNING */}
-          <TabsContent value="rooms" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Layout className="w-5 h-5" />
-                  Rum & Planlösning
-                </CardTitle>
-                <CardDescription>
-                  Detaljerad beskrivning av alla rum
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h4 className="font-medium">Rum i objektet</h4>
-                  <Button type="button" onClick={addRoom} variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Lägg till rum
-                  </Button>
-                </div>
-
-                {fields.map((field, index) => (
-                  <Card key={field.id} className="p-4">
-                    <div className="flex justify-between items-start mb-4">
-                      <h5 className="font-medium">Rum {index + 1}</h5>
-                      <Button 
-                        type="button" 
-                        onClick={() => remove(index)} 
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`rooms.${index}.type`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Rumstyp</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Välj rumstyp" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {ROOM_TYPES.map(type => (
-                                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name={`rooms.${index}.size`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Storlek (kvm)</FormLabel>
-                            <FormControl>
-                              <Input type="number" placeholder="Ex: 25" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name={`rooms.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Beskrivning</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Beskriv rummets karaktär, läge, ljusinsläpp etc..."
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </Card>
-                ))}
-
-                <Separator />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="kitchenDescription"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Utensils className="w-4 h-4" />
-                          Köksbeskrivning
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Beskriv kökets stil, utrustning, material, skick..."
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="bathroomDescription"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <Bath className="w-4 h-4" />
-                          Badrumsbeskrivning
-                        </FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Beskriv badrummet, material, utrustning, skick..."
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* DETALJER */}
-          <TabsContent value="details" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" />
-                  Material & Detaljer
-                </CardTitle>
-                <CardDescription>
-                  Material, ytskikt och tekniska detaljer
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="flooring"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Golv</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Välj golvmaterial" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {FLOORING_TYPES.map(type => (
-                              <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="heating"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Uppvärmning</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Välj uppvärmningstyp" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {HEATING_TYPES.map(type => (
-                              <SelectItem key={type} value={type}>{type}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="specialFeatures"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Särskilda egenskaper</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Brandsäkra fönster, golvvärme i badrum, originaldetaljer, etc..."
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="uniqueSellingPoints"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Försäljningsargument</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Vad gör detta objekt unikt? Läge, vy, material, planlösning..."
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* LÄGE */}
-          <TabsContent value="location" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Läge & Omgivning
-                </CardTitle>
-                <CardDescription>
-                  Områdesinformation och kommunikationer
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="view"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Utsikt</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: Sjöutsikt, parkutsikt, innergård" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="transport"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Kommunikationer</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: 5 min till t-bana, buss utanför" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="neighborhood"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Områdesbeskrivning</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Beskriv områdets karaktär, grannar, lugnt/livligt etc..."
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="parking"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Parkering</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Garage i carport, gästparkering" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Plattformval */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Plattform</CardTitle>
-            <CardDescription>
-              Välj vilken plattform texten ska optimeras för
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FormField
-              control={form.control}
-              name="platform"
-              render={({ field }) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
                 <FormItem>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Välj plattform" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="hemnet">Hemnet</SelectItem>
-                      <SelectItem value="booli">Booli</SelectItem>
-                      <SelectItem value="general">Egen sida/Övrigt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
+                  <FormLabel className="text-xs text-gray-500">Kök</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="T.ex: Nytt kök 2022, vita luckor, stenbänk, integrerade vitvaror från Siemens"
+                      {...field}
+                      className="min-h-[72px] resize-none text-sm"
+                    />
+                  </FormControl>
                 </FormItem>
-              )}
-            />
-          </CardContent>
-        </Card>
+              )} />
+              <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Badrum</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="T.ex: Helkaklat, renoverat 2020, dusch och badkar, golvvärme"
+                      {...field}
+                      className="min-h-[72px] resize-none text-sm"
+                    />
+                  </FormControl>
+                </FormItem>
+              )} />
+            </div>
 
-        {/* Pro: Ordintervall-väljare */}
-        {isPro && (
-          <Card className="border-gray-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="w-4 h-4 text-gray-600" />
-                Textlängd (Pro)
-              </CardTitle>
-              <CardDescription>
-                Välj hur lång objektbeskrivningen ska vara (200-600 ord)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Minst antal ord</label>
-                  <Select value={String(wordCountMin)} onValueChange={(v) => setWordCountMin(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[200, 250, 300, 350, 400, 450, 500].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-1 block">Max antal ord</label>
-                  <Select value={String(wordCountMax)} onValueChange={(v) => setWordCountMax(Number(v))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[300, 350, 400, 450, 500, 550, 600].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Vad gör objektet speciellt?</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="T.ex: Högt i tak, originalplank, söderläge med balkong, sjöutsikt, lugn innergård"
+                    {...field}
+                    className="min-h-[72px] resize-none text-sm"
+                  />
+                </FormControl>
+              </FormItem>
+            )} />
+          </div>
+        </div>
+
+        {/* ── MER DETALJER (expandable) ── */}
+        <div className="border-t" style={{ borderColor: "#E8E5DE" }}>
+          <button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            className="w-full flex items-center justify-between py-4 text-sm font-medium transition-colors hover:text-gray-700"
+            style={{ color: "#9CA3AF" }}
+          >
+            <span>Läge, material & fler detaljer</span>
+            {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {showDetails && (
+            <div className="pb-5 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField control={form.control} name="view" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Utsikt</FormLabel>
+                    <FormControl><Input placeholder="Sjöutsikt, parkutsikt, innergård" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="transport" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
+                    <FormControl><Input placeholder="5 min till t-bana, buss utanför" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
               </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* Submit */}
-        <Button 
-          type="submit" 
-          className="w-full bg-gray-800 hover:bg-gray-900 text-white" 
-          disabled={isPending || disabled}
-          size="lg"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Genererar objektbeskrivning...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generera professionell objektbeskrivning
-            </>
+              <FormField control={form.control} name="neighborhood" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="T.ex: Populärt familjeområde nära parker, skolor och matbutiker. Lugnt men centralt."
+                      {...field}
+                      className="min-h-[68px] resize-none text-sm"
+                    />
+                  </FormControl>
+                </FormItem>
+              )} />
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <FormField control={form.control} name="flooring" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Golv</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {FLOORING_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="heating" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Uppvärmning</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger className="h-10"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {HEATING_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="energyClass" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger className="h-10"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )} />
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <FormField control={form.control} name="parking" render={({ field }) => (
+                  <FormItem className="col-span-2">
+                    <FormLabel className="text-xs text-gray-500">Parkering</FormLabel>
+                    <FormControl><Input placeholder="Garage, carport, P-plats" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="floor" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
+                    <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="elevator" render={({ field }) => (
+                  <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value as boolean}
+                        onCheckedChange={field.onChange}
+                        id="elevator-check"
+                      />
+                    </FormControl>
+                    <label htmlFor="elevator-check" className="text-sm text-gray-600 cursor-pointer leading-none">
+                      Hiss
+                    </label>
+                  </FormItem>
+                )} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField control={form.control} name="lotArea" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
+                    <FormControl><Input type="number" placeholder="500" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="balconyArea" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Balkong (kvm)</FormLabel>
+                    <FormControl><Input type="number" placeholder="8" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+
+              <FormField control={form.control} name="specialFeatures" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Särskilda egenskaper</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="T.ex: Golvvärme i badrum, öppen spis, originaldetaljer, takbjälkar"
+                      {...field}
+                      className="min-h-[68px] resize-none text-sm"
+                    />
+                  </FormControl>
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="otherInfo" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Allt annat som AI:n bör veta om objektet"
+                      {...field}
+                      className="min-h-[60px] resize-none text-sm"
+                    />
+                  </FormControl>
+                </FormItem>
+              )} />
+            </div>
           )}
-        </Button>
+        </div>
+
+        {/* ── PLATTFORM, PRO-OPTIONS & SUBMIT ── */}
+        <div className="border-t pt-5 space-y-4" style={{ borderColor: "#E8E5DE" }}>
+
+          {/* Platform pills */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-xs text-gray-400 font-medium shrink-0">Plattform:</span>
+            <div className="flex gap-2">
+              {([
+                { value: "hemnet" as const, label: "Hemnet" },
+                { value: "booli" as const, label: "Booli" },
+                { value: "general" as const, label: "Egen sida" },
+              ]).map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => form.setValue("platform", p.value)}
+                  className="px-3.5 py-1.5 text-xs rounded-full border transition-all font-medium"
+                  style={{
+                    background: selectedPlatform === p.value ? "#2D6A4F" : "#fff",
+                    color: selectedPlatform === p.value ? "#fff" : "#6B7280",
+                    borderColor: selectedPlatform === p.value ? "#2D6A4F" : "#E8E5DE",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pro: word count */}
+          {isPro && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-gray-400 font-medium shrink-0">Textlängd:</span>
+              <div className="flex items-center gap-2">
+                <Select value={String(wordCountMin)} onValueChange={(v) => setWordCountMin(Number(v))}>
+                  <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[200, 250, 300, 350, 400, 450, 500].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-xs text-gray-300">—</span>
+                <Select value={String(wordCountMax)} onValueChange={(v) => setWordCountMax(Number(v))}>
+                  <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[300, 350, 400, 450, 500, 550, 600].map((n) => (
+                      <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Pro: images */}
+          {isPro && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400 font-medium">Bilder (valfritt)</span>
+                {uploadedImages.length > 0 && (
+                  <span className="text-xs text-gray-400">{uploadedImages.length} bild(er)</span>
+                )}
+              </div>
+              <div
+                className="border border-dashed rounded-lg p-3 text-center transition-colors hover:border-gray-400"
+                style={{ borderColor: "#D1D5DB" }}
+              >
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  id="image-upload"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    files.forEach((file) => {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setUploadedImages((prev) => [...prev, reader.result as string]);
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  }}
+                />
+                <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-gray-500">
+                  <Plus className="w-3.5 h-3.5" />
+                  Ladda upp bilder
+                </label>
+              </div>
+              {uploadedImages.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {uploadedImages.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={img}
+                        alt={`Bild ${idx + 1}`}
+                        className="w-14 h-14 object-cover rounded-lg border"
+                        style={{ borderColor: "#E8E5DE" }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            className="w-full h-12 text-sm font-semibold transition-colors"
+            disabled={isPending || disabled}
+            style={{ background: "#2D6A4F", color: "#fff" }}
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Genererar beskrivning...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generera objektbeskrivning
+              </>
+            )}
+          </Button>
+        </div>
       </form>
     </Form>
   );
-}
-
-interface PromptFormProps {
-  onSubmit: (data: { prompt: string; type: "apartment" | "house" | "townhouse" | "villa"; platform: "hemnet" | "booli" | "general"; wordCountMin?: number; wordCountMax?: number }) => void;
-  isPending: boolean;
-  disabled?: boolean;
-  isPro?: boolean;
 }
