@@ -60,7 +60,7 @@ export default function Home() {
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 h-16">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
@@ -134,17 +134,16 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-6xl mx-auto px-6 py-10">
+      <main className="max-w-7xl mx-auto px-6 py-8">
 
         {/* Hero — only when no result is showing */}
         {!result && (
-          <div className="mb-10 max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl leading-snug mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+          <div className="mb-8">
+            <h1 className="text-2xl sm:text-3xl leading-snug mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
               Skriv objektbeskrivningar som säljer
             </h1>
-            <p className="text-base leading-relaxed" style={{ color: "#6B7280" }}>
-              Fyll i fastighetsdata nedan. AI:n genererar en professionell annonstext
-              redo för Hemnet, Booli eller din egen hemsida.
+            <p className="text-sm leading-relaxed" style={{ color: "#9CA3AF" }}>
+              Fyll i fastighetsdata — AI:n genererar en professionell annonstext redo för Hemnet, Booli eller din egen hemsida.
             </p>
           </div>
         )}
@@ -174,22 +173,12 @@ export default function Home() {
           </div>
         )}
 
-        {/* Two-column layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        {/* Main grid — 12 columns */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* ── LEFT: Form ── */}
-          <div className={result ? "lg:col-span-2" : "lg:col-span-3"}>
-            <div className="bg-white rounded-xl border p-6 sm:p-8" style={{ borderColor: "#E8E5DE" }}>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-                  Fastighetsdata
-                </h2>
-                {isAuthenticated && (
-                  <span className="text-xs px-2 py-0.5 rounded" style={{ background: "#F0EDE6", color: "#6B7280" }}>
-                    {remaining} kvar idag
-                  </span>
-                )}
-              </div>
+          <div className={result ? "lg:col-span-5" : "lg:col-span-8"}>
+            <div className="bg-white rounded-xl border p-5 sm:p-6" style={{ borderColor: "#E8E5DE" }}>
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -199,44 +188,67 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── RIGHT: Result or placeholder ── */}
-          <div className={result ? "lg:col-span-3" : "lg:col-span-2"}>
+          {/* ── RIGHT: Result or sidebar ── */}
+          <div className={result ? "lg:col-span-7" : "lg:col-span-4"}>
             {result ? (
-              <ResultSection
-                result={result}
-                onNewPrompt={() => setResult(null)}
-              />
+              <div className="lg:sticky lg:top-24">
+                <ResultSection
+                  result={result}
+                  onNewPrompt={() => setResult(null)}
+                />
+              </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-5 lg:sticky lg:top-24">
                 {/* Preview card */}
-                <div className="bg-white rounded-xl border p-6 sm:p-8" style={{ borderColor: "#E8E5DE" }}>
-                  <div className="flex items-center gap-2 mb-4">
+                <div className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
+                  <div className="flex items-center gap-2 mb-3">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
                       Så här funkar det
                     </span>
                   </div>
-                  <ol className="space-y-4">
+                  <ol className="space-y-3">
                     {[
-                      { step: "1", text: "Fyll i fastighetens data i formuläret" },
-                      { step: "2", text: "Välj plattform — Hemnet, Booli eller allmän" },
-                      { step: "3", text: "AI:n genererar en komplett objektbeskrivning" },
-                      { step: "4", text: "Kopiera texten direkt till din annons" },
+                      { step: "1", text: "Fyll i fastighetens data" },
+                      { step: "2", text: "Välj plattform (Hemnet, Booli...)" },
+                      { step: "3", text: "AI:n genererar en komplett annonstext" },
+                      { step: "4", text: "Kopiera texten till din annons" },
                     ].map((item) => (
                       <li key={item.step} className="flex items-start gap-3">
                         <span
-                          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                           style={{ background: "#E8F5E9", color: "#2D6A4F" }}
                         >
                           {item.step}
                         </span>
-                        <span className="text-sm leading-relaxed pt-0.5" style={{ color: "#4B5563" }}>
+                        <span className="text-sm leading-relaxed" style={{ color: "#4B5563" }}>
                           {item.text}
                         </span>
                       </li>
                     ))}
                   </ol>
                 </div>
+
+                {/* Usage indicator for logged in */}
+                {isAuthenticated && (
+                  <div className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Användning idag</span>
+                      <span className="text-xs font-medium" style={{ color: plan === "pro" ? "#D4AF37" : "#6B7280" }}>
+                        {plan === "pro" ? "Pro" : "Gratis"}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ background: "#2D6A4F", width: `${Math.min(100, (used / limit) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
+                      {remaining} av {limit} beskrivningar kvar
+                    </p>
+                  </div>
+                )}
 
                 {/* Upgrade CTA — only for free users */}
                 {isAuthenticated && plan === "free" && (
@@ -297,8 +309,8 @@ export default function Home() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t mt-16 py-8" style={{ borderColor: "#E8E5DE" }}>
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
+      <footer className="border-t mt-12 py-6" style={{ borderColor: "#E8E5DE" }}>
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
           <span>© {new Date().getFullYear()} OptiPrompt</span>
           <div className="flex gap-4">
             <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>
