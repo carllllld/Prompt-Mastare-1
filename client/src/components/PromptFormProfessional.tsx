@@ -110,7 +110,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       apartment: "Lägenhet", house: "Hus", townhouse: "Radhus", villa: "Villa",
     };
 
-    let d = "Skriv en professionell och säljande objektbeskrivning baserat på följande fastighetsdata.\n\nOBJEKTDISPOSITION\n\n";
+    let d = "OBJEKTDISPOSITION\n\n";
 
     d += "=== GRUNDINFORMATION ===\n";
     d += `Typ: ${typeLabels[values.propertyType] || values.propertyType}\n`;
