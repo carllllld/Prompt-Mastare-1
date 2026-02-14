@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, Crown } from "lucide-react";
 import { useState } from "react";
 
 interface PropertyFormData {
@@ -47,10 +47,6 @@ const ENERGY_CLASSES = ["A", "B", "C", "D", "E", "F", "G"];
 
 const HEATING_TYPES = [
   "Fjärrvärme", "Värmepump", "Bergvärme", "Elpanna", "Vedpanna", "Golvvärme", "Direktverkande el"
-];
-
-const FLOORING_TYPES = [
-  "Ekparkett", "Laminat", "Klinker", "Vinyl", "Matta", "Träslager", "Stengolv", "Betong"
 ];
 
 interface PromptFormProps {
@@ -114,12 +110,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       apartment: "Lägenhet", house: "Hus", townhouse: "Radhus", villa: "Villa",
     };
 
-    let d = "OBJEKTDISPOSITION\n\n";
+    let d = "Skriv en professionell och säljande objektbeskrivning baserat på följande fastighetsdata.\n\nOBJEKTDISPOSITION\n\n";
 
     d += "=== GRUNDINFORMATION ===\n";
     d += `Typ: ${typeLabels[values.propertyType] || values.propertyType}\n`;
     if (values.address) d += `Adress: ${values.address}\n`;
-    if (values.area) d += `Område: ${values.area}\n`;
+    if (values.area) d += `Stadsdel/Område: ${values.area}\n`;
     if (values.price) d += `Pris: ${values.price} kr\n`;
     if (values.monthlyFee) d += `Avgift: ${values.monthlyFee} kr/mån\n`;
 
@@ -153,24 +149,26 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     }
 
     d += "\n=== MATERIAL & TEKNIK ===\n";
-    if (values.flooring) d += `Golv: ${values.flooring}\n`;
+    if (values.flooring) d += `Golvmaterial (typ och var i bostaden, t.ex. per rum): ${values.flooring}\n`;
     if (values.heating) d += `Uppvärmning: ${values.heating}\n`;
 
     if (values.view || values.neighborhood || values.transport || values.parking) {
       d += "\n=== LÄGE & OMGIVNING ===\n";
       if (values.view) d += `Utsikt: ${values.view}\n`;
-      if (values.neighborhood) d += `Område: ${values.neighborhood}\n`;
+      if (values.neighborhood) d += `Områdesbeskrivning (karaktär, service, grannar): ${values.neighborhood}\n`;
       if (values.transport) d += `Kommunikationer: ${values.transport}\n`;
       if (values.parking) d += `Parkering: ${values.parking}\n`;
     }
 
     if (values.uniqueSellingPoints) {
       d += "\n=== FÖRSÄLJNINGSARGUMENT ===\n";
+      d += "(Unika kvaliteter som gör bostaden attraktiv — lyft dessa i texten)\n";
       d += `${values.uniqueSellingPoints}\n`;
     }
 
     if (values.specialFeatures) {
       d += "\n=== SÄRSKILDA EGENSKAPER ===\n";
+      d += "(Specifik utrustning, installationer eller egenskaper utöver standard)\n";
       d += `${values.specialFeatures}\n`;
     }
 
@@ -232,7 +230,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             )} />
             <FormField control={form.control} name="area" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs text-gray-500">Område</FormLabel>
+                <FormLabel className="text-xs text-gray-500">Stadsdel / Område</FormLabel>
                 <FormControl><Input placeholder="Vasastan" {...field} className="h-10" /></FormControl>
               </FormItem>
             )} />
@@ -401,13 +399,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <FormField control={form.control} name="flooring" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Golv</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {FLOORING_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel className="text-xs text-gray-500">Golvmaterial</FormLabel>
+                    <FormControl><Input placeholder="T.ex: Ekparkett i vardagsrum, klinker i hall" {...field} className="h-10" /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="heating" render={({ field }) => (
@@ -562,64 +555,79 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
           )}
 
-          {/* Pro: images */}
-          {isPro && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
+          {/* Images — Pro feature, visible to all */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400 font-medium">Bilder (valfritt)</span>
-                {uploadedImages.length > 0 && (
-                  <span className="text-xs text-gray-400">{uploadedImages.length} bild(er)</span>
-                )}
+                <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: "#D4AF37", color: "#fff" }}>Pro</span>
               </div>
-              <div
-                className="border border-dashed rounded-lg p-3 text-center transition-colors hover:border-gray-400"
-                style={{ borderColor: "#D1D5DB" }}
-              >
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  id="image-upload"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    files.forEach((file) => {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setUploadedImages((prev) => [...prev, reader.result as string]);
-                      };
-                      reader.readAsDataURL(file);
-                    });
-                  }}
-                />
-                <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <Plus className="w-3.5 h-3.5" />
-                  Ladda upp bilder
-                </label>
-              </div>
-              {uploadedImages.length > 0 && (
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {uploadedImages.map((img, idx) => (
-                    <div key={idx} className="relative group">
-                      <img
-                        src={img}
-                        alt={`Bild ${idx + 1}`}
-                        className="w-14 h-14 object-cover rounded-lg border"
-                        style={{ borderColor: "#E8E5DE" }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                        className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+              {isPro && uploadedImages.length > 0 && (
+                <span className="text-xs text-gray-400">{uploadedImages.length} bild(er)</span>
               )}
             </div>
-          )}
+            {isPro ? (
+              <>
+                <div
+                  className="border border-dashed rounded-lg p-3 text-center transition-colors hover:border-gray-400"
+                  style={{ borderColor: "#D1D5CB" }}
+                >
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    id="image-upload"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      files.forEach((file) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setUploadedImages((prev) => [...prev, reader.result as string]);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-gray-500">
+                    <Plus className="w-3.5 h-3.5" />
+                    Ladda upp bilder
+                  </label>
+                </div>
+                {uploadedImages.length > 0 && (
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    {uploadedImages.map((img, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={img}
+                          alt={`Bild ${idx + 1}`}
+                          className="w-14 h-14 object-cover rounded-lg border"
+                          style={{ borderColor: "#E8E5DE" }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div
+                className="border border-dashed rounded-lg p-3.5 text-center"
+                style={{ borderColor: "#E8E5DE", background: "#FAFAF7" }}
+              >
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                  <Lock className="w-3.5 h-3.5" />
+                  Uppgradera till Pro för att ladda upp bilder
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Submit */}
           <Button
