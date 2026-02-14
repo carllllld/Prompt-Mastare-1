@@ -25,93 +25,102 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+    <div className="space-y-5 pb-12">
 
       {/* HUVUDANNONS */}
-      <Card className="border-2 border-slate-200 shadow-xl overflow-hidden">
-        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+      <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+        <div className="px-6 py-4 border-b flex justify-between items-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-indigo-600" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
-              Genererad annonstext
+            <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+              Objektbeskrivning
             </span>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => copyToClipboard(result.improvedPrompt, 'main')} 
-              className="h-9 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-            >
-              {copiedMain ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-              {copiedMain ? "Kopierad" : "Kopiera annons"}
-            </Button>
-          </div>
-        </div>
-        <CardContent className="p-8 bg-white">
-          <div className="whitespace-pre-wrap text-slate-800 leading-relaxed font-serif text-lg">
-            {result.improvedPrompt}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* SOCIALA MEDIER (VERSION UTAN EMOJIS) */}
-      <Card className="border border-slate-200 bg-slate-50/30">
-        <div className="px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-          <div className="flex items-center gap-2 text-slate-500">
-            <Share2 className="w-4 h-4" />
-            <span className="text-[10px] font-bold uppercase tracking-tight">Kortversion för sociala medier</span>
-          </div>
           <Button 
-            variant="ghost" 
+            variant="outline" 
             size="sm" 
-            onClick={() => copyToClipboard(result.socialCopy, 'social')} 
-            className="h-8 text-slate-600 text-xs hover:bg-white shadow-sm border border-slate-100"
+            onClick={() => copyToClipboard(result.improvedPrompt, 'main')} 
+            className="h-8 text-xs font-medium"
+            style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}
           >
-            {copiedSocial ? "Klar" : "Kopiera text"}
+            {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+            {copiedMain ? "Kopierad!" : "Kopiera"}
           </Button>
         </div>
-        <CardContent className="p-5 text-slate-600 text-sm leading-relaxed italic">
-          {result.socialCopy || "Ingen social media text genererades."}
-        </CardContent>
-      </Card>
-
-      {/* ANALYS & TIPS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3 text-amber-700 font-bold text-[10px] uppercase tracking-tighter">
-            <AlertCircle className="w-4 h-4" /> Att tänka på
+        <div className="p-6 sm:p-8">
+          <div className="whitespace-pre-wrap leading-relaxed text-base" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+            {result.improvedPrompt}
           </div>
-          <ul className="space-y-2">
-            {result.suggestions?.map((s, i) => (
-              <li key={i} className="text-xs text-amber-900 flex gap-2">
-                <span className="text-amber-400">•</span> {s}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-3 text-emerald-700 font-bold text-[10px] uppercase tracking-tighter">
-            <Check className="w-4 h-4" /> Förbättringar
-          </div>
-          <ul className="space-y-2">
-            {result.improvements?.map((imp, i) => (
-              <li key={i} className="text-xs text-emerald-900 flex gap-2">
-                <span className="text-emerald-400">✓</span> {imp}
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
 
-      <div className="flex justify-center pt-4">
+      {/* SOCIAL MEDIA */}
+      {result.socialCopy && (
+        <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+          <div className="px-5 py-3 border-b flex justify-between items-center" style={{ borderColor: "#E8E5DE" }}>
+            <div className="flex items-center gap-2">
+              <Share2 className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Social media</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => copyToClipboard(result.socialCopy, 'social')} 
+              className="h-7 text-xs"
+              style={{ color: "#6B7280" }}
+            >
+              {copiedSocial ? "Kopierad!" : "Kopiera"}
+            </Button>
+          </div>
+          <div className="p-5 text-sm leading-relaxed italic" style={{ color: "#4B5563" }}>
+            {result.socialCopy}
+          </div>
+        </div>
+      )}
+
+      {/* TIPS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {result.suggestions && result.suggestions.length > 0 && (
+          <div className="rounded-xl border p-5" style={{ background: "#FFFBEB", borderColor: "#FDE68A" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle className="w-3.5 h-3.5" style={{ color: "#D97706" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#92400E" }}>Att tänka på</span>
+            </div>
+            <ul className="space-y-2">
+              {result.suggestions.map((s, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#78350F" }}>
+                  <span style={{ color: "#F59E0B" }}>•</span> {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {result.improvements && result.improvements.length > 0 && (
+          <div className="rounded-xl border p-5" style={{ background: "#ECFDF5", borderColor: "#A7F3D0" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Check className="w-3.5 h-3.5" style={{ color: "#059669" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#065F46" }}>Förbättringar</span>
+            </div>
+            <ul className="space-y-2">
+              {result.improvements.map((imp, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#064E3B" }}>
+                  <span style={{ color: "#10B981" }}>✓</span> {imp}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-center pt-2">
         <Button 
           variant="ghost" 
           onClick={onNewPrompt}
-          className="text-slate-400 hover:text-indigo-600 transition-colors"
+          className="text-sm transition-colors"
+          style={{ color: "#9CA3AF" }}
         >
-          <RefreshCw className="w-4 h-4 mr-2" /> Skapa en ny version
+          <RefreshCw className="w-3.5 h-3.5 mr-2" /> Skapa ny beskrivning
         </Button>
       </div>
     </div>

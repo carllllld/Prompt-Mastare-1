@@ -67,27 +67,26 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="min-h-screen !bg-white !text-slate-900 flex flex-col" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-      <nav className="border-b border-slate-200 !bg-white sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col" style={{ background: "#FAFAF7", fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <nav className="border-b sticky top-0 z-50" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="text-slate-600 hover:text-gray-800" data-testid="button-back-home">
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-800" data-testid="button-back-home">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Tillbaka
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <div className="bg-gray-800 p-1.5 rounded-lg text-white">
-                <History className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
+                <History className="w-3.5 h-3.5 text-white" />
               </div>
-              <span className="font-bold text-lg !text-slate-900">Historik</span>
+              <span className="font-semibold text-lg" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>Historik</span>
             </div>
           </div>
-          <div className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-md font-semibold">
-            <Clock className="h-3 w-3 mr-1" />
+          <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "#F0EDE6", color: "#6B7280" }}>
             Sparas i 30 dagar
-          </div>
+          </span>
         </div>
       </nav>
 
