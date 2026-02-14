@@ -29,16 +29,11 @@ export default function Home() {
   const [activeTemplate, setActiveTemplate] = useState<number | null>(null);
 
   const handleSubmit = (data: any) => {
-    console.log("[Home Debug] handleSubmit called with:", data);
-    console.log("[Home Debug] isAuthenticated:", isAuthenticated);
-    
     if (!isAuthenticated) {
-      console.log("[Home Debug] Not authenticated, opening auth modal");
       setAuthModalOpen(true);
       return;
     }
     
-    console.log("[Home Debug] Calling mutate with data");
     mutate(data, {
       onSuccess: (data) => {
         setResult(data);
@@ -48,112 +43,90 @@ export default function Home() {
         toast({
           title: "Ett fel uppstod",
           description: error?.message || "Kunde inte generera text.",
-          variant: "destructive" as any,
+        });
+      },
+    });
+  };
+
+  const handleUpgrade = () => {
+    startCheckout({}, {
+      onSuccess: () => {
+        toast({
+          title: "Omdirigerar till betalning...",
+          description: "Du kommer snart att skickas till vår säkra betalsida.",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Kunde inte starta uppgradering",
+          description: error?.message || "Vänligen försök igen senare.",
         });
       },
     });
   };
 
   const propertyTemplates = [
-    { 
-      name: "Modern City Living", 
-      icon: Building2, 
-      desc: "Sofistikerad stadslägenhet",
-      quick: "Vasastan, 2 rum, 78m², balkong",
-      color: "from-blue-600 to-cyan-500"
+    {
+      name: "Lägenhet", 
+      desc: "Modern city-lägenhet", 
+      quick: "2 rum, kök, balkong",
+      icon: Building2,
+      color: "from-blue-500 to-cyan-500"
     },
-    { 
-      name: "Suburban Dream Home", 
-      icon: HomeIcon, 
-      desc: "Familjevänligt villaområde",
-      quick: "Bromma, 4 rum, 145m², trädgård",
-      color: "from-emerald-600 to-teal-500"
+    {
+      name: "Villa", 
+      desc: "Familjevänlig villa", 
+      quick: "4 rum, trädgård, garage",
+      icon: HomeIcon,
+      color: "from-emerald-500 to-teal-500"
     },
-    { 
-      name: "Charming Townhouse", 
-      icon: Compass, 
-      desc: "Perfekt mellanting",
-      quick: "Solna, 3 rum, 95m², 2 plan",
-      color: "from-purple-600 to-pink-500"
-    },
-    { 
-      name: "Weekend Retreat", 
-      icon: Eye, 
-      desc: "Avkoppling i naturen",
-      quick: "Värmdö, 2 rum, 55m², sjönära",
-      color: "from-orange-600 to-red-500"
+    {
+      name: "Radhus", 
+      desc: "Bekvämt radhus", 
+      quick: "3 rum, 2 plan, förråd",
+      icon: Building2,
+      color: "from-purple-500 to-pink-500"
     }
   ];
 
   const statsData = [
-    { 
-      label: "Snabbare försäljning", 
-      value: "94%", 
-      change: "+12%", 
-      icon: TrendingUp,
-      color: "emerald",
-      description: "Jämfört med branschgenomsnitt"
-    },
-    { 
-      label: "Texter denna månad", 
-      value: "2.3k", 
-      change: "+23%", 
-      icon: FileText,
-      color: "blue",
-      description: "Aktiva mäklare på plattformen"
-    },
-    { 
-      label: "Kundnöjdhet", 
-      value: "4.9", 
-      change: "+0.3", 
-      icon: Star,
-      color: "purple",
-      description: "Baserat på 1,247 recensioner"
-    },
-    { 
-      label: "AI-precision", 
-      value: "98%", 
-      change: "+5%", 
-      icon: Brain,
-      color: "indigo",
-      description: "Match mot kundbehov"
-    }
+    { label: "Konvertering", value: "94%", change: "+12%", icon: TrendingUp, color: "emerald", description: "Högre än branschsnitt" },
+    { label: "Snabbhet", value: "15s", change: "+8%", icon: Zap, color: "blue", description: "Från idé till färdig text" },
+    { label: "Kvalitet", value: "9.8", change: "+5%", icon: Star, color: "purple", description: "Betyg av användare" },
+    { label: "AI-precision", value: "98%", change: "+5%", icon: Brain, color: "indigo", description: "Match mot kundbehov" }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden">
-      {/* Premium Navigation */}
-      <nav className="relative z-50 border-b border-white/10 backdrop-blur-xl bg-slate-900/80">
+    <div className="min-h-screen bg-white">
+      {/* Navigation */}
+      <nav className="border-b border-gray-200 bg-white">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <div className="flex items-center gap-3 group">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                  <div className="relative bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl text-white shadow-2xl">
-                    <FileText className="w-6 h-6" />
-                  </div>
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-600 p-2 rounded-lg">
+                  <FileText className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <span className="font-bold text-xl text-white tracking-tight">Mäklartexter</span>
-                  <div className="text-xs text-blue-400 font-medium">AI Precision Engine</div>
+                  <span className="font-semibold text-lg text-gray-900">Mäklartexter</span>
+                  <div className="text-xs text-gray-500">AI för fastighetsbranschen</div>
                 </div>
               </div>
               
               {isAuthenticated && (
-                <div className="hidden md:flex items-center gap-8">
-                  <Link href="/history" className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors group">
-                    <Clock className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                <div className="hidden md:flex items-center gap-6">
+                  <Link href="/history" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900">
+                    <Clock className="w-4 h-4" />
                     <span>Historik</span>
                   </Link>
                   {user?.plan === "pro" && (
-                    <Link href="/teams" className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors group">
-                      <Users className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <Link href="/teams" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900">
+                      <Users className="w-4 h-4" />
                       <span>Teams</span>
                     </Link>
                   )}
-                  <Link href="/analytics" className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-white transition-colors group">
-                    <BarChart3 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                  <Link href="/analytics" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900">
+                    <BarChart3 className="w-4 h-4" />
                     <span>Analytics</span>
                   </Link>
                 </div>
@@ -162,27 +135,27 @@ export default function Home() {
 
             <div className="flex items-center gap-4">
               {authLoading ? (
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                 </div>
               ) : isAuthenticated ? (
                 <div className="flex items-center gap-4">
-                  <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-800 to-slate-700 rounded-xl border border-white/10">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <div className="hidden sm:flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold text-white">{userStatus?.promptsRemaining}</div>
-                      <div className="text-xs text-slate-400">kvar</div>
+                      <div className="text-sm font-medium text-gray-900">{userStatus?.promptsRemaining}</div>
+                      <div className="text-xs text-gray-500">kvar</div>
                     </div>
                   </div>
                   <div className="hidden sm:block text-right">
-                    <div className="text-sm font-medium text-white">{user?.email}</div>
-                    <div className="text-xs text-blue-400 capitalize font-medium">{userStatus?.plan}</div>
+                    <div className="text-sm font-medium text-gray-900">{user?.email}</div>
+                    <div className="text-xs text-gray-500 capitalize">{userStatus?.plan}</div>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={() => logout()} 
-                    className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
+                    className="text-gray-500 hover:text-red-600"
                   >
                     <LogOut className="w-4 h-4" />
                   </Button>
@@ -190,9 +163,9 @@ export default function Home() {
               ) : (
                 <Button 
                   onClick={() => setAuthModalOpen(true)} 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-semibold shadow-2xl hover:shadow-blue-500/25 transition-all hover:scale-105"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
                 >
-                  Starta AI-motorn
+                  Kom igång
                 </Button>
               )}
             </div>
@@ -201,107 +174,96 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
+      <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
-          {/* Main Hero */}
+          {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             <div className="space-y-6">
-              <div className="inline-flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full border border-blue-500/30 backdrop-blur-sm">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-blue-300">AI-Precision Engine v3.0</span>
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none text-xs px-3 py-1 rounded-full font-semibold">BETA</div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
+                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                <span className="text-sm font-medium text-blue-900">AI för mäklare</span>
               </div>
               
               <div className="space-y-4">
-                <h1 className="text-5xl lg:text-6xl font-bold text-white leading-tight tracking-tight">
-                  <span className="block">Bygg</span>
-                  <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">persuasiva</span>
+                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+                  <span className="block">Skapa</span>
+                  <span className="text-blue-600">övertygande</span>
                   <span className="block">fastighetstexter</span>
                 </h1>
-                <p className="text-xl text-slate-300 max-w-2xl leading-relaxed">
-                  Vår AI analyserar arkitektoniska detaljer, demografiska data och psykologiska triggers 
-                  för att skapa objektbeskrivningar som konverterar 94% snabbare än branschgenomsnittet.
+                <p className="text-xl text-gray-600 max-w-2xl leading-relaxed">
+                  Vår AI analyserar fastighetsdetaljer och marknadsdata för att skapa 
+                  objektbeskrivningar som fångar intresse och genererar fler visningar.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold shadow-2xl hover:shadow-purple-500/25 transition-all hover:scale-105 group"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-base font-medium"
                   onClick={() => document.getElementById('main-form')?.scrollIntoView({ behavior: 'smooth' })}
                 >
-                  <Zap className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" />
-                  Generera magi nu
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  <Zap className="w-4 h-4 mr-2" />
+                  Testa gratis
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
-                <Button variant="outline" size="lg" className="border-white/20 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/10 hover:border-white/30 transition-all">
-                  <Eye className="w-5 h-5 mr-2" />
-                  Se AI i aktion
+                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-6 py-3 rounded-lg text-base font-medium hover:bg-gray-50">
+                  <Eye className="w-4 h-4 mr-2" />
+                  Se exempel
                 </Button>
               </div>
             </div>
 
-            {/* Interactive Stats Dashboard */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {statsData.map((stat, i) => (
-                <Card 
-                  key={i}
-                  className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 backdrop-blur-sm hover:scale-105 transition-transform cursor-pointer group"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`w-12 h-12 bg-gradient-to-br ${stat.color === 'emerald' ? 'from-emerald-500 to-teal-500' : stat.color === 'blue' ? 'from-blue-500 to-cyan-500' : stat.color === 'purple' ? 'from-purple-500 to-pink-500' : 'from-indigo-500 to-purple-500'} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                        <stat.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="text-xs font-semibold text-emerald-400 bg-emerald-500/20 px-2 py-1 rounded-full">
-                        {stat.change}
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
-                    <div className="text-sm text-slate-400 font-medium">{stat.label}</div>
-                    <div className="text-xs text-slate-500 mt-2">{stat.description}</div>
-                  </CardContent>
-                </Card>
+                <div key={i} className="text-center">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <stat.icon className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                  <div className="text-sm text-gray-600 font-medium">{stat.label}</div>
+                  <div className="text-xs text-green-600 mt-1">{stat.change}</div>
+                </div>
               ))}
             </div>
           </div>
 
-          {/* Interactive Blueprint Templates */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
-              <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 backdrop-blur-sm shadow-2xl">
-                <CardHeader className="border-b border-white/10">
-                  <CardTitle className="flex items-center gap-3 text-xl">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-white" />
+              <Card className="border border-gray-200 bg-white shadow-sm">
+                <CardHeader className="border-b border-gray-200">
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FileText className="w-4 h-4 text-blue-600" />
                     </div>
-                    <span>Property Blueprints</span>
+                    <span>Snabbstart mallar</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   {propertyTemplates.map((template, i) => (
                     <div
                       key={i}
-                      className={`relative p-4 rounded-xl border cursor-pointer transition-all ${
+                      className={`relative p-4 rounded-lg border cursor-pointer transition-all ${
                         activeTemplate === i 
-                          ? 'bg-gradient-to-br ' + template.color + ' border-transparent' 
-                          : 'bg-slate-800/30 border-white/10 hover:border-white/20 hover:bg-slate-800/50'
+                          ? 'bg-blue-50 border-blue-300' 
+                          : 'bg-white border-gray-200 hover:border-gray-300'
                       }`}
                       onClick={() => setActiveTemplate(i)}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 bg-gradient-to-br ${template.color} rounded-xl flex items-center justify-center shadow-lg ${activeTemplate === i ? 'scale-110' : ''} transition-transform`}>
-                          <template.icon className="w-6 h-6 text-white" />
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 ${activeTemplate === i ? 'bg-blue-600' : 'bg-gray-100'} rounded-lg flex items-center justify-center transition-colors`}>
+                          <template.icon className={`w-5 h-5 ${activeTemplate === i ? 'text-white' : 'text-gray-600'}`} />
                         </div>
                         <div className="flex-1">
-                          <div className="font-semibold text-white mb-1">{template.name}</div>
-                          <div className="text-sm text-slate-400 mb-2">{template.desc}</div>
-                          <div className="text-xs text-slate-500 italic font-mono">{template.quick}</div>
+                          <div className={`font-medium mb-1 ${activeTemplate === i ? 'text-blue-900' : 'text-gray-900'}`}>{template.name}</div>
+                          <div className="text-sm text-gray-600 mb-1">{template.desc}</div>
+                          <div className="text-xs text-gray-500 italic">{template.quick}</div>
                         </div>
                       </div>
                       {activeTemplate === i && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
                         </div>
                       )}
                     </div>
@@ -312,264 +274,221 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Main Form Section */}
-        <div id="main-form" className="mt-20 grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Enhanced Form */}
+        {/* Form Section */}
+        <div id="main-form" className="mt-16 grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Form */}
           <div>
-            <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 backdrop-blur-sm shadow-2xl">
-              <CardHeader className="border-b border-white/10 bg-gradient-to-r from-slate-800/50 to-slate-900/50">
-                <CardTitle className="flex items-center gap-3 text-xl">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center animate-pulse">
-                    <Hammer className="w-4 h-4 text-white" />
+            <Card className="border border-gray-200 bg-white shadow-sm">
+              <CardHeader className="border-b border-gray-200">
+                <CardTitle className="flex items-center gap-3 text-lg">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Hammer className="w-4 h-4 text-blue-600" />
                   </div>
-                  <span>AI Text Generator</span>
+                  <span>Skapa din text</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
                 {userStatus && (
-                  <div className="mb-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20">
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                          <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping"></div>
-                        </div>
-                        <div>
-                          <div className="font-semibold text-white">
-                            {userStatus.promptsRemaining} av {userStatus.monthlyLimit} kvar
-                          </div>
-                          <div className="text-sm text-slate-400">
-                            {userStatus.plan === "pro" ? "Professional Engine" : "Starter Engine"}
-                          </div>
-                        </div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <div className="text-sm font-medium text-gray-900">{userStatus.promptsRemaining} kvar</div>
                       </div>
-                      {userStatus.plan !== "pro" && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => startCheckout("pro")}
-                          className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/50 transition-all"
-                        >
-                          <Zap className="w-4 h-4 mr-2" />
-                          Upgrade
-                        </Button>
-                      )}
+                      <div className="text-xs text-gray-500 capitalize">{userStatus.plan}</div>
                     </div>
                   </div>
                 )}
-
+                
                 <PromptFormProfessional 
-                  onSubmit={handleSubmit} 
-                  isPending={isPending} 
-                  disabled={userStatus?.promptsRemaining === 0}
-                  isPro={userStatus?.plan === "pro"}
+                  onSubmit={handleSubmit}
+                  isPending={isPending}
                 />
               </CardContent>
             </Card>
           </div>
 
-          {/* Results with AI Magic */}
+          {/* Results */}
           <div>
             {result ? (
-              <div className="space-y-6">
-                <Card className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-white/10 backdrop-blur-sm shadow-2xl">
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 rounded-t-xl">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-white animate-pulse" />
-                        </div>
-                        <div>
-                          <div className="font-bold text-lg">AI-Generated Text</div>
-                          <div className="text-sm text-blue-200">Precision Engine v3.0</div>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
-                        className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(result.improvedPrompt);
-                          toast({ title: "Kopierat!", description: "Texten finns nu i ditt urklipp." });
-                        }}
-                      >
-                        <div className="w-4 h-4 mr-2">📋</div>
-                        Copy
-                      </Button>
+              <Card className="border border-gray-200 bg-white shadow-sm">
+                <CardHeader className="border-b border-gray-200">
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-green-600" />
                     </div>
+                    <span>Genererad text</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <TextImprovement 
+                    fullText={result.improved || ""}
+                    isPro={userStatus?.plan === "pro"}
+                  />
+                  <div className="mt-6 flex gap-4">
+                    <Button 
+                      onClick={() => navigator.clipboard.writeText(result.improved || "")}
+                      className="flex-1"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Kopiera text
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setResult(null)}
+                    >
+                      Ny text
+                    </Button>
                   </div>
-                  <CardContent className="p-6">
-                    <div className="prose prose-invert max-w-none">
-                      <p className="whitespace-pre-wrap leading-relaxed text-slate-100 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        {result.improvedPrompt}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {userStatus?.plan === "pro" && (
-                  <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 backdrop-blur-sm">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                          <Palette className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="font-semibold text-white">AI Text Assistant</div>
-                      </div>
-                      <TextImprovement 
-                        fullText={result.improvedPrompt} 
-                        isPro={true}
-                        onTextUpdate={(newText: any) => setResult((prev: any) => prev ? {...prev, improvedPrompt: newText} : null)}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                </CardContent>
+              </Card>
             ) : (
-              <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 backdrop-blur-sm">
-                <CardContent className="p-8 text-center">
-                  <div className="relative mb-8">
-                    <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-2xl">
-                      <Brain className="w-12 h-12 text-white animate-pulse" />
-                    </div>
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
+              <Card className="border border-gray-200 bg-white shadow-sm">
+                <CardContent className="p-12 text-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Target className="w-8 h-8 text-gray-400" />
                   </div>
-                  
-                  <h3 className="text-2xl font-bold text-white mb-4">Redo för AI-magi?</h3>
-                  <p className="text-slate-300 mb-8 max-w-md mx-auto">
-                    Vår precision-engine analyserar tusentals datapunkter för att skapa 
-                    objektbeskrivningar som konverterar. Resultat är garanterade.
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Redo att skapa magi?</h3>
+                  <p className="text-gray-600 mb-6">
+                    Fyll i formuläret för att generera din första AI-drivna fastighetstext.
                   </p>
-                  
-                  {userStatus?.plan !== "pro" && (
-                    <div className="p-6 bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-white/10 backdrop-blur-sm">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <div className="font-bold text-white text-lg mb-1">Professional Engine</div>
-                          <div className="text-sm text-slate-400">Unlock full AI potential</div>
-                        </div>
-                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-none px-3 py-1 rounded-full font-semibold text-xs">PRO</div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 gap-3 mb-6">
-                        <div className="flex items-center gap-3 text-sm text-slate-300">
-                          <div className="w-5 h-5 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                          </div>
-                          <span>Unlimited prompts (20/mån)</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-300">
-                          <div className="w-5 h-5 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          </div>
-                          <span>Extended text length (600+ ord)</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-300">
-                          <div className="w-5 h-5 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                          </div>
-                          <span>AI Text Assistant & Editor</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-slate-300">
-                          <div className="w-5 h-5 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                            <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                          </div>
-                          <span>Advanced analytics & insights</span>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transition-all hover:scale-105"
-                        onClick={() => startCheckout("pro")}
-                      >
-                        <Zap className="w-4 h-4 mr-2" />
-                        Upgrade to Professional - 199kr/mån
-                      </Button>
-                    </div>
-                  )}
+                  <Button 
+                    onClick={() => document.getElementById('main-form')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Börja här
+                  </Button>
                 </CardContent>
               </Card>
             )}
           </div>
         </div>
+
+        {/* Features Section */}
+        <div className="mt-20">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Varför välja Mäklartexter AI?</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Professionell AI-teknik skapad specifikt för fastighetsbranschen
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="border border-gray-200 bg-white shadow-sm p-6">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                <Zap className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Snabbt och effektivt</h3>
+              <p className="text-gray-600">
+                Generera professionella fastighetstexter på sekunder istället för timmar.
+              </p>
+            </Card>
+
+            <Card className="border border-gray-200 bg-white shadow-sm p-6">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                <Target className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Optimerad för konvertering</h3>
+              <p className="text-gray-600">
+                Våra texter är designade för att maximera intresse och generera fler visningar.
+              </p>
+            </Card>
+
+            <Card className="border border-gray-200 bg-white shadow-sm p-6">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <Brain className="w-6 h-6 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">AI-driven precision</h3>
+              <p className="text-gray-600">
+                Avancerad AI som förstår fastighetsmarknaden och köparbeteende.
+              </p>
+            </Card>
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="mt-20 text-center">
+          <div className="bg-blue-50 rounded-2xl p-12 border border-blue-200">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Redo att revolutionera din fastighetsmarknadsföring?
+            </h2>
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              Gå med hundratals mäklare som redan använder vår AI för att skapa bättre fastighetstexter.
+            </p>
+            <Button 
+              size="lg"
+              onClick={() => setAuthModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-medium"
+            >
+              <Sparkles className="w-5 h-5 mr-2" />
+              Börja gratis idag
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Premium Footer */}
-      <footer className="relative z-10 border-t border-white/10 bg-slate-900/80 backdrop-blur-xl mt-20">
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-gray-50 mt-20">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
             <div className="md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
                   <FileText className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <span className="font-bold text-xl text-white">Mäklartexter</span>
-                  <div className="text-sm text-blue-400">AI Precision Engine</div>
+                  <span className="font-bold text-xl text-gray-900">Mäklartexter</span>
+                  <div className="text-sm text-gray-500">AI för fastighetsbranschen</div>
                 </div>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed max-w-md">
-                Revolutionary AI-powered property descriptions that convert. 
-                Built by real estate professionals, for real estate professionals.
+              <p className="text-gray-600 text-sm leading-relaxed max-w-md">
+                Revolutionerande AI-drivna fastighetstexter som konverterar. 
+                Skapad av fastighetsproffs, för fastighetsproffs.
               </p>
-              <div className="flex items-center gap-4 mt-6">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <span>System Operational</span>
-                </div>
-                <div className="text-xs text-slate-500">v3.0.1</div>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-4">Produkt</h4>
+              <div className="space-y-3 text-sm">
+                <div><Link href="/features" className="text-gray-600 hover:text-gray-900">Funktioner</Link></div>
+                <div><Link href="/blueprint" className="text-gray-600 hover:text-gray-900">Mallar</Link></div>
+                <div><Link href="/analytics" className="text-gray-600 hover:text-gray-900">Analytics</Link></div>
+                <div><Link href="/api" className="text-gray-600 hover:text-gray-900">API</Link></div>
               </div>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
+              <h4 className="font-semibold text-gray-900 mb-4">Företag</h4>
               <div className="space-y-3 text-sm">
-                <div><Link href="/features" className="text-slate-400 hover:text-white transition-colors">Features</Link></div>
-                <div><Link href="/blueprint" className="text-slate-400 hover:text-white transition-colors">Blueprint</Link></div>
-                <div><Link href="/analytics" className="text-slate-400 hover:text-white transition-colors">Analytics</Link></div>
-                <div><Link href="/api" className="text-slate-400 hover:text-white transition-colors">API</Link></div>
+                <div><Link href="/about" className="text-gray-600 hover:text-gray-900">Om oss</Link></div>
+                <div><Link href="/blog" className="text-gray-600 hover:text-gray-900">Blogg</Link></div>
+                <div><Link href="/careers" className="text-gray-600 hover:text-gray-900">Karriär</Link></div>
+                <div><Link href="/contact" className="text-gray-600 hover:text-gray-900">Kontakt</Link></div>
               </div>
             </div>
             
             <div>
-              <h4 className="font-semibold text-white mb-4">Resources</h4>
+              <h4 className="font-semibold text-gray-900 mb-4">Legal</h4>
               <div className="space-y-3 text-sm">
-                <div><Link href="/documentation" className="text-slate-400 hover:text-white transition-colors">Documentation</Link></div>
-                <div><Link href="/guides" className="text-slate-400 hover:text-white transition-colors">Guides</Link></div>
-                <div><Link href="/blog" className="text-slate-400 hover:text-white transition-colors">Blog</Link></div>
-                <div><Link href="/support" className="text-slate-400 hover:text-white transition-colors">Support</Link></div>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold text-white mb-4">Company</h4>
-              <div className="space-y-3 text-sm">
-                <div><Link href="/about" className="text-slate-400 hover:text-white transition-colors">About</Link></div>
-                <div><Link href="/careers" className="text-slate-400 hover:text-white transition-colors">Careers</Link></div>
-                <div><Link href="/privacy" className="text-slate-400 hover:text-white transition-colors">Privacy</Link></div>
-                <div><Link href="/terms" className="text-slate-400 hover:text-white transition-colors">Terms</Link></div>
+                <div><Link href="/privacy" className="text-gray-600 hover:text-gray-900">Integritet</Link></div>
+                <div><Link href="/terms" className="text-gray-600 hover:text-gray-900">Villkor</Link></div>
+                <div><Link href="/security" className="text-gray-600 hover:text-gray-900">Säkerhet</Link></div>
+                <div><Link href="/gdpr" className="text-gray-600 hover:text-gray-900">GDPR</Link></div>
               </div>
             </div>
           </div>
           
-          <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <div className="text-sm text-slate-400">
-              © {new Date().getFullYear()} Mäklartexter AB. All rights reserved.
-            </div>
-            <div className="flex items-center gap-6 mt-4 md:mt-0">
-              <div className="text-xs text-slate-500">Stockholm, Sweden</div>
-              <div className="text-xs text-slate-500">•</div>
-              <div className="text-xs text-slate-500">EU Compliant</div>
-              <div className="text-xs text-slate-500">•</div>
-              <div className="text-xs text-slate-500">GDPR Ready</div>
-            </div>
+          <div className="border-t border-gray-200 mt-8 pt-8 text-center text-sm text-gray-500">
+            <p>&copy; 2024 Mäklartexter AI. Alla rättigheter reserverade.</p>
           </div>
         </div>
       </footer>
 
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      {/* Auth Modal */}
+      <AuthModal 
+        open={authModalOpen} 
+        onOpenChange={setAuthModalOpen} 
+      />
     </div>
   );
 }
