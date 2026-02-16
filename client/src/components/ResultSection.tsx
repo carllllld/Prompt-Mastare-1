@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone } from "lucide-react";
 import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
+import { TextEditor } from "./TextEditor";
+import { PdfExport } from "./PdfExport";
 
 interface ResultSectionProps {
   result: OptimizeResponse;
@@ -42,6 +44,10 @@ function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
 
 export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
+  const [editedText, setEditedText] = useState(result.improvedPrompt);
+
+  // Build a live result object that reflects edits for PDF export
+  const liveResult = { ...result, improvedPrompt: editedText };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -65,6 +71,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#2D6A4F" }}>
             Komplett textkit — 5 texter genererade
           </span>
+          <PdfExport result={liveResult} />
         </div>
       )}
 
@@ -98,26 +105,27 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
         <CopyCard title="Rubrik" icon={Type} text={result.headline} iconColor="#D4AF37" delay="0.03s" />
       )}
 
-      {/* ── 2. OBJEKTBESKRIVNING ── */}
+      {/* ── 2. OBJEKTBESKRIVNING (editable) ── */}
       <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
-        <div className="px-6 py-4 border-b flex justify-between items-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+        <div className="px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
             <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
               Objektbeskrivning
             </span>
           </div>
-          <Button variant="outline" size="sm" onClick={() => copyToClipboard(result.improvedPrompt)}
-            className="h-8 text-xs font-medium transition-shadow"
-            style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}>
-            {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-            {copiedMain ? "Kopierad!" : "Kopiera text"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <PdfExport result={liveResult} />
+            <Button variant="outline" size="sm" onClick={() => copyToClipboard(editedText)}
+              className="h-8 text-xs font-medium transition-shadow"
+              style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}>
+              {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+              {copiedMain ? "Kopierad!" : "Kopiera text"}
+            </Button>
+          </div>
         </div>
         <div className="p-6 sm:p-8">
-          <div className="whitespace-pre-wrap leading-relaxed text-base font-serif" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939", lineHeight: "1.6" }}>
-            {result.improvedPrompt}
-          </div>
+          <TextEditor text={editedText} onTextChange={setEditedText} />
         </div>
       </div>
 

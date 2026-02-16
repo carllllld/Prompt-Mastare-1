@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { ResultSection } from "@/components/ResultSection";
+import { HistoryPanel } from "@/components/HistoryPanel";
 import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
@@ -336,6 +337,11 @@ export default function Home() {
                       Uppgradera till Pro
                     </Button>
                   </div>
+                )}
+
+                {/* History panel — logged in users */}
+                {isAuthenticated && (
+                  <HistoryPanel />
                 )}
 
                 {/* Not logged in CTA */}

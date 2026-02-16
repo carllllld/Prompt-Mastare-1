@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, Crown } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, Crown, MapPin } from "lucide-react";
 import { useState } from "react";
 
 interface PropertyFormData {
@@ -77,6 +77,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [showDetails, setShowDetails] = useState(false);
   const [wordCountMin, setWordCountMin] = useState(350);
   const [wordCountMax, setWordCountMax] = useState(450);
+  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
+  const [addressLookupResult, setAddressLookupResult] = useState<string | null>(null);
 
   const handleWordCountMin = (val: number) => {
     setWordCountMin(val);
@@ -267,7 +269,52 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
               <FormItem className="col-span-2">
                 <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
-                <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10" /></FormControl>
+                <div className="flex gap-2">
+                  <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10 flex-1" /></FormControl>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={addressLookupLoading || !field.value}
+                    className="h-10 text-[11px] px-3 whitespace-nowrap"
+                    style={{ borderColor: "#D1D5DB", color: addressLookupLoading ? "#9CA3AF" : "#2D6A4F" }}
+                    onClick={async () => {
+                      if (!field.value) return;
+                      setAddressLookupLoading(true);
+                      setAddressLookupResult(null);
+                      try {
+                        const res = await fetch("/api/address-lookup", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ address: field.value }),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.transport) form.setValue("transport", data.transport);
+                          if (data.neighborhood) form.setValue("neighborhood", data.neighborhood);
+                          const count = [data.transport, data.neighborhood].filter(Boolean).length;
+                          setAddressLookupResult(count > 0 ? `${data.places?.length || 0} platser hittade` : "Inga platser hittade");
+                        }
+                      } catch (err) {
+                        console.error("Address lookup failed:", err);
+                      } finally {
+                        setAddressLookupLoading(false);
+                      }
+                    }}
+                  >
+                    {addressLookupLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <><MapPin className="w-3.5 h-3.5 mr-1" />Sök läge</>
+                    )}
+                  </Button>
+                </div>
+                {addressLookupResult && (
+                  <p className="text-[10px] mt-1" style={{ color: "#2D6A4F" }}>
+                    ✓ {addressLookupResult} — kollektivtrafik & närområde ifyllt
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )} />
