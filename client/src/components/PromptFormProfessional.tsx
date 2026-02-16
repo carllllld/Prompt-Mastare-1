@@ -63,6 +63,7 @@ interface PromptFormProps {
     prompt: string;
     type: string;
     platform: string;
+    propertyData?: any;
     wordCountMin?: number;
     wordCountMax?: number;
     imageUrls?: string[];
@@ -221,6 +222,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       prompt: d,
       type: values.propertyType,
       platform: values.platform,
+      propertyData: values,
       ...(isPro && { wordCountMin, wordCountMax }),
       ...(uploadedImages.length > 0 && { imageUrls: uploadedImages }),
     });

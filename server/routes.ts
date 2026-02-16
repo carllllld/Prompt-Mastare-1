@@ -1032,7 +1032,6 @@ function matchExamples(disposition: any, _toneAnalysis: any): string[] {
   } else if (type.includes('radhus')) {
     candidates = [...EXAMPLE_DATABASE.radhus];
   } else {
-    // LÃ¤genhet â€" matcha efter storlek
     if (size > 0 && size < 55) {
       candidates = [...EXAMPLE_DATABASE.small_apartment, ...EXAMPLE_DATABASE.medium_apartment];
     } else if (size >= 85) {
@@ -1045,7 +1044,91 @@ function matchExamples(disposition: any, _toneAnalysis: any): string[] {
   return candidates.slice(0, 2).map((ex) => ex.text);
 }
 
-// Faktagranskning â€“ ALDRIG omskrivning, bara rapportering
+// Bygg disposition direkt frÃ¥n strukturerad formulÃ¤rdata â€" HOPPA Ã–VER AI-extraktion
+function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_analysis: any, writing_plan: any } {
+  const typeLabels: Record<string, string> = {
+    apartment: "lÃ¤genhet", house: "villa", townhouse: "radhus", villa: "villa",
+  };
+  const propertyType = typeLabels[pd.propertyType] || pd.propertyType || "lÃ¤genhet";
+  const size = Number(pd.livingArea) || 0;
+  
+  const disposition = {
+    property: {
+      type: propertyType,
+      address: pd.address || "",
+      size: size,
+      rooms: Number(pd.totalRooms) || 0,
+      bedrooms: Number(pd.bedrooms) || 0,
+      floor: pd.floor || null,
+      year_built: pd.buildYear || null,
+      condition: pd.condition || null,
+      energy_class: pd.energyClass || null,
+      elevator: pd.elevator || false,
+      materials: {
+        floors: pd.flooring || null,
+        kitchen: pd.kitchenDescription || null,
+        bathroom: pd.bathroomDescription || null,
+      },
+      balcony: pd.balconyArea ? {
+        exists: true, direction: pd.balconyDirection || null, size: `${pd.balconyArea} kvm`,
+      } : { exists: false },
+      layout: pd.layoutDescription || null,
+      storage: pd.storage ? [pd.storage] : [],
+      heating: pd.heating || null,
+      parking: pd.parking || null,
+      lot_area: pd.lotArea ? `${pd.lotArea} kvm` : null,
+      garden: pd.gardenDescription || null,
+      special_features: pd.specialFeatures ? pd.specialFeatures.split(/[,\n]+/).map((s: string) => s.trim()).filter(Boolean) : [],
+      unique_selling_points: pd.uniqueSellingPoints || null,
+      other_info: pd.otherInfo || null,
+    },
+    economics: {
+      price: Number(pd.price) || null,
+      fee: Number(pd.monthlyFee) || null,
+      association: pd.brfName ? { name: pd.brfName } : null,
+    },
+    location: {
+      area: pd.area || null,
+      transport: pd.transport || null,
+      neighborhood: pd.neighborhood || null,
+      view: pd.view || null,
+    },
+  };
+
+  const price = disposition.economics.price;
+  let priceCategory = "standard";
+  if (price && size) {
+    const pricePerKvm = price / size;
+    if (pricePerKvm > 120000) priceCategory = "luxury";
+    else if (pricePerKvm > 80000) priceCategory = "premium";
+    else if (pricePerKvm < 30000) priceCategory = "budget";
+  }
+
+  const tone_analysis = {
+    price_category: priceCategory,
+    target_audience: size > 100 ? "families" : size > 60 ? "couples" : "singles_couples",
+    writing_style: "professional",
+    key_selling_points: [
+      pd.uniqueSellingPoints,
+      pd.kitchenDescription ? "kÃ¶k" : null,
+      pd.balconyArea ? "balkong/uteplats" : null,
+    ].filter(Boolean).slice(0, 3),
+  };
+
+  const writing_plan = {
+    opening: `${pd.address} â€" ${propertyType} om ${size} kvm`,
+    must_include: [
+      pd.address && "adress", pd.livingArea && "storlek", pd.totalRooms && "rum",
+      pd.kitchenDescription && "kÃ¶k", pd.bathroomDescription && "badrum",
+      pd.balconyArea && "balkong", pd.area && "lÃ¤ge",
+    ].filter(Boolean),
+    forbidden_phrases: ["erbjuder", "perfekt fÃ¶r", "i hjÃ¤rtat av", "vilket", "fÃ¶r den som", "fantastisk", "vÃ¤lkommen"],
+  };
+
+  return { disposition, tone_analysis, writing_plan };
+}
+
+// Faktagranskning â€" ALDRIG omskrivning, bara rapportering
 const FACT_CHECK_PROMPT = `
 # UPPGIFT
 
@@ -1240,69 +1323,76 @@ Svara kortfattat och konkret.`
       
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
 
-      // === OPTIMIZED PIPELINE: 3 CORE STEPS ===
+      // === OPTIMIZED PIPELINE ===
+      const propertyData = req.body.propertyData;
       
-      // Step 1: Combined extraction (facts + tone + writing plan) - 1 API call
-      console.log("[Step 1] Combined extraction: facts, tone, and writing plan...");
-      
-      const dispositionMessages = [
-        {
-          role: "system" as const,
-          content: COMBINED_EXTRACTION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: `RÃ…DATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}\n\nÃ–NSKAT ORDANTAL: ${targetWordMin}-${targetWordMax} ord`,
-        },
-      ];
-
-      const dispositionCompletion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: dispositionMessages,
-        max_tokens: 3000,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      });
-
-      const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
       let disposition: any;
-      try {
-        disposition = safeJsonParse(dispositionText);
-      } catch (e) {
-        console.warn("[Step 1] Disposition JSON parse failed, retrying once...", e);
-        const dispositionRetry = await openai.chat.completions.create({
+      let toneAnalysis: any;
+      let writingPlan: any;
+
+      if (propertyData && propertyData.address) {
+        // SNABB VÃ„G: Strukturerad data frÃ¥n formulÃ¤ret â†' hoppa Ã¶ver AI-extraktion (0 API-anrop)
+        console.log("[Step 1] FAST PATH: Using structured form data directly (skipping AI extraction)");
+        const structured = buildDispositionFromStructuredData(propertyData);
+        disposition = structured.disposition;
+        toneAnalysis = structured.tone_analysis;
+        writingPlan = structured.writing_plan;
+        console.log("[Step 1] Structured disposition built from form data");
+      } else {
+        // FALLBACK: FÃ¶r gammal klient eller API-anrop utan propertyData
+        console.log("[Step 1] FALLBACK: AI extraction from raw text...");
+        
+        const dispositionMessages = [
+          {
+            role: "system" as const,
+            content: COMBINED_EXTRACTION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          },
+          {
+            role: "user" as const,
+            content: `RÃ…DATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}\n\nÃ–NSKAT ORDANTAL: ${targetWordMin}-${targetWordMax} ord`,
+          },
+        ];
+
+        const dispositionCompletion = await openai.chat.completions.create({
           model: aiModel,
-          messages: [
-            {
-              role: "system" as const,
-              content:
-                COMBINED_EXTRACTION_PROMPT +
-                "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
-            },
-            { role: "user" as const, content: `RÃ…DATA: ${prompt}` },
-          ],
+          messages: dispositionMessages,
           max_tokens: 3000,
           temperature: 0.1,
           response_format: { type: "json_object" },
         });
-        const dispositionRetryText = dispositionRetry.choices[0]?.message?.content || "{}";
+
+        const dispositionText = dispositionCompletion.choices[0]?.message?.content || "{}";
+        let rawDisposition: any;
         try {
-          disposition = safeJsonParse(dispositionRetryText);
-        } catch (e2) {
-          return res.status(422).json({
-            message: "Kunde inte tolka data. FÃ¶rsÃ¶k igen.",
+          rawDisposition = safeJsonParse(dispositionText);
+        } catch (e) {
+          console.warn("[Step 1] Disposition JSON parse failed, retrying...", e);
+          const dispositionRetry = await openai.chat.completions.create({
+            model: aiModel,
+            messages: [
+              {
+                role: "system" as const,
+                content: COMBINED_EXTRACTION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+              },
+              { role: "user" as const, content: `RÃ…DATA: ${prompt}` },
+            ],
+            max_tokens: 3000,
+            temperature: 0.1,
+            response_format: { type: "json_object" },
           });
+          const retryText = dispositionRetry.choices[0]?.message?.content || "{}";
+          try {
+            rawDisposition = safeJsonParse(retryText);
+          } catch (e2) {
+            return res.status(422).json({ message: "Kunde inte tolka data. FÃ¶rsÃ¶k igen." });
+          }
         }
+        
+        disposition = rawDisposition.disposition || rawDisposition;
+        toneAnalysis = rawDisposition.tone_analysis || {};
+        writingPlan = rawDisposition.writing_plan || {};
+        console.log("[Step 1] AI extraction completed");
       }
-      
-      // Extract sub-fields from combined extraction
-      const rawDisposition = disposition;
-      if (rawDisposition.disposition) {
-        disposition = rawDisposition.disposition;
-      }
-      const toneAnalysis = rawDisposition.tone_analysis || {};
-      const writingPlan = rawDisposition.writing_plan || {};
-      console.log("[Step 1] Combined extraction completed");
 
       // Step 2: Local example matching - 0 API calls
       console.log("[Step 2] Local example matching...");
