@@ -173,6 +173,20 @@ const FORBIDDEN_PHRASES = [
   "hÃ¤r bor du",
   "strategiskt placerad",
   "strategiskt lÃ¤ge",
+  
+  // NYA FRASER FRÅN OUTPUT-TEST 2026-02
+  "skapa minnen",
+  "utmärkt val",
+  "gott om utrymme",
+  "lek och avkoppling",
+  "natur och stadsliv",
+  "bekvämt boende",
+  "rymligt intryck",
+  "gör det enkelt att",
+  "gör det möjligt att",
+  "ett område för familjer",
+  "i mycket gott skick",
+  "ligger centralt i",
 ];
 
 function findRuleViolations(text: string, platform: string = "hemnet"): string[] {
@@ -535,6 +549,24 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["hÃ¤r kan du", ""],
   ["hÃ¤r bor du", ""],
   
+  // === NYA FRASER FRÃ…N OUTPUT-TEST 2026-02 ===
+  ["skapa minnen", ""],
+  ["utmÃ¤rkt val fÃ¶r den som", ""],
+  ["utmÃ¤rkt val", ""],
+  ["gott om utrymme fÃ¶r lek och avkoppling", "stor tomt"],
+  ["gott om utrymme", ""],
+  ["lek och avkoppling", ""],
+  ["natur och stadsliv", ""],
+  ["bekvÃ¤mt boende", ""],
+  ["rymligt intryck", ""],
+  ["gÃ¶r det enkelt att umgÃ¥s", ""],
+  ["gÃ¶r det enkelt att", ""],
+  ["gÃ¶r det mÃ¶jligt att", ""],
+  ["ett omrÃ¥de fÃ¶r familjer", ""],
+  ["i mycket gott skick", "i gott skick"],
+  ["ligger centralt i ett omrÃ¥de", ""],
+  ["ligger centralt i", "ligger i"],
+  
   ];
 
 function cleanForbiddenPhrases(text: string): string {
@@ -892,6 +924,7 @@ ALDRIG GÃ–R:
 - AnvÃ¤nd "kontakta oss", "boka visning", "missa inte", "unik mÃ¶jlighet"
 - HITTA PÃ… fakta. Om mÃ¤rke/mÃ¥tt/Ã¥rtal/avstÃ¥nd inte finns i dispositionen â€" UTELÃ„MNA det.
 - Skriva lÃ¥nga meningar med bisatser.
+- Skriva sammanfattande/emotionella stycken i slutet. INGA "skapa minnen", "utmÃ¤rkt val", "bekvÃ¤mt boende", "lek och avkoppling". Sista stycket ska vara LÃ„GE eller PRIS â€" aldrig kÃ¤nslor.
 
 ALLTID GÃ–R:
 - BÃ¶rja med "Gatuadress, vÃ¥ning/ort. Typ om X kvm..."
@@ -927,7 +960,8 @@ Kort text max 280 tecken. BÃ¶rja med gatunamnet. 1-2 sÃ¤ljpunkter. Ingen emo
 2. HITTA ALDRIG PÃ… fakta. Bara det som stÃ¥r i dispositionen.
 3. Inga fÃ¶rbjudna ord: erbjuder, bjuder pÃ¥, prÃ¤glas av, generÃ¶s, fantastisk, perfekt, vilket, som ger en.
 4. Korta meningar. Ingen utfyllnad. Varje mening = ny fakta.
-5. Avsluta ALDRIG med uppmaning.`;
+5. Avsluta ALDRIG med uppmaning.
+6. INGA emotionella slutstycken. Sista stycket = LÄGE eller PRIS.`;
 
 // --- BOOLI/EGEN SIDA: Sandwich-teknik fÃ¶r maximal AI-lydnad ---
 const BOOLI_TEXT_PROMPT_WRITER = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en objektbeskrivning fÃ¶r Booli/egen sida.
@@ -941,6 +975,7 @@ ALDRIG GÃ–R:
 - AnvÃ¤nd "kontakta oss", "boka visning", "missa inte", "unik mÃ¶jlighet"
 - HITTA PÃ… fakta. Om mÃ¤rke/mÃ¥tt/Ã¥rtal/avstÃ¥nd inte finns i dispositionen â€" UTELÃ„MNA det.
 - Skriva lÃ¥nga meningar med bisatser.
+- Skriva sammanfattande/emotionella stycken i slutet. INGA "skapa minnen", "utmÃ¤rkt val", "bekvÃ¤mt boende", "lek och avkoppling". Sista stycket ska vara LÃ„GE eller PRIS â€" aldrig kÃ¤nslor.
 
 ALLTID GÃ–R:
 - BÃ¶rja med "Gatuadress, vÃ¥ning/ort. Typ om X kvm..."
@@ -978,7 +1013,8 @@ Kort text max 280 tecken. BÃ¶rja med gatunamnet. 1-2 sÃ¤ljpunkter. Ingen emo
 2. HITTA ALDRIG PÃ… fakta. Bara det som stÃ¥r i dispositionen.
 3. Inga fÃ¶rbjudna ord: erbjuder, bjuder pÃ¥, prÃ¤glas av, generÃ¶s, fantastisk, perfekt, vilket, som ger en.
 4. Korta meningar. Ingen utfyllnad. Varje mening = ny fakta.
-5. Avsluta ALDRIG med uppmaning.`;
+5. Avsluta ALDRIG med uppmaning.
+6. INGA emotionella slutstycken. Sista stycket = LÄGE eller PRIS.`;
 
 // [Dead code removed: _UNUSED_BOOLI_TEXT_PROMPT + BOOLI_EXPERT_PROMPT â€” ~300 lines of unused prompts]
 const _UNUSED_BOOLI_TEXT_PROMPT = `REMOVED`;
@@ -1305,16 +1341,19 @@ Svara kortfattat och konkret.`
             "DÅLIGT: \"Köket präglas av moderna material och bjuder på generös arbetsyta, vilket skapar en härlig plats för matlagning.\"\n" +
             "BRA: \"Köket är renoverat 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Plats för matbord vid fönstret.\"\n\n" +
             "DÅLIGT: \"Kontakta oss för visning av detta unika hem.\"\n" +
-            "BRA: (Avsluta med läge-info, ALDRIG med uppmaning)\n" +
+            "BRA: (Avsluta med läge-info, ALDRIG med uppmaning)\n\n" +
+            "DÅLIGT: \"Den öppna planlösningen gör det enkelt att umgås och skapa minnen. Den stora tomten har gott om utrymme för lek och avkoppling. Med närhet till natur och stadsliv är detta ett utmärkt val för den som söker ett bekvämt boende.\"\n" +
+            "BRA: (Avsluta med fakta om LÄGE eller PRIS — ALDRIG med emotionella sammanfattningar)\n" +
             "\n--- REGLER ---\n" +
             "1. Börja med gatuadress — ALDRIG 'Välkommen' eller 'Här'\n" +
             "2. Använd BARA fakta från dispositionen — HITTA ALDRIG PÅ\n" +
             "3. Korta meningar. Varje mening = ny fakta. Ingen utfyllnad.\n" +
-            "4. FÖRBJUDET: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, som ger en, för den som, i hjärtat av, drömboende\n" +
+            "4. FÖRBJUDET: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, som ger en, för den som, i hjärtat av, drömboende, skapa minnen, utmärkt val, bekvämt boende, gott om utrymme\n" +
             "5. Skriv i samma stil som exempeltexterna\n" +
-            "6. Avsluta ALDRIG med uppmaning\n" +
+            "6. Avsluta ALDRIG med uppmaning eller emotionellt slutstycke\n" +
+            "7. Sista stycket ska vara LÄGE eller PRIS — aldrig känslor\n" +
             "\n--- VIKTIGAST (läs detta sist) ---\n" +
-            "Börja med gatuadressen. HITTA INTE PÅ fakta. Inga förbjudna ord. Korta meningar. Ingen uppmaning i slutet.",
+            "Börja med gatuadressen. HITTA INTE PÅ fakta. Inga förbjudna ord. Korta meningar. Sista stycket = LÄGE eller PRIS. Aldrig emotionell sammanfattning.",
         },
       ];
 
