@@ -31,7 +31,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
     <div className="space-y-4 pb-12">
 
       {/* ── STATUS BAR ── */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap animate-slide-up">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ background: "#F0EDE6", color: "#4B5563" }}>
           <BarChart3 className="w-3 h-3" />
           {wordCount} ord
@@ -63,7 +63,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
       </div>
 
       {/* ── HUVUDANNONS ── */}
-      <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+      <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.05s" }}>
         <div className="px-6 py-4 border-b flex justify-between items-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
@@ -75,7 +75,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
             variant="outline" 
             size="sm" 
             onClick={() => copyToClipboard(result.improvedPrompt, 'main')} 
-            className="h-8 text-xs font-medium"
+            className="h-8 text-xs font-medium transition-shadow"
             style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}
           >
             {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
@@ -83,7 +83,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           </Button>
         </div>
         <div className="p-6 sm:p-8">
-          <div className="whitespace-pre-wrap leading-relaxed text-base" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+          <div className="whitespace-pre-wrap leading-relaxed text-base font-serif" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939", lineHeight: "1.6" }}>
             {result.improvedPrompt}
           </div>
         </div>
@@ -91,7 +91,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
 
       {/* ── HIGHLIGHTS ── */}
       {result.highlights && result.highlights.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 animate-slide-up" style={{ animationDelay: "0.1s" }}>
           {result.highlights.map((h, i) => (
             <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "#F0FDF4", borderColor: "#BBF7D0", color: "#166534" }}>
               {h}
@@ -102,7 +102,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
 
       {/* ── SOCIAL MEDIA ── */}
       {result.socialCopy && (
-        <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+        <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.15s" }}>
           <div className="px-5 py-3 border-b flex justify-between items-center" style={{ borderColor: "#E8E5DE" }}>
             <div className="flex items-center gap-2">
               <Share2 className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
@@ -144,7 +144,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
       )}
 
       {/* ── INFO CARDS GRID ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up" style={{ animationDelay: "0.25s" }}>
 
         {/* Saknad information */}
         {result.improvements && result.improvements.length > 0 && (

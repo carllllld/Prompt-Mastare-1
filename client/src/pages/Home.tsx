@@ -25,6 +25,7 @@ export default function Home() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const LOADING_STEPS = [
     "Analyserar fastighetsdata...",
@@ -57,6 +58,7 @@ export default function Home() {
       onSuccess: (res: OptimizeResponse) => {
         setResult(res);
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+        setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       },
       onError: (error: any) => {
         if (error.limitReached) {
@@ -242,9 +244,9 @@ export default function Home() {
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}
-          <div className={result ? "lg:col-span-7" : "lg:col-span-4"}>
+          <div ref={resultRef} className={result ? "lg:col-span-7" : "lg:col-span-4"}>
             {result ? (
-              <div className="lg:sticky lg:top-24">
+              <div className="lg:sticky lg:top-24 animate-fade-in">
                 <ResultSection
                   result={result}
                   onNewPrompt={() => setResult(null)}
