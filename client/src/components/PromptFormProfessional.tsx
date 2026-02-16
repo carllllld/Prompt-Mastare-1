@@ -76,6 +76,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [showDetails, setShowDetails] = useState(false);
   const [wordCountMin, setWordCountMin] = useState(350);
   const [wordCountMax, setWordCountMax] = useState(450);
+
+  const handleWordCountMin = (val: number) => {
+    setWordCountMin(val);
+    if (val > wordCountMax) setWordCountMax(val);
+  };
+  const handleWordCountMax = (val: number) => {
+    setWordCountMax(val);
+    if (val < wordCountMin) setWordCountMin(val);
+  };
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
 
   const form = useForm<PropertyFormData>({
@@ -120,6 +129,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const selectedType = form.watch("propertyType");
 
   const onLocalSubmit = (values: PropertyFormData) => {
+    const isApartmentType = values.propertyType === "apartment" || values.propertyType === "townhouse";
     const typeLabels: Record<string, string> = {
       apartment: "Lägenhet", house: "Hus", townhouse: "Radhus", villa: "Villa",
     };
@@ -131,7 +141,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     if (values.address) d += `Adress: ${values.address}\n`;
     if (values.area) d += `Stadsdel/Område: ${values.area}\n`;
     if (values.price) d += `Pris: ${values.price} kr\n`;
-    if (values.monthlyFee) d += `Avgift: ${values.monthlyFee} kr/mån\n`;
+    if (values.monthlyFee) {
+      const feeLabel = isApartmentType ? "Avgift" : "Driftskostnad";
+      d += `${feeLabel}: ${values.monthlyFee} kr/mån\n`;
+    }
 
     d += "\n=== YTOR ===\n";
     if (values.livingArea) d += `Boarea: ${values.livingArea} kvm\n`;
@@ -146,8 +159,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     if (values.buildYear) d += `Byggår: ${values.buildYear}\n`;
     if (values.condition) d += `Skick: ${values.condition}\n`;
     if (values.energyClass) d += `Energiklass: ${values.energyClass}\n`;
-    if (values.floor) d += `Våning: ${values.floor}\n`;
-    d += `Hiss: ${values.elevator ? "Ja" : "Nej"}\n`;
+    if (isApartmentType) {
+      if (values.floor) d += `Våning: ${values.floor}\n`;
+      d += `Hiss: ${values.elevator ? "Ja" : "Nej"}\n`;
+    }
     if (values.brfName) d += `Förening: ${values.brfName}\n`;
     if (values.storage) d += `Förråd/Förvaring: ${values.storage}\n`;
 
@@ -166,9 +181,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       d += `${values.bathroomDescription}\n`;
     }
 
-    d += "\n=== MATERIAL & TEKNIK ===\n";
-    if (values.flooring) d += `Golvmaterial (typ och var i bostaden, t.ex. per rum): ${values.flooring}\n`;
-    if (values.heating) d += `Uppvärmning: ${values.heating}\n`;
+    if (values.flooring || values.heating) {
+      d += "\n=== MATERIAL & TEKNIK ===\n";
+      if (values.flooring) d += `Golvmaterial (typ och var i bostaden, t.ex. per rum): ${values.flooring}\n`;
+      if (values.heating) d += `Uppvärmning: ${values.heating}\n`;
+    }
 
     if (values.view || values.neighborhood || values.transport || values.parking) {
       d += "\n=== LÄGE & OMGIVNING ===\n";
@@ -270,8 +287,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             )} />
             <FormField control={form.control} name="monthlyFee" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs text-gray-500">Avgift (kr/mån)</FormLabel>
-                <FormControl><Input type="number" placeholder="3 500" {...field} className="h-10" /></FormControl>
+                <FormLabel className="text-xs text-gray-500">
+                  {(selectedType === "apartment" || selectedType === "townhouse") ? "Avgift (kr/mån)" : "Driftskostnad (kr/mån)"}
+                </FormLabel>
+                <FormControl><Input type="number" placeholder={(selectedType === "apartment" || selectedType === "townhouse") ? "3 500" : "2 000"} {...field} className="h-10" /></FormControl>
               </FormItem>
             )} />
             <FormField control={form.control} name="livingArea" render={({ field }) => (
@@ -624,7 +643,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-xs text-gray-400 font-medium shrink-0">Textlängd:</span>
               <div className="flex items-center gap-2">
-                <Select value={String(wordCountMin)} onValueChange={(v) => setWordCountMin(Number(v))}>
+                <Select value={String(wordCountMin)} onValueChange={(v) => handleWordCountMin(Number(v))}>
                   <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[200, 250, 300, 350, 400, 450, 500].map((n) => (
@@ -633,7 +652,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   </SelectContent>
                 </Select>
                 <span className="text-xs text-gray-300">—</span>
-                <Select value={String(wordCountMax)} onValueChange={(v) => setWordCountMax(Number(v))}>
+                <Select value={String(wordCountMax)} onValueChange={(v) => handleWordCountMax(Number(v))}>
                   <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[300, 350, 400, 450, 500, 550, 600].map((n) => (
