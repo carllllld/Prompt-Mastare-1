@@ -913,7 +913,7 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
 };
 
 // --- HEMNET FORMAT: Sandwich-teknik fÃ¶r maximal AI-lydnad ---
-const HEMNET_TEXT_PROMPT = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en Hemnet-annons.
+const HEMNET_TEXT_PROMPT = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en Hemnet-annons OCH 4 extra marknadsföringstexter.
 
 # KRITISKT â€" LÃ„S DETTA FÃ–RST
 
@@ -933,7 +933,7 @@ ALLTID GÃ–R:
 - AnvÃ¤nd platser med NAMN och AVSTÅND om de finns i dispositionen.
 - Skriv i presens.
 
-# STRUKTUR
+# STRUKTUR FÃ–R OBJEKTBESKRIVNING
 
 1. Ã–PPNING: Adress, vÃ¥ning, typ, kvm, rum.
 2. PLANLÃ–SNING: Hall, vardagsrum, takhÃ¶jd, golv, ljus.
@@ -946,13 +946,16 @@ ALLTID GÃ–R:
 
 Om info saknas fÃ¶r en punkt â€" HOPPA Ã–VER den.
 
-# SOCIAL MEDIA
+# EXTRA TEXTER (generera ALLA frÃ¥n samma disposition)
 
-Kort text max 280 tecken. BÃ¶rja med gatunamnet. 1-2 sÃ¤ljpunkter. Ingen emoji. Inga utropstecken.
+RUBRIK (max 70 tecken): Gatuadress + typ + unik egenskap. Ex: "Birger Jarlsgatan 22 â€" Ljus trea med balkong i sÃ¶derlÃ¤ge"
+INSTAGRAM (3-5 meningar): BÃ¶rja med gatunamnet. 2-3 sÃ¤ljpunkter. Avsluta med storlek. Inga emoji/utropstecken. LÃ¤gg till 5 hashtags pÃ¥ egen rad.
+VISNINGSINBJUDAN (max 80 ord): BÃ¶rja "Visning â€" [adress]". Typ, storlek, 2 hÃ¶jdpunkter. Avsluta med "Tid: [TID]\\nPlats: [ADRESS]\\nAnmÃ¤lan: [KONTAKT]".
+KORTANNONS (max 40 ord): Gatuadress, typ, kvm, 1-2 sÃ¤ljpunkter. FÃ¶r print/banner/Google Ads.
 
 # OUTPUT (JSON)
 
-{"highlights":["sÃ¤ljpunkt 1","sÃ¤ljpunkt 2","sÃ¤ljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","analysis":{"target_group":"MÃ¥lgrupp","area_advantage":"LÃ¤gesfÃ¶rdelar","pricing_factors":"VÃ¤rdehÃ¶jande faktorer"},"socialCopy":"Max 280 tecken","missing_info":["Saknad info"],"pro_tips":["Tips"]}
+{"highlights":["sÃ¤ljpunkt 1","sÃ¤ljpunkt 2","sÃ¤ljpunkt 3"],"improvedPrompt":"Objektbeskrivningen med stycken separerade av \\n\\n","headline":"Rubrik max 70 tecken","instagramCaption":"Instagram-text med hashtags","showingInvitation":"Visningsinbjudan-mejl","shortAd":"Kort annonstext max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"MÃ¥lgrupp","area_advantage":"LÃ¤gesfÃ¶rdelar","pricing_factors":"VÃ¤rdehÃ¶jande faktorer"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
 
 # PÃ…MINNELSE â€" VIKTIGAST
 
@@ -961,10 +964,11 @@ Kort text max 280 tecken. BÃ¶rja med gatunamnet. 1-2 sÃ¤ljpunkter. Ingen emo
 3. Inga fÃ¶rbjudna ord: erbjuder, bjuder pÃ¥, prÃ¤glas av, generÃ¶s, fantastisk, perfekt, vilket, som ger en.
 4. Korta meningar. Ingen utfyllnad. Varje mening = ny fakta.
 5. Avsluta ALDRIG med uppmaning.
-6. INGA emotionella slutstycken. Sista stycket = LÄGE eller PRIS.`;
+6. INGA emotionella slutstycken. Sista stycket = LÃ„GE eller PRIS.
+7. Generera ALLA fÃ¤lt: headline, instagramCaption, showingInvitation, shortAd.`;
 
 // --- BOOLI/EGEN SIDA: Sandwich-teknik fÃ¶r maximal AI-lydnad ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en objektbeskrivning fÃ¶r Booli/egen sida.
+const BOOLI_TEXT_PROMPT_WRITER = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en objektbeskrivning fÃ¶r Booli/egen sida OCH 4 extra marknadsföringstexter.
 
 # KRITISKT â€" LÃ„S DETTA FÃ–RST
 
@@ -984,7 +988,7 @@ ALLTID GÃ–R:
 - Inkludera ekonomi: avgift, utgÃ¥ngspris â€" om det finns i dispositionen.
 - Skriv i presens.
 
-# STRUKTUR (mer detaljerad Ã¤n Hemnet)
+# STRUKTUR FÃ–R OBJEKTBESKRIVNING (mer detaljerad Ã¤n Hemnet)
 
 1. Ã–PPNING: Adress, vÃ¥ning, typ, kvm, rum.
 2. PLANLÃ–SNING: Hall, vardagsrum, takhÃ¶jd, golv, ljus.
@@ -999,13 +1003,16 @@ ALLTID GÃ–R:
 
 Om info saknas fÃ¶r en punkt â€" HOPPA Ã–VER den.
 
-# SOCIAL MEDIA
+# EXTRA TEXTER (generera ALLA frÃ¥n samma disposition)
 
-Kort text max 280 tecken. BÃ¶rja med gatunamnet. 1-2 sÃ¤ljpunkter. Ingen emoji. Inga utropstecken.
+RUBRIK (max 70 tecken): Gatuadress + typ + unik egenskap. Ex: "TallvÃ¤gen 8 â€" Villa med eldstad och dubbelgarage"
+INSTAGRAM (3-5 meningar): BÃ¶rja med gatunamnet. 2-3 sÃ¤ljpunkter. Avsluta med storlek. Inga emoji/utropstecken. LÃ¤gg till 5 hashtags pÃ¥ egen rad.
+VISNINGSINBJUDAN (max 80 ord): BÃ¶rja "Visning â€" [adress]". Typ, storlek, 2 hÃ¶jdpunkter. Avsluta med "Tid: [TID]\\nPlats: [ADRESS]\\nAnmÃ¤lan: [KONTAKT]".
+KORTANNONS (max 40 ord): Gatuadress, typ, kvm, 1-2 sÃ¤ljpunkter. FÃ¶r print/banner/Google Ads.
 
 # OUTPUT (JSON)
 
-{"highlights":["sÃ¤ljpunkt 1","sÃ¤ljpunkt 2","sÃ¤ljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","analysis":{"target_group":"MÃ¥lgrupp","area_advantage":"LÃ¤gesfÃ¶rdelar","pricing_factors":"VÃ¤rdehÃ¶jande faktorer"},"socialCopy":"Max 280 tecken","missing_info":["Saknad info"],"pro_tips":["Tips"]}
+{"highlights":["sÃ¤ljpunkt 1","sÃ¤ljpunkt 2","sÃ¤ljpunkt 3"],"improvedPrompt":"Objektbeskrivningen med stycken separerade av \\n\\n","headline":"Rubrik max 70 tecken","instagramCaption":"Instagram-text med hashtags","showingInvitation":"Visningsinbjudan-mejl","shortAd":"Kort annonstext max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"MÃ¥lgrupp","area_advantage":"LÃ¤gesfÃ¶rdelar","pricing_factors":"VÃ¤rdehÃ¶jande faktorer"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
 
 # PÃ…MINNELSE â€" VIKTIGAST
 
@@ -1014,7 +1021,8 @@ Kort text max 280 tecken. BÃ¶rja med gatunamnet. 1-2 sÃ¤ljpunkter. Ingen emo
 3. Inga fÃ¶rbjudna ord: erbjuder, bjuder pÃ¥, prÃ¤glas av, generÃ¶s, fantastisk, perfekt, vilket, som ger en.
 4. Korta meningar. Ingen utfyllnad. Varje mening = ny fakta.
 5. Avsluta ALDRIG med uppmaning.
-6. INGA emotionella slutstycken. Sista stycket = LÄGE eller PRIS.`;
+6. INGA emotionella slutstycken. Sista stycket = LÃ„GE eller PRIS.
+7. Generera ALLA fÃ¤lt: headline, instagramCaption, showingInvitation, shortAd.`;
 
 // [Dead code removed: _UNUSED_BOOLI_TEXT_PROMPT + BOOLI_EXPERT_PROMPT â€” ~300 lines of unused prompts]
 const _UNUSED_BOOLI_TEXT_PROMPT = `REMOVED`;
@@ -1474,6 +1482,18 @@ Svara kortfattat och konkret.`
       if (result.socialCopy) {
         result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
       }
+      if (result.headline) {
+        result.headline = cleanForbiddenPhrases(result.headline);
+      }
+      if (result.instagramCaption) {
+        result.instagramCaption = cleanForbiddenPhrases(result.instagramCaption);
+      }
+      if (result.showingInvitation) {
+        result.showingInvitation = cleanForbiddenPhrases(result.showingInvitation);
+      }
+      if (result.shortAd) {
+        result.shortAd = cleanForbiddenPhrases(result.shortAd);
+      }
       console.log("[Post-processing] Automatic phrase cleanup done before validation");
 
       // Validering - nu kÃ¶rs den pÃ¥ redan rensad text
@@ -1685,6 +1705,10 @@ Svara med JSON i formatet:
         pro_tips: result.pro_tips || [],
         critical_gaps: result.critical_gaps || [],
         socialCopy: result.socialCopy || null,
+        headline: result.headline || null,
+        instagramCaption: result.instagramCaption || null,
+        showingInvitation: result.showingInvitation || null,
+        shortAd: result.shortAd || null,
         improvement_suggestions: improvementSuggestions,
         factCheck: result.factCheck || null,
         wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
