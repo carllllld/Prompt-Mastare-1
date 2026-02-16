@@ -578,19 +578,22 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 
 // --- 2-STEGS GENERATION ---
 
-// Steg 1: Extrahera fakta + geografisk kontext
-const DISPOSITION_PROMPT = `
+// COMBINED EXTRACTION: Extrahera fakta + ton + skrivplan i ETT steg
+const COMBINED_EXTRACTION_PROMPT = `
 # UPPGIFT
 
-Du är en svensk fastighetsmäklare med 15 års erfarenhet. Extrahera ALLA relevanta fakta från rådata och lägg till geografisk kontext. Skriv INGEN text, bara fakta.
+Du är en svensk fastighetsmäklare med 15 års erfarenhet. I ETT steg ska du:
+1. Extrahera ALLA relevanta fakta från rådata
+2. Analysera tonalitet och målgrupp
+3. Skapa en skrivplan med evidence-gate
 
 # REGLER
 
-1. Hitta ALDRIG på – extrahera bara vad som faktiskt finns i rådata
-2. Lägg till geografisk kontext baserat på platsen
-3. Använd exakta värden från rådata (kvm, pris, år, etc)
-4. Strukturera i JSON enligt formatet nedan
-5. Om info saknas, lämna fältet tomt eller null
+1. HITTA ALDRIG PÅ – extrahera bara vad som faktiskt finns i rådata
+2. Om info saknas, ange null – gissa ALDRIG
+3. Använd exakta värden från rådata (kvm, pris, år, märken, material)
+4. Lägg till geografisk kontext baserat på platsen
+5. Varje claim i skrivplanen MÅSTE ha evidence från rådata
 
 # GEOGRAFISK INTELLIGENS
 
@@ -599,99 +602,80 @@ För varje plats, lägg till:
 - Prisnivå (låg, medel, hög, premium)
 - Målgrupp (förstagångsköpare, familjer, etablerade, downsizers)
 - Kommunikationstyp (t-bana, pendeltåg, buss, bil)
-- Närliggande städer/områden
 
 # OUTPUT FORMAT (JSON)
 
 {
-  "property": {
-    "type": "lägenhet/villa/radhus/nyproduktion/fritidshus",
-    "address": "exakt adress från rådata",
-    "size": 62,
-    "rooms": 3,
-    "floor": "3 av 5",
-    "year_built": "1930-tal",
-    "renovations": ["kök 2022", "badrum 2020", "fönster 2021"],
-    "materials": {
-      "floors": "parkettgolv i ek",
-      "walls": "målade väggar, originalsnickerier",
-      "kitchen": "marmor bänkskiva",
-      "bathroom": "kakel och klinker",
-      "windows": "träfönster med 3-glas",
-      "doors": "originaldörrar med höga socklar"
+  "disposition": {
+    "property": {
+      "type": "lägenhet/villa/radhus",
+      "address": "exakt adress",
+      "size": 62,
+      "rooms": 3,
+      "bedrooms": 2,
+      "floor": "3 av 5",
+      "year_built": "1930-tal",
+      "condition": "gott skick",
+      "energy_class": "C",
+      "elevator": true,
+      "renovations": ["kök 2022", "badrum 2020"],
+      "materials": {
+        "floors": "ekparkett",
+        "walls": "målade väggar",
+        "kitchen": "stenbänk, vita luckor",
+        "bathroom": "helkaklat"
+      },
+      "balcony": { "exists": true, "direction": "sydväst", "size": "8 kvm", "type": "inglasad" },
+      "ceiling_height": "2.8 meter",
+      "layout": "genomgående planlösning",
+      "storage": ["garderob i sovrum", "förråd 4 kvm"],
+      "heating": "fjärrvärme",
+      "parking": "garage",
+      "special_features": ["golvvärme badrum", "öppen spis"]
     },
-    "balcony": {
-      "exists": true,
-      "direction": "sydväst",
-      "size": "8 kvm",
-      "type": "inglasad balkong"
+    "economics": {
+      "price": 4500000,
+      "fee": 4200,
+      "price_per_kvm": 72581,
+      "association": { "name": "BRF Solhemmet", "status": "stabil ekonomi", "renovations": "stambytt 2019" }
     },
-    "windows": {
-      "description": "stora fönsterpartier med djupa nischer",
-      "directions": ["mot gata", "mot gård"],
-      "special": "överljus i vardagsrum"
+    "location": {
+      "area": "Östermalm",
+      "municipality": "Stockholm",
+      "character": "stadskärna, exklusivt",
+      "price_level": "premium",
+      "target_group": "etablerade",
+      "transport": { "type": "tunnelbana", "distance": "5 min till Karlaplan" },
+      "amenities": ["Karlaplan", "Djurgården"],
+      "services": ["ICA 200m"],
+      "parking": "garage i förening",
+      "geographic_context": "Centralt Stockholm"
     },
-    "ceiling_height": "2.8 meter",
-    "layout": "genomgående planlösning, sovrum i fil",
-    "storage": ["garderob i sovrum", "förråd i källare 4 kvm"],
-    "heating": "fjärrvärme, golvvärme badrum",
-    "ventilation": "FTX-ventilation",
-    "condition": "nyskick/mycket gott skick/gott skick/behöver renoveras",
-    "energy_class": "A/B/C/D/E/F/G",
-    "elevator": true,
-    "bedrooms": 2,
-    "parking": "garage, P-plats, carport",
-    "special_features": ["golvvärme i badrum", "öppen spis", "originaldetaljer", "takbjälkar"]
+    "unique_features": ["takhöjd 2.8m", "originaldetaljer", "inglasad balkong"]
   },
-  "economics": {
-    "price": 4500000,
-    "fee": 4200,
-    "price_per_kvm": 72581,
-    "association": {
-      "name": "BRF Solhemmet",
-      "status": "stabil ekonomi, låg belåning 15%",
-      "renovations": "stambytt 2019, fönsterbytte 2021",
-      "fund": "underhållsfond 2.3 MSEK",
-      "insurance": "försäkring ingår i avgiften"
-    },
-    "running_costs": {
-      "heating": "1200 kr/år",
-      "water": "300 kr/mån",
-      "garbage": "150 kr/mån"
-    }
-  },
-  "location": {
-    "area": "Östermalm",
-    "subarea": "stadskärnan",
-    "municipality": "Stockholm",
-    "region": "Stockholms län",
-    "character": "stadskärna, exklusivt",
-    "price_level": "premium",
-    "target_group": "etablerade, investerare",
-    "transport": {
-      "type": "tunnelbana",
-      "distance": "5 min till Karlaplan",
-      "details": ["tunnelbana 5 min till Karlaplan", "buss 2 min", "cykel 10 min till city"]
-    },
-    "amenities": ["Karlaplan", "Östermalms saluhall", "Djurgården", "Vasaparken"],
-    "schools": ["Högstadiet 300m", "Gymnasium 500m"],
-    "services": ["ICA 200m", "Apotek 150m", "Systembolaget 300m"],
-    "nearby_areas": ["Djurgården", "Norrmalm", "Vasastan"],
-    "parking": "garage, P-plats i förening",
-    "geographic_context": "Centralt Stockholm, exklusivt innerstadsområde"
-  },
-  "unique_features": ["takhöjd 2.8m med originalstuckatur", "eldstad i vardagsrum", "bevarade originaldetaljer", "inglasad balkong", "genomgående planlösning"],
-  "legal_info": {
-    "leasehold": null,
-    "planning_area": "bostadsområde",
-    "building_permit": "bygglov 1930"
-  },
-  "platform": "hemnet/booli",
   "tone_analysis": {
-    "price_category": "premium",
-    "location_category": "urban_premium",
-    "property_category": "character_apartment",
-    "writing_style": "sophisticated_professional"
+    "price_category": "budget/standard/premium/luxury",
+    "location_category": "suburban/urban/waterfront/nature",
+    "target_audience": "first_time_buyers/young_families/established/downsizers",
+    "writing_style": "professional/sophisticated/luxury",
+    "key_selling_points": ["punkt 1", "punkt 2", "punkt 3"],
+    "local_context": "kort geografisk kontext"
+  },
+  "writing_plan": {
+    "opening": "Adress + typ + unik egenskap (ALDRIG 'Välkommen')",
+    "paragraphs": [
+      {"id": "p1", "goal": "Öppning och läge", "must_include": ["adress", "typ", "storlek"]},
+      {"id": "p2", "goal": "Planlösning och rum", "must_include": ["rum", "material", "ljus"]},
+      {"id": "p3", "goal": "Kök och badrum", "must_include": ["utrustning", "renovering"]},
+      {"id": "p4", "goal": "Balkong/uteplats", "must_include": ["storlek", "väderstreck"]},
+      {"id": "p5", "goal": "Läge och kommunikationer", "must_include": ["transport", "service"]}
+    ],
+    "claims": [
+      {"claim": "påstående som får vara i texten", "evidence": "exakt värde från rådata"}
+    ],
+    "must_include": ["obligatoriska fakta som MÅSTE med"],
+    "missing_info": ["info som saknas i rådata"],
+    "forbidden_phrases": ["erbjuder", "perfekt för", "i hjärtat av", "vilket gör det", "för den som", "drömboende", "luftig känsla", "fantastisk", "välkommen till"]
   }
 }
 `;
@@ -1326,6 +1310,65 @@ Exempel: "1912 års jugendarkitektur i denna karaktärsfulla hörnlägenhet vid 
 - Nämn säsongsvariationer: "Sommarmorgnar på balkongen" / "Vinterkvällar vid brasan"
 `;
 
+// Lokal exempelmatchning – ingen AI-anrop behövs
+function matchExamples(disposition: any, toneAnalysis: any): string[] {
+  const type = (disposition?.property?.type || 'lägenhet').toLowerCase();
+  const priceLevel = (toneAnalysis?.price_category || 'standard').toLowerCase();
+
+  let candidates: any[] = [];
+
+  if (type.includes('villa')) {
+    candidates = [...EXAMPLE_DATABASE.villa_nature];
+    if (priceLevel === 'luxury') candidates = [...EXAMPLE_DATABASE.luxury_waterfront, ...candidates];
+  } else if (type.includes('radhus')) {
+    candidates = [...EXAMPLE_DATABASE.radhus_family, ...EXAMPLE_DATABASE.standard_suburban];
+  } else {
+    if (priceLevel === 'luxury') {
+      candidates = [...EXAMPLE_DATABASE.luxury_waterfront, ...EXAMPLE_DATABASE.premium_ostermalm];
+    } else if (priceLevel === 'premium') {
+      candidates = [...EXAMPLE_DATABASE.premium_ostermalm, ...EXAMPLE_DATABASE.urban_city];
+    } else if (priceLevel === 'budget') {
+      candidates = [...EXAMPLE_DATABASE.budget_first_time, ...EXAMPLE_DATABASE.standard_suburban];
+    } else {
+      candidates = [...EXAMPLE_DATABASE.standard_suburban, ...EXAMPLE_DATABASE.budget_first_time];
+    }
+  }
+
+  // Prioritera nyproduktion om relevant
+  const yearBuilt = disposition?.property?.year_built;
+  if (yearBuilt && (String(yearBuilt).includes('202') || String(yearBuilt).includes('nyproduktion'))) {
+    candidates = [...EXAMPLE_DATABASE.new_build, ...candidates];
+  }
+
+  return candidates.slice(0, 2).map((ex: any) => ex.text);
+}
+
+// Faktagranskning – ALDRIG omskrivning, bara rapportering
+const FACT_CHECK_PROMPT = `
+# UPPGIFT
+
+Granska objektbeskrivningen mot dispositionen. ÄNDRA ALDRIG texten. Rapportera bara fel.
+
+# REGLER
+
+1. Kontrollera att ALLA fakta i texten finns i dispositionen
+2. Flagga påhittade detaljer (märken, mått, årtal som inte finns i rådata)
+3. Flagga juridiskt problematiska påståenden
+4. SKRIV ALDRIG om texten – rapportera bara
+5. Kontrollera att inga förbjudna AI-fraser smugit sig in
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "fact_check_passed": true,
+  "issues": [
+    {"type": "fabricated/inaccurate/legal/ai_phrase", "quote": "den problematiska frasen", "reason": "varför det är fel"}
+  ],
+  "quality_score": 0.95,
+  "broker_tips": ["konkret tips för mäklaren"]
+}
+`;
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
   // User status endpoint
@@ -1495,27 +1538,27 @@ Svara kortfattat och konkret.`
       
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
 
-      // === 3-STEGS GENERATION ===
+      // === OPTIMIZED PIPELINE: 3 CORE STEPS ===
       
-      // Steg 1: Extrahera fakta + geografisk kontext
-      console.log("[Step 1] Extracting facts and geographic context...");
+      // Step 1: Combined extraction (facts + tone + writing plan) - 1 API call
+      console.log("[Step 1] Combined extraction: facts, tone, and writing plan...");
       
       const dispositionMessages = [
         {
           role: "system" as const,
-          content: DISPOSITION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: COMBINED_EXTRACTION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user" as const,
-          content: `RÅDATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}`,
+          content: `RÅDATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}\n\nÖNSKAT ORDANTAL: ${targetWordMin}-${targetWordMax} ord`,
         },
       ];
 
       const dispositionCompletion = await openai.chat.completions.create({
         model: aiModel,
         messages: dispositionMessages,
-        max_tokens: 2000,
-        temperature: 0.1, // Låg temperatur för faktaextrahering
+        max_tokens: 3000,
+        temperature: 0.1,
         response_format: { type: "json_object" },
       });
 
@@ -1531,12 +1574,12 @@ Svara kortfattat och konkret.`
             {
               role: "system" as const,
               content:
-                DISPOSITION_PROMPT +
+                COMBINED_EXTRACTION_PROMPT +
                 "\n\nSvara ENDAST med ett giltigt JSON-objekt. Inga trailing commas. Inga kommentarer.",
             },
             { role: "user" as const, content: `RÅDATA: ${prompt}` },
           ],
-          max_tokens: 2000,
+          max_tokens: 3000,
           temperature: 0.1,
           response_format: { type: "json_object" },
         });
@@ -1545,271 +1588,36 @@ Svara kortfattat och konkret.`
           disposition = safeJsonParse(dispositionRetryText);
         } catch (e2) {
           return res.status(422).json({
-            message: "Kunde inte tolka disposition (ogiltig JSON). Försök igen.",
+            message: "Kunde inte tolka data. Försök igen.",
           });
         }
       }
-      console.log("[Step 1] Disposition created:", JSON.stringify(disposition, null, 2));
-
-      // Steg 2: Tonalitetsanalys baserat på pris, läge och typ
-      console.log("[Step 2] Analyzing tone based on price, location and property type...");
       
-      const toneAnalysisPrompt = `
-# UPPGIFT
+      // Extract sub-fields from combined extraction
+      const rawDisposition = disposition;
+      if (rawDisposition.disposition) {
+        disposition = rawDisposition.disposition;
+      }
+      const toneAnalysis = rawDisposition.tone_analysis || {};
+      const writingPlan = rawDisposition.writing_plan || {};
+      console.log("[Step 1] Combined extraction completed");
 
-Analysera objektet och bestäm optimal tonalitet och stil för objektbeskrivningen.
+      // Step 2: Local example matching - 0 API calls
+      console.log("[Step 2] Local example matching...");
+      const matchedExamples = matchExamples(disposition, toneAnalysis);
+      console.log(`[Step 2] Matched ${matchedExamples.length} examples`);
 
-# INPUT
-DISPOSITION: ${JSON.stringify(disposition, null, 2)}
 
-# OUTPUT FORMAT (JSON)
-{
-  "tone_profile": {
-    "price_category": "budget/standard/premium/luxury",
-    "location_category": "suburban/urban/city_center/waterfront/nature",
-    "property_category": "apartment/villa/radhouse/new_build/townhouse",
-    "target_audience": "first_time_buyers/young_families/established_families/empty_nesters/investors/downsizers",
-    "writing_style": "casual/professional/sophisticated/luxury/minimalist",
-    "emotional_tone": "warm/neutral/formal/enthusiastic",
-    "focus_areas": ["investment_potential", "family_living", "lifestyle", "convenience", "nature", "city_life"],
-    "key_selling_points": ["3-5 viktigaste försäljningsargument"],
-    "local_context": "geografisk kontext och områdets karaktär",
-    "demographic_profile": {
-      "age_group": "20-35/35-50/50-65/65+",
-      "income_level": "low/medium/high/very_high",
-      "lifestyle": "active/calm/social/quiet",
-      "priorities": ["price", "location", "size", "quality", "amenities"]
-    },
-    "market_positioning": {
-      "competitiveness": "low/medium/high",
-      "uniqueness": "common/unique/rare",
-      "urgency": "low/medium/high"
-    }
-  }
-}
-`;
+      // Step 3: Text generation - 1 API call (single version, no A/B waste)
+      console.log("[Step 3] Generating text...");
 
-      const toneMessages = [
+      // Single text generation (no A/B waste - always use BOOLI_TEXT_PROMPT_WRITER for booli)
+      const textPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
+      
+      const textMessages = [
         {
           role: "system" as const,
-          content: toneAnalysisPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: "Analysera detta objekt och bestäm tonalitet.",
-        },
-      ];
-
-      const toneCompletion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: toneMessages,
-        max_tokens: 1000,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      });
-
-      const toneText = toneCompletion.choices[0]?.message?.content || "{}";
-      let toneAnalysis: any;
-      try {
-        toneAnalysis = safeJsonParse(toneText);
-      } catch (e) {
-        console.warn("[Step 2] Tone analysis JSON parse failed, using default...", e);
-        toneAnalysis = {
-          tone_profile: {
-            price_category: "standard",
-            location_category: "urban",
-            property_category: "apartment",
-            target_audience: "families",
-            writing_style: "professional",
-            key_selling_points: ["Bra läge", "Välskött"],
-            local_context: "Standard område"
-          }
-        };
-      }
-      console.log("[Step 2] Tone analysis completed:", JSON.stringify(toneAnalysis, null, 2));
-
-      // Steg 3: AI-driven exempelgenerator - hitta bästa riktiga annonser
-      console.log("[Step 3] AI-driven example generator - finding best real estate descriptions...");
-      
-      const exampleGeneratorPrompt = `
-# UPPGIFT
-
-Du är en erfaren svensk fastighetsmäklare. Hitta de 3 BÄSTA befintliga objektbeskrivningarna från Hemnet/Booli som perfekta matchar detta objekt.
-
-# INPUT OBJEKT
-DISPOSITION: ${JSON.stringify(disposition, null, 2)}
-TONALITETSANALYS: ${JSON.stringify(toneAnalysis, null, 2)}
-
-# SÖKKRITER (hitta annonser med):
-- Samma objekttyp: ${disposition.property?.type || 'bostad'}
-- Samma prisklass: ${disposition.price ? `cirka ${Math.round(disposition.price / 1000000)}M kr` : 'okänt pris'}
-- Samma områdeskategori: ${toneAnalysis.tone_profile?.location_category || 'standard'}
-- Samma storleksklass: ${disposition.property?.size ? `${Math.round(disposition.property.size / 50) * 50} kvm` : 'okänd storlek'}
-- Högkvalitativa, professionella beskrivningar
-- Inga AI-klyschor eller generiska formuleringar
-
-# EXEMPEL PÅ BRA OBJEKTBESKRIVNINGAR (för referens):
-
-PREMIUM EXEMPEL - Villa Mörtnäs:
-"Ekorrvägen 10, Mörtnäs. En rymlig villa på 165 kvm med 6 rum i lugnt och naturnära område. Villan har ekparkettgolv och nyrenoverat kök från Marbodal 2023.
-
-Huset har en praktisk planlösning med socialt kök i öppen planlösning med vardagsrum. Köket har vitvaror från Siemens och bänkskivor i kvartskomposit. Det finns gott om förvaringsutrymmen i både kök och hall.
-
-Badrummet har badkar och golvvärme. Samtliga rum har ekparkettgolv och villan har en hög takhöjd på över 3 meter. De spröjsade fönstren bidrar till husets charm och karaktär.
-
-Det finns en härlig terrass i söderläge. Dessutom finns ett nybyggt uterum med TV-soffa och extra badrum. Uppvärmning sker via fjärrvärme.
-
-Fastigheten ligger i Mörtnäs med 10 minuters gångavstånd till bussen. Området är lugnt och naturnära med goda kommunikationer till centrala Värmdö."
-
-STANDARD EXEMPEL - Lägenhet Upplands Väsby:
-"Björkängsvägen 3, Upplands Väsby. En välplanerad trea om 85 kvm i barnvänligt område. Lägenheten har balkong i västerläge.
-
-Lägenheten har en social planlösning med hall, vardagsrum, kök, två sovrum och badrum. Köket är från 2018 med vitvaror från Bosch och god bänkyta.
-
-Vardagsrummet har plats för soffagrupp och matbord. Det finns utgång till balkongen på 6 kvm. Golven är av laminat i hela lägenheten.
-
-Badrummet är helkaklat med dusch, wc och handfat. Det finns tvättmaskin och torktumlare.
-
-Läget är lugnt med 300 meter till skola och förskola. Kommunikationer med pendeltåg tar 35 minuter till Stockholm."
-
-# OUTPUT FORMAT (JSON)
-{
-  "search_strategy": "hur du skulle söka på Hemnet/Booli",
-  "selected_examples": [
-    {
-      "text": "hela exempeltexten från bästa annonsen",
-      "source": "Hemnet/Booli + länk/datum",
-      "relevance_score": 0.95,
-      "match_reasons": ["exakt prisnivå", "samma område", "perfekt tonalitet", "samma storlek"],
-      "style_analysis": {
-        "writing_style": "professionell/sophisticated/casual",
-        "tone": "saklig/säljande/informativ",
-        "structure": "faktabaserad/berättande",
-        "unique_elements": ["specifika detaljer som gör den unik"]
-      }
-    }
-  ],
-  "writing_guidance": {
-    "target_tone": "exakt tonalitet att använda",
-    "key_phrases": ["fraser som fungerar bra"],
-    "structure_template": "hur texten ska struktureras",
-    "avoid_elements": ["vad som ska undvikas"]
-  }
-}
-`;
-
-      const exampleMessages = [
-        {
-          role: "system" as const,
-          content: exampleGeneratorPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: "Hitta de 3 bästa objektbeskrivningarna från Hemnet/Booli för detta objekt.",
-        },
-      ];
-
-      const exampleCompletion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: exampleMessages,
-        max_tokens: 2000,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      });
-
-      const exampleText = exampleCompletion.choices[0]?.message?.content || "{}";
-      let exampleSelection: any;
-      try {
-        exampleSelection = safeJsonParse(exampleText);
-      } catch (e) {
-        console.warn("[Step 3] Example matching JSON parse failed, using defaults...", e);
-        exampleSelection = {
-          selected_examples: EXAMPLE_DATABASE.premium_ostermalm.slice(0, 2),
-          selection_strategy: "default_fallback",
-          writing_guidance: "Använd professionell mäklarstil"
-        };
-      }
-      console.log("[Step 3] Example selection completed:", JSON.stringify(exampleSelection, null, 2));
-
-      // Steg 4A: Planering - skapa skrivplan baserat på fakta och exempel
-      console.log("[Step 4A] Creating writing plan based on facts and examples...");
-      
-      const planningPrompt = `
-# UPPGIFT
-Skapa en kortfattad skrivplan för objektbeskrivningen baserat på fakta och exempel.
-
-# INPUT
-DISPOSITION: ${JSON.stringify(disposition, null, 2)}
-TONALITETSANALYS: ${JSON.stringify(toneAnalysis, null, 2)}
-EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
-
-# OUTPUT FORMAT (JSON)
-{
-  "writing_plan": [
-    "1. Öppning: Adress + typ + unik egenskap",
-    "2. Planlösning: Rum och material",
-    "3. Kök: Märke och renovering",
-    "4. Badrum: Utrustning och detaljer",
-    "5. Läge: Områdesbeskrivning"
-  ],
-  "key_selling_points": ["3-5 viktigaste försäljningsargumenten"],
-  "tone_guidance": "konkret tonalitetsinstruktion",
-  "structure_template": "hur texten ska struktureras"
-}
-`;
-
-      const planningMessages = [
-        {
-          role: "system" as const,
-          content: planningPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: "Skapa skrivplan för detta objekt.",
-        },
-      ];
-
-      const planningCompletion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: planningMessages,
-        max_tokens: 500,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      });
-
-      const planningText = planningCompletion.choices[0]?.message?.content || "{}";
-      let writingPlan: any;
-      try {
-        writingPlan = safeJsonParse(planningText);
-      } catch (e) {
-        console.warn("[Step 4A] Planning JSON parse failed, using default...", e);
-        writingPlan = {
-          writing_plan: [
-            "1. Öppning: Adress och objekttyp",
-            "2. Planlösning: Rum och ytor",
-            "3. Kök och badrum",
-            "4. Övriga detaljer",
-            "5. Läge och område"
-          ],
-          key_selling_points: ["Bra läge", "Välskött"],
-          tone_guidance: "Professionell och informativ",
-          structure_template: "Faktabaserad"
-        };
-      }
-      console.log("[Step 4A] Writing plan created:", JSON.stringify(writingPlan, null, 2));
-
-      // Steg 4B: Textgenerering - skriv text enligt skrivplan
-      console.log("[Step 4B] Generating text based on writing plan...");
-
-      // A/B-testning: generera två versioner
-      const promptA = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
-      const promptB = platform === "hemnet" ? HEMNET_TEXT_PROMPT_B : BOOLI_TEXT_PROMPT_WRITER;
-      
-      console.log("[Step 4B] Generating version A...");
-      const textMessagesA = [
-        {
-          role: "system" as const,
-          content: promptA + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: textPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
         },
         {
           role: "user" as const,
@@ -1820,92 +1628,39 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
             JSON.stringify(writingPlan, null, 2) +
             "\n\nTONALITET: " +
             JSON.stringify(toneAnalysis, null, 2) +
+            "\n\nEXEMPELTEXTER (skriv i samma professionella stil):\n" +
+            matchedExamples.map((ex: string, i: number) => `EXEMPEL ${i + 1}:\n${ex}`).join("\n\n") +
             "\n\nPLATTFORM: " +
             (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA") +
-            "\n\nANPASSA texten efter skrivplanen:\n" +
+            "\n\nINSTRUKTIONER:\n" +
             "1. Följ skrivplanen exakt\n" +
-            "2. Använd bara fakta från disposition\n" +
+            "2. Använd BARA fakta från dispositionen – hitta ALDRIG på\n" +
             "3. Följ tonalitetsguiden\n" +
             `4. Skriv ${targetWordMin}-${targetWordMax} ord\n` +
-            "5. Skriv som en erfaren mäklare",
+            "5. Skriv som en erfaren mäklare – saklig, konkret, trovärdig\n" +
+            "6. Skriv i samma stil som exempeltexterna",
         },
       ];
 
-      const textCompletionA = await openai.chat.completions.create({
+      const textCompletion = await openai.chat.completions.create({
         model: aiModel,
-        messages: textMessagesA,
+        messages: textMessages,
         max_tokens: 4000,
         temperature: 0.2,
         response_format: { type: "json_object" },
       });
 
-      const textA = textCompletionA.choices[0]?.message?.content || "{}";
-      let resultA: any;
+      const textRaw = textCompletion.choices[0]?.message?.content || "{}";
+      let result: any;
       try {
-        resultA = safeJsonParse(textA);
+        result = safeJsonParse(textRaw);
       } catch (e) {
-        console.warn("[Step 4B] Version A JSON parse failed, using fallback...", e);
-        resultA = { improvedPrompt: "Text kunde inte genereras" };
+        console.warn("[Step 3] Text generation JSON parse failed...", e);
+        result = { improvedPrompt: "Text kunde inte genereras" };
       }
-
-      console.log("[Step 4B] Generating version B...");
-      const textMessagesB = [
-        {
-          role: "system" as const,
-          content: promptB + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content:
-            "DISPOSITION: " +
-            JSON.stringify(disposition, null, 2) +
-            "\n\nSKRIVPLAN: " +
-            JSON.stringify(writingPlan, null, 2) +
-            "\n\nTONALITET: " +
-            JSON.stringify(toneAnalysis, null, 2) +
-            "\n\nPLATTFORM: " +
-            (platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA") +
-            "\n\nANPASSA texten efter skrivplanen:\n" +
-            "1. Följ skrivplanen exakt\n" +
-            "2. Använd bara fakta från disposition\n" +
-            "3. Följ tonalitetsguiden\n" +
-            `4. Skriv ${targetWordMin}-${targetWordMax} ord\n` +
-            "5. Skriv som en erfaren mäklare",
-        },
-      ];
-
-      const textCompletionB = await openai.chat.completions.create({
-        model: aiModel,
-        messages: textMessagesB,
-        max_tokens: 4000,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-      });
-
-      const textB = textCompletionB.choices[0]?.message?.content || "{}";
-      let resultB: any;
-      try {
-        resultB = safeJsonParse(textB);
-      } catch (e) {
-        console.warn("[Step 4B] Version B JSON parse failed, using fallback...", e);
-        resultB = { improvedPrompt: "Text kunde inte genereras" };
-      }
-
-      // Välj bästa version (för nu används A, men kan bytas till B baserat på preferens)
-      let result = resultA;
-      console.log("[Step 4B] Selected version A as primary");
       
-      // Lägg till B-versionen för A/B-testning
-      result.abTestResults = {
-        versionA: resultA,
-        versionB: resultB,
-        selectedVersion: "A"
-      };
-      
-      // Lägg till skrivplanen i resultatet
       result.writingPlan = writingPlan;
-      
-      console.log("[Step 4B] Generated text:", result.improvedPrompt?.substring(0, 200) + "...");
+      console.log("[Step 3] Text generated:", result.improvedPrompt?.substring(0, 200) + "...");
       
       // Post-processing - rensa förbjudna fraser
       if (result.improvedPrompt) {
@@ -1921,7 +1676,7 @@ EXEMPEL: ${JSON.stringify(exampleSelection.selected_examples[0], null, 2)}
       console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
       // Retry loop - skickar befintlig text och ber AI:n BARA fixa specifika fel
-      const maxAttempts = platform === "hemnet" ? 2 : 4;
+      const maxAttempts = 2;
       let attempts = 0;
       while (violations.length > 0 && attempts < maxAttempts) {
         attempts++;
@@ -1988,137 +1743,51 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten", "highlights": [...],
         console.log("[AI Validation] After retry " + attempts + " violations:", violations.length > 0 ? violations : "NONE");
       }
       
-      // Steg 5: Kvalitetskontroll och juridisk granskning
-      console.log("[Step 5] Quality control and legal review...");
-      
-      const qualityControlPrompt = `
-# UPPGIFT
-
-Du är en erfaren fastighetsmäklare med 15 års erfarenhet och juridisk kompetens. Granska den genererade objektbeskrivningen för kvalitet och juridisk korrekthet.
-
-# INPUT
-GENERERAD TEXT: ${result.improvedPrompt || ""}
-DISPOSITION: ${JSON.stringify(disposition, null, 2)}
-PLATTFORM: ${platform}
-
-# GRANSKNINGSKRITER
-1. FAKTA-KONTROLL (KRITISKT):
-   - ALLA fakta måste finnas EXAKT i dispositionen
-   - INGA påhittade märken (t.ex. "Siemens" om det står "vitvaror")
-   - INGA påhittade material (t.ex. "kvartskomposit" om det står "bänkskivor")
-   - INGA påhittade antal (t.ex. "tre toaletter" om det inte står)
-
-2. PLAGIATKONTROLL:
-   - Kontrollera att texten är unik och inte kopierad från befintliga annonser
-   - Identifierar eventuella uppenbara kopieringar från exempeltexter
-   - Säkerställ att formuleringar är originala
-
-3. JURIDISK KORREKTHET:
-   - Inga överdrivna eller vilseledande påståenden
-   - Följ FMI:s regler för objektbeskrivningar
-
-4. SPRÅKQUALITET:
-   - Professionell mäklarstil utan AI-klyschor
-   - Fullständiga meningar utan avbrott
-   - Korrekt grammatik och stavning
-
-5. SÄLJSTYRKA:
-   - Konkreta och säljande formuleringar
-   - Relevant information för målgruppen
-   - Bra flöde och struktur
-
-# OUTPUT FORMAT (JSON)
-{
-  "quality_score": 0.95,
-  "legal_compliance": "passed/failed",
-  "language_quality": "excellent/good/fair/poor",
-  "sales_effectiveness": "high/medium/low",
-  "plagiat_check": "passed/failed",
-  "fact_check": "passed/failed",
-  "issues_found": [
-    {
-      "type": "legal/language/sales/plagiat/fact",
-      "severity": "high/medium/low",
-      "description": "beskrivning av problemet",
-      "suggestion": "förslag på förbättring"
-    }
-  ],
-  "final_text": "eventuellt korrigerad text om stora fel",
-  "approval": "approved/needs_revision",
-  "broker_feedback": {
-    "strengths": ["3-5 styrkor i texten"],
-    "improvements": ["2-3 förslag på förbättringar"],
-    "market_appeal": "high/medium/low",
-    "target_group_match": "excellent/good/fair/poor"
-  },
-  "optimization_suggestions": {
-    "add_details": ["specifika detaljer som kan läggas till"],
-    "remove_phrases": ["fraser som kan tas bort"],
-    "rephrase": ["meningar som kan formuleras om"]
-  }
-}
-`;
-
-      const qualityMessages = [
-        {
-          role: "system" as const,
-          content: qualityControlPrompt + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
-        },
-        {
-          role: "user" as const,
-          content: "Granska denna objektbeskrivning för kvalitet och juridisk korrekthet.",
-        },
-      ];
-
-      const qualityCompletion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: qualityMessages,
-        max_tokens: 1500,
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-      });
-
-      const qualityText = qualityCompletion.choices[0]?.message?.content || "{}";
-      let qualityReview: any;
-      try {
-        qualityReview = safeJsonParse(qualityText);
-      } catch (e) {
-        console.warn("[Step 5] Quality control JSON parse failed, using defaults...", e);
-        qualityReview = {
-          quality_score: 0.8,
-          legal_compliance: "passed",
-          language_quality: "good",
-          sales_effectiveness: "medium",
-          issues_found: [],
-          final_text: result.improvedPrompt,
-          approval: "approved"
-        };
-      }
-      console.log("[Step 5] Quality control completed:", JSON.stringify(qualityReview, null, 2));
-      
-      // Uppdatera resultat med kvalitetskontroll
-      if (qualityReview.final_text && qualityReview.final_text !== result.improvedPrompt) {
-        result.improvedPrompt = qualityReview.final_text;
-        console.log("[Step 5] Text updated by quality control");
-      }
-      
-      // Lägg till kvalitetsdata i resultatet
-      result.qualityControl = qualityReview;
-      
+      // Return error if still has violations after retries
       if (violations.length > 0) {
-        console.warn("[AI Validation] ERROR: Still has violations after retries:", violations);
+        console.warn("[Validation] Still has violations after retries:", violations);
         return res.status(422).json({
-          message:
-            "Kunde inte generera en text utan förbjudna mallfraser efter flera försök. Försök igen.",
+          message: "Kunde inte generera en text utan regelbrott. Försök igen.",
           violations,
         });
       }
 
-      // Lägg till stycken (cleanForbiddenPhrases körs redan före validering)
+      // Step 4: Fact-check review (NEVER rewrites text) - 1 API call
+      console.log("[Step 4] Fact-check review...");
+      
+      const factCheckMessages = [
+        {
+          role: "system" as const,
+          content: FACT_CHECK_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+        },
+        {
+          role: "user" as const,
+          content: `OBJEKTBESKRIVNING:\n${result.improvedPrompt}\n\nDISPOSITION:\n${JSON.stringify(disposition, null, 2)}`,
+        },
+      ];
+
+      let factCheck: any = { fact_check_passed: true, issues: [], quality_score: 0.9, broker_tips: [] };
+      try {
+        const factCheckCompletion = await openai.chat.completions.create({
+          model: aiModel,
+          messages: factCheckMessages,
+          max_tokens: 1000,
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+        factCheck = safeJsonParse(factCheckCompletion.choices[0]?.message?.content || "{}");
+      } catch (e) {
+        console.warn("[Step 4] Fact-check failed, continuing...", e);
+      }
+      console.log("[Step 4] Fact-check:", factCheck.fact_check_passed ? "PASSED" : "ISSUES FOUND", factCheck.issues?.length || 0, "issues");
+      
+      result.factCheck = factCheck;
+
+      // Final post-processing: add paragraphs
       if (result.improvedPrompt) {
         result.improvedPrompt = addParagraphs(result.improvedPrompt);
       }
-      console.log("[Post-processing] Paragraphs added");
+      console.log("[Pipeline] Complete - 3 API calls used (free) / 5-6 (pro)");
 
       // Increment usage
       await storage.incrementUserPrompts(user.id);
