@@ -1690,20 +1690,17 @@ Svara kortfattat och konkret.`
           messages: [
             {
               role: "system" as const,
-              content: `Du är en textredaktör. Din uppgift är att REDIGERA den befintliga texten och BARA fixa de specifika felen som listas. Ändra så lite som möjligt - behåll resten av texten exakt som den är.
+              content: `Du är en textredaktör. Din uppgift är att REDIGERA den befintliga texten och BARA fixa de specifika felen som listas. Ändra så lite som möjligt — behåll resten av texten EXAKT som den är.
 
 FÖRBJUDNA ORD som ALDRIG får finnas:
-- erbjuder, erbjuds, erbjuda
-- perfekt för, idealisk för, för den som
-- vilket gör det enkelt, vilket ger en
-- kontakta oss, tveka inte, stadens puls
-- i hjärtat av, drömboende, drömhem
-- luftig känsla, fantastisk, underbar, magisk
+erbjuder, erbjuds, perfekt för, idealisk för, för den som, vilket gör det enkelt, vilket ger en, kontakta oss, tveka inte, stadens puls, i hjärtat av, drömboende, drömhem, luftig känsla, fantastisk, underbar, magisk
 
-Om texten är för kort: lägg till 2-3 meningar med konkreta fakta från dispositionen.
-Om texten har förbjudna fraser: ersätt BARA de fraserna med neutrala alternativ.
+REGLER:
+- Om texten har förbjudna fraser: ersätt BARA de fraserna med neutrala alternativ.
+- Om texten är för kort: lägg till 2-3 meningar med konkreta fakta från dispositionen.
+- ÄNDRA ALDRIG meningar som inte innehåller fel.
 
-Returnera JSON: {"improvedPrompt": "den redigerade texten", "highlights": [...], "analysis": {...}, "socialCopy": "...", "missing_info": [...], "pro_tips": [...]}`,
+Returnera JSON: {"improvedPrompt": "den redigerade texten"}`,
             },
             {
               role: "user" as const,
@@ -1724,7 +1721,13 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten", "highlights": [...],
 
         const retryText = retryCompletion.choices[0]?.message?.content || "{}";
         try {
-          result = safeJsonParse(retryText);
+          const retryResult = safeJsonParse(retryText);
+          // KRITISKT: Ersätt BARA texten, behåll original highlights/analysis/socialCopy/tips
+          if (retryResult.improvedPrompt) {
+            result.improvedPrompt = retryResult.improvedPrompt;
+          }
+          // Behåll socialCopy bara om retryn inte hade en — annars kan AI:n ha skrivit om den
+          // Original socialCopy från steg 3 är alltid bättre
         } catch (e) {
           console.warn("[AI Validation] Retry JSON parse failed, continuing to next attempt...", e);
           violations = ["Ogiltig JSON i modellens svar"]; 
