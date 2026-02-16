@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Check, Copy, AlertCircle, FileText, Share2, RefreshCw } from "lucide-react";
+import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3 } from "lucide-react";
 import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 
@@ -24,10 +23,46 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
     }
   };
 
-  return (
-    <div className="space-y-5 pb-12">
+  const wordCount = result.wordCount || result.improvedPrompt.split(/\s+/).filter(Boolean).length;
+  const qualityScore = result.factCheck?.quality_score;
+  const factPassed = result.factCheck?.fact_check_passed;
 
-      {/* HUVUDANNONS */}
+  return (
+    <div className="space-y-4 pb-12">
+
+      {/* ── STATUS BAR ── */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ background: "#F0EDE6", color: "#4B5563" }}>
+          <BarChart3 className="w-3 h-3" />
+          {wordCount} ord
+        </div>
+        {qualityScore != null && (
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{
+              background: qualityScore >= 0.8 ? "#ECFDF5" : qualityScore >= 0.6 ? "#FFFBEB" : "#FEF2F2",
+              color: qualityScore >= 0.8 ? "#065F46" : qualityScore >= 0.6 ? "#92400E" : "#991B1B",
+            }}
+          >
+            <Star className="w-3 h-3" />
+            Kvalitet: {Math.round(qualityScore * 100)}%
+          </div>
+        )}
+        {factPassed != null && (
+          <div
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{
+              background: factPassed ? "#ECFDF5" : "#FEF2F2",
+              color: factPassed ? "#065F46" : "#991B1B",
+            }}
+          >
+            {factPassed ? <ShieldCheck className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
+            {factPassed ? "Faktagranskad" : "Fakta-problem"}
+          </div>
+        )}
+      </div>
+
+      {/* ── HUVUDANNONS ── */}
       <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
         <div className="px-6 py-4 border-b flex justify-between items-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
@@ -44,7 +79,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
             style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}
           >
             {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-            {copiedMain ? "Kopierad!" : "Kopiera"}
+            {copiedMain ? "Kopierad!" : "Kopiera text"}
           </Button>
         </div>
         <div className="p-6 sm:p-8">
@@ -54,40 +89,73 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
         </div>
       </div>
 
-      {/* SOCIAL MEDIA */}
+      {/* ── HIGHLIGHTS ── */}
+      {result.highlights && result.highlights.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {result.highlights.map((h, i) => (
+            <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "#F0FDF4", borderColor: "#BBF7D0", color: "#166534" }}>
+              {h}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── SOCIAL MEDIA ── */}
       {result.socialCopy && (
         <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
           <div className="px-5 py-3 border-b flex justify-between items-center" style={{ borderColor: "#E8E5DE" }}>
             <div className="flex items-center gap-2">
               <Share2 className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Social media</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Social media-text</span>
             </div>
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => copyToClipboard(result.socialCopy, 'social')} 
+              onClick={() => copyToClipboard(result.socialCopy!, 'social')} 
               className="h-7 text-xs"
               style={{ color: "#6B7280" }}
             >
+              {copiedSocial ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
               {copiedSocial ? "Kopierad!" : "Kopiera"}
             </Button>
           </div>
-          <div className="p-5 text-sm leading-relaxed italic" style={{ color: "#4B5563" }}>
+          <div className="p-5 text-sm leading-relaxed" style={{ color: "#4B5563" }}>
             {result.socialCopy}
           </div>
         </div>
       )}
 
-      {/* TIPS */}
+      {/* ── FACT CHECK ISSUES ── */}
+      {result.factCheck?.issues && result.factCheck.issues.length > 0 && (
+        <div className="rounded-xl border p-5" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldAlert className="w-3.5 h-3.5" style={{ color: "#DC2626" }} />
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#991B1B" }}>Faktagranskning — problem hittade</span>
+          </div>
+          <ul className="space-y-2">
+            {result.factCheck.issues.map((issue, i) => (
+              <li key={i} className="text-xs" style={{ color: "#7F1D1D" }}>
+                <span className="font-medium">{issue.quote}</span>
+                {issue.reason && <span className="ml-1">— {issue.reason}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── INFO CARDS GRID ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {result.suggestions && result.suggestions.length > 0 && (
+
+        {/* Saknad information */}
+        {result.improvements && result.improvements.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#FFFBEB", borderColor: "#FDE68A" }}>
             <div className="flex items-center gap-2 mb-3">
-              <AlertCircle className="w-3.5 h-3.5" style={{ color: "#D97706" }} />
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#92400E" }}>Att tänka på</span>
+              <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#D97706" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#92400E" }}>Saknad information</span>
             </div>
-            <ul className="space-y-2">
-              {result.suggestions.map((s, i) => (
+            <p className="text-[10px] mb-2" style={{ color: "#B45309" }}>Lägg till dessa uppgifter för en bättre text:</p>
+            <ul className="space-y-1.5">
+              {result.improvements.map((s, i) => (
                 <li key={i} className="text-xs flex gap-2" style={{ color: "#78350F" }}>
                   <span style={{ color: "#F59E0B" }}>•</span> {s}
                 </li>
@@ -96,16 +164,51 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           </div>
         )}
 
-        {result.improvements && result.improvements.length > 0 && (
+        {/* Tips till mäklaren */}
+        {result.suggestions && result.suggestions.length > 0 && (
+          <div className="rounded-xl border p-5" style={{ background: "#EFF6FF", borderColor: "#BFDBFE" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="w-3.5 h-3.5" style={{ color: "#2563EB" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#1E40AF" }}>Tips från AI:n</span>
+            </div>
+            <ul className="space-y-1.5">
+              {result.suggestions.map((s, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#1E3A5F" }}>
+                  <span style={{ color: "#3B82F6" }}>→</span> {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Broker tips from fact-check */}
+        {result.factCheck?.broker_tips && result.factCheck.broker_tips.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#ECFDF5", borderColor: "#A7F3D0" }}>
             <div className="flex items-center gap-2 mb-3">
               <Check className="w-3.5 h-3.5" style={{ color: "#059669" }} />
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#065F46" }}>Förbättringar</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#065F46" }}>Mäklartips</span>
             </div>
-            <ul className="space-y-2">
-              {result.improvements.map((imp, i) => (
+            <ul className="space-y-1.5">
+              {result.factCheck.broker_tips.map((tip, i) => (
                 <li key={i} className="text-xs flex gap-2" style={{ color: "#064E3B" }}>
-                  <span style={{ color: "#10B981" }}>✓</span> {imp}
+                  <span style={{ color: "#10B981" }}>✓</span> {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Improvement suggestions (pro) */}
+        {result.improvement_suggestions?.strengths && result.improvement_suggestions.strengths.length > 0 && (
+          <div className="rounded-xl border p-5" style={{ background: "#F5F3FF", borderColor: "#DDD6FE" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Star className="w-3.5 h-3.5" style={{ color: "#7C3AED" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#5B21B6" }}>Styrkor i texten</span>
+            </div>
+            <ul className="space-y-1.5">
+              {result.improvement_suggestions.strengths.map((s, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#4C1D95" }}>
+                  <span style={{ color: "#8B5CF6" }}>★</span> {s}
                 </li>
               ))}
             </ul>
@@ -113,6 +216,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
         )}
       </div>
 
+      {/* ── NEW PROMPT ── */}
       <div className="flex justify-center pt-2">
         <Button 
           variant="ghost" 
