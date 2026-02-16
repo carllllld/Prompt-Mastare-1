@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { ResultSection } from "@/components/ResultSection";
@@ -23,6 +23,30 @@ export default function Home() {
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+  const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const LOADING_STEPS = [
+    "Analyserar fastighetsdata...",
+    "Identifierar målgrupp och tonalitet...",
+    "Skapar skrivplan...",
+    "Matchar exempeltexter...",
+    "Skriver objektbeskrivning...",
+    "Faktagranskar texten...",
+    "Putsar och finsliper...",
+  ];
+
+  useEffect(() => {
+    if (isPending) {
+      setLoadingStep(0);
+      loadingInterval.current = setInterval(() => {
+        setLoadingStep((prev) => Math.min(prev + 1, LOADING_STEPS.length - 1));
+      }, 3000);
+    } else {
+      if (loadingInterval.current) clearInterval(loadingInterval.current);
+    }
+    return () => { if (loadingInterval.current) clearInterval(loadingInterval.current); };
+  }, [isPending]);
 
   const handleSubmit = (data: any) => {
     if (!isAuthenticated) {
@@ -186,6 +210,35 @@ export default function Home() {
                 isPro={plan === "pro"}
               />
             </div>
+
+            {/* Loading progress */}
+            {isPending && (
+              <div className="mt-4 bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
+                <div className="space-y-3">
+                  {LOADING_STEPS.map((step, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{
+                        background: i < loadingStep ? "#2D6A4F" : i === loadingStep ? "#E8F5E9" : "#F0EDE6",
+                      }}>
+                        {i < loadingStep ? (
+                          <Check className="w-3 h-3 text-white" />
+                        ) : i === loadingStep ? (
+                          <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#2D6A4F" }} />
+                        ) : (
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#D1D5DB" }} />
+                        )}
+                      </div>
+                      <span className="text-sm" style={{
+                        color: i <= loadingStep ? "#1D2939" : "#9CA3AF",
+                        fontWeight: i === loadingStep ? 500 : 400,
+                      }}>
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}

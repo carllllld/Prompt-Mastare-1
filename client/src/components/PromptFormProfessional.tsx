@@ -17,11 +17,16 @@ interface PropertyFormData {
   livingArea: string;
   totalRooms: string;
   bedrooms: string;
+  bathrooms: string;
   buildYear: string;
   condition: string;
   energyClass: string;
   floor: string;
   elevator: boolean;
+  balconyArea: string;
+  balconyDirection: string;
+  brfName: string;
+  storage: string;
   layoutDescription: string;
   kitchenDescription: string;
   bathroomDescription: string;
@@ -33,7 +38,7 @@ interface PropertyFormData {
   flooring: string;
   heating: string;
   lotArea: string;
-  balconyArea: string;
+  gardenDescription: string;
   specialFeatures: string;
   otherInfo: string;
   platform: "hemnet" | "booli" | "general";
@@ -47,6 +52,10 @@ const ENERGY_CLASSES = ["A", "B", "C", "D", "E", "F", "G"];
 
 const HEATING_TYPES = [
   "Fjärrvärme", "Värmepump", "Bergvärme", "Elpanna", "Vedpanna", "Golvvärme", "Direktverkande el"
+];
+
+const BALCONY_DIRECTIONS = [
+  "Norr", "Nordost", "Öst", "Sydost", "Söder", "Sydväst", "Väst", "Nordväst"
 ];
 
 interface PromptFormProps {
@@ -79,11 +88,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       livingArea: "",
       totalRooms: "",
       bedrooms: "",
+      bathrooms: "",
       buildYear: "",
       condition: "Gott skick",
       energyClass: "C",
       floor: "",
       elevator: false,
+      balconyArea: "",
+      balconyDirection: "",
+      brfName: "",
+      storage: "",
       layoutDescription: "",
       kitchenDescription: "",
       bathroomDescription: "",
@@ -95,7 +109,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       flooring: "",
       heating: "Fjärrvärme",
       lotArea: "",
-      balconyArea: "",
+      gardenDescription: "",
       specialFeatures: "",
       otherInfo: "",
       platform: "hemnet",
@@ -123,8 +137,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     if (values.livingArea) d += `Boarea: ${values.livingArea} kvm\n`;
     if (values.lotArea) d += `Tomtarea: ${values.lotArea} kvm\n`;
     if (values.balconyArea) d += `Balkong: ${values.balconyArea} kvm\n`;
+    if (values.balconyDirection) d += `Balkong väderstreck: ${values.balconyDirection}\n`;
     if (values.totalRooms) d += `Antal rum: ${values.totalRooms}\n`;
     if (values.bedrooms) d += `Sovrum: ${values.bedrooms}\n`;
+    if (values.bathrooms) d += `Badrum/WC: ${values.bathrooms}\n`;
 
     d += "\n=== BYGGNAD ===\n";
     if (values.buildYear) d += `Byggår: ${values.buildYear}\n`;
@@ -132,6 +148,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     if (values.energyClass) d += `Energiklass: ${values.energyClass}\n`;
     if (values.floor) d += `Våning: ${values.floor}\n`;
     d += `Hiss: ${values.elevator ? "Ja" : "Nej"}\n`;
+    if (values.brfName) d += `Förening: ${values.brfName}\n`;
+    if (values.storage) d += `Förråd/Förvaring: ${values.storage}\n`;
 
     if (values.layoutDescription) {
       d += "\n=== PLANLÖSNING & RUM ===\n";
@@ -164,6 +182,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       d += "\n=== FÖRSÄLJNINGSARGUMENT ===\n";
       d += "(Unika kvaliteter som gör bostaden attraktiv — lyft dessa i texten)\n";
       d += `${values.uniqueSellingPoints}\n`;
+    }
+
+    if (values.gardenDescription) {
+      d += "\n=== TRÄDGÅRD & UTEPLATS ===\n";
+      d += `${values.gardenDescription}\n`;
     }
 
     if (values.specialFeatures) {
@@ -222,16 +245,18 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
         {/* ── GRUNDUPPGIFTER ── */}
         <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3">
-            <FormField control={form.control} name="address" render={({ field }) => (
+            <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
               <FormItem className="col-span-2">
-                <FormLabel className="text-xs text-gray-500">Adress</FormLabel>
+                <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
                 <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10" /></FormControl>
+                <FormMessage />
               </FormItem>
             )} />
-            <FormField control={form.control} name="area" render={({ field }) => (
+            <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs text-gray-500">Stadsdel / Område</FormLabel>
+                <FormLabel className="text-xs text-gray-500">Stadsdel / Område *</FormLabel>
                 <FormControl><Input placeholder="Vasastan" {...field} className="h-10" /></FormControl>
+                <FormMessage />
               </FormItem>
             )} />
           </div>
@@ -270,10 +295,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormControl><Input type="number" placeholder="2" {...field} className="h-10" /></FormControl>
               </FormItem>
             )} />
-            <FormField control={form.control} name="buildYear" render={({ field }) => (
+            <FormField control={form.control} name="bathrooms" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                <FormLabel className="text-xs text-gray-500">Badrum/WC</FormLabel>
+                <FormControl><Input type="number" placeholder="1" {...field} className="h-10" /></FormControl>
               </FormItem>
             )} />
             <FormField control={form.control} name="condition" render={({ field }) => (
@@ -287,6 +312,89 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     ))}
                   </SelectContent>
                 </Select>
+              </FormItem>
+            )} />
+          </div>
+
+          {/* Conditional: Apartment fields (floor, elevator, BRF, buildYear) */}
+          {(selectedType === "apartment" || selectedType === "townhouse") && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mt-3">
+              <FormField control={form.control} name="buildYear" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                  <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="floor" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
+                  <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="elevator" render={({ field }) => (
+                <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
+                  <FormControl>
+                    <Checkbox checked={field.value as boolean} onCheckedChange={field.onChange} id="elevator-main" />
+                  </FormControl>
+                  <label htmlFor="elevator-main" className="text-sm text-gray-600 cursor-pointer leading-none">Hiss</label>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="brfName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
+                  <FormControl><Input placeholder="BRF Solhemmet" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+          )}
+
+          {/* Conditional: House/Villa fields (lot, garden) */}
+          {(selectedType === "house" || selectedType === "villa") && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 mt-3">
+              <FormField control={form.control} name="lotArea" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
+                  <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="buildYear" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                  <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="parking" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Parkering</FormLabel>
+                  <FormControl><Input placeholder="Garage, carport" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+          )}
+
+          {/* Balcony row — always visible */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 mt-3">
+            <FormField control={form.control} name="balconyArea" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Balkong/uteplats (kvm)</FormLabel>
+                <FormControl><Input type="number" placeholder="8" {...field} className="h-10" /></FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="balconyDirection" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Väderstreck</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {BALCONY_DIRECTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="storage" render={({ field }) => (
+              <FormItem className="col-span-2">
+                <FormLabel className="text-xs text-gray-500">Förråd/Förvaring</FormLabel>
+                <FormControl><Input placeholder="Förråd 5 kvm i källare" {...field} className="h-10" /></FormControl>
               </FormItem>
             )} />
           </div>
@@ -427,49 +535,31 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 )} />
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Apartment: parking here since not in main section */}
+              {(selectedType === "apartment" || selectedType === "townhouse") && (
                 <FormField control={form.control} name="parking" render={({ field }) => (
-                  <FormItem className="col-span-2">
-                    <FormLabel className="text-xs text-gray-500">Parkering</FormLabel>
-                    <FormControl><Input placeholder="Garage, carport, P-plats" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="floor" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
-                    <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
+                    <FormLabel className="text-xs text-gray-500">Parkering</FormLabel>
+                    <FormControl><Input placeholder="Garage, carport, P-plats i förening" {...field} className="h-10" /></FormControl>
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="elevator" render={({ field }) => (
-                  <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
+              )}
+
+              {/* House/Villa: garden description */}
+              {(selectedType === "house" || selectedType === "villa") && (
+                <FormField control={form.control} name="gardenDescription" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Trädgård & uteplats</FormLabel>
                     <FormControl>
-                      <Checkbox
-                        checked={field.value as boolean}
-                        onCheckedChange={field.onChange}
-                        id="elevator-check"
+                      <Textarea
+                        placeholder="T.ex: Lättskött trädgård med gräsmatta, uteplats i söderläge, fruktträd, häck"
+                        {...field}
+                        className="min-h-[68px] resize-none text-sm"
                       />
                     </FormControl>
-                    <label htmlFor="elevator-check" className="text-sm text-gray-600 cursor-pointer leading-none">
-                      Hiss
-                    </label>
                   </FormItem>
                 )} />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField control={form.control} name="lotArea" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
-                    <FormControl><Input type="number" placeholder="500" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="balconyArea" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Balkong (kvm)</FormLabel>
-                    <FormControl><Input type="number" placeholder="8" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
+              )}
 
               <FormField control={form.control} name="specialFeatures" render={({ field }) => (
                 <FormItem>

@@ -872,8 +872,8 @@ OUTPUT (JSON):
 }
 `;
 
-// --- HEMNET FORMAT: VARIANT B (för A/B-testning) ---
-const HEMNET_TEXT_PROMPT_B = `
+// [REMOVED] HEMNET_TEXT_PROMPT_B, BOOLI_TEXT_PROMPT, BOOLI_EXPERT_PROMPT — dead code removed
+const _DEAD_CODE_REMOVED = `
 Du är en svensk fastighetsmäklare med 15 års erfarenhet. Skriv en objektbeskrivning för Hemnet.
 
 ANVÄND ALL KONTEXT NEDAN:
@@ -1871,7 +1871,9 @@ Svara med JSON i formatet:
         pro_tips: result.pro_tips || [],
         critical_gaps: result.critical_gaps || [],
         socialCopy: result.socialCopy || null,
-        improvement_suggestions: improvementSuggestions
+        improvement_suggestions: improvementSuggestions,
+        factCheck: result.factCheck || null,
+        wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
       });
     } catch (err: any) {
       console.error("Optimize error:", err);

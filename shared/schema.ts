@@ -53,6 +53,17 @@ export const optimizeResponseSchema = z.object({
     missing_elements: z.array(z.string()).optional(),
     strengths: z.array(z.string()).optional(),
   }).optional(),
+  factCheck: z.object({
+    fact_check_passed: z.boolean().optional(),
+    issues: z.array(z.object({
+      type: z.string().optional(),
+      quote: z.string().optional(),
+      reason: z.string().optional(),
+    })).optional(),
+    quality_score: z.number().optional(),
+    broker_tips: z.array(z.string()).optional(),
+  }).optional().nullable(),
+  wordCount: z.number().optional(),
 });
 
 export const userStatusSchema = z.object({
