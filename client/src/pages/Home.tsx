@@ -29,11 +29,11 @@ export default function Home() {
 
   const LOADING_STEPS = [
     "Analyserar fastighetsdata...",
-    "Identifierar målgrupp och tonalitet...",
-    "Skapar skrivplan...",
     "Matchar exempeltexter...",
     "Skriver objektbeskrivning...",
-    "Faktagranskar texten...",
+    "Genererar rubrik & Instagram-text...",
+    "Skapar visningsinbjudan & kortannons...",
+    "Faktagranskar alla texter...",
     "Putsar och finsliper...",
   ];
 
@@ -166,10 +166,10 @@ export default function Home() {
         {!result && (
           <div className="mb-8">
             <h1 className="text-2xl sm:text-3xl leading-snug mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-              Skriv objektbeskrivningar som säljer
+              5 texter. 1 klick. Redo att publicera.
             </h1>
             <p className="text-sm leading-relaxed" style={{ color: "#9CA3AF" }}>
-              Fyll i fastighetsdata — AI:n genererar en professionell annonstext redo för Hemnet, Booli eller din egen hemsida.
+              Fyll i fastighetsdata — få objektbeskrivning, rubrik, Instagram-inlägg, visningsinbjudan och kortannons. Allt på en gång.
             </p>
           </div>
         )}
@@ -266,8 +266,8 @@ export default function Home() {
                     {[
                       { step: "1", text: "Fyll i fastighetens data" },
                       { step: "2", text: "Välj plattform (Hemnet, Booli...)" },
-                      { step: "3", text: "AI:n genererar en komplett annonstext" },
-                      { step: "4", text: "Kopiera texten till din annons" },
+                      { step: "3", text: "AI:n genererar 5 texter direkt" },
+                      { step: "4", text: "Kopiera varje text med ett klick" },
                     ].map((item) => (
                       <li key={item.step} className="flex items-start gap-3">
                         <span
@@ -300,7 +300,7 @@ export default function Home() {
                       />
                     </div>
                     <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
-                      {remaining} av {limit} beskrivningar kvar
+                      {remaining} av {limit} textkits kvar
                     </p>
                   </div>
                 )}
@@ -315,7 +315,7 @@ export default function Home() {
                       Pro ger dig 20 beskrivningar per dag, prioriterad AI och längre texter.
                     </p>
                     <ul className="space-y-2 mb-5">
-                      {["20 beskrivningar / dag", "Längre & mer detaljerade texter", "Social media-texter inkluderade", "Prioriterad AI-bearbetning"].map((f) => (
+                      {["20 textkits / dag (5 texter per kit)", "Längre & mer detaljerade texter", "Visningsinbjudan & kortannons", "Prioriterad AI-bearbetning"].map((f) => (
                         <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
                           <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
                           {f}

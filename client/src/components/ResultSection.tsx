@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3 } from "lucide-react";
+import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone } from "lucide-react";
 import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 
@@ -8,27 +8,65 @@ interface ResultSectionProps {
   onNewPrompt: () => void;
 }
 
+function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
+  title: string;
+  icon: any;
+  text: string;
+  iconColor: string;
+  delay: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: delay }}>
+      <div className="px-5 py-3 border-b flex justify-between items-center" style={{ borderColor: "#E8E5DE" }}>
+        <div className="flex items-center gap-2">
+          <Icon className="w-3.5 h-3.5" style={{ color: iconColor }} />
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>{title}</span>
+        </div>
+        <Button variant="ghost" size="sm" onClick={copy} className="h-7 text-xs" style={{ color: "#6B7280" }}>
+          {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+          {copied ? "Kopierad!" : "Kopiera"}
+        </Button>
+      </div>
+      <div className="p-5 text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#4B5563" }}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
 export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
-  const [copiedSocial, setCopiedSocial] = useState(false);
 
-  const copyToClipboard = (text: string, type: 'main' | 'social') => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    if (type === 'main') {
-      setCopiedMain(true);
-      setTimeout(() => setCopiedMain(false), 2000);
-    } else {
-      setCopiedSocial(true);
-      setTimeout(() => setCopiedSocial(false), 2000);
-    }
+    setCopiedMain(true);
+    setTimeout(() => setCopiedMain(false), 2000);
   };
 
   const wordCount = result.wordCount || result.improvedPrompt.split(/\s+/).filter(Boolean).length;
   const qualityScore = result.factCheck?.quality_score;
   const factPassed = result.factCheck?.fact_check_passed;
 
+  const hasExtraTexts = result.headline || result.instagramCaption || result.showingInvitation || result.shortAd;
+
   return (
     <div className="space-y-4 pb-12">
+
+      {/* ── TEXTKIT HEADER ── */}
+      {hasExtraTexts && (
+        <div className="flex items-center gap-2 animate-slide-up">
+          <div className="w-2 h-2 rounded-full" style={{ background: "#2D6A4F" }} />
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#2D6A4F" }}>
+            Komplett textkit — 5 texter genererade
+          </span>
+        </div>
+      )}
 
       {/* ── STATUS BAR ── */}
       <div className="flex items-center gap-3 flex-wrap animate-slide-up">
@@ -37,33 +75,31 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           {wordCount} ord
         </div>
         {qualityScore != null && (
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
             style={{
               background: qualityScore >= 0.8 ? "#ECFDF5" : qualityScore >= 0.6 ? "#FFFBEB" : "#FEF2F2",
               color: qualityScore >= 0.8 ? "#065F46" : qualityScore >= 0.6 ? "#92400E" : "#991B1B",
-            }}
-          >
+            }}>
             <Star className="w-3 h-3" />
             Kvalitet: {Math.round(qualityScore * 100)}%
           </div>
         )}
         {factPassed != null && (
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
-            style={{
-              background: factPassed ? "#ECFDF5" : "#FEF2F2",
-              color: factPassed ? "#065F46" : "#991B1B",
-            }}
-          >
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{ background: factPassed ? "#ECFDF5" : "#FEF2F2", color: factPassed ? "#065F46" : "#991B1B" }}>
             {factPassed ? <ShieldCheck className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
             {factPassed ? "Faktagranskad" : "Fakta-problem"}
           </div>
         )}
       </div>
 
-      {/* ── HUVUDANNONS ── */}
-      <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.05s" }}>
+      {/* ── 1. RUBRIK ── */}
+      {result.headline && (
+        <CopyCard title="Rubrik" icon={Type} text={result.headline} iconColor="#D4AF37" delay="0.03s" />
+      )}
+
+      {/* ── 2. OBJEKTBESKRIVNING ── */}
+      <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
         <div className="px-6 py-4 border-b flex justify-between items-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
@@ -71,13 +107,9 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
               Objektbeskrivning
             </span>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => copyToClipboard(result.improvedPrompt, 'main')} 
+          <Button variant="outline" size="sm" onClick={() => copyToClipboard(result.improvedPrompt)}
             className="h-8 text-xs font-medium transition-shadow"
-            style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}
-          >
+            style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}>
             {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
             {copiedMain ? "Kopierad!" : "Kopiera text"}
           </Button>
@@ -100,29 +132,24 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
         </div>
       )}
 
-      {/* ── SOCIAL MEDIA ── */}
-      {result.socialCopy && (
-        <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.15s" }}>
-          <div className="px-5 py-3 border-b flex justify-between items-center" style={{ borderColor: "#E8E5DE" }}>
-            <div className="flex items-center gap-2">
-              <Share2 className="w-3.5 h-3.5" style={{ color: "#9CA3AF" }} />
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Social media-text</span>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => copyToClipboard(result.socialCopy!, 'social')} 
-              className="h-7 text-xs"
-              style={{ color: "#6B7280" }}
-            >
-              {copiedSocial ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
-              {copiedSocial ? "Kopierad!" : "Kopiera"}
-            </Button>
-          </div>
-          <div className="p-5 text-sm leading-relaxed" style={{ color: "#4B5563" }}>
-            {result.socialCopy}
-          </div>
-        </div>
+      {/* ── 3. INSTAGRAM ── */}
+      {result.instagramCaption && (
+        <CopyCard title="Instagram / Facebook" icon={Instagram} text={result.instagramCaption} iconColor="#E1306C" delay="0.12s" />
+      )}
+
+      {/* ── 4. VISNINGSINBJUDAN ── */}
+      {result.showingInvitation && (
+        <CopyCard title="Visningsinbjudan" icon={Mail} text={result.showingInvitation} iconColor="#2563EB" delay="0.15s" />
+      )}
+
+      {/* ── 5. KORTANNONS ── */}
+      {result.shortAd && (
+        <CopyCard title="Kortannons" icon={Megaphone} text={result.shortAd} iconColor="#7C3AED" delay="0.18s" />
+      )}
+
+      {/* ── SOCIAL MEDIA (legacy / extra) ── */}
+      {result.socialCopy && !result.instagramCaption && (
+        <CopyCard title="Social media-text" icon={Share2} text={result.socialCopy} iconColor="#9CA3AF" delay="0.2s" />
       )}
 
       {/* ── FACT CHECK ISSUES ── */}
@@ -146,7 +173,6 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
       {/* ── INFO CARDS GRID ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up" style={{ animationDelay: "0.25s" }}>
 
-        {/* Saknad information */}
         {result.improvements && result.improvements.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#FFFBEB", borderColor: "#FDE68A" }}>
             <div className="flex items-center gap-2 mb-3">
@@ -164,7 +190,6 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           </div>
         )}
 
-        {/* Tips till mäklaren */}
         {result.suggestions && result.suggestions.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#EFF6FF", borderColor: "#BFDBFE" }}>
             <div className="flex items-center gap-2 mb-3">
@@ -181,7 +206,6 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           </div>
         )}
 
-        {/* Broker tips from fact-check */}
         {result.factCheck?.broker_tips && result.factCheck.broker_tips.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#ECFDF5", borderColor: "#A7F3D0" }}>
             <div className="flex items-center gap-2 mb-3">
@@ -198,7 +222,6 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           </div>
         )}
 
-        {/* Improvement suggestions (pro) */}
         {result.improvement_suggestions?.strengths && result.improvement_suggestions.strengths.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#F5F3FF", borderColor: "#DDD6FE" }}>
             <div className="flex items-center gap-2 mb-3">
@@ -218,12 +241,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
 
       {/* ── NEW PROMPT ── */}
       <div className="flex justify-center pt-2">
-        <Button 
-          variant="ghost" 
-          onClick={onNewPrompt}
-          className="text-sm transition-colors"
-          style={{ color: "#9CA3AF" }}
-        >
+        <Button variant="ghost" onClick={onNewPrompt} className="text-sm transition-colors" style={{ color: "#9CA3AF" }}>
           <RefreshCw className="w-3.5 h-3.5 mr-2" /> Skapa ny beskrivning
         </Button>
       </div>
