@@ -569,6 +569,16 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   
   ];
 
+// Haversine distance between two lat/lng points in meters
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function cleanForbiddenPhrases(text: string): string {
   if (!text) return text;
   let cleaned = text;
@@ -1719,6 +1729,150 @@ Svara med JSON i formatet:
     }
   });
 
+
+  // ── AI REWRITE: Inline text editing ──
+  app.post("/api/rewrite", requireAuth, async (req, res) => {
+    try {
+      const { selectedText, fullText, instruction } = req.body;
+      if (!selectedText || !fullText || !instruction) {
+        return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
+      }
+
+      const rewriteCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system" as const,
+            content: `Du är en svensk fastighetsmäklare och textredaktör. Du ska skriva om EN specifik del av en objektbeskrivning.
+
+REGLER:
+- Skriv om BARA den markerade texten enligt instruktionen.
+- Behåll samma stil och ton som resten av texten.
+- HITTA ALDRIG PÅ fakta som inte finns i originaltexten.
+- Inga förbjudna ord: erbjuder, fantastisk, perfekt, vilket, som ger en, för den som, i hjärtat av.
+- Korta meningar. Presens. Ingen utfyllnad.
+- Svara med JSON: {"rewritten": "den omskrivna texten"}`,
+          },
+          {
+            role: "user" as const,
+            content: `HELA TEXTEN (för kontext):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`,
+          },
+        ],
+        max_tokens: 1000,
+        temperature: 0.25,
+        response_format: { type: "json_object" },
+      });
+
+      const raw = rewriteCompletion.choices[0]?.message?.content || "{}";
+      let parsed: any;
+      try { parsed = JSON.parse(raw); } catch { parsed = { rewritten: selectedText }; }
+
+      const rewritten = cleanForbiddenPhrases(parsed.rewritten || selectedText);
+      const newFullText = fullText.replace(selectedText, rewritten);
+
+      res.json({ rewritten, newFullText });
+    } catch (err: any) {
+      console.error("Rewrite error:", err);
+      res.status(500).json({ message: err.message || "Omskrivning misslyckades" });
+    }
+  });
+
+  // ── ADDRESS LOOKUP: Auto-fill nearby places ──
+  app.post("/api/address-lookup", requireAuth, async (req, res) => {
+    try {
+      const { address } = req.body;
+      if (!address) return res.status(400).json({ message: "Adress krävs" });
+
+      const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+      if (googleApiKey) {
+        // Google Places: geocode → nearby search
+        const geoRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address + ", Sverige")}&key=${googleApiKey}`
+        );
+        const geoData = await geoRes.json() as any;
+        const location = geoData.results?.[0]?.geometry?.location;
+
+        if (!location) {
+          return res.json({ places: [], message: "Adressen kunde inte hittas" });
+        }
+
+        const types = [
+          { type: "transit_station", label: "Kollektivtrafik" },
+          { type: "school", label: "Skola" },
+          { type: "supermarket", label: "Matbutik" },
+          { type: "park", label: "Park" },
+          { type: "restaurant", label: "Restaurang" },
+        ];
+
+        const places: any[] = [];
+        for (const { type, label } of types) {
+          const nearbyRes = await fetch(
+            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=1500&type=${type}&key=${googleApiKey}&language=sv`
+          );
+          const nearbyData = await nearbyRes.json() as any;
+          const first = nearbyData.results?.[0];
+          if (first) {
+            const dist = haversineDistance(
+              location.lat, location.lng,
+              first.geometry.location.lat, first.geometry.location.lng
+            );
+            places.push({
+              name: first.name,
+              type: label,
+              distance: dist < 1000 ? `${Math.round(dist)} m` : `${(dist / 1000).toFixed(1)} km`,
+              distanceMeters: Math.round(dist),
+            });
+          }
+        }
+
+        const formattedAddress = geoData.results?.[0]?.formatted_address || address;
+        const transport = places
+          .filter((p: any) => p.type === "Kollektivtrafik")
+          .map((p: any) => `${p.name} ${p.distance}`)
+          .join(", ") || null;
+        const neighborhood = places
+          .filter((p: any) => p.type !== "Kollektivtrafik")
+          .slice(0, 4)
+          .map((p: any) => `${p.name} (${p.type.toLowerCase()}) ${p.distance}`)
+          .join(". ") || null;
+
+        res.json({ formattedAddress, places, transport, neighborhood });
+      } else {
+        // Fallback: Use OpenAI to generate likely nearby places based on address knowledge
+        const aiRes = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system" as const,
+              content: `Du är en svensk stadsplaneringsexpert. Baserat på en adress i Sverige, ange troliga närliggande platser. BARA platser du är SÄKER på existerar nära adressen. Om du inte vet — svara med tomma arrays.
+
+Svara med JSON:
+{"transport":"Närmaste kollektivtrafik med ungefärligt avstånd","neighborhood":"Närmaste butiker, skolor, parker med ungefärligt avstånd","places":[{"name":"Platsnamn","type":"Typ","distance":"Avstånd"}]}`,
+            },
+            { role: "user" as const, content: `Adress: ${address}, Sverige` },
+          ],
+          max_tokens: 500,
+          temperature: 0.1,
+          response_format: { type: "json_object" },
+        });
+
+        const raw = aiRes.choices[0]?.message?.content || "{}";
+        let parsed: any;
+        try { parsed = JSON.parse(raw); } catch { parsed = { places: [] }; }
+        res.json({
+          formattedAddress: address,
+          places: parsed.places || [],
+          transport: parsed.transport || null,
+          neighborhood: parsed.neighborhood || null,
+          source: "ai-estimated",
+        });
+      }
+    } catch (err: any) {
+      console.error("Address lookup error:", err);
+      res.status(500).json({ message: err.message || "Adresssökning misslyckades" });
+    }
+  });
 
   // Stripe checkout
   app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
