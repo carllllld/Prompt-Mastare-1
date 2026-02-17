@@ -3,7 +3,7 @@ import type { Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import OpenAI from "openai";
-import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, type PlanType, type User } from "@shared/schema";
+import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
 
@@ -29,6 +29,84 @@ function safeJsonParse(rawText: string): any {
     .replace(/\u0000/g, "")
     .trim();
   return JSON.parse(sanitized);
+}
+
+// AI-analys av användarens skrivstil
+async function analyzeWritingStyle(referenceTexts: string[]): Promise<{
+  formality: number;
+  detailLevel: number;
+  emotionalTone: number;
+  sentenceLength: number;
+  adjectiveUsage: number;
+  factFocus: number;
+}> {
+  const analysisPrompt = `Analysera dessa 3 objektbeskrivningar från en svensk mäklare och ge en stilprofil.
+
+TEXTER:
+${referenceTexts.join('\n\n---\n\n')}
+
+Svara ENDAST med JSON i detta format:
+{
+  "formality": 1-10, // 1=mycket informell, 10=mycket formell
+  "detailLevel": 1-10, // 1=kortfattad, 10=mycket detaljerad
+  "emotionalTone": 1-10, // 1=rena fakta, 10=känslomässigt
+  "sentenceLength": 1-10, // 1=korta meningar, 10=långa meningar
+  "adjectiveUsage": 1-10, // 1=få adjektiv, 10=många adjektiv
+  "factFocus": 1-10 // 1=fokus på känsla, 10=fokus på fakta
+}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: analysisPrompt }],
+      max_tokens: 200,
+      temperature: 0.1,
+    });
+
+    const analysis = safeJsonParse(response.choices[0]?.message?.content || "{}");
+    
+    // Validera och normalisera värden
+    return {
+      formality: Math.max(1, Math.min(10, Number(analysis.formality) || 5)),
+      detailLevel: Math.max(1, Math.min(10, Number(analysis.detailLevel) || 5)),
+      emotionalTone: Math.max(1, Math.min(10, Number(analysis.emotionalTone) || 5)),
+      sentenceLength: Math.max(1, Math.min(10, Number(analysis.sentenceLength) || 5)),
+      adjectiveUsage: Math.max(1, Math.min(10, Number(analysis.adjectiveUsage) || 5)),
+      factFocus: Math.max(1, Math.min(10, Number(analysis.factFocus) || 5)),
+    };
+  } catch (error) {
+    console.error("Style analysis failed:", error);
+    // Fallback till neutral profil
+    return {
+      formality: 5,
+      detailLevel: 5,
+      emotionalTone: 5,
+      sentenceLength: 5,
+      adjectiveUsage: 5,
+      factFocus: 5,
+    };
+  }
+}
+
+// Generera personaliserad prompt baserat på användarens stil
+function generatePersonalizedPrompt(referenceTexts: string[], styleProfile: any): string {
+  return `Skriv i exakt samma stil och ton som dessa exempel från mäklaren:
+
+EXEMPELTEXTER:
+${referenceTexts.join('\n\n---\n\n')}
+
+STILPROFIL:
+- Formalitet: ${styleProfile.formality}/10
+- Detaljnivå: ${styleProfile.detailLevel}/10
+- Känsloton: ${styleProfile.emotionalTone}/10
+- Meninglängd: ${styleProfile.sentenceLength}/10
+- Adjektivanvändning: ${styleProfile.adjectiveUsage}/10
+- Faktafokus: ${styleProfile.factFocus}/10
+
+VIKTIGT: Använd samma ton, men UNDVIK dessa klyschor:
+${FORBIDDEN_PHRASES.slice(0, 20).join(', ')}
+
+Skriv som en erfaren svensk mäklare med exakt samma stil som exemplen ovan.`;
 }
 
 // Förbjudna fraser - AI-fraser som avslöjar genererad text
@@ -1648,6 +1726,123 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // PERSONAL STYLE ENDPOINTS - Pro-funktion
+  app.get("/api/personal-style", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      if (user.plan !== "pro") {
+        return res.status(403).json({ message: "Personlig stil är endast för Pro-användare" });
+      }
+
+      const personalStyle = await storage.getPersonalStyle(user.id);
+      
+      if (!personalStyle) {
+        return res.json({ 
+          hasStyle: false, 
+          message: "Ingen personlig stil har satts upp än" 
+        });
+      }
+
+      res.json({
+        hasStyle: true,
+        referenceTexts: personalStyle.referenceTexts,
+        styleProfile: personalStyle.styleProfile,
+        isActive: personalStyle.isActive,
+        teamShared: personalStyle.teamShared,
+        createdAt: personalStyle.createdAt
+      });
+    } catch (err) {
+      console.error("Get personal style error:", err);
+      res.status(500).json({ message: "Kunde inte hämta personlig stil" });
+    }
+  });
+
+  app.post("/api/personal-style", requireAuth, requirePro, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { referenceTexts, teamShared } = req.body;
+
+      if (!referenceTexts || !Array.isArray(referenceTexts) || referenceTexts.length !== 3) {
+        return res.status(400).json({ message: "Du måste ange exakt 3 exempeltexter" });
+      }
+
+      // Validera att varje text är minst 100 tecken
+      for (const text of referenceTexts) {
+        if (typeof text !== "string" || text.trim().length < 100) {
+          return res.status(400).json({ message: "Varje exempeltext måste vara minst 100 tecken lång" });
+        }
+      }
+
+      console.log("[Personal Style] Analyzing writing style from 3 reference texts...");
+      
+      // Analysera skrivstilen med AI
+      const styleProfile = await analyzeWritingStyle(referenceTexts);
+      
+      console.log("[Personal Style] Style analysis completed:", styleProfile);
+
+      // Spara till databasen
+      const personalStyleData: InsertPersonalStyle = {
+        userId: user.id,
+        referenceTexts,
+        styleProfile,
+        isActive: true,
+        teamShared: teamShared || false
+      };
+
+      const savedStyle = await storage.createPersonalStyle(personalStyleData);
+      
+      res.json({
+        success: true,
+        styleProfile,
+        message: "Personlig stil har sparats! AI:n kommer nu att använda din skrivstil."
+      });
+    } catch (err) {
+      console.error("Create personal style error:", err);
+      res.status(500).json({ message: "Kunde inte spara personlig stil" });
+    }
+  });
+
+  app.put("/api/personal-style", requireAuth, requirePro, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { isActive, teamShared } = req.body;
+
+      const updatedStyle = await storage.updatePersonalStyle(user.id, { 
+        isActive, 
+        teamShared,
+        updatedAt: new Date()
+      });
+      
+      if (!updatedStyle) {
+        return res.status(404).json({ message: "Ingen personlig stil hittades" });
+      }
+
+      res.json({
+        success: true,
+        message: "Personlig stil har uppdaterats"
+      });
+    } catch (err) {
+      console.error("Update personal style error:", err);
+      res.status(500).json({ message: "Kunde inte uppdatera personlig stil" });
+    }
+  });
+
+  app.delete("/api/personal-style", requireAuth, requirePro, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      
+      await storage.deletePersonalStyle(user.id);
+      
+      res.json({
+        success: true,
+        message: "Personlig stil har raderats"
+      });
+    } catch (err) {
+      console.error("Delete personal style error:", err);
+      res.status(500).json({ message: "Kunde inte radera personlig stil" });
+    }
+  });
+
   // Optimize endpoint
   app.post("/api/optimize", requireAuth, async (req, res) => {
     try {
@@ -1775,6 +1970,20 @@ Svara kortfattat och konkret.`
       let disposition: any;
       let toneAnalysis: any;
       let writingPlan: any;
+      let personalStylePrompt = "";
+
+      // Hämta personlig stil för Pro-användare
+      if (plan === "pro") {
+        try {
+          const personalStyle = await storage.getPersonalStyle(user.id);
+          if (personalStyle && personalStyle.isActive) {
+            console.log("[Personal Style] Using user's personal writing style");
+            personalStylePrompt = generatePersonalizedPrompt(personalStyle.referenceTexts, personalStyle.styleProfile);
+          }
+        } catch (error) {
+          console.error("[Personal Style] Failed to load personal style:", error);
+        }
+      }
 
       if (propertyData && propertyData.address) {
         // SNABB VÄG: Strukturerad data från formuläret → hoppa över AI-extraktion (0 API-anrop)
@@ -1850,7 +2059,13 @@ Svara kortfattat och konkret.`
       console.log("[Step 3] Generating text...");
 
       // Single text generation (no A/B waste - always use BOOLI_TEXT_PROMPT_WRITER for booli)
-      const textPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
+      let textPrompt = platform === "hemnet" ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
+      
+      // Lägg till personlig stil om den finns
+      if (personalStylePrompt) {
+        textPrompt = personalStylePrompt + "\n\n" + textPrompt;
+        console.log("[Personal Style] Personalized prompt integrated");
+      }
       
       const textMessages = [
         {

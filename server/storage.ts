@@ -7,7 +7,8 @@ import {
   promptComments, type PromptComment, type InsertPromptComment,
   presenceSessions, type PresenceSession,
   teamInvites, type TeamInvite,
-  emailRateLimits, type EmailRateLimit
+  emailRateLimits, type EmailRateLimit,
+  personalStyles, type PersonalStyle, type InsertPersonalStyle
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gt, gte } from "drizzle-orm";
@@ -81,6 +82,12 @@ export interface IStorage {
   // Email rate limiting methods
   canSendEmail(email: string, emailType: string, maxPerHour: number): Promise<boolean>;
   recordEmailSent(email: string, emailType: string): Promise<void>;
+
+  // Personal style methods
+  getPersonalStyle(userId: string): Promise<PersonalStyle | null>;
+  createPersonalStyle(style: InsertPersonalStyle): Promise<PersonalStyle>;
+  updatePersonalStyle(userId: string, data: Partial<InsertPersonalStyle>): Promise<PersonalStyle | null>;
+  deletePersonalStyle(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -491,6 +498,34 @@ export class DatabaseStorage implements IStorage {
       email: email.toLowerCase(),
       emailType,
     });
+  }
+
+  async getPersonalStyle(userId: string): Promise<PersonalStyle | null> {
+    const result = await db.select()
+      .from(personalStyles)
+      .where(eq(personalStyles.userId, userId))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async createPersonalStyle(style: InsertPersonalStyle): Promise<PersonalStyle> {
+    const [result] = await db.insert(personalStyles)
+      .values(style)
+      .returning();
+    return result;
+  }
+
+  async updatePersonalStyle(userId: string, data: Partial<InsertPersonalStyle>): Promise<PersonalStyle | null> {
+    const [result] = await db.update(personalStyles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(personalStyles.userId, userId))
+      .returning();
+    return result || null;
+  }
+
+  async deletePersonalStyle(userId: string): Promise<void> {
+    await db.delete(personalStyles)
+      .where(eq(personalStyles.userId, userId));
   }
 }
 
