@@ -139,7 +139,7 @@ export const PLAN_LIMITS = {
 // Feature access per plan
 export const FEATURE_ACCESS = {
   free: { personalStyle: false, areaSearch: false, textEditing: false, teamFeatures: false, apiAccess: false },
-  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: false },
+  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true },
   premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: true, apiAccess: true },
 } as const;
 
