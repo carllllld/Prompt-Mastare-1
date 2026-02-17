@@ -1657,29 +1657,31 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
   return { disposition, tone_analysis, writing_plan };
 }
 
-// Faktagranskning — ALDRIG omskrivning, bara rapportering
+// Faktagranskning med korrigering — hitta fel OCH fixa dem
 const FACT_CHECK_PROMPT = `
 # UPPGIFT
 
-Granska objektbeskrivningen mot dispositionen. ÄNDRA ALDRIG texten. Rapportera bara fel.
+Granska objektbeskrivningen mot dispositionen. Hitta fel och korrigera dem.
 
 # REGLER
 
 1. Kontrollera att ALLA fakta i texten finns i dispositionen
-2. Flagga påhittade detaljer (märken, mått, årtal som inte finns i rådata)
-3. Flagga juridiskt problematiska påståenden
-4. SKRIV ALDRIG om texten — rapportera bara
-5. Kontrollera att inga förbjudna AI-fraser smugit sig in
+2. Ta bort påhittade detaljer (märken, mått, årtal som inte finns i rådata)
+3. Ta bort juridiskt problematiska påståenden
+4. Ta bort ALLA förbjudna AI-fraser
+5. Behåll ALLA korrekta fakta från dispositionen
+6. Skriv om texten för att vara 100% korrekt
 
 # OUTPUT FORMAT (JSON)
 
 {
   "fact_check_passed": true,
+  "corrected_text": "Hela den korrigerade texten här",
   "issues": [
-    {"type": "fabricated/inaccurate/legal/ai_phrase", "quote": "den problematiska frasen", "reason": "varför det är fel"}
+    {"type": "fabricated/inaccurate/legal/ai_phrase", "quote": "felaktig fras", "correction": "korrigerad fras", "reason": "varför det var fel"}
   ],
   "quality_score": 0.95,
-  "broker_tips": ["konkret tips för mäklaren"]
+  "broker_tips": ["tips för mäklaren"]
 }
 `;
 
@@ -2337,140 +2339,62 @@ Svara kortfattat och konkret.`
       }
       console.log("[Post-processing] Automatic phrase cleanup done before validation");
 
-      // Validering - nu körs den på redan rensad text
-      let violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
-      console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
+      // Step 2: Validation + Direct Correction (no retries needed)
+      console.log("[Step 2] AI validation and correction...");
       
-      // Retry loop - skickar befintlig text och ber AI:n BARA fixa specifika fel
-      const maxAttempts = 2;
-      let attempts = 0;
-      while (violations.length > 0 && attempts < maxAttempts) {
-        attempts++;
-        console.log(`[AI Validation] Retry attempt ${attempts} due to violations:`, violations);
-        
-        const violationList = violations.map(v => `- ${v}`).join("\n");
-        const currentText = result.improvedPrompt || "";
-
-        const retryCompletion = await openai.chat.completions.create({
-          model: aiModel,
-          messages: [
-            {
-              role: "system" as const,
-              content: `Du är en textredaktör. Fixa BARA de listade felen. Ändra så lite som möjligt.
-
-ERSÄTTNINGAR:
-- "erbjuder"/"erbjuds" → "har"
-- "bjuder på" → "har"
-- "präglas av"/"genomsyras av" → "har"
-- "generös"/"generösa"/"generöst" → ta bort, använd exakt mått
-- "fantastisk"/"perfekt"/"idealisk"/"underbar"/"magisk"/"imponerande" → ta bort helt
-- "smakfullt"/"stilfullt"/"elegant"/"exklusivt"/"omsorgsfullt" → ta bort helt
-- "vilket"/"som ger en"/"för den som" → dela upp i två korta meningar
-- "i hjärtat av" → "centralt i"
-- "Välkommen"/"Här" i början → börja med gatuadressen
-- "kontakta oss"/"boka visning" → ta bort hela meningen
-- "drömboende"/"en sann pärla" → ta bort helt
-- "faciliteter" → "utrymmen" eller ta bort
-- "njut av" → ta bort
-- "ljus och luftig" → "ljus"
-- "stilrent och modernt" → "modernt"
-- alla "X och Y"-adjektivpar → behåll bara ett ord
-- "Det finns även/också" → ta bort, börja med objektet: "Förråd 5 kvm."
-- "-möjligheter" (förvaringsmöjligheter etc) → ta bort suffixet
-- "ligger X meter/km bort" (om 2+) → variera: "X meter", "ca X min", "nära X"
-- Monotona meningsstarter (3+ med samma ord) → variera: börja med rummet/objektet
-- Emotionellt slutstycke → ersätt med LÄGE-fakta från dispositionen
-- "inte bara...utan också" → ta bort "inte bara", ersätt "utan också" med "och"
-- "bidrar till"/"förstärker"/"skapar en" → ta bort
-
-REGLER:
-- Om texten är för kort: lägg till fakta från dispositionen. Korta meningar.
-- HITTA ALDRIG PÅ fakta.
-- ÄNDRA ALDRIG meningar utan fel.
-- Varje mening ska börja med ett NYTT subjekt (rumsnamn, material, platsnamn).
-
-Returnera JSON: {"improvedPrompt": "den redigerade texten"}`,
-            },
-            {
-              role: "user" as const,
-              content:
-                "BEFINTLIG TEXT ATT REDIGERA:\n\n" +
-                currentText +
-                "\n\n---\n\nFEL ATT FIXA:\n" +
-                violationList +
-                "\n\n---\n\nDISPOSITION (för att lägga till fakta om texten är för kort):\n" +
-                JSON.stringify(disposition, null, 2) +
-                "\n\nFixa BARA felen ovan. Ändra så lite som möjligt av resten.",
-            },
-          ],
-          max_tokens: 4000,
-          temperature: 0.1,
-          response_format: { type: "json_object" },
-        });
-
-        const retryText = retryCompletion.choices[0]?.message?.content || "{}";
-        try {
-          const retryResult = safeJsonParse(retryText);
-          // KRITISKT: Ersätt BARA texten, behåll original highlights/analysis/socialCopy/tips
-          if (retryResult.improvedPrompt) {
-            result.improvedPrompt = retryResult.improvedPrompt;
-          }
-          // Behåll socialCopy bara om retryn inte hade en â€” annars kan AI:n ha skrivit om den
-          // Original socialCopy från steg 3 är alltid bättre
-        } catch (e) {
-          console.warn("[AI Validation] Retry JSON parse failed, continuing to next attempt...", e);
-          violations = ["Ogiltig JSON i modellens svar"]; 
-          continue;
-        }
-        
-        // VIKTIGT: Kör cleanForbiddenPhrases efter varje retry också
-        if (result.improvedPrompt) {
-          result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
-        }
-        if (result.socialCopy) {
-          result.socialCopy = cleanForbiddenPhrases(result.socialCopy);
-        }
-        
-        violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
-        console.log("[AI Validation] After retry " + attempts + " violations:", violations.length > 0 ? violations : "NONE");
-      }
-      
-      // Om det fortfarande finns violations efter retries — returnera texten ändå med varningar
-      // Bättre att ge användaren en text med mindre brister än att ge ett tomt felmeddelande
-      if (violations.length > 0) {
-        console.warn("[Validation] Still has violations after retries, returning text with warnings:", violations);
-      }
-
-      // Step 4: Fact-check review (NEVER rewrites text) - 1 API call
-      console.log("[Step 4] Fact-check review...");
-      
-      const factCheckMessages = [
+      const validationMessages = [
         {
           role: "system" as const,
-          content: FACT_CHECK_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
+          content: `Hitta förbjudna fraser i texten och ersätt dem med korrekta alternativ.
+
+# REGLER
+
+1. Hitta ALLA förbjudna AI-fraser (397 st)
+2. Ersätt dem med specifika fakta från dispositionen
+3. Behåll alla korrekta delar av texten
+4. Se till att texten fortfarande flyter naturligt
+5. Använd gatuadress som öppning, aldrig "Välkommen"
+
+# OUTPUT FORMAT (JSON)
+
+{
+  "corrected_text": "Hela den korrigerade texten här",
+  "corrections": [
+    {"from": "förbjuden fras", "to": "korrekt fras", "reason": "AI-klyscha ersatt med fakta"}
+  ],
+  "violations_remaining": 0
+}
+
+Svara ENDAST med giltigt JSON-objekt.`,
         },
         {
           role: "user" as const,
-          content: `OBJEKTBESKRIVNING:\n${result.improvedPrompt}\n\nDISPOSITION:\n${JSON.stringify(disposition, null, 2)}`,
+          content: `TEXT TO CORRECT:\n${result.improvedPrompt}\n\nDISPOSITION FOR FACTS:\n${JSON.stringify(disposition, null, 2)}`,
         },
       ];
 
-      let factCheck: any = { fact_check_passed: true, issues: [], quality_score: 0.9, broker_tips: [] };
+      let validationResult: any = { corrected_text: result.improvedPrompt, corrections: [], violations_remaining: 0 };
       try {
-        const factCheckCompletion = await openai.chat.completions.create({
+        const validationCompletion = await openai.chat.completions.create({
           model: aiModel,
-          messages: factCheckMessages,
-          max_tokens: 1000,
+          messages: validationMessages,
+          max_tokens: 3000,
           temperature: 0.1,
           response_format: { type: "json_object" },
         });
-        factCheck = safeJsonParse(factCheckCompletion.choices[0]?.message?.content || "{}");
+        validationResult = safeJsonParse(validationCompletion.choices[0]?.message?.content || "{}");
+        
+        // Använd korrigerad text
+        if (validationResult.corrected_text && validationResult.corrected_text !== result.improvedPrompt) {
+          console.log("[Step 2] Using corrected text from validation");
+          result.improvedPrompt = validationResult.corrected_text;
+        }
       } catch (e) {
-        console.warn("[Step 4] Fact-check failed, continuing...", e);
+        console.warn("[Step 2] Validation failed, continuing...", e);
       }
-      console.log("[Step 4] Fact-check:", factCheck.fact_check_passed ? "PASSED" : "ISSUES FOUND", factCheck.issues?.length || 0, "issues");
-      
-      result.factCheck = factCheck;
+      console.log("[Step 2] Validation corrections:", validationResult.corrections?.length || 0, "fixes applied");
+
+      // Step 3: Fact-check review (NEVER rewrites text) - 1 API call
 
       // Final post-processing: add paragraphs
       if (result.improvedPrompt) {
