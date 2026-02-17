@@ -2,10 +2,15 @@
 import type { Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import OpenAI from "openai";
+import { getGeographicContext } from "./geographic-intelligence";
+import { analyzeMarketPosition, getMarketTrends2025 } from "./market-intelligence";
+import { analyzeArchitecturalValue } from "./architectural-intelligence";
+import { analyzeBRFEconomy, generateBRFWarningSigns } from "./brf-intelligence";
+import { identifyBuyerSegment, generatePsychologicalProfile } from "./buyer-psychology";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
+import OpenAI from "openai";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
@@ -2050,7 +2055,98 @@ Svara kortfattat och konkret.`
         disposition = structured.disposition;
         toneAnalysis = structured.tone_analysis;
         writingPlan = structured.writing_plan;
-        console.log("[Step 1] Structured disposition built from form data");
+        
+        // === ENHANCED INTELLIGENCE INTEGRATION ===
+        // Add geographic intelligence
+        const geoContext = getGeographicContext(propertyData.address);
+        if (geoContext.city) {
+          disposition.location.city = geoContext.city.name;
+          disposition.location.area_type = geoContext.district?.characteristics.areaType;
+          disposition.location.price_level = geoContext.district?.characteristics.avgPricePerKvm || geoContext.city.propertyCharacteristics.avgPricePerKvm;
+          disposition.location.nearby_amenities = geoContext.nearbyAmenities;
+          disposition.location.transport_options = geoContext.transportOptions;
+          disposition.location.area_characteristics = geoContext.areaCharacteristics;
+        }
+        
+        // Add market intelligence
+        if (geoContext.city) {
+          const marketData = getMarketTrends2025(geoContext.city.name.toLowerCase());
+          if (marketData) {
+            toneAnalysis.market_trends = marketData.priceDevelopment;
+            toneAnalysis.key_drivers = marketData.keyDrivers;
+            toneAnalysis.risks = marketData.risks;
+            toneAnalysis.opportunities = marketData.opportunities;
+          }
+          
+          const marketPosition = analyzeMarketPosition(
+            Number(propertyData.price) || 0,
+            Number(propertyData.livingArea) || 0,
+            geoContext.city.name.toLowerCase()
+          );
+          toneAnalysis.market_segment = marketPosition.segment;
+          toneAnalysis.market_comparison = marketPosition.marketComparison;
+          toneAnalysis.market_recommendation = marketPosition.recommendation;
+        }
+        
+        // Add architectural intelligence
+        const archAnalysis = analyzeArchitecturalValue(
+          propertyData.buildYear || "2000",
+          [propertyData.flooring || "", propertyData.kitchenDescription || "", propertyData.bathroomDescription || ""],
+          [propertyData.specialFeatures || ""]
+        );
+        if (archAnalysis.era) {
+          disposition.property.architectural_era = archAnalysis.era.name;
+          disposition.property.architectural_style = archAnalysis.era.characteristics.style;
+          disposition.property.maintenance_profile = archAnalysis.maintenanceProfile;
+          disposition.property.energy_profile = archAnalysis.energyProfile;
+          disposition.property.modernization_potential = archAnalysis.modernizationPotential;
+        }
+        
+        // Add BRF intelligence for apartments
+        if (propertyData.propertyType === "apartment" && propertyData.brfName) {
+          const brfAnalysis = analyzeBRFEconomy(
+            propertyData.brfName,
+            {
+              equityRatio: 45, // Would come from actual data
+              monthlyFee: Number(propertyData.monthlyFee) || 0,
+              debtPerSqm: 8000, // Would come from actual data
+              operatingResult: 100000, // Would come from actual data
+              reserveFund: 500000, // Would come from actual data
+              totalApartments: 50, // Would come from actual data
+              yearBuilt: propertyData.buildYear || "2000",
+              lastMajorRenovation: "2020",
+              upcomingRenovations: []
+            },
+            geoContext.city?.name.toLowerCase() || "stockholm",
+            (geoContext.district?.characteristics.areaType === "waterfront" || geoContext.district?.characteristics.areaType === "industrial") ? "urban_center" : (geoContext.district?.characteristics.areaType || "urban_center")
+          );
+          disposition.economics.association = {
+            name: propertyData.brfName,
+            financial_health: brfAnalysis.financialHealth,
+            warning_signs: generateBRFWarningSigns(brfAnalysis),
+            market_position: brfAnalysis.marketPosition
+          };
+        }
+        
+        // Add buyer psychology intelligence
+        const buyerSegment = identifyBuyerSegment(
+          35, // Would come from user data or target market
+          "medium",
+          "couple",
+          propertyData.propertyType || "apartment",
+          geoContext.city?.name || "Stockholm",
+          Number(propertyData.price) || 0
+        );
+        if (buyerSegment) {
+          const psychologicalProfile = generatePsychologicalProfile(propertyData, buyerSegment);
+          toneAnalysis.target_buyer_segment = buyerSegment.name;
+          toneAnalysis.buyer_motivations = psychologicalProfile.segment.motivations.primary;
+          toneAnalysis.buyer_concerns = psychologicalProfile.segment.concerns.major;
+          toneAnalysis.psychological_triggers = psychologicalProfile.triggers.map(t => t.trigger);
+          toneAnalysis.messaging_strategy = psychologicalProfile.messaging_strategy.key_messages;
+        }
+        
+        console.log("[Step 1] Enhanced disposition with intelligence databases");
       } else {
         // FALLBACK: För gammal klient eller API-anrop utan propertyData
         console.log("[Step 1] FALLBACK: AI extraction from raw text...");
