@@ -1556,47 +1556,47 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
     writing_style: "professional",
     key_selling_points: [
       pd.uniqueSellingPoints,
-      pd.kitchenDescription ? "kÃ¶k" : null,
+      pd.kitchenDescription ? "kök" : null,
       pd.balconyArea ? "balkong/uteplats" : null,
     ].filter(Boolean).slice(0, 3),
   };
 
   const writing_plan = {
-    opening: `${pd.address} â€" ${propertyType} om ${size} kvm`,
+    opening: `${pd.address} — ${propertyType} om ${size} kvm`,
     must_include: [
       pd.address && "adress", pd.livingArea && "storlek", pd.totalRooms && "rum",
-      pd.kitchenDescription && "kÃ¶k", pd.bathroomDescription && "badrum",
-      pd.balconyArea && "balkong", pd.area && "lÃ¤ge",
+      pd.kitchenDescription && "kök", pd.bathroomDescription && "badrum",
+      pd.balconyArea && "balkong", pd.area && "läge",
     ].filter(Boolean),
-    forbidden_phrases: ["erbjuder", "perfekt fÃ¶r", "i hjÃ¤rtat av", "vilket", "fÃ¶r den som", "fantastisk", "vÃ¤lkommen"],
+    forbidden_phrases: ["erbjuder", "perfekt för", "i hjärtat av", "vilket", "för den som", "fantastisk", "välkommen"],
   };
 
   return { disposition, tone_analysis, writing_plan };
 }
 
-// Faktagranskning â€" ALDRIG omskrivning, bara rapportering
+// Faktagranskning — ALDRIG omskrivning, bara rapportering
 const FACT_CHECK_PROMPT = `
 # UPPGIFT
 
-Granska objektbeskrivningen mot dispositionen. Ã„NDRA ALDRIG texten. Rapportera bara fel.
+Granska objektbeskrivningen mot dispositionen. ÄNDRA ALDRIG texten. Rapportera bara fel.
 
 # REGLER
 
 1. Kontrollera att ALLA fakta i texten finns i dispositionen
-2. Flagga pÃ¥hittade detaljer (mÃ¤rken, mÃ¥tt, Ã¥rtal som inte finns i rÃ¥data)
-3. Flagga juridiskt problematiska pÃ¥stÃ¥enden
-4. SKRIV ALDRIG om texten â€“ rapportera bara
-5. Kontrollera att inga fÃ¶rbjudna AI-fraser smugit sig in
+2. Flagga påhittade detaljer (märken, mått, årtal som inte finns i rådata)
+3. Flagga juridiskt problematiska påståenden
+4. SKRIV ALDRIG om texten — rapportera bara
+5. Kontrollera att inga förbjudna AI-fraser smugit sig in
 
 # OUTPUT FORMAT (JSON)
 
 {
   "fact_check_passed": true,
   "issues": [
-    {"type": "fabricated/inaccurate/legal/ai_phrase", "quote": "den problematiska frasen", "reason": "varfÃ¶r det Ã¤r fel"}
+    {"type": "fabricated/inaccurate/legal/ai_phrase", "quote": "den problematiska frasen", "reason": "varför det är fel"}
   ],
   "quality_score": 0.95,
-  "broker_tips": ["konkret tips fÃ¶r mÃ¤klaren"]
+  "broker_tips": ["konkret tips för mäklaren"]
 }
 `;
 
