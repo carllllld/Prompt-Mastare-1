@@ -1543,7 +1543,24 @@ Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Eldstad. Tomt 920 kv
 6. VARIERA avstånd. Aldrig 2x "ligger X bort".
 7. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
 8. Generera ALLA fält: headline, instagramCaption, showingInvitation, shortAd, socialCopy.
-9. Skriv som exemplen ovan. Kort. Rakt. Specifikt. Mänskligt.`;
+
+# SMART PERSONLIGHET (Gör texten säljande utan klichéer)
+
+9. ANVÄND MÄKLARENS EGENA ORD: Bevara unika beskrivningar från layoutDescription, kitchenDescription etc.
+10. SKAPA BILDER: "Köket vetter mot söder där morgonsolen strömmar in" (om det stämmer).
+11. LÄGG TILL KÄNSLA (faktabaserad): "Här startar dagen med kaffe i soligt kök" (om kök ligger i söder).
+12. HUMAN TOUCH: "Familjens samlingsplats", "Din egen oas", "Perfekt för late morgnar".
+13. SÄLJANDE MEN ÄRLIGT: "Utsikten är din varje morgon", "Här finns plats för livets alla stunder".
+
+# PRISSKLASS-ANPASSAT SPRÅK
+
+14. LUXURY (price_per_kvm > avg * 1.3): Använd exklusiva termer som "exklusivt", "unik", "exceptionell", "genomgående högsta standard", "privat ingång", "panoramavy", "sjurumsyta". Fokusera på status, unikhet och exklusivitet.
+15. PREMIUM (avg * 0.7 < price_per_kvm <= avg * 1.3): Använd termer som "generös", "spatiös", "luftig", "modern", "bekväm", "hög kvalitet". Fokusera på komfort, kvalitet och livskvalitet.
+16. BUDGET (price_per_kvm < avg * 0.7): Använd termer som "prisvärt", "smart", "praktisk", "chans", "potential", "perfekt start". Fokusera på värde, möjligheter och framtid.
+
+VIKTIGT: All personlighet MUSTE vara baserad på fakta från dispositionen!
+
+12. Skriv som en riktig mäklare med hjärta, men med fakta som grund. Anpassa språket efter prisklass. Kort. Rakt. Specifikt. Mänskligt.`;
 
 // [Dead code removed: _UNUSED_BOOLI_TEXT_PROMPT + BOOLI_EXPERT_PROMPT — ~300 lines of unused prompts]
 const _UNUSED_BOOLI_TEXT_PROMPT = `REMOVED`;
@@ -1945,11 +1962,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { prompt, type, platform, wordCountMin, wordCountMax, imageUrls } = req.body;
 
       // Bestäm AI-modell baserat på plan
-      const aiModel = plan === "pro" ? "gpt-4o" : "gpt-4o-mini";
+      const aiModel = (plan === "pro" || plan === "premium") ? "gpt-4o" : "gpt-4o-mini";
 
-      // Konkurrentanalys (Pro-funktion)
+      // Konkurrentanalys (Pro + Premium-funktion)
       let competitorAnalysis = "";
-      if (plan === "pro") {
+      if (plan === "pro" || plan === "premium") {
         console.log(`[Competitor Analysis] Analyzing market position...`);
         
         // Extrahera grundläggande info från prompten för analys
@@ -1997,8 +2014,8 @@ Svara kortfattat och konkret.`
       
       // Bildanalys om bilder finns
       let imageAnalysis = "";
-      if (imageUrls && imageUrls.length > 0 && plan === "pro") {
-        console.log(`[Image Analysis] Analyzing ${imageUrls.length} images (Pro feature)...`);
+      if (imageUrls && imageUrls.length > 0 && (plan === "pro" || plan === "premium")) {
+        console.log(`[Image Analysis] Analyzing ${imageUrls.length} images (Pro + Premium feature)...`);
         
         const imageMessages = [
           {
@@ -2032,14 +2049,16 @@ Svara kortfattat och konkret.`
       let targetWordMin: number;
       let targetWordMax: number;
       
-      if (plan === "pro" && wordCountMin && wordCountMax) {
-        // Pro-användare kan välja eget intervall (inom gränser)
-        targetWordMin = Math.max(WORD_LIMITS.pro.min, Math.min(wordCountMin, WORD_LIMITS.pro.max));
-        targetWordMax = Math.max(WORD_LIMITS.pro.min, Math.min(wordCountMax, WORD_LIMITS.pro.max));
-      } else if (plan === "pro") {
-        // Pro-användare utan val får default
-        targetWordMin = WORD_LIMITS.pro.default.min;
-        targetWordMax = WORD_LIMITS.pro.default.max;
+      if ((plan === "pro" || plan === "premium") && wordCountMin && wordCountMax) {
+        // Pro + Premium-användare kan välja eget intervall (inom gränser)
+        const limits = plan === "premium" ? WORD_LIMITS.premium : WORD_LIMITS.pro;
+        targetWordMin = Math.max(limits.min, Math.min(wordCountMin, limits.max));
+        targetWordMax = Math.max(limits.min, Math.min(wordCountMax, limits.max));
+      } else if (plan === "pro" || plan === "premium") {
+        // Pro + Premium-användare utan val får default
+        const defaults = plan === "premium" ? WORD_LIMITS.premium.default : WORD_LIMITS.pro.default;
+        targetWordMin = defaults.min;
+        targetWordMax = defaults.max;
       } else {
         // Free-användare får fast intervall
         targetWordMin = WORD_LIMITS.free.min;
@@ -2056,8 +2075,8 @@ Svara kortfattat och konkret.`
       let writingPlan: any;
       let personalStylePrompt = "";
 
-      // Hämta personlig stil för Pro-användare
-      if (plan === "pro") {
+      // Hämta personlig stil för Pro + Premium-användare
+      if (plan === "pro" || plan === "premium") {
         try {
           const personalStyle = await storage.getPersonalStyle(user.id);
           if (personalStyle && personalStyle.isActive) {
@@ -2542,8 +2561,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
             content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`,
           },
         ],
-        max_tokens: 1000,
-        temperature: 0.2,
+        max_tokens: 500,
+        temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
         response_format: { type: "json_object" },
       });
 
@@ -3330,7 +3349,7 @@ Svara ENDAST med den förbättrade texten, inga förklaringar.`
         model: "gpt-4o",
         messages: messages,
         max_tokens: 500,
-        temperature: 0.7,
+        temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
       });
 
       const improvedText = completion.choices[0]?.message?.content || selectedText;

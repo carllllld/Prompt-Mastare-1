@@ -147,6 +147,7 @@ export const FEATURE_ACCESS = {
 export const WORD_LIMITS = {
   free: { min: 200, max: 300 },
   pro: { min: 200, max: 600, default: { min: 350, max: 450 } },
+  premium: { min: 200, max: 800, default: { min: 400, max: 600 } },  // Premium får högre max
 } as const;
 
 export const PLAN_PRICES = {
