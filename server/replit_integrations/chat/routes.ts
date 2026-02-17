@@ -1,13 +1,9 @@
 import type { Express, Request, Response } from "express";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { chatStorage } from "./storage";
 
-const anthropic = new Anthropic({
-  apiKey:
-    process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY ||
-    process.env.ANTHROPIC_API_KEY ||
-    "",
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export function registerChatRoutes(app: Express): void {
@@ -78,27 +74,32 @@ export function registerChatRoutes(app: Express): void {
         content: m.content,
       }));
 
+      // Convert messages for OpenAI format
+      const openaiMessages = [
+        { role: "system", content: "You are a helpful assistant." },
+        ...chatMessages
+      ];
+
       // Set up SSE
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      const stream = await anthropic.messages.stream({
-        model: "claude-3-5-sonnet-20240620",
-        messages: chatMessages,
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: openaiMessages,
         max_tokens: 2048,
         temperature: 0.3,
+        stream: true,
       });
 
       let fullResponse = "";
 
-      for await (const event of stream) {
-        if (event.type === "content_block_delta" && (event as any).delta?.type === "text_delta") {
-          const deltaText = (event as any).delta?.text || "";
-          if (deltaText) {
-            fullResponse += deltaText;
-            res.write(`data: ${JSON.stringify({ content: deltaText })}\n\n`);
-          }
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content || "";
+        if (delta) {
+          fullResponse += delta;
+          res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
         }
       }
 
