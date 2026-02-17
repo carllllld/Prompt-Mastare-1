@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone } from "lucide-react";
+import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone } from "lucide-react";
 import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { TextEditor } from "./TextEditor";
@@ -218,7 +218,7 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
           <div className="rounded-xl border p-5" style={{ background: "#ECFDF5", borderColor: "#A7F3D0" }}>
             <div className="flex items-center gap-2 mb-3">
               <Check className="w-3.5 h-3.5" style={{ color: "#059669" }} />
-              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#065F46" }}>Mäklartips</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#065F46" }}>Texttips</span>
             </div>
             <ul className="space-y-1.5">
               {result.factCheck.broker_tips.map((tip, i) => (
@@ -245,6 +245,17 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
             </ul>
           </div>
         )}
+      </div>
+
+      {/* ── DISCLAIMER ── */}
+      <div className="rounded-xl border p-4" style={{ background: "#FFF8E1", borderColor: "#FFE082" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <AlertCircle className="w-3.5 h-3.5" style={{ color: "#F57C00" }} />
+          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#E65100" }}>Viktig information</span>
+        </div>
+        <p className="text-xs" style={{ color: "#BF360C" }}>
+          AI-analyser och tips avser endast textkvalitet och kommunikation. Inga juridiska, mäklarmässiga eller prisrelaterade råd. Kontrollera alltid information och följ gällande lagar och regler.
+        </p>
       </div>
 
       {/* ── NEW PROMPT ── */}

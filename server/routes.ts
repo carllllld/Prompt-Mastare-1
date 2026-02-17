@@ -1531,7 +1531,7 @@ Gatuadress + typ + kvm + 1-2 säljpunkter. Kompakt.
 Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Eldstad. Tomt 920 kvm. Dubbelgarage."
 
 # OUTPUT (JSON)
-{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram + hashtags","showingInvitation":"Max 80 ord","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
+{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram + hashtags","showingInvitation":"Max 80 ord","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande"},"missing_info":["Saknad info"],"text_tips":["Texttips för förbättring"]}
 
 # LÄS DETTA SIST — DET VIKTIGASTE
 
@@ -2416,40 +2416,42 @@ Svara ENDAST med giltigt JSON-objekt.`,
           result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
           result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
         ].filter(Boolean) as string[],
-        suggestions: result.pro_tips || [],
+        suggestions: result.text_tips || [],
         socialCopy: result.socialCopy || null,
       });
 
       // AI-förbättringsanalys (körs efter textgenerering)
       let improvementSuggestions = undefined;
-      if (plan === "pro") {
+      if (plan !== "free") {
         console.log("[Improvement Analysis] Analyzing generated text for improvements...");
         
-        const improvementPrompt = `Analysera denna objektbeskrivning och ge förbättringsförslag:
+        const improvementPrompt = `Analysera denna objektbeskrivning ur ett rent text- och kommunikationsperspektiv:
 
 OBJEKTBESKRIVNING:
 ${result.improvedPrompt}
 
-MÅLGRUPP: ${result.analysis?.target_group || "Okänd"}
+Ge feedback ENDAST på:
+1. Textstruktur - är flödet logiskt och lättläst?
+2. Språkton - är tonen professionell och saklig?
+3. Informationstäthet - är varje mening informativ?
+4. Styrkor - vad fungerar bra i texten?
 
-Ge feedback på:
-1. Ton och språk - passar det målgruppen?
-2. Målgruppsanpassning - hur väl passar texten målgruppen?
-3. Saknade element - vad skulle kunna förbättra texten?
-4. Styrkor - vad är bra med texten?
+VIKTIGT: INGA juridiska råd, INGA mäklartips, INGA prisrekommendationer.
+Fokusera ENDAST på textkvalitet och kommunikation.
 
 Svara med JSON i formatet:
 {
-  "tone": "beskrivning av ton och om den passar",
-  "target_audience_fit": "hur väl texten passar målgruppen",
-  "missing_elements": ["element 1", "element 2"],
-  "strengths": ["styrka 1", "styrka 2"]
+  "tone": "Beskrivning av textens ton och professionalitet",
+  "structure_quality": "Hur väl strukturerad och lättläst texten är",
+  "information_density": "Hur informativ och koncis texten är",
+  "strengths": ["styrka 1", "styrka 2"],
+  "text_improvements": ["konkret textförslag 1", "konkret textförslag 2"]
 }`;
 
         const improvementMessages = [
           {
             role: "system" as const,
-            content: "Du är en expert på fastighetstexter och marknadsföring. Ge konstruktiv feedback.",
+            content: "Du är en expert på textkvalitet och kommunikation. Ge ENDAST feedback på textstruktur, språk och läsbarhet. INGA juridiska råd, INGA mäklartips, INGA prisrekommendationer. Fokusera på att göra texten bättre rent kommunikativt.",
           },
           {
             role: "user" as const,
@@ -2484,8 +2486,8 @@ Svara med JSON i formatet:
         highlights: result.highlights || [],
         analysis: result.analysis || {},
         improvements: result.missing_info || [],
-        suggestions: result.pro_tips || [],
-        pro_tips: result.pro_tips || [],
+        suggestions: result.text_tips || [],
+        text_tips: result.text_tips || [],
         critical_gaps: result.critical_gaps || [],
         socialCopy: result.socialCopy || null,
         headline: result.headline || null,
