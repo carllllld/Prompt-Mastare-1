@@ -2533,102 +2533,160 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
   // ── ADDRESS LOOKUP: Auto-fill nearby places ──
   app.post("/api/address-lookup", requireAuth, async (req, res) => {
     try {
+      const user = (req as any).user as User;
+      const plan = (user.plan as PlanType) || "free";
+      
+      // Check API access
+      if (!FEATURE_ACCESS[plan].apiAccess) {
+        return res.status(403).json({ 
+          message: "Adress-sökning är endast för Pro- och Premium-användare",
+          upgradeTo: "pro"
+        });
+      }
+      
+      // Check usage limits
+      const usage = await storage.getMonthlyUsage(user.id) || {
+        textsGenerated: 0,
+        areaSearchesUsed: 0,
+        textEditsUsed: 0,
+        personalStyleAnalyses: 0,
+      };
+      
+      const limits = PLAN_LIMITS[plan];
+      if (usage.areaSearchesUsed >= limits.areaSearches) {
+        return res.status(429).json({
+          message: `Du har nått din gräns för adress-sökningar. Uppgradera till Premium för obegränsad användning!`,
+          limitReached: true,
+          upgradeTo: "premium",
+        });
+      }
+      
       const { address } = req.body;
       if (!address) return res.status(400).json({ message: "Adress krävs" });
 
-      const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
-
-      if (googleApiKey) {
-        // Google Places: geocode → nearby search
-        const geoRes = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address + ", Sverige")}&key=${googleApiKey}`
+      // OpenStreetMap: Nominatim + Overpass API (FREE)
+      console.log("[Address Lookup] Using OpenStreetMap APIs");
+      
+      try {
+        // Step 1: Geocode with Nominatim
+        const nominatimRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Sverige")}&limit=1&addressdetails=1`,
+          {
+            headers: {
+              'User-Agent': 'OptiPrompt-Maklare/1.0 (contact@optiprompt.se)' // Required by Nominatim
+            }
+          }
         );
-        const geoData = await geoRes.json() as any;
-        const location = geoData.results?.[0]?.geometry?.location;
+        const nominatimData = await nominatimRes.json() as any;
+        const location = nominatimData[0];
 
         if (!location) {
           return res.json({ places: [], message: "Adressen kunde inte hittas" });
         }
 
-        const types = [
-          { type: "transit_station", label: "Kollektivtrafik" },
-          { type: "school", label: "Skola" },
-          { type: "supermarket", label: "Matbutik" },
-          { type: "park", label: "Park" },
-          { type: "restaurant", label: "Restaurang" },
-        ];
+        const lat = parseFloat(location.lat);
+        const lon = parseFloat(location.lon);
+        const formattedAddress = location.display_name || address;
 
-        const places: any[] = [];
-        for (const { type, label } of types) {
-          const nearbyRes = await fetch(
-            `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${location.lat},${location.lng}&radius=1500&type=${type}&key=${googleApiKey}&language=sv`
+        // Step 2: Find nearby places with Overpass API
+        const overpassQuery = `
+          [out:json][timeout:25];
+          (
+            node["amenity"~"school|college|university"](around:1500,${lat},${lon});
+            node["shop"~"supermarket|grocery|convenience"](around:1500,${lat},${lon});
+            node["leisure"="park"](around:1500,${lat},${lon});
+            node["highway"~"bus_stop|bus_station|tram_stop|subway_entrance"](around:1500,${lat},${lon});
+            node["amenity"="restaurant"](around:1500,${lat},${lon});
           );
-          const nearbyData = await nearbyRes.json() as any;
-          const first = nearbyData.results?.[0];
-          if (first) {
-            const dist = haversineDistance(
-              location.lat, location.lng,
-              first.geometry.location.lat, first.geometry.location.lng
-            );
-            places.push({
-              name: first.name,
+          out tags;
+        `;
+
+        const overpassRes = await fetch(
+          'https://overpass-api.de/api/interpreter',
+          {
+            method: 'POST',
+            body: 'data=' + encodeURIComponent(overpassQuery),
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            }
+          }
+        );
+        const overpassData = await overpassRes.json() as any;
+
+        // Step 3: Process and categorize results
+        const places: any[] = [];
+        const transportPlaces: any[] = [];
+        
+        overpassData.elements.forEach((element: any) => {
+          if (!element.tags || !element.tags.name) return;
+          
+          const dist = haversineDistance(lat, lon, element.lat, element.lon);
+          const distanceStr = dist < 1000 ? `${Math.round(dist)} m` : `${(dist / 1000).toFixed(1)} km`;
+          
+          let category = "";
+          let label = "";
+          
+          if (element.tags.amenity === "school" || element.tags.amenity === "college" || element.tags.amenity === "university") {
+            category = "school";
+            label = "Skola";
+          } else if (element.tags.shop && (element.tags.shop.includes("supermarket") || element.tags.shop.includes("grocery"))) {
+            category = "supermarket";
+            label = "Matbutik";
+          } else if (element.tags.leisure === "park") {
+            category = "park";
+            label = "Park";
+          } else if (element.tags.highway && (element.tags.highway.includes("bus") || element.tags.highway.includes("tram") || element.tags.highway.includes("subway"))) {
+            category = "transit_station";
+            label = "Kollektivtrafik";
+            transportPlaces.push({
+              name: element.tags.name,
               type: label,
-              distance: dist < 1000 ? `${Math.round(dist)} m` : `${(dist / 1000).toFixed(1)} km`,
+              distance: distanceStr,
+              distanceMeters: Math.round(dist),
+            });
+            return; // Skip adding to general places array
+          } else if (element.tags.amenity === "restaurant") {
+            category = "restaurant";
+            label = "Restaurang";
+          }
+          
+          if (category) {
+            places.push({
+              name: element.tags.name,
+              type: label,
+              distance: distanceStr,
               distanceMeters: Math.round(dist),
             });
           }
-        }
+        });
 
-        const formattedAddress = geoData.results?.[0]?.formatted_address || address;
-        const transport = places
-          .filter((p: any) => p.type === "Kollektivtrafik")
-          .map((p: any) => `${p.name} ${p.distance}`)
-          .join(", ") || null;
+        // Sort by distance and limit results
+        places.sort((a: any, b: any) => a.distanceMeters - b.distanceMeters);
+        transportPlaces.sort((a: any, b: any) => a.distanceMeters - b.distanceMeters);
+
+        const transport = transportPlaces.slice(0, 2).map((p: any) => `${p.name} ${p.distance}`).join(", ") || null;
         const neighborhood = places
-          .filter((p: any) => p.type !== "Kollektivtrafik")
           .slice(0, 4)
           .map((p: any) => `${p.name} (${p.type.toLowerCase()}) ${p.distance}`)
           .join(". ") || null;
 
-        res.json({ formattedAddress, places, transport, neighborhood });
-      } else {
-        // Fallback: Use OpenAI to generate likely nearby places based on address knowledge
-        const aiRes = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system" as const,
-              content: `Du är en svensk stadsplaneringsexpert med djup kunskap om svenska orter och kommuner.
-
-REGLER:
-1. Ange BARA platser du är SÄKER på existerar nära adressen. Om du är osäker — utelämna platsen.
-2. Använd KORREKTA officiella namn: "Busshållplats Grisslinge" (inte "Grisslinge busstation"), "ICA Nära Mölnvik" (inte "ICA Mölnvik centrum").
-3. För kollektivtrafik: ange typ (busshållplats/pendeltågsstation/tunnelbana/spårvagn) + officiellt hållplatsnamn.
-4. För skolor: använd skolans officiella namn (t.ex. "Ösbyskolan", "Mölnviks skola").
-5. För matbutiker: använd butikskedja + ort (t.ex. "ICA Nära Mölnvik", "Coop Gustavsberg").
-6. Avstånd ska vara ungefärliga men realistiska. Ange i meter (under 1 km) eller kilometer.
-7. Om adressen är i ett villaområde utanför stadskärnan — anpassa avstånden (ofta längre).
-8. Svara med TOMMA arrays om du inte känner till området.
-
-Svara med JSON:
-{"transport":"Närmaste kollektivtrafik med officiellt namn och avstånd","neighborhood":"Närmaste butiker, skolor, parker med officiella namn och avstånd","places":[{"name":"Officiellt platsnamn","type":"Typ","distance":"Avstånd"}]}`,
-            },
-            { role: "user" as const, content: `Adress: ${address}, Sverige` },
-          ],
-          max_tokens: 500,
-          temperature: 0.1,
-          response_format: { type: "json_object" },
+        res.json({ 
+          formattedAddress, 
+          places: places.slice(0, 6), 
+          transport, 
+          neighborhood,
+          source: "openstreetmap"
         });
-
-        const raw = aiRes.choices[0]?.message?.content || "{}";
-        let parsed: any;
-        try { parsed = JSON.parse(raw); } catch { parsed = { places: [] }; }
-        res.json({
-          formattedAddress: address,
-          places: parsed.places || [],
-          transport: parsed.transport || null,
-          neighborhood: parsed.neighborhood || null,
-          source: "ai-estimated",
+        
+        // Increment usage for area search
+        await storage.incrementUsage(user.id, 'areaSearches');
+        console.log(`[Usage] Incremented area search for user ${user.id} (OpenStreetMap)`);
+        
+      } catch (osmError: any) {
+        console.error("[OpenStreetMap] Error:", osmError);
+        res.status(500).json({ 
+          message: "Adresssökning misslyckades. Försök igen senare.",
+          error: osmError.message
         });
       }
     } catch (err: any) {
