@@ -2196,27 +2196,36 @@ Svara med JSON i formatet:
       }
 
       const rewriteCompletion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           {
             role: "system" as const,
-            content: `Du är en svensk fastighetsmäklare och textredaktör. Du ska skriva om EN specifik del av en objektbeskrivning.
+            content: `Du är en svensk fastighetsmäklare. Skriver om en del av en objektbeskrivning med samma professionella stil som riktiga mäklare.
 
-REGLER:
-- Skriv om BARA den markerade texten enligt instruktionen.
-- Behåll samma stil och ton som resten av texten.
-- HITTA ALDRIG PÅ fakta som inte finns i originaltexten.
-- Inga förbjudna ord: erbjuder, fantastisk, perfekt, vilket, som ger en, för den som, i hjärtat av.
-- Korta meningar. Presens. Ingen utfyllnad.
-- Svara med JSON: {"rewritten": "den omskrivna texten"}`,
+# EXEMPEL PÅ RIKTIG MÄKLARSTIL
+"Balkongen vetter mot söder. Köket renoverat 2021 med Ballingslöv-luckor. Skolan 400 meter. ICA 5 minuter."
+
+NOTERA: Korta meningar. Fakta-fokuserat. Inga adjektiv som "fantastisk", "generös". Inga bisatser med "vilket".
+
+# FÖRBJUDET (använd ALDRIG)
+erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, idealisk, vilket, som ger en, för den som, i hjärtat av, faciliteter, njut av, livsstil, smakfullt, stilfullt, elegant, imponerande, harmonisk, inbjudande, tidlös, ljus och luftig, stilrent och modernt, mysigt och ombonat, inte bara, utan också, bidrar till, förstärker, skapar en känsla, -möjligheter, Det finns även, Det finns också
+
+# INSTRUKTIONER
+1. Skriv om BARA den markerade texten enligt instruktionen
+2. Behåll ALLA fakta från originaltexten. HITTA ALDRIG PÅ ny fakta.
+3. Använd samma korta, direkta stil som exemplet ovan
+4. Korta meningar. Presens. Ingen utfyllnad.
+5. Om instruktionen säger "gör mer säljande" → lägg till KONKRETA fakta, inte adjektiv
+
+Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           },
           {
             role: "user" as const,
-            content: `HELA TEXTEN (för kontext):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`,
+            content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`,
           },
         ],
         max_tokens: 1000,
-        temperature: 0.25,
+        temperature: 0.2,
         response_format: { type: "json_object" },
       });
 
@@ -2225,7 +2234,17 @@ REGLER:
       try { parsed = JSON.parse(raw); } catch { parsed = { rewritten: selectedText }; }
 
       const rewritten = cleanForbiddenPhrases(parsed.rewritten || selectedText);
-      const newFullText = fullText.replace(selectedText, rewritten);
+      
+      // More robust text replacement - handle edge cases
+      let newFullText = fullText;
+      if (fullText.includes(selectedText)) {
+        newFullText = fullText.replace(selectedText, rewritten);
+      } else {
+        // Try to find the text with minor variations (whitespace, etc)
+        const escaped = selectedText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escaped.replace(/\s+/g, '\\s+'), 'i');
+        newFullText = fullText.replace(regex, rewritten);
+      }
 
       res.json({ rewritten, newFullText });
     } catch (err: any) {

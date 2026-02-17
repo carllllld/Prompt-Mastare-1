@@ -8,10 +8,10 @@ interface TextEditorProps {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Skriv om", instruction: "Skriv om den markerade texten med andra ord men behåll fakta och ton.", icon: Wand2 },
-  { label: "Förkorta", instruction: "Gör den markerade texten kortare. Behåll all fakta men ta bort utfyllnad.", icon: Minus },
-  { label: "Förläng", instruction: "Gör den markerade texten mer detaljerad. Lägg till relevant beskrivning men hitta inte på fakta.", icon: Plus },
-  { label: "Mer formellt", instruction: "Gör den markerade texten mer formell och professionell i tonen.", icon: PenLine },
+  { label: "Skriv om", instruction: "Skriv om texten med andra ord men behåll ALLA fakta. Använd korta meningar.", icon: Wand2 },
+  { label: "Mer fakta", instruction: "Lägg till KONKRETA detaljer om rummet/objektet. Använd mått, material, årtal. Hitta inte på.", icon: Plus },
+  { label: "Kondensera", instruction: "Gör texten kortare. Behåll bara viktigaste fakta. Inga utfyllnadsmeningar.", icon: Minus },
+  { label: "Byt fokus", instruction: "Byt fokus till en annan egenskap. Om kök → fokusera på vitvaror/material. Om läge → fokusera på avstånd.", icon: PenLine },
 ];
 
 export function TextEditor({ text, onTextChange }: TextEditorProps) {
