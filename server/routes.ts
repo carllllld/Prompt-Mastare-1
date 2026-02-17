@@ -187,6 +187,18 @@ const FORBIDDEN_PHRASES = [
   "ett område för familjer",
   "i mycket gott skick",
   "ligger centralt i",
+  
+  // NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys)
+  "faciliteter",
+  "nyrenoverade faciliteter",
+  "njut av",
+  "förvaringsmöjligheter inkluderar",
+  "förvaringsmöjligheter",
+  "odlingsmöjligheter",
+  "boendmöjligheter",
+  "parkeringsmöjligheter",
+  "det finns även",
+  "det finns också",
 ];
 
 function findRuleViolations(text: string, platform: string = "hemnet"): string[] {
@@ -567,6 +579,38 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["ligger centralt i ett omrÃ¥de", ""],
   ["ligger centralt i", "ligger i"],
   
+  // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys) ===
+  // "faciliteter" — inte naturligt mäklarspråk
+  ["nyrenoverade faciliteter om", "nyrenoverat,"],
+  ["nyrenoverade faciliteter och", "nyrenoverade ytor och"],
+  ["nyrenoverade faciliteter", "nyrenoverade ytor"],
+  ["renoverade faciliteter", "renoverade utrymmen"],
+  ["faciliteter", "utrymmen"],
+  
+  // "Njut av" — AI-klyscha
+  ["njut av en jacuzzi", "jacuzzi"],
+  ["njut av jacuzzi", "jacuzzi"],
+  ["njut av", ""],
+  
+  // "Det finns även/också" — lat meningsstart
+  ["det finns även en", ""],
+  ["det finns även ett", ""],
+  ["det finns även", ""],
+  ["det finns också en", ""],
+  ["det finns också ett", ""],
+  ["det finns också", ""],
+  
+  // "-möjligheter" — byråkratiskt
+  ["förvaringsmöjligheter inkluderar ett förråd", "förråd"],
+  ["förvaringsmöjligheter inkluderar", "förvaring:"],
+  ["förvaringsmöjligheter", "förvaring"],
+  ["odlingsmöjligheter", "plats för odling"],
+  ["boendemöjligheter", "boende"],
+  ["parkeringsmöjligheter", "parkering"],
+  
+  // "En X finns på" — passiv konstruktion
+  ["en jacuzzi finns på", "jacuzzi på"],
+  
   ];
 
 // Haversine distance between two lat/lng points in meters
@@ -922,119 +966,134 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
   ]
 };
 
-// --- HEMNET FORMAT: Sandwich-teknik fÃ¶r maximal AI-lydnad ---
-const HEMNET_TEXT_PROMPT = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en Hemnet-annons OCH 4 extra marknadsföringstexter.
+// --- HEMNET FORMAT: Sandwich-teknik för maximal AI-lydnad ---
+const HEMNET_TEXT_PROMPT = `Du är en svensk fastighetsmäklare. Skriv en Hemnet-annons OCH 4 extra marknadsföringstexter.
 
-# KRITISKT â€" LÃ„S DETTA FÃ–RST
+# KRITISKT — LÄS DETTA FÖRST
 
-ALDRIG GÃ–R:
-- BÃ¶rja med "VÃ¤lkommen", "HÃ¤r", "Denna" eller "I". BÃ¶rja ALLTID med gatuadressen.
-- AnvÃ¤nd "erbjuder", "bjuder pÃ¥", "prÃ¤glas av", "generÃ¶s", "fantastisk", "perfekt", "idealisk", "drÃ¶m-", "en sann pÃ¤rla"
-- AnvÃ¤nd "vilket", "som ger en", "fÃ¶r den som", "i hjÃ¤rtat av", "skapar en", "genomsyras"
-- AnvÃ¤nd "kontakta oss", "boka visning", "missa inte", "unik mÃ¶jlighet"
-- HITTA PÃ… fakta. Om mÃ¤rke/mÃ¥tt/Ã¥rtal/avstÃ¥nd inte finns i dispositionen â€" UTELÃ„MNA det.
-- Skriva lÃ¥nga meningar med bisatser.
-- Skriva sammanfattande/emotionella stycken i slutet. INGA "skapa minnen", "utmÃ¤rkt val", "bekvÃ¤mt boende", "lek och avkoppling". Sista stycket ska vara LÃ„GE eller PRIS â€" aldrig kÃ¤nslor.
+ALDRIG GÖR:
+- Börja med "Välkommen", "Här", "Denna" eller "I". Börja ALLTID med gatuadressen.
+- Använd "erbjuder", "bjuder på", "präglas av", "generös", "fantastisk", "perfekt", "idealisk", "dröm-", "en sann pärla"
+- Använd "vilket", "som ger en", "för den som", "i hjärtat av", "skapar en", "genomsyras"
+- Använd "kontakta oss", "boka visning", "missa inte", "unik möjlighet"
+- Använd "faciliteter", "njut av", "förvaringsmöjligheter", "odlingsmöjligheter", "parkeringsmöjligheter"
+- Börja 2+ meningar med "Det finns" eller "Den har". VARIERA meningsstarter. Börja med rummet/objektet: "Köket har...", "Balkongen vetter...", "Tomten rymmer..."
+- Upprepa "ligger X meter/kilometer bort" mer än 1 gång. Variera: "ca 5 min promenad", "i närheten", "500 meter", "nära X".
+- HITTA PÅ fakta. Om märke/mått/årtal/avstånd inte finns i dispositionen — UTELÄMNA det.
+- Skriva långa meningar med bisatser.
+- Skriva sammanfattande/emotionella stycken i slutet. Sista stycket ska vara LÄGE eller PRIS — aldrig känslor.
 
-ALLTID GÃ–R:
-- BÃ¶rja med "Gatuadress, vÃ¥ning/ort. Typ om X kvm..."
+ALLTID GÖR:
+- Börja med "Gatuadress, ort. Typ om X kvm med Y rum."
 - Korta meningar. En ny faktauppgift per mening. Ingen utfyllnad.
-- AnvÃ¤nd EXAKTA vÃ¤rden frÃ¥n dispositionen: kvm, Ã¥rtal, mÃ¤rken, material.
-- AnvÃ¤nd platser med NAMN och AVSTÅND om de finns i dispositionen.
-- Skriv i presens.
+- Använd EXAKTA värden från dispositionen: kvm, årtal, märken, material.
+- Variera meningsstarter: börja med rumsnamn, material, årtal — ALDRIG upprepa samma mönster.
+- Använd platser med NAMN och AVSTÅND om de finns i dispositionen.
+- Skriv i presens. "Köket har" — inte "Köket hade".
+- Variera avståndsformat: "500 meter", "ca 5 min", "i närheten", "nära X".
 
-# STRUKTUR FÃ–R OBJEKTBESKRIVNING
+# STRUKTUR FÖR OBJEKTBESKRIVNING
 
-1. Ã–PPNING: Adress, vÃ¥ning, typ, kvm, rum.
-2. PLANLÃ–SNING: Hall, vardagsrum, takhÃ¶jd, golv, ljus.
-3. KÃ–K: MÃ¤rke, Ã¥rtal, bÃ¤nkskiva, vitvaror. Bara frÃ¥n dispositionen.
+1. ÖPPNING: Adress, ort, typ, kvm, rum. Lyft det unika.
+2. PLANLÖSNING: Hall, vardagsrum, takhöjd, golv, ljus.
+3. KÖK: Märke, årtal, bänkskiva, vitvaror. Bara från dispositionen.
 4. SOVRUM: Antal, storlek, garderober.
-5. BADRUM: Ã…rtal, kakel, dusch/badkar, tvÃ¤ttmaskin.
-6. BALKONG/UTEPLATS: Storlek kvm, vÃ¤derstreck.
-7. FÃ–RENING: BRF-namn, avgift, stambyte â€" om det finns.
-8. LÃ„GE: Platser med namn och avstÃ¥nd frÃ¥n dispositionen. HITTA INTE PÃ… platser.
+5. BADRUM: Årtal, kakel, dusch/badkar, tvättmaskin.
+6. BALKONG/UTEPLATS/TRÄDGÅRD: Storlek kvm, väderstreck. Eventuella tillägg (jacuzzi, pergola etc).
+7. EXTRA: Förråd, laddstation, garage, golvvärme, energiklass — UTAN "Det finns" eller "Den har".
+8. FÖRENING: BRF-namn, avgift, stambyte — om det finns.
+9. LÄGE: Platser med namn och avstånd. VARIERA format. HITTA INTE PÅ platser.
 
-Om info saknas fÃ¶r en punkt â€" HOPPA Ã–VER den.
+Om info saknas för en punkt — HOPPA ÖVER den.
 
-# EXTRA TEXTER (generera ALLA frÃ¥n samma disposition)
+# EXTRA TEXTER (generera ALLA från samma disposition)
 
-RUBRIK (max 70 tecken): Gatuadress + typ + unik egenskap. Ex: "Birger Jarlsgatan 22 â€" Ljus trea med balkong i sÃ¶derlÃ¤ge"
-INSTAGRAM (3-5 meningar): BÃ¶rja med gatunamnet. 2-3 sÃ¤ljpunkter. Avsluta med storlek. Inga emoji/utropstecken. LÃ¤gg till 5 hashtags pÃ¥ egen rad.
-VISNINGSINBJUDAN (max 80 ord): BÃ¶rja "Visning â€" [adress]". Typ, storlek, 2 hÃ¶jdpunkter. Avsluta med "Tid: [TID]\\nPlats: [ADRESS]\\nAnmÃ¤lan: [KONTAKT]".
-KORTANNONS (max 40 ord): Gatuadress, typ, kvm, 1-2 sÃ¤ljpunkter. FÃ¶r print/banner/Google Ads.
+RUBRIK (max 70 tecken): Gatuadress + typ + unik egenskap. Ex: "Birger Jarlsgatan 22 — Ljus trea med balkong i söderläge"
+INSTAGRAM (3-5 meningar): Börja med gatunamnet. 2-3 konkreta säljpunkter. Avsluta med storlek. Inga emoji/utropstecken. ALDRIG "njut av" eller "faciliteter". Lägg till 5 hashtags på egen rad.
+VISNINGSINBJUDAN (max 80 ord): Börja "Visning — [adress]". Typ, storlek, 2 konkreta höjdpunkter (mått/märke/årtal). ALDRIG "njut av" eller "faciliteter". Avsluta med "Tid: [TID]\\nPlats: [ADRESS]\\nAnmälan: [KONTAKT]".
+KORTANNONS (max 40 ord): Gatuadress, typ, kvm, 1-2 konkreta säljpunkter. ALDRIG "njut av" eller "faciliteter". För print/banner/Google Ads.
 
 # OUTPUT (JSON)
 
-{"highlights":["sÃ¤ljpunkt 1","sÃ¤ljpunkt 2","sÃ¤ljpunkt 3"],"improvedPrompt":"Objektbeskrivningen med stycken separerade av \\n\\n","headline":"Rubrik max 70 tecken","instagramCaption":"Instagram-text med hashtags","showingInvitation":"Visningsinbjudan-mejl","shortAd":"Kort annonstext max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"MÃ¥lgrupp","area_advantage":"LÃ¤gesfÃ¶rdelar","pricing_factors":"VÃ¤rdehÃ¶jande faktorer"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
+{"highlights":["säljpunkt 1","säljpunkt 2","säljpunkt 3"],"improvedPrompt":"Objektbeskrivningen med stycken separerade av \\n\\n","headline":"Rubrik max 70 tecken","instagramCaption":"Instagram-text med hashtags","showingInvitation":"Visningsinbjudan-mejl","shortAd":"Kort annonstext max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande faktorer"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
 
-# PÃ…MINNELSE â€" VIKTIGAST
+# PÅMINNELSE — VIKTIGAST
 
-1. BÃ¶rja med gatuadressen. ALDRIG "VÃ¤lkommen" eller "HÃ¤r".
-2. HITTA ALDRIG PÃ… fakta. Bara det som stÃ¥r i dispositionen.
-3. Inga fÃ¶rbjudna ord: erbjuder, bjuder pÃ¥, prÃ¤glas av, generÃ¶s, fantastisk, perfekt, vilket, som ger en.
+1. Börja med gatuadressen. ALDRIG "Välkommen" eller "Här".
+2. HITTA ALDRIG PÅ fakta. Bara det som står i dispositionen.
+3. Inga förbjudna ord: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, som ger en, faciliteter, njut av.
 4. Korta meningar. Ingen utfyllnad. Varje mening = ny fakta.
-5. Avsluta ALDRIG med uppmaning.
-6. INGA emotionella slutstycken. Sista stycket = LÃ„GE eller PRIS.
-7. Generera ALLA fÃ¤lt: headline, instagramCaption, showingInvitation, shortAd.`;
+5. VARIERA meningsstarter. Aldrig 2+ meningar med "Det finns" eller "Den har". Börja med rummet/objektet.
+6. VARIERA avståndsformat. Aldrig 2+ "ligger X bort". Använd "ca X min", "nära X", "i närheten".
+7. Avsluta ALDRIG med uppmaning eller emotionellt slutstycke. Sista stycket = LÄGE eller PRIS.
+8. Generera ALLA fält: headline, instagramCaption, showingInvitation, shortAd.
+9. ALDRIG "njut av" eller "faciliteter" i NÅGON av texterna.`;
 
-// --- BOOLI/EGEN SIDA: Sandwich-teknik fÃ¶r maximal AI-lydnad ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du Ã¤r en svensk fastighetsmÃ¤klare. Skriv en objektbeskrivning fÃ¶r Booli/egen sida OCH 4 extra marknadsföringstexter.
+// --- BOOLI/EGEN SIDA: Sandwich-teknik för maximal AI-lydnad ---
+const BOOLI_TEXT_PROMPT_WRITER = `Du är en svensk fastighetsmäklare. Skriv en objektbeskrivning för Booli/egen sida OCH 4 extra marknadsföringstexter.
 
-# KRITISKT â€" LÃ„S DETTA FÃ–RST
+# KRITISKT — LÄS DETTA FÖRST
 
-ALDRIG GÃ–R:
-- BÃ¶rja med "VÃ¤lkommen", "HÃ¤r", "Denna" eller "I". BÃ¶rja ALLTID med gatuadressen.
-- AnvÃ¤nd "erbjuder", "bjuder pÃ¥", "prÃ¤glas av", "generÃ¶s", "fantastisk", "perfekt", "idealisk", "drÃ¶m-", "en sann pÃ¤rla"
-- AnvÃ¤nd "vilket", "som ger en", "fÃ¶r den som", "i hjÃ¤rtat av", "skapar en", "genomsyras"
-- AnvÃ¤nd "kontakta oss", "boka visning", "missa inte", "unik mÃ¶jlighet"
-- HITTA PÃ… fakta. Om mÃ¤rke/mÃ¥tt/Ã¥rtal/avstÃ¥nd inte finns i dispositionen â€" UTELÃ„MNA det.
-- Skriva lÃ¥nga meningar med bisatser.
-- Skriva sammanfattande/emotionella stycken i slutet. INGA "skapa minnen", "utmÃ¤rkt val", "bekvÃ¤mt boende", "lek och avkoppling". Sista stycket ska vara LÃ„GE eller PRIS â€" aldrig kÃ¤nslor.
+ALDRIG GÖR:
+- Börja med "Välkommen", "Här", "Denna" eller "I". Börja ALLTID med gatuadressen.
+- Använd "erbjuder", "bjuder på", "präglas av", "generös", "fantastisk", "perfekt", "idealisk", "dröm-", "en sann pärla"
+- Använd "vilket", "som ger en", "för den som", "i hjärtat av", "skapar en", "genomsyras"
+- Använd "kontakta oss", "boka visning", "missa inte", "unik möjlighet"
+- Använd "faciliteter", "njut av", "förvaringsmöjligheter", "odlingsmöjligheter", "parkeringsmöjligheter"
+- Börja 2+ meningar med "Det finns" eller "Den har". VARIERA meningsstarter. Börja med rummet/objektet.
+- Upprepa "ligger X meter/kilometer bort" mer än 1 gång. Variera: "ca 5 min", "nära X", "i närheten".
+- HITTA PÅ fakta. Om märke/mått/årtal/avstånd inte finns i dispositionen — UTELÄMNA det.
+- Skriva långa meningar med bisatser.
+- Skriva sammanfattande/emotionella stycken i slutet. Sista stycket ska vara LÄGE eller PRIS — aldrig känslor.
 
-ALLTID GÃ–R:
-- BÃ¶rja med "Gatuadress, vÃ¥ning/ort. Typ om X kvm..."
+ALLTID GÖR:
+- Börja med "Gatuadress, våning/ort. Typ om X kvm..."
 - Korta meningar. En ny faktauppgift per mening. Ingen utfyllnad.
-- AnvÃ¤nd EXAKTA vÃ¤rden frÃ¥n dispositionen: kvm, Ã¥rtal, mÃ¤rken, material.
-- Inkludera ekonomi: avgift, utgÃ¥ngspris â€" om det finns i dispositionen.
+- Använd EXAKTA värden från dispositionen: kvm, årtal, märken, material.
+- Variera meningsstarter: börja med rumsnamn, material, årtal — ALDRIG upprepa samma mönster.
+- Inkludera ekonomi: avgift, utgångspris — om det finns i dispositionen.
 - Skriv i presens.
+- Variera avståndsformat: "500 meter", "ca 5 min", "i närheten", "nära X".
 
-# STRUKTUR FÃ–R OBJEKTBESKRIVNING (mer detaljerad Ã¤n Hemnet)
+# STRUKTUR FÖR OBJEKTBESKRIVNING (mer detaljerad än Hemnet)
 
-1. Ã–PPNING: Adress, vÃ¥ning, typ, kvm, rum.
-2. PLANLÃ–SNING: Hall, vardagsrum, takhÃ¶jd, golv, ljus.
-3. KÃ–K: MÃ¤rke, Ã¥rtal, bÃ¤nkskiva, vitvaror, matplats.
+1. ÖPPNING: Adress, våning, typ, kvm, rum.
+2. PLANLÖSNING: Hall, vardagsrum, takhöjd, golv, ljus.
+3. KÖK: Märke, årtal, bänkskiva, vitvaror, matplats.
 4. SOVRUM: Antal, storlek, garderober.
-5. BADRUM: Ã…rtal, kakel, dusch/badkar, tvÃ¤ttmaskin.
-6. BALKONG/UTEPLATS: Storlek kvm, vÃ¤derstreck.
-7. EXTRA: FÃ¶rrÃ¥d, parkering, garage, uterum.
-8. FÃ–RENING: BRF-namn, avgift, stambyte â€" om det finns.
-9. LÃ„GE: Platser med namn och avstÃ¥nd frÃ¥n dispositionen. HITTA INTE PÃ… platser.
-10. PRIS: UtgÃ¥ngspris om det finns.
+5. BADRUM: Årtal, kakel, dusch/badkar, tvättmaskin.
+6. BALKONG/UTEPLATS/TRÄDGÅRD: Storlek kvm, väderstreck. Eventuella tillägg (jacuzzi, pergola etc).
+7. EXTRA: Förråd, laddstation, garage, golvvärme, energiklass — UTAN "Det finns" eller "Den har".
+8. FÖRENING: BRF-namn, avgift, stambyte — om det finns.
+9. LÄGE: Platser med namn och avstånd. VARIERA format. HITTA INTE PÅ platser.
+10. PRIS: Utgångspris om det finns.
 
-Om info saknas fÃ¶r en punkt â€" HOPPA Ã–VER den.
+Om info saknas för en punkt — HOPPA ÖVER den.
 
-# EXTRA TEXTER (generera ALLA frÃ¥n samma disposition)
+# EXTRA TEXTER (generera ALLA från samma disposition)
 
-RUBRIK (max 70 tecken): Gatuadress + typ + unik egenskap. Ex: "TallvÃ¤gen 8 â€" Villa med eldstad och dubbelgarage"
-INSTAGRAM (3-5 meningar): BÃ¶rja med gatunamnet. 2-3 sÃ¤ljpunkter. Avsluta med storlek. Inga emoji/utropstecken. LÃ¤gg till 5 hashtags pÃ¥ egen rad.
-VISNINGSINBJUDAN (max 80 ord): BÃ¶rja "Visning â€" [adress]". Typ, storlek, 2 hÃ¶jdpunkter. Avsluta med "Tid: [TID]\\nPlats: [ADRESS]\\nAnmÃ¤lan: [KONTAKT]".
-KORTANNONS (max 40 ord): Gatuadress, typ, kvm, 1-2 sÃ¤ljpunkter. FÃ¶r print/banner/Google Ads.
+RUBRIK (max 70 tecken): Gatuadress + typ + unik egenskap. Ex: "Tallvägen 8 — Villa med eldstad och dubbelgarage"
+INSTAGRAM (3-5 meningar): Börja med gatunamnet. 2-3 konkreta säljpunkter. Avsluta med storlek. Inga emoji/utropstecken. ALDRIG "njut av" eller "faciliteter". Lägg till 5 hashtags på egen rad.
+VISNINGSINBJUDAN (max 80 ord): Börja "Visning — [adress]". Typ, storlek, 2 konkreta höjdpunkter (mått/märke/årtal). ALDRIG "njut av" eller "faciliteter". Avsluta med "Tid: [TID]\\nPlats: [ADRESS]\\nAnmälan: [KONTAKT]".
+KORTANNONS (max 40 ord): Gatuadress, typ, kvm, 1-2 konkreta säljpunkter. ALDRIG "njut av" eller "faciliteter". För print/banner/Google Ads.
 
 # OUTPUT (JSON)
 
-{"highlights":["sÃ¤ljpunkt 1","sÃ¤ljpunkt 2","sÃ¤ljpunkt 3"],"improvedPrompt":"Objektbeskrivningen med stycken separerade av \\n\\n","headline":"Rubrik max 70 tecken","instagramCaption":"Instagram-text med hashtags","showingInvitation":"Visningsinbjudan-mejl","shortAd":"Kort annonstext max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"MÃ¥lgrupp","area_advantage":"LÃ¤gesfÃ¶rdelar","pricing_factors":"VÃ¤rdehÃ¶jande faktorer"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
+{"highlights":["säljpunkt 1","säljpunkt 2","säljpunkt 3"],"improvedPrompt":"Objektbeskrivningen med stycken separerade av \\n\\n","headline":"Rubrik max 70 tecken","instagramCaption":"Instagram-text med hashtags","showingInvitation":"Visningsinbjudan-mejl","shortAd":"Kort annonstext max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande faktorer"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
 
-# PÃ…MINNELSE â€" VIKTIGAST
+# PÅMINNELSE — VIKTIGAST
 
-1. BÃ¶rja med gatuadressen. ALDRIG "VÃ¤lkommen" eller "HÃ¤r".
-2. HITTA ALDRIG PÃ… fakta. Bara det som stÃ¥r i dispositionen.
-3. Inga fÃ¶rbjudna ord: erbjuder, bjuder pÃ¥, prÃ¤glas av, generÃ¶s, fantastisk, perfekt, vilket, som ger en.
+1. Börja med gatuadressen. ALDRIG "Välkommen" eller "Här".
+2. HITTA ALDRIG PÅ fakta. Bara det som står i dispositionen.
+3. Inga förbjudna ord: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, som ger en, faciliteter, njut av.
 4. Korta meningar. Ingen utfyllnad. Varje mening = ny fakta.
-5. Avsluta ALDRIG med uppmaning.
-6. INGA emotionella slutstycken. Sista stycket = LÃ„GE eller PRIS.
-7. Generera ALLA fÃ¤lt: headline, instagramCaption, showingInvitation, shortAd.`;
+5. VARIERA meningsstarter. Aldrig 2+ meningar med "Det finns" eller "Den har". Börja med rummet/objektet.
+6. VARIERA avståndsformat. Aldrig 2+ "ligger X bort". Använd "ca X min", "nära X", "i närheten".
+7. Avsluta ALDRIG med uppmaning eller emotionellt slutstycke. Sista stycket = LÄGE eller PRIS.
+8. Generera ALLA fält: headline, instagramCaption, showingInvitation, shortAd.
+9. ALDRIG "njut av" eller "faciliteter" i NÅGON av texterna.`;
 
-// [Dead code removed: _UNUSED_BOOLI_TEXT_PROMPT + BOOLI_EXPERT_PROMPT â€” ~300 lines of unused prompts]
+// [Dead code removed: _UNUSED_BOOLI_TEXT_PROMPT + BOOLI_EXPERT_PROMPT — ~300 lines of unused prompts]
 const _UNUSED_BOOLI_TEXT_PROMPT = `REMOVED`;
 const BOOLI_EXPERT_PROMPT = `REMOVED`;
 
@@ -1451,15 +1510,19 @@ Svara kortfattat och konkret.`
             "DÅLIGT: \"Kontakta oss för visning av detta unika hem.\"\n" +
             "BRA: (Avsluta med läge-info, ALDRIG med uppmaning)\n\n" +
             "DÅLIGT: \"Den öppna planlösningen gör det enkelt att umgås och skapa minnen. Den stora tomten har gott om utrymme för lek och avkoppling. Med närhet till natur och stadsliv är detta ett utmärkt val för den som söker ett bekvämt boende.\"\n" +
-            "BRA: (Avsluta med fakta om LÄGE eller PRIS — ALDRIG med emotionella sammanfattningar)\n" +
+            "BRA: (Avsluta med fakta om LÄGE eller PRIS — ALDRIG med emotionella sammanfattningar)\n\n" +
+            "DÅLIGT: \"Den har energiklass C. Det finns golvvärme i alla badrum. En jacuzzi finns på verandan. Det finns även en laddstation. Förvaringsmöjligheter inkluderar ett förråd på 5 kvm.\"\n" +
+            "BRA: \"Energiklass C. Värmepump. Golvvärme i badrum och hall. Jacuzzi på verandan. Laddstation för elbil. Förråd om 5 kvm.\"\n" +
             "\n--- REGLER ---\n" +
             "1. Börja med gatuadress — ALDRIG 'Välkommen' eller 'Här'\n" +
             "2. Använd BARA fakta från dispositionen — HITTA ALDRIG PÅ\n" +
             "3. Korta meningar. Varje mening = ny fakta. Ingen utfyllnad.\n" +
-            "4. FÖRBJUDET: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, som ger en, för den som, i hjärtat av, drömboende, skapa minnen, utmärkt val, bekvämt boende, gott om utrymme\n" +
+            "4. FÖRBJUDET: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, som ger en, för den som, i hjärtat av, drömboende, skapa minnen, utmärkt val, bekvämt boende, gott om utrymme, faciliteter, njut av, förvaringsmöjligheter, odlingsmöjligheter\n" +
             "5. Skriv i samma stil som exempeltexterna\n" +
             "6. Avsluta ALDRIG med uppmaning eller emotionellt slutstycke\n" +
             "7. Sista stycket ska vara LÄGE eller PRIS — aldrig känslor\n" +
+            "8. VARIERA meningsstarter — aldrig 2+ 'Det finns' eller 'Den har'. Börja med rummet/objektet.\n" +
+            "9. VARIERA avstånd — aldrig 2+ 'ligger X bort'. Använd 'ca X min', 'nära X', 'i närheten'.\n" +
             "\n--- VIKTIGAST (läs detta sist) ---\n" +
             "Börja med gatuadressen. HITTA INTE PÅ fakta. Inga förbjudna ord. Korta meningar. Sista stycket = LÄGE eller PRIS. Aldrig emotionell sammanfattning.",
         },
@@ -1845,10 +1908,20 @@ REGLER:
           messages: [
             {
               role: "system" as const,
-              content: `Du är en svensk stadsplaneringsexpert. Baserat på en adress i Sverige, ange troliga närliggande platser. BARA platser du är SÄKER på existerar nära adressen. Om du inte vet — svara med tomma arrays.
+              content: `Du är en svensk stadsplaneringsexpert med djup kunskap om svenska orter och kommuner.
+
+REGLER:
+1. Ange BARA platser du är SÄKER på existerar nära adressen. Om du är osäker — utelämna platsen.
+2. Använd KORREKTA officiella namn: "Busshållplats Grisslinge" (inte "Grisslinge busstation"), "ICA Nära Mölnvik" (inte "ICA Mölnvik centrum").
+3. För kollektivtrafik: ange typ (busshållplats/pendeltågsstation/tunnelbana/spårvagn) + officiellt hållplatsnamn.
+4. För skolor: använd skolans officiella namn (t.ex. "Ösbyskolan", "Mölnviks skola").
+5. För matbutiker: använd butikskedja + ort (t.ex. "ICA Nära Mölnvik", "Coop Gustavsberg").
+6. Avstånd ska vara ungefärliga men realistiska. Ange i meter (under 1 km) eller kilometer.
+7. Om adressen är i ett villaområde utanför stadskärnan — anpassa avstånden (ofta längre).
+8. Svara med TOMMA arrays om du inte känner till området.
 
 Svara med JSON:
-{"transport":"Närmaste kollektivtrafik med ungefärligt avstånd","neighborhood":"Närmaste butiker, skolor, parker med ungefärligt avstånd","places":[{"name":"Platsnamn","type":"Typ","distance":"Avstånd"}]}`,
+{"transport":"Närmaste kollektivtrafik med officiellt namn och avstånd","neighborhood":"Närmaste butiker, skolor, parker med officiella namn och avstånd","places":[{"name":"Officiellt platsnamn","type":"Typ","distance":"Avstånd"}]}`,
             },
             { role: "user" as const, content: `Adress: ${address}, Sverige` },
           ],
