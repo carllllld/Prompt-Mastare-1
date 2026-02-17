@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   email: varchar("email").unique().notNull(),
   passwordHash: varchar("password_hash").notNull(),
   plan: varchar("plan").notNull().default("free"),
+  planStartAt: timestamp("plan_start_at").defaultNow(), // När planen/startdatum började
   promptsUsedToday: integer("prompts_used_today").notNull().default(0),
   lastResetDate: date("last_reset_date").defaultNow(),
   stripeCustomerId: varchar("stripe_customer_id"),

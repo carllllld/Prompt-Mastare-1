@@ -1693,14 +1693,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const now = new Date();
       const userNow = new Date(now.getTime() - tzOffset * 60000);
-      const tomorrow = new Date(userNow);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      const resetTime = new Date(tomorrow.getTime() + tzOffset * 60000);
 
       if (userId) {
         const user = await storage.getUserById(userId);
         if (user) {
+          // ANVÄNDAR-SPECIFIK MÅNAD - baserat på när användaren startade sin plan
+          const planStartAt = new Date(user.planStartAt || user.createdAt || now);
+          
+          // Beräkna nästa reset baserat på användarens startdatum
+          const nextReset = new Date(userNow);
+          nextReset.setMonth(planStartAt.getMonth());
+          nextReset.setFullYear(planStartAt.getFullYear() + 1);
+          nextReset.setDate(planStartAt.getDate());
+          nextReset.setHours(0, 0, 0, 0);
+          
+          // Om nästa reset har passerat, lägg till ett år
+          if (nextReset <= userNow) {
+            nextReset.setFullYear(nextReset.getFullYear() + 1);
+          }
+          
+          const resetTime = new Date(nextReset.getTime() + tzOffset * 60000);
           const plan = (user.plan as PlanType) || "free";
           const usage = await storage.getMonthlyUsage(userId) || {
             textsGenerated: 0,
@@ -1731,22 +1743,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             stripeCustomerId: user.stripeCustomerId || null,
           });
         }
-      }
+      } else {
+        // För icke-inloggade användare - använd standard reset (första nästa månad)
+        const nextMonth = new Date(userNow);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        nextMonth.setDate(1);
+        nextMonth.setHours(0, 0, 0, 0);
+        const resetTime = new Date(nextMonth.getTime() + tzOffset * 60000);
 
-      res.json({
-        plan: "free",
-        textsUsedThisMonth: 0,
-        textsRemaining: PLAN_LIMITS.free.texts,
-        monthlyTextLimit: PLAN_LIMITS.free.texts,
-        areaSearchesUsed: 0,
-        areaSearchesLimit: PLAN_LIMITS.free.areaSearches,
-        textEditsUsed: 0,
-        textEditsLimit: PLAN_LIMITS.free.textEdits,
-        personalStyleAnalyses: 0,
-        personalStyleAnalysesLimit: PLAN_LIMITS.free.personalStyleAnalyses,
-        isLoggedIn: false,
-        resetTime: resetTime.toISOString(),
-      });
+        return res.json({
+          plan: "free",
+          textsUsedThisMonth: 0,
+          textsRemaining: PLAN_LIMITS.free.texts,
+          monthlyTextLimit: PLAN_LIMITS.free.texts,
+          areaSearchesUsed: 0,
+          areaSearchesLimit: PLAN_LIMITS.free.areaSearches,
+          textEditsUsed: 0,
+          textEditsLimit: PLAN_LIMITS.free.textEdits,
+          personalStyleAnalyses: 0,
+          personalStyleAnalysesLimit: PLAN_LIMITS.free.personalStyleAnalyses,
+          isLoggedIn: false,
+          resetTime: resetTime.toISOString(),
+        });
+      }
     } catch (err) {
       console.error("User status error:", err);
       res.status(500).json({ message: "Kunde inte hämta användarstatus" });
