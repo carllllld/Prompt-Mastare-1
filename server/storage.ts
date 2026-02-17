@@ -8,7 +8,8 @@ import {
   presenceSessions, type PresenceSession,
   teamInvites, type TeamInvite,
   emailRateLimits, type EmailRateLimit,
-  personalStyles, type PersonalStyle, type InsertPersonalStyle
+  personalStyles, type PersonalStyle, type InsertPersonalStyle,
+  usageTracking, type UsageTracking, type InsertUsageTracking
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gt, gte } from "drizzle-orm";
@@ -25,7 +26,7 @@ export interface IStorage {
   incrementUserPrompts(userId: string): Promise<void>;
   resetUserPromptsIfNewDay(user: User): Promise<User>;
   // Subscription methods
-  upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
+  upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
   setUserPlan(userId: string, plan: "free" | "basic" | "pro"): Promise<void>; // Admin function
   // Optimization history methods
@@ -88,6 +89,11 @@ export interface IStorage {
   createPersonalStyle(style: InsertPersonalStyle): Promise<PersonalStyle>;
   updatePersonalStyle(userId: string, data: Partial<InsertPersonalStyle>): Promise<PersonalStyle | null>;
   deletePersonalStyle(userId: string): Promise<void>;
+
+  // Usage tracking methods
+  getMonthlyUsage(userId: string): Promise<UsageTracking | null>;
+  incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking>;
+  resetMonthlyUsage(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -138,7 +144,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upgradeUser(userId: string, plan: "basic" | "pro", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
+  async upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
       .set({ 
         plan,
@@ -526,6 +532,79 @@ export class DatabaseStorage implements IStorage {
   async deletePersonalStyle(userId: string): Promise<void> {
     await db.delete(personalStyles)
       .where(eq(personalStyles.userId, userId));
+  }
+
+  // Usage tracking methods
+  async getMonthlyUsage(userId: string): Promise<UsageTracking | null> {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    
+    const result = await db.select()
+      .from(usageTracking)
+      .where(and(
+        eq(usageTracking.userId, userId),
+        eq(usageTracking.month, month),
+        eq(usageTracking.year, year)
+      ))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  async incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking> {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    
+    // Get user's current plan
+    const user = await this.getUserById(userId);
+    if (!user) throw new Error('User not found');
+    
+    // Try to get existing usage record
+    let usage = await this.getMonthlyUsage(userId);
+    
+    if (!usage) {
+      // Create new usage record
+      const [newUsage] = await db.insert(usageTracking)
+        .values({
+          userId,
+          month,
+          year,
+          planType: user.plan,
+          textsGenerated: type === 'texts' ? 1 : 0,
+          areaSearchesUsed: type === 'areaSearches' ? 1 : 0,
+          textEditsUsed: type === 'textEdits' ? 1 : 0,
+          personalStyleAnalyses: type === 'personalStyleAnalyses' ? 1 : 0,
+        })
+        .returning();
+      return newUsage;
+    }
+    
+    // Update existing record
+    const updateField = type === 'texts' ? 'textsGenerated' :
+                       type === 'areaSearches' ? 'areaSearchesUsed' :
+                       type === 'textEdits' ? 'textEditsUsed' :
+                       'personalStyleAnalyses';
+    
+    const [updatedUsage] = await db.update(usageTracking)
+      .set({
+        [updateField]: sql`${usageTracking[updateField]} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(usageTracking.userId, userId),
+        eq(usageTracking.month, month),
+        eq(usageTracking.year, year)
+      ))
+      .returning();
+    
+    return updatedUsage;
+  }
+
+  async resetMonthlyUsage(userId: string): Promise<void> {
+    await db.delete(usageTracking)
+      .where(eq(usageTracking.userId, userId));
   }
 }
 

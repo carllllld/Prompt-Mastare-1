@@ -3,7 +3,7 @@ import type { Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
 import OpenAI from "openai";
-import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
+import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
 
@@ -1103,8 +1103,8 @@ function addParagraphs(text: string): string {
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
-const STRIPE_BASIC_PRICE_ID = process.env.STRIPE_BASIC_PRICE_ID;
 const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
+const STRIPE_PREMIUM_PRICE_ID = process.env.STRIPE_PREMIUM_PRICE_ID;
 
 // --- 2-STEGS GENERATION ---
 
@@ -1697,14 +1697,30 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const user = await storage.getUserById(userId);
         if (user) {
           const plan = (user.plan as PlanType) || "free";
-          const monthlyLimit = PLAN_LIMITS[plan];
-          const promptsUsedToday = user.promptsUsedToday || 0;
+          const usage = await storage.getMonthlyUsage(userId) || {
+            textsGenerated: 0,
+            areaSearchesUsed: 0,
+            textEditsUsed: 0,
+            personalStyleAnalyses: 0,
+          };
+          
+          const limits = PLAN_LIMITS[plan];
+          const textsRemaining = Math.max(0, limits.texts - usage.textsGenerated);
+          const areaSearchesRemaining = Math.max(0, limits.areaSearches - usage.areaSearchesUsed);
+          const textEditsRemaining = Math.max(0, limits.textEdits - usage.textEditsUsed);
+          const personalStyleAnalysesRemaining = Math.max(0, limits.personalStyleAnalyses - usage.personalStyleAnalyses);
 
           return res.json({
             plan,
-            promptsUsedToday,
-            promptsRemaining: Math.max(0, monthlyLimit - promptsUsedToday),
-            monthlyLimit,
+            textsUsedThisMonth: usage.textsGenerated,
+            textsRemaining,
+            monthlyTextLimit: limits.texts,
+            areaSearchesUsed: usage.areaSearchesUsed,
+            areaSearchesLimit: limits.areaSearches,
+            textEditsUsed: usage.textEditsUsed,
+            textEditsLimit: limits.textEdits,
+            personalStyleAnalyses: usage.personalStyleAnalyses,
+            personalStyleAnalysesLimit: limits.personalStyleAnalyses,
             isLoggedIn: true,
             resetTime: resetTime.toISOString(),
             stripeCustomerId: user.stripeCustomerId || null,
@@ -1714,9 +1730,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       res.json({
         plan: "free",
-        promptsUsedToday: 0,
-        promptsRemaining: PLAN_LIMITS.free,
-        monthlyLimit: PLAN_LIMITS.free,
+        textsUsedThisMonth: 0,
+        textsRemaining: PLAN_LIMITS.free.texts,
+        monthlyTextLimit: PLAN_LIMITS.free.texts,
+        areaSearchesUsed: 0,
+        areaSearchesLimit: PLAN_LIMITS.free.areaSearches,
+        textEditsUsed: 0,
+        textEditsLimit: PLAN_LIMITS.free.textEdits,
+        personalStyleAnalyses: 0,
+        personalStyleAnalysesLimit: PLAN_LIMITS.free.personalStyleAnalyses,
         isLoggedIn: false,
         resetTime: resetTime.toISOString(),
       });
@@ -1730,8 +1752,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/personal-style", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user as User;
-      if (user.plan !== "pro") {
-        return res.status(403).json({ message: "Personlig stil är endast för Pro-användare" });
+      if (!FEATURE_ACCESS[user.plan as PlanType].personalStyle) {
+        return res.status(403).json({ message: "Personlig stil är endast för Pro/Premium-användare" });
       }
 
       const personalStyle = await storage.getPersonalStyle(user.id);
@@ -1757,9 +1779,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  app.post("/api/personal-style", requireAuth, requirePro, async (req, res) => {
+  app.post("/api/personal-style", requireAuth, async (req, res) => {
     try {
       const user = (req as any).user as User;
+      const plan = (user.plan as PlanType) || "free";
+      
+      // Check feature access
+      if (!FEATURE_ACCESS[plan].personalStyle) {
+        return res.status(403).json({ message: "Personlig stil är endast för Pro/Premium-användare" });
+      }
+      
+      // Check usage limits for personal style analysis
+      const usage = await storage.getMonthlyUsage(user.id) || {
+        textsGenerated: 0,
+        areaSearchesUsed: 0,
+        textEditsUsed: 0,
+        personalStyleAnalyses: 0,
+      };
+      
+      const limits = PLAN_LIMITS[plan];
+      if (usage.personalStyleAnalyses >= limits.personalStyleAnalyses) {
+        return res.status(429).json({
+          message: `Du har nått din gräns för personlig stil-analys. Uppgradera till Premium för obegränsad användning!`,
+          limitReached: true,
+          upgradeTo: "premium",
+        });
+      }
+      
       const { referenceTexts, teamShared } = req.body;
 
       if (!referenceTexts || !Array.isArray(referenceTexts) || referenceTexts.length !== 3) {
@@ -1790,6 +1836,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       };
 
       const savedStyle = await storage.createPersonalStyle(personalStyleData);
+      
+      // Increment usage for personal style analysis
+      await storage.incrementUsage(user.id, 'personalStyleAnalyses');
+      console.log(`[Usage] Incremented personal style analysis for user ${user.id}`);
       
       res.json({
         success: true,
@@ -1848,13 +1898,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
-      const promptsUsedToday = user.promptsUsedToday || 0;
-
-      const monthlyLimit = PLAN_LIMITS[plan];
-      if (promptsUsedToday >= monthlyLimit) {
+      
+      // Check monthly usage limits
+      const usage = await storage.getMonthlyUsage(user.id) || {
+        textsGenerated: 0,
+        areaSearchesUsed: 0,
+        textEditsUsed: 0,
+        personalStyleAnalyses: 0,
+      };
+      
+      const limits = PLAN_LIMITS[plan];
+      if (usage.textsGenerated >= limits.texts) {
         return res.status(429).json({
-          message: `Du har nått din månadsgräns av ${monthlyLimit} objektbeskrivningar. Uppgradera till Pro för fler!`,
+          message: `Du har nått din månadsgräns av ${limits.texts} objektbeskrivningar. Uppgradera till Pro för fler!`,
           limitReached: true,
+          upgradeTo: plan === "free" ? "pro" : "premium",
         });
       }
 
@@ -2377,6 +2435,10 @@ Svara med JSON i formatet:
         }
       }
 
+      // Increment usage after successful generation
+      await storage.incrementUsage(user.id, 'texts');
+      console.log(`[Usage] Incremented text generation for user ${user.id}`);
+
       res.json({
         originalPrompt: prompt,
         improvedPrompt: result.improvedPrompt || prompt,
@@ -2583,7 +2645,7 @@ Svara med JSON:
 
       console.log("[Stripe Checkout] User authenticated:", user.id, user.email);
 
-      const priceId = tier === "basic" ? STRIPE_BASIC_PRICE_ID : STRIPE_PRO_PRICE_ID;
+      const priceId = tier === "pro" ? STRIPE_PRO_PRICE_ID : STRIPE_PREMIUM_PRICE_ID;
       if (!priceId) {
         console.error("[Stripe Checkout] Price ID not configured for tier:", tier);
         return res.status(500).json({ message: "Stripe price not configured" });
@@ -2679,7 +2741,7 @@ Svara med JSON:
         case "checkout.session.completed": {
           const session = event.data.object as Stripe.Checkout.Session;
           const userId = session.metadata?.userId;
-          const targetPlan = session.metadata?.targetPlan as "basic" | "pro";
+          const targetPlan = session.metadata?.targetPlan as "pro" | "premium";
 
           if (userId && targetPlan && session.subscription && session.customer) {
             await storage.upgradeUser(
