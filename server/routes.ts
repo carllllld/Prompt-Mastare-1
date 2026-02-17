@@ -31,70 +31,70 @@ function safeJsonParse(rawText: string): any {
   return JSON.parse(sanitized);
 }
 
-// FÃ¶rbjudna fraser - AI-fraser som avslÃ¶jar genererad text
-// VIKTIGT: AnvÃ¤nd KORTA fraser fÃ¶r att fÃ¥nga alla varianter
+// Förbjudna fraser - AI-fraser som avslöjar genererad text
+// VIKTIGT: Använd KORTA fraser för att fånga alla varianter
 const FORBIDDEN_PHRASES = [
-  // Generiska AI-Ã¶ppningar - KRITISKT
-  "vÃ¤lkommen till",
-  "vÃ¤lkommen hem",
-  "hÃ¤r mÃ¶ts du",
-  "hÃ¤r erbjuds",
+  // Generiska AI-öppningar - KRITISKT
+  "välkommen till",
+  "välkommen hem",
+  "här möts du",
+  "här erbjuds",
   "nu finns chansen",
   "missa inte",
-  "unik mÃ¶jlighet",
+  "unik möjlighet",
   "unik chans",
-  "sÃ¤llsynt tillfÃ¤lle",
+  "sällsynt tillfälle",
   "finner du",
-  "utmÃ¤rkt mÃ¶jlighet",
+  "utmärkt möjlighet",
   "stor potential",
   "kontakta oss",
-  "fÃ¶r mer information",
+  "för mer information",
   "och visning",
-  "i hjÃ¤rtat av",
-  "hjÃ¤rtat av",
-  "vilket gÃ¶r det enkelt",
-  "vilket gÃ¶r det smidigt",
-  "vilket gÃ¶r det lÃ¤tt",
+  "i hjärtat av",
+  "hjärtat av",
+  "vilket gör det enkelt",
+  "vilket gör det smidigt",
+  "vilket gör det lätt",
   "vilket ger en",
   "ger en rymlig",
-  "ger en hÃ¤rlig",
+  "ger en härlig",
   "ger en luftig",
-  "rymlig kÃ¤nsla",
-  "hÃ¤rlig plats fÃ¶r",
-  "plats fÃ¶r avkoppling",
+  "rymlig känsla",
+  "härlig plats för",
+  "plats för avkoppling",
   "njutning av",
-  "mÃ¶jlighet att pÃ¥verka",
+  "möjlighet att påverka",
   "forma framtiden",
-  "fÃ¶r den som",
-  "vilket sÃ¤kerstÃ¤ller",
+  "för den som",
+  "vilket säkerställer",
   
   // "erbjuder" i alla former
   " erbjuder ",
   " erbjuds ",
   
-  // NYA AI-KLYSCHOR FRÃ…N OUTPUT-ANALYS
+  // NYA AI-KLYSCHOR FRÅN OUTPUT-ANALYS
   "erbjuder en bra plats",
   "erbjuder en perfekt",
   "erbjuder en fantastisk",
   "skapar en",
-  "skapar en miljÃ¶",
+  "skapar en miljö",
   "skapar en avkopplande",
-  "Ã¤r ett bra val",
-  "Ã¤r ett bra val fÃ¶r",
-  "Ã¤r en perfekt plats",
-  "Ã¤r en bra plats",
-  "Ã¤r en bra plats fÃ¶r",
+  "är ett bra val",
+  "är ett bra val för",
+  "är en perfekt plats",
+  "är en bra plats",
+  "är en bra plats för",
   "vilket ger ytterligare",
   "vilket ger ytterligare utrymme",
-  "den sÃ¶dervÃ¤nda placeringen",
-  "den sÃ¶dervÃ¤nda placeringen ger",
+  "den södervända placeringen",
+  "den södervända placeringen ger",
   
-  // AtmosfÃ¤r/luftig-fraser
-  "trivsam atmosfÃ¤r",
-  "hÃ¤rlig atmosfÃ¤r",
-  "mysig atmosfÃ¤r",
-  "inbjudande atmosfÃ¤r",
-  "luftig atmosfÃ¤r",
+  // Atmosfär/luftig-fraser
+  "trivsam atmosfär",
+  "härlig atmosfär",
+  "mysig atmosfär",
+  "inbjudande atmosfär",
+  "luftig atmosfär",
   "luftig och",
   
   // Rofylld/lugn klyschor
@@ -102,77 +102,77 @@ const FORBIDDEN_PHRASES = [
   "rofylld",
   
   // Trygg-fraser
-  "trygg boendemiljÃ¶",
+  "trygg boendemiljö",
   "trygg boendeekonomi",
   "tryggt boende",
   
   // Sociala klyschor
   "sociala sammanhang",
-  "sociala tillstÃ¤llningar",
-  "socialt umgÃ¤nge",
+  "sociala tillställningar",
+  "socialt umgänge",
   
   // Komfort-fraser
   "extra komfort",
   "maximal komfort",
   
-  // Ã–verdrivna adjektiv
+  // Överdrivna adjektiv
   "fantastisk",
   "underbar",
   "magisk",
   "otrolig",
-  "drÃ¶mboende",
-  "drÃ¶mlÃ¤genhet",
-  "drÃ¶mhem",
-  "en sann pÃ¤rla",
+  "drömboende",
+  "drömlägenhet",
+  "drömhem",
+  "en sann pärla",
   
   // Vardags-klyschor
-  "underlÃ¤ttar vardagen",
-  "bekvÃ¤mlighet i vardagen",
+  "underlättar vardagen",
+  "bekvämlighet i vardagen",
   "den matlagningsintresserade",
-  "god natts sÃ¶mn",
+  "god natts sömn",
   
-  // LÃ¤ges-klyschor
+  // Läges-klyschor
   "eftertraktat boendealternativ",
-  "attraktivt lÃ¤ge",
-  "attraktivt med nÃ¤rhet",
-  "inom rÃ¤ckhÃ¥ll",
+  "attraktivt läge",
+  "attraktivt med närhet",
+  "inom räckhåll",
   "stadens puls",
   
-  // HjÃ¤rta-klyschor
-  "hjÃ¤rtat i hemmet",
-  "husets hjÃ¤rta",
-  "hemmets hjÃ¤rta",
+  // Hjärta-klyschor
+  "hjärtat i hemmet",
+  "husets hjärta",
+  "hemmets hjärta",
   
   // Andra
   "inte bara ett hem",
-  "stark efterfrÃ¥gan",
+  "stark efterfrågan",
   "goda arbetsytor",
   
-  // AI-fraser som riktiga mÃ¤klare ALDRIG anvÃ¤nder
-  "generÃ¶sa ytor",
-  "generÃ¶s takhÃ¶jd",
-  "generÃ¶st tilltaget",
-  "generÃ¶st med",
-  "bjuder pÃ¥",
-  "prÃ¤glas av",
+  // AI-fraser som riktiga mäklare ALDRIG använder
+  "generösa ytor",
+  "generös takhöjd",
+  "generöst tilltaget",
+  "generöst med",
+  "bjuder på",
+  "präglas av",
   "genomsyras av",
   "andas lugn",
   "andas charm",
   "andas historia",
-  "prÃ¤glad av",
+  "präglad av",
   "stor charm",
   "med sin charm",
   "med mycket charm",
   "trivsamt boende",
   "trivsam bostad",
   "en bostad som",
-  "en lÃ¤genhet som",
+  "en lägenhet som",
   "ett hem som",
-  "hÃ¤r finns",
-  "hÃ¤r kan du",
-  "hÃ¤r bor du",
+  "här finns",
+  "här kan du",
+  "här bor du",
   "strategiskt placerad",
-  "strategiskt lÃ¤ge",
+  "strategiskt läge",
   
   // NYA FRASER FRÅN OUTPUT-TEST 2026-02
   "skapa minnen",
@@ -400,20 +400,20 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   return violations;
 }
 
-// Separat funktion fÃ¶r ordrÃ¤kning (endast fÃ¶r improvedPrompt)
+// Separat funktion för ordräkning (endast för improvedPrompt)
 function checkWordCount(text: string, platform: string, targetMin?: number, targetMax?: number): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
   
-  // AnvÃ¤nd anvÃ¤ndarens valda lÃ¤ngd om den finns, annars plattformens standard
+  // Använd användarens valda längd om den finns, annars plattformens standard
   const minWords = targetMin || (platform === "hemnet" ? 180 : 200);
   const maxWords = targetMax || (platform === "hemnet" ? 500 : 600);
   
   if (wordCount < minWords) {
-    violations.push(`FÃ¶r fÃ¥ ord: ${wordCount}/${minWords} krÃ¤vs`);
+    violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
   }
   if (wordCount > maxWords) {
-    violations.push(`FÃ¶r mÃ¥nga ord: ${wordCount}/${maxWords} max`);
+    violations.push(`För många ord: ${wordCount}/${maxWords} max`);
   }
   return violations;
 }
@@ -437,282 +437,282 @@ function validateOptimizationResult(result: any, platform: string = "hemnet", ta
   return Array.from(new Set(violations));
 }
 
-// Post-processing: Rensa bort fÃ¶rbjudna fraser automatiskt
-// VIKTIGT: LÃ¤ngre fraser FÃ–RST sÃ¥ de matchas innan kortare
-// Detta eliminerar behovet av retries fÃ¶r de vanligaste AI-fraserna
+// Post-processing: Rensa bort förbjudna fraser automatiskt
+// VIKTIGT: Längre fraser FÖRST så de matchas innan kortare
+// Detta eliminerar behovet av retries för de vanligaste AI-fraserna
 const PHRASE_REPLACEMENTS: [string, string][] = [
-  // === Ã–PPNINGAR - ta bort helt ===
-  ["vÃ¤lkommen till denna", ""],
-  ["vÃ¤lkommen till", ""],
-  ["vÃ¤lkommen hem till", ""],
-  ["hÃ¤r mÃ¶ts du av", ""],
-  ["hÃ¤r erbjuds", ""],
+  // === ÖPPNINGAR - ta bort helt ===
+  ["välkommen till denna", ""],
+  ["välkommen till", ""],
+  ["välkommen hem till", ""],
+  ["här möts du av", ""],
+  ["här erbjuds", ""],
   
   // === ERBJUDER-VARIANTER (vanligaste AI-frasen) ===
-  ["lÃ¤genheten erbjuder", "lÃ¤genheten har"],
+  ["lägenheten erbjuder", "lägenheten har"],
   ["bostaden erbjuder", "bostaden har"],
-  ["kÃ¶ket erbjuder", "kÃ¶ket har"],
+  ["köket erbjuder", "köket har"],
   ["badrummet erbjuder", "badrummet har"],
   ["balkongen erbjuder", "balkongen har"],
-  ["omrÃ¥det erbjuder", "omrÃ¥det har"],
-  ["fÃ¶reningen erbjuder", "fÃ¶reningen har"],
+  ["området erbjuder", "området har"],
+  ["föreningen erbjuder", "föreningen har"],
   [" erbjuder ", " har "],
   [" erbjuds ", " finns "],
   ["erbjuder", "har"],
   ["erbjuds", "finns"],
   
-  // === "VILKET GER/GÃ–R" - vanlig AI-konstruktion ===
-  ["vilket gÃ¶r det enkelt att ta sig", "med nÃ¤ra till"],
-  ["vilket gÃ¶r det enkelt", ""],
+  // === "VILKET GER/GÖR" - vanlig AI-konstruktion ===
+  ["vilket gör det enkelt att ta sig", "med nära till"],
+  ["vilket gör det enkelt", ""],
   ["vilket ger en luftig", "med"],
   ["vilket ger en", "med"],
   ["vilket ger", "med"],
   ["som ger en", "med"],
   
-  // === "FÃ–R DEN SOM" - vanlig AI-fras ===
-  ["perfekt fÃ¶r den som", "passar"],
-  ["idealisk fÃ¶r den som", "passar"],
-  ["fÃ¶r den matlagningsintresserade", ""],
-  ["fÃ¶r den som uppskattar", ""],
-  ["fÃ¶r den som gillar", ""],
-  ["fÃ¶r den som vill", ""],
-  ["fÃ¶r den som sÃ¶ker", ""],
-  ["fÃ¶r den som", ""],
-  ["perfekt fÃ¶r", "passar"],
-  ["idealisk fÃ¶r", "passar"],
+  // === "FÖR DEN SOM" - vanlig AI-fras ===
+  ["perfekt för den som", "passar"],
+  ["idealisk för den som", "passar"],
+  ["för den matlagningsintresserade", ""],
+  ["för den som uppskattar", ""],
+  ["för den som gillar", ""],
+  ["för den som vill", ""],
+  ["för den som söker", ""],
+  ["för den som", ""],
+  ["perfekt för", "passar"],
+  ["idealisk för", "passar"],
   
   // === KONTAKT/CTA - ta bort helt ===
-  ["kontakta oss fÃ¶r visning", ""],
+  ["kontakta oss för visning", ""],
   ["kontakta oss", ""],
-  ["tveka inte att hÃ¶ra av dig", ""],
+  ["tveka inte att höra av dig", ""],
   ["tveka inte", ""],
   ["boka visning", ""],
-  ["hÃ¶r av dig", ""],
+  ["hör av dig", ""],
   
   // === PLATS-KLYSCHOR ===
-  ["i hjÃ¤rtat av stockholm", "centralt i stockholm"],
-  ["i hjÃ¤rtat av", "centralt i"],
-  ["hjÃ¤rtat av", "centrala"],
-  ["stadens puls", "stadskÃ¤rnan"],
+  ["i hjärtat av stockholm", "centralt i stockholm"],
+  ["i hjärtat av", "centralt i"],
+  ["hjärtat av", "centrala"],
+  ["stadens puls", "stadskärnan"],
   ["mitt i stadens liv", "centralt"],
   
-  // === DRÃ–M-ORD ===
-  ["drÃ¶mboende", "bostad"],
-  ["drÃ¶mhem", "hem"],
-  ["drÃ¶mlÃ¤genhet", "lÃ¤genhet"],
-  ["en sann pÃ¤rla", ""],
-  ["en riktig pÃ¤rla", ""],
+  // === DRÖM-ORD ===
+  ["drömboende", "bostad"],
+  ["drömhem", "hem"],
+  ["drömlägenhet", "lägenhet"],
+  ["en sann pärla", ""],
+  ["en riktig pärla", ""],
   
-  // === LUFTIG/ATMOSFÃ„R ===
-  ["luftig och inbjudande atmosfÃ¤r", ""],
-  ["luftig atmosfÃ¤r", ""],
-  ["ger en luftig kÃ¤nsla", ""],
-  ["luftig kÃ¤nsla", ""],
+  // === LUFTIG/ATMOSFÄR ===
+  ["luftig och inbjudande atmosfär", ""],
+  ["luftig atmosfär", ""],
+  ["ger en luftig känsla", ""],
+  ["luftig känsla", ""],
   ["luftig", "rymlig"],
-  ["inbjudande atmosfÃ¤r", ""],
-  ["trivsam atmosfÃ¤r", ""],
-  ["hÃ¤rlig atmosfÃ¤r", ""],
+  ["inbjudande atmosfär", ""],
+  ["trivsam atmosfär", ""],
+  ["härlig atmosfär", ""],
   
   // === ROFYLLD ===
-  ["rofyllt lÃ¤ge", "lugnt lÃ¤ge"],
-  ["rofylld miljÃ¶", "lugn miljÃ¶"],
+  ["rofyllt läge", "lugnt läge"],
+  ["rofylld miljö", "lugn miljö"],
   ["rofyllt", "lugnt"],
   ["rofylld", "lugn"],
   
   // === VARDAGEN ===
-  ["underlÃ¤ttar vardagen", ""],
-  ["bekvÃ¤mlighet i vardagen", ""],
+  ["underlättar vardagen", ""],
+  ["bekvämlighet i vardagen", ""],
   ["i vardagen", ""],
   
   // === ATTRAKTIVT ===
-  ["attraktivt lÃ¤ge", "bra lÃ¤ge"],
-  ["attraktivt med nÃ¤rhet", "nÃ¤ra"],
+  ["attraktivt läge", "bra läge"],
+  ["attraktivt med närhet", "nära"],
   ["attraktivt", ""],
   
   // === SUPERLATIV ===
   ["fantastisk utsikt", "fin utsikt"],
-  ["fantastiskt lÃ¤ge", "bra lÃ¤ge"],
+  ["fantastiskt läge", "bra läge"],
   ["fantastisk", "fin"],
   ["underbar", "fin"],
   ["magisk", ""],
   ["otrolig", ""],
-  ["enastÃ¥ende", ""],
+  ["enastående", ""],
   
-  // === Ã–VRIGT ===
-  ["unik mÃ¶jlighet", ""],
+  // === ÖVRIGT ===
+  ["unik möjlighet", ""],
   ["unik chans", ""],
-  ["sÃ¤llsynt tillfÃ¤lle", ""],
+  ["sällsynt tillfälle", ""],
   ["missa inte", ""],
-  ["inom rÃ¤ckhÃ¥ll", "i nÃ¤rheten"],
-  ["sociala tillstÃ¤llningar", "middagar"],
-  ["sociala sammanhang", "umgÃ¤nge"],
+  ["inom räckhåll", "i närheten"],
+  ["sociala tillställningar", "middagar"],
+  ["sociala sammanhang", "umgänge"],
   ["extra komfort", ""],
   ["maximal komfort", ""],
-  ["trygg boendemiljÃ¶", "stabil fÃ¶rening"],
+  ["trygg boendemiljö", "stabil förening"],
   ["trygg boendeekonomi", "stabil ekonomi"],
-  ["goda arbetsytor", "bÃ¤nkyta"],
-  ["gott om arbetsyta", "bÃ¤nkyta"],
+  ["goda arbetsytor", "bänkyta"],
+  ["gott om arbetsyta", "bänkyta"],
   
-  // === NYA FRASER FRÃ…N GRANSKNING ===
-  ["sÃ¤ker boendemiljÃ¶", ""],
-  ["stadens liv och rÃ¶relse", ""],
+  // === NYA FRASER FRÅN GRANSKNING ===
+  ["säker boendemiljö", ""],
+  ["stadens liv och rörelse", ""],
   ["mitt i stadens liv", "centralt"],
   ["njuta av eftermiddagssolen", "med eftermiddagssol"],
-  ["njuta av kvÃ¤llssolen", "med kvÃ¤llssol"],
+  ["njuta av kvällssolen", "med kvällssol"],
   ["njuta av", ""],
   ["den vanliga balkongen", "balkongen"],
-  ["trevligt sÃ¤llskap", ""],
-  ["med nÃ¤ra till runt", "med nÃ¤ra till"],
-  ["nÃ¤ra till runt i staden", "nÃ¤ra tunnelbana"],
-  ["med ett bekvÃ¤mt boende med", "med"],
-  ["bekvÃ¤mt boende", ""],
-  ["det finns mÃ¶jlighet att uppdatera", ""],
-  ["om sÃ¥ Ã¶nskas", ""],
-  ["efter egna Ã¶nskemÃ¥l", ""],
-  ["har potential fÃ¶r modernisering", "kan renoveras"],
-  ["potential fÃ¶r", ""],
-  ["imponerande takhÃ¶jd", "hÃ¶g takhÃ¶jd"],
+  ["trevligt sällskap", ""],
+  ["med nära till runt", "med nära till"],
+  ["nära till runt i staden", "nära tunnelbana"],
+  ["med ett bekvämt boende med", "med"],
+  ["bekvämt boende", ""],
+  ["det finns möjlighet att uppdatera", ""],
+  ["om så önskas", ""],
+  ["efter egna önskemål", ""],
+  ["har potential för modernisering", "kan renoveras"],
+  ["potential för", ""],
+  ["imponerande takhöjd", "hög takhöjd"],
   ["imponerande", ""],
-  ["unik karaktÃ¤r", "karaktÃ¤r"],
-  ["lugn atmosfÃ¤r", ""],
+  ["unik karaktär", "karaktär"],
+  ["lugn atmosfär", ""],
   
-  // === "VILKET"-KONSTRUKTIONER (vanlig AI-mÃ¶nster) ===
+  // === "VILKET"-KONSTRUKTIONER (vanlig AI-mönster) ===
   ["vilket bidrar till en rymlig", "med rymlig"],
   ["vilket bidrar till", "med"],
-  ["vilket skapar rymd", "med hÃ¶g takhÃ¶jd"],
+  ["vilket skapar rymd", "med hög takhöjd"],
   ["vilket skapar", "och ger"],
-  ["vilket gÃ¶r den till ett lÃ¥ngsiktigt val", ""],
-  ["vilket gÃ¶r den till", "och Ã¤r"],
-  ["vilket gÃ¶r det till en utmÃ¤rkt", "och fungerar som"],
-  ["vilket gÃ¶r det till ett", "och Ã¤r ett"],
-  ["vilket gÃ¶r det till", "och Ã¤r"],
-  ["vilket kan vara en fÃ¶rdel", ""],
+  ["vilket gör den till ett långsiktigt val", ""],
+  ["vilket gör den till", "och är"],
+  ["vilket gör det till en utmärkt", "och fungerar som"],
+  ["vilket gör det till ett", "och är ett"],
+  ["vilket gör det till", "och är"],
+  ["vilket kan vara en fördel", ""],
   ["vilket kan vara", ""],
-  ["vilket passar familjer", "fÃ¶r familjer"],
-  ["vilket passar den som sÃ¶ker", "fÃ¶r"],
-  ["vilket passar den som", "fÃ¶r"],
-  ["vilket passar", "fÃ¶r"],
-  ["vilket underlÃ¤ttar resor", "med enkel pendling"],
-  ["vilket underlÃ¤ttar pendling", "med enkel pendling"],
-  ["vilket underlÃ¤ttar", "med"],
-  ["vilket Ã¤r uppskattat av mÃ¥nga", ""],
-  ["vilket Ã¤r uppskattat", ""],
-  ["vilket Ã¤r", "och Ã¤r"],
+  ["vilket passar familjer", "för familjer"],
+  ["vilket passar den som söker", "för"],
+  ["vilket passar den som", "för"],
+  ["vilket passar", "för"],
+  ["vilket underlättar resor", "med enkel pendling"],
+  ["vilket underlättar pendling", "med enkel pendling"],
+  ["vilket underlättar", "med"],
+  ["vilket är uppskattat av många", ""],
+  ["vilket är uppskattat", ""],
+  ["vilket är", "och är"],
   
-  // === FLER AI-FRASER FRÃ…N GRANSKNING 2 ===
-  ["rymlig atmosfÃ¤r", "rymd"],
+  // === FLER AI-FRASER FRÅN GRANSKNING 2 ===
+  ["rymlig atmosfär", "rymd"],
   ["med god isolering och energibesparing", ""],
   ["med god isolering", ""],
-  ["sociala sammankomster", "umgÃ¤nge"],
-  ["med behaglig temperatur Ã¥ret runt", ""],
+  ["sociala sammankomster", "umgänge"],
+  ["med behaglig temperatur året runt", ""],
   ["behaglig temperatur", ""],
   ["harmonisk livsstil", ""],
-  ["modern livsstil med alla bekvÃ¤mligheter", ""],
+  ["modern livsstil med alla bekvämligheter", ""],
   ["modern livsstil", ""],
-  ["alla bekvÃ¤mligheter", ""],
-  ["fridfull miljÃ¶", "lugnt lÃ¤ge"],
-  ["goda kommunikationsmÃ¶jligheter", "bra kommunikationer"],
-  ["kommunikationsmÃ¶jligheter", "kommunikationer"],
+  ["alla bekvämligheter", ""],
+  ["fridfull miljö", "lugnt läge"],
+  ["goda kommunikationsmöjligheter", "bra kommunikationer"],
+  ["kommunikationsmöjligheter", "kommunikationer"],
   ["rekreation och avkoppling", "friluftsliv"],
-  ["karaktÃ¤r och charm", "karaktÃ¤r"],
+  ["karaktär och charm", "karaktär"],
   
-  // === FLER AI-FRASER FRÃ…N GRANSKNING 3 ===
-  ["stilren och funktionell matlagningsmiljÃ¶", "funktionellt kÃ¶k"],
-  ["funktionell matlagningsmiljÃ¶", "funktionellt kÃ¶k"],
-  ["matlagningsmiljÃ¶", "kÃ¶k"],
-  ["maximerar anvÃ¤ndningen av varje kvadratmeter", ""],
-  ["maximerar anvÃ¤ndningen", ""],
-  ["lugn och trygg miljÃ¶", "lugnt omrÃ¥de"],
-  ["trygg miljÃ¶", ""],
-  ["fokus pÃ¥ kvalitet och hÃ¥llbarhet", ""],
-  ["fokus pÃ¥ kvalitet", ""],
-  ["ytterligare fÃ¶rstÃ¤rker dess", "med"],
-  ["ytterligare fÃ¶rstÃ¤rker", ""],
-  ["ett lÃ¥ngsiktigt val fÃ¶r kÃ¶pare", ""],
-  ["lÃ¥ngsiktigt val", ""],
-  ["gott om utrymme fÃ¶r fÃ¶rvaring", "bra fÃ¶rvaring"],
-  ["vÃ¤lplanerad layout", "bra planlÃ¶sning"],
+  // === FLER AI-FRASER FRÅN GRANSKNING 3 ===
+  ["stilren och funktionell matlagningsmiljö", "funktionellt kök"],
+  ["funktionell matlagningsmiljö", "funktionellt kök"],
+  ["matlagningsmiljö", "kök"],
+  ["maximerar användningen av varje kvadratmeter", ""],
+  ["maximerar användningen", ""],
+  ["lugn och trygg miljö", "lugnt område"],
+  ["trygg miljö", ""],
+  ["fokus på kvalitet och hållbarhet", ""],
+  ["fokus på kvalitet", ""],
+  ["ytterligare förstärker dess", "med"],
+  ["ytterligare förstärker", ""],
+  ["ett långsiktigt val för köpare", ""],
+  ["långsiktigt val", ""],
+  ["gott om utrymme för förvaring", "bra förvaring"],
+  ["välplanerad layout", "bra planlösning"],
   ["gott inomhusklimat", ""],
   ["bidrar till ett gott", "ger"],
   ["smakfullt renoverat", "renoverat"],
   ["smakfullt inrett", ""],
-  ["enhetlig och elegant kÃ¤nsla", ""],
-  ["enhetlig och stilren kÃ¤nsla", ""],
-  ["fÃ¶r .", ". "],
+  ["enhetlig och elegant känsla", ""],
+  ["enhetlig och stilren känsla", ""],
+  ["för .", ". "],
   
-  // === FLER AI-FRASER FRÃ…N GRANSKNING 4 ===
-  ["tidslÃ¶s och elegant kÃ¤nsla", ""],
-  ["slÃ¤pper in rikligt med ljus", ""],
-  ["underlÃ¤ttar umgÃ¤nge med familj och vÃ¤nner", ""],
-  ["passande", "lÃ¤mplig"],
-  ["en mÃ¶jlighet att fÃ¶rvÃ¤rva", ""],
+  // === FLER AI-FRASER FRÅN GRANSKNING 4 ===
+  ["tidslös och elegant känsla", ""],
+  ["släpper in rikligt med ljus", ""],
+  ["underlättar umgänge med familj och vänner", ""],
+  ["passande", "lämplig"],
+  ["en möjlighet att förvärva", ""],
   ["unik kombination av tradition och modernitet", ""],
   ["kombination av tradition och modernitet", ""],
   ["tradition och modernitet", ""],
-  ["ett val fÃ¶r kÃ¶pare", ""],
-  ["ett val fÃ¶r", ""],
+  ["ett val för köpare", ""],
+  ["ett val för", ""],
   ["historiska detaljer", "originaldetaljer"],
-  ["moderna bekvÃ¤mligheter", ""],
+  ["moderna bekvämligheter", ""],
   ["moderna", ""],
-  ["bekvÃ¤mligheter", ""],
+  ["bekvämligheter", ""],
   
-  // === FLER AI-FRASER FRÃ…N GRANSKNING 5 ===
-  ["hÃ¶gkvalitativa material och finish", "hÃ¶gkvalitativa material"],
+  // === FLER AI-FRASER FRÅN GRANSKNING 5 ===
+  ["högkvalitativa material och finish", "högkvalitativa material"],
   ["material och finish", "material"],
-  ["klassiska charm", "karaktÃ¤r"],
-  ["trevlig plats att vistas pÃ¥", "bra plats"],
-  ["plats att vistas pÃ¥", "plats"],
+  ["klassiska charm", "karaktär"],
+  ["trevlig plats att vistas på", "bra plats"],
+  ["plats att vistas på", "plats"],
   ["unik kombination av modern komfort och klassisk charm", ""],
   ["kombination av modern komfort och klassisk charm", ""],
   ["modern komfort och klassisk charm", ""],
-  ["utmÃ¤rkt val", ""],
+  ["utmärkt val", ""],
   ["smidig pendling", "enkel pendling"],
-  ["med kÃ¤nsla av rymd", "med rymd"],
-  ["bidrar till husets klassiska charm", "ger karaktÃ¤r"],
+  ["med känsla av rymd", "med rymd"],
+  ["bidrar till husets klassiska charm", "ger karaktär"],
   ["med extra utrymme", "med mer plats"],
-  ["medkel tillgÃ¥ng", "lÃ¤ttillgÃ¤nglig"],
-  ["medkel", "lÃ¤tt"],
-  ["stor fÃ¶rdel", "fÃ¶rdel"],
+  ["medkel tillgång", "lättillgänglig"],
+  ["medkel", "lätt"],
+  ["stor fördel", "fördel"],
   
-  // === AI-FRASER SOM RIKTIGA MÃ„KLARE ALDRIG ANVÃ„NDER ===
-  ["generÃ¶sa ytor", "stora ytor"],
-  ["generÃ¶s takhÃ¶jd", "hÃ¶g takhÃ¶jd"],
-  ["generÃ¶st tilltaget", "stort"],
-  ["generÃ¶st med", "med"],
-  ["bjuder pÃ¥ utsikt", "har utsikt"],
-  ["bjuder pÃ¥", "har"],
-  ["prÃ¤glas av lugn", "Ã¤r lugnt"],
-  ["prÃ¤glas av", "har"],
+  // === AI-FRASER SOM RIKTIGA MÄKLARE ALDRIG ANVÄNDER ===
+  ["generösa ytor", "stora ytor"],
+  ["generös takhöjd", "hög takhöjd"],
+  ["generöst tilltaget", "stort"],
+  ["generöst med", "med"],
+  ["bjuder på utsikt", "har utsikt"],
+  ["bjuder på", "har"],
+  ["präglas av lugn", "är lugnt"],
+  ["präglas av", "har"],
   ["genomsyras av", "har"],
-  ["andas lugn", "Ã¤r lugnt"],
-  ["andas charm", "har karaktÃ¤r"],
+  ["andas lugn", "är lugnt"],
+  ["andas charm", "har karaktär"],
   ["andas historia", "har originaldetaljer"],
-  ["prÃ¤glad av", "med"],
-  ["stor charm", "karaktÃ¤r"],
-  ["strategiskt placerad", "centralt belÃ¤gen"],
-  ["strategiskt lÃ¤ge", "centralt lÃ¤ge"],
+  ["präglad av", "med"],
+  ["stor charm", "karaktär"],
+  ["strategiskt placerad", "centralt belägen"],
+  ["strategiskt läge", "centralt läge"],
   ["trivsamt boende", ""],
   ["trivsam bostad", ""],
-  ["hÃ¤r finns", "det finns"],
-  ["hÃ¤r kan du", ""],
-  ["hÃ¤r bor du", ""],
+  ["här finns", "det finns"],
+  ["här kan du", ""],
+  ["här bor du", ""],
   
-  // === NYA FRASER FRÃ…N OUTPUT-TEST 2026-02 ===
+  // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 ===
   ["skapa minnen", ""],
-  ["utmÃ¤rkt val fÃ¶r den som", ""],
-  ["utmÃ¤rkt val", ""],
-  ["gott om utrymme fÃ¶r lek och avkoppling", "stor tomt"],
+  ["utmärkt val för den som", ""],
+  ["utmärkt val", ""],
+  ["gott om utrymme för lek och avkoppling", "stor tomt"],
   ["gott om utrymme", ""],
   ["lek och avkoppling", ""],
   ["natur och stadsliv", ""],
-  ["bekvÃ¤mt boende", ""],
+  ["bekvämt boende", ""],
   ["rymligt intryck", ""],
-  ["gÃ¶r det enkelt att umgÃ¥s", ""],
-  ["gÃ¶r det enkelt att", ""],
-  ["gÃ¶r det mÃ¶jligt att", ""],
-  ["ett omrÃ¥de fÃ¶r familjer", ""],
+  ["gör det enkelt att umgås", ""],
+  ["gör det enkelt att", ""],
+  ["gör det möjligt att", ""],
+  ["ett område för familjer", ""],
   ["i mycket gott skick", "i gott skick"],
-  ["ligger centralt i ett omrÃ¥de", ""],
+  ["ligger centralt i ett område", ""],
   ["ligger centralt i", "ligger i"],
   
   // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys) ===
@@ -911,53 +911,53 @@ function cleanForbiddenPhrases(text: string): string {
   if (!text) return text;
   let cleaned = text;
   
-  // FÃ¶rst: Fixa trasiga ord som AI:n genererar (HELA ORD, inte delar)
+  // Först: Fixa trasiga ord som AI:n genererar (HELA ORD, inte delar)
   const brokenWordFixes: [RegExp, string][] = [
-    [/\bmmÃ¥ngaa\b/gi, "mÃ¥nga"],
-    [/\bgmÃ¥ngaavstÃ¥nd\b/gi, "gÃ¥ngavstÃ¥nd"],
+    [/\bmmångaa\b/gi, "många"],
+    [/\bgmångaavstånd\b/gi, "gångavstånd"],
     [/\bVkoppling\b/gi, "Avkoppling"],
     [/\bEnna\b/gi, "Denna"],
-    [/\bMgÃ¤nge\b/gi, "umgÃ¤nge"],
+    [/\bMgänge\b/gi, "umgänge"],
     [/\bAmiljer\b/gi, "Familjer"],
     [/\bamiljer\b/gi, "familjer"],
     [/\bperfekt plats\b/gi, "bra plats"],
-    [/\bperfekt fÃ¶r\b/gi, "passar"],
+    [/\bperfekt för\b/gi, "passar"],
     [/\bmed mer plats \.\b/gi, "med mer plats."],
     [/\bmed rymd och ljus\.\b/gi, "med god rymd."],
-    [/\bPriset \. Enna\b/gi, "Priset fÃ¶r denna"],
-    [/\bPriset \.\b/gi, "Priset fÃ¶r denna"],
+    [/\bPriset \. Enna\b/gi, "Priset för denna"],
+    [/\bPriset \.\b/gi, "Priset för denna"],
     [/\b\. Enna\b/gi, ". Denna"],
     [/\bmed , med\b/gi, "med"],
     [/\bmed rymd\b/gi, "med god rymd"],
     [/\bmed mer plats \./gi, "med mer plats."],
-    [/\bÃ¤r en perfekt plats \./gi, "passar bra."],
+    [/\bär en perfekt plats \./gi, "passar bra."],
     [/\bperfekt plats \./gi, "bra plats."],
     [/\bFamiljer\./gi, "familjer."],
-    // Nya trasiga ord frÃ¥n output
-    [/\bsprojsade\b/gi, "sprÃ¶jsade"],
-    [/\bTt skapa\b/gi, "fÃ¶r att skapa"],
-    [/\bTt ge\b/gi, "fÃ¶r att ge"],
-    [/\b. Tt\b/gi, ". FÃ¶r att"],
-    [/\b. Vkoppling\b/gi, ". FÃ¶r avkoppling"],
-    [/\b. MgÃ¤nge\b/gi, ". FÃ¶r umgÃ¤nge"],
+    // Nya trasiga ord från output
+    [/\bsprojsade\b/gi, "spröjsade"],
+    [/\bTt skapa\b/gi, "för att skapa"],
+    [/\bTt ge\b/gi, "för att ge"],
+    [/\b. Tt\b/gi, ". För att"],
+    [/\b. Vkoppling\b/gi, ". För avkoppling"],
+    [/\b. Mgänge\b/gi, ". För umgänge"],
     [/\b. Kad komfort\b/gi, ". Komfort"],
     [/\b. En \./gi, ". En "],
     [/\b. Med\b/gi, ". Med"],
-    [/\b. Villan Ã¤r passar\b/gi, ". Villan passar"],
-    [/\b. Villan har Ã¤ven\b/gi, ". Villan har"],
-    [/\b. OmrÃ¥det Ã¤r familjevÃ¤nligt och har en\b/gi, ". OmrÃ¥det Ã¤r familjevÃ¤nligt"],
-    [/\b. Med nÃ¤rhet till kollektivtrafik\b/gi, ". Med nÃ¤rhet till kollektivtrafik"],
-    // Fixa ofullstÃ¤ndiga meningar
-    [/\bMaterialvalet Ã¤r noggrant utvalda\b/gi, "Materialen Ã¤r noggrant utvalda"],
-    [/\bSovrummen Ã¤r utformade\b/gi, "Sovrummen Ã¤r utformade"],
-    [/\bTerrassen vetter mot sÃ¶der\b/gi, "Terrassen vetter mot sÃ¶der"],
-    [/\bDen Ã¤r passar soliga dagar\b/gi, "Den passar fÃ¶r soliga dagar"],
+    [/\b. Villan är passar\b/gi, ". Villan passar"],
+    [/\b. Villan har även\b/gi, ". Villan har"],
+    [/\b. Området är familjevänligt och har en\b/gi, ". Området är familjevänligt"],
+    [/\b. Med närhet till kollektivtrafik\b/gi, ". Med närhet till kollektivtrafik"],
+    // Fixa ofullständiga meningar
+    [/\bMaterialvalet är noggrant utvalda\b/gi, "Materialen är noggrant utvalda"],
+    [/\bSovrummen är utformade\b/gi, "Sovrummen är utformade"],
+    [/\bTerrassen vetter mot söder\b/gi, "Terrassen vetter mot söder"],
+    [/\bDen är passar soliga dagar\b/gi, "Den passar för soliga dagar"],
     [/\bDet finns ett nybyggt uterum\b/gi, "Det finns ett nybyggt uterum"],
-    [/\bVillan har Ã¤ven golvvÃ¤rme\b/gi, "Villan har golvvÃ¤rme"],
-    [/\bDen generÃ¶sa takhÃ¶jden bidrar till\b/gi, "Den hÃ¶ga takhÃ¶jden bidrar till"],
-    [/\bDen generÃ¶sa takhÃ¶jden\b/gi, "Den hÃ¶ga takhÃ¶jden"],
-    // Fixa "Tt" i bÃ¶rjan av meningar
-    [/\bTt\b/gi, "fÃ¶r att"],
+    [/\bVillan har även golvvärme\b/gi, "Villan har golvvärme"],
+    [/\bDen generösa takhöjden bidrar till\b/gi, "Den höga takhöjden bidrar till"],
+    [/\bDen generösa takhöjden\b/gi, "Den höga takhöjden"],
+    // Fixa "Tt" i början av meningar
+    [/\bTt\b/gi, "för att"],
     // Fixa ". En" och ". Med" i slutet av meningar
     [/\b\. En\b/gi, ". En"],
     [/\b\. Med\b/gi, ". Med"],
@@ -965,8 +965,8 @@ function cleanForbiddenPhrases(text: string): string {
     [/\bEnna\b/gi, "Denna"],
     // Fixa "Vkoppling" till "Avkoppling"
     [/\bVkoppling\b/gi, "Avkoppling"],
-    // Fixa "MgÃ¤nge" till "umgÃ¤nge"
-    [/\bMgÃ¤nge\b/gi, "umgÃ¤nge"],
+    // Fixa "Mgänge" till "umgänge"
+    [/\bMgänge\b/gi, "umgänge"],
     // Fixa "Kad" till "med"
     [/\bKad komfort\b/gi, "med komfort"],
   ];
@@ -975,7 +975,7 @@ function cleanForbiddenPhrases(text: string): string {
     cleaned = cleaned.replace(regex, replacement);
   }
   
-  // Sedan: ErsÃ¤tt fÃ¶rbjudna fraser
+  // Sedan: Ersätt förbjudna fraser
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     const regex = new RegExp(phrase, "gi");
     cleaned = cleaned.replace(regex, replacement);
@@ -983,20 +983,20 @@ function cleanForbiddenPhrases(text: string): string {
   
   // Ta bort dubbla mellanslag
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
-  // Ta bort meningar som bÃ¶rjar med tomt efter ersÃ¤ttning
+  // Ta bort meningar som börjar med tomt efter ersättning
   cleaned = cleaned.replace(/\.\s*\./g, ".").replace(/,\s*,/g, ",");
-  // Fixa meningar som bÃ¶rjar med liten bokstav efter borttagning
-  cleaned = cleaned.replace(/\.\s+([a-zÃ¥Ã¤Ã¶])/g, (match, letter) => `. ${letter.toUpperCase()}`);
-  // Ta bort meningar som bara Ã¤r ett ord eller tomma
+  // Fixa meningar som börjar med liten bokstav efter borttagning
+  cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (match, letter) => `. ${letter.toUpperCase()}`);
+  // Ta bort meningar som bara är ett ord eller tomma
   cleaned = cleaned.replace(/\.\s*\./g, ".");
-  // Fixa "Priset . Enna" -> "Priset fÃ¶r denna"
-  cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset fÃ¶r denna");
+  // Fixa "Priset . Enna" -> "Priset för denna"
+  cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset för denna");
   cleaned = cleaned.replace(/\. Enna/gi, ". Denna");
   
   return cleaned;
 }
 
-// LÃ¤gg till styckeindelning om texten saknar radbrytningar
+// Lägg till styckeindelning om texten saknar radbrytningar
 function addParagraphs(text: string): string {
   if (!text || text.includes("\n\n")) return text; // Redan styckeindelad
   
@@ -1034,33 +1034,33 @@ const STRIPE_PRO_PRICE_ID = process.env.STRIPE_PRO_PRICE_ID;
 const COMBINED_EXTRACTION_PROMPT = `
 # UPPGIFT
 
-Du Ã¤r en svensk fastighetsmÃ¤klare med 15 Ã¥rs erfarenhet. I ETT steg ska du:
-1. Extrahera ALLA relevanta fakta frÃ¥n rÃ¥data
-2. Analysera tonalitet och mÃ¥lgrupp
+Du är en svensk fastighetsmäklare med 15 års erfarenhet. I ETT steg ska du:
+1. Extrahera ALLA relevanta fakta från rådata
+2. Analysera tonalitet och målgrupp
 3. Skapa en skrivplan med evidence-gate
 
 # REGLER
 
-1. HITTA ALDRIG PÃ… â€“ extrahera bara vad som faktiskt finns i rÃ¥data
-2. Om info saknas, ange null â€“ gissa ALDRIG
-3. AnvÃ¤nd exakta vÃ¤rden frÃ¥n rÃ¥data (kvm, pris, Ã¥r, mÃ¤rken, material)
-4. AnvÃ¤nd BARA fakta frÃ¥n rÃ¥data â€" lÃ¤gg ALDRIG till avstÃ¥nd, platser eller detaljer som inte stÃ¥r i rÃ¥data
-5. Varje claim i skrivplanen MÃ…STE ha evidence frÃ¥n rÃ¥data
+1. HITTA ALDRIG PÅ — extrahera bara vad som faktiskt finns i rådata
+2. Om info saknas, ange null — gissa ALDRIG
+3. Använd exakta värden från rådata (kvm, pris, år, märken, material)
+4. Använd BARA fakta från rådata — lägg ALDRIG till avstånd, platser eller detaljer som inte står i rådata
+5. Varje claim i skrivplanen MÅSTE ha evidence från rådata
 
-# KLASSIFICERING (baserat pÃ¥ rÃ¥data â€" hitta ALDRIG pÃ¥ nya fakta)
+# KLASSIFICERING (baserat på rådata — hitta ALDRIG på nya fakta)
 
-Kategorisera objektet utifrÃ¥n vad som FINNS i rÃ¥data:
-- OmrÃ¥destyp (stadskÃ¤rna, villaomrÃ¥de, fÃ¶rort, etc) â€" baserat pÃ¥ adress/omrÃ¥de
-- PrisnivÃ¥ (budget, standard, premium, luxury) â€" baserat pÃ¥ pris och kvm-pris
-- MÃ¥lgrupp (fÃ¶rstagÃ¥ngskÃ¶pare, familjer, etablerade, downsizers) â€" baserat pÃ¥ storlek och lÃ¤ge
-- VIKTIGT: LÃ¤gg INTE till kommunikationer, butiker eller avstÃ¥nd som inte stÃ¥r i rÃ¥data
+Kategorisera objektet utifrån vad som FINNS i rådata:
+- Områdestyp (stadskärna, villaområde, förort, etc) — baserat på adress/område
+- Prisnivå (budget, standard, premium, luxury) — baserat på pris och kvm-pris
+- Målgrupp (förstagångsköpare, familjer, etablerade, downsizers) — baserat på storlek och läge
+- VIKTIGT: Lägg INTE till kommunikationer, butiker eller avstånd som inte står i rådata
 
 # OUTPUT FORMAT (JSON)
 
 {
   "disposition": {
     "property": {
-      "type": "lÃ¤genhet/villa/radhus",
+      "type": "lägenhet/villa/radhus",
       "address": "exakt adress",
       "size": 62,
       "rooms": 3,
@@ -1070,20 +1070,20 @@ Kategorisera objektet utifrÃ¥n vad som FINNS i rÃ¥data:
       "condition": "gott skick",
       "energy_class": "C",
       "elevator": true,
-      "renovations": ["kÃ¶k 2022", "badrum 2020"],
+      "renovations": ["kök 2022", "badrum 2020"],
       "materials": {
         "floors": "ekparkett",
-        "walls": "mÃ¥lade vÃ¤ggar",
-        "kitchen": "stenbÃ¤nk, vita luckor",
+        "walls": "målade väggar",
+        "kitchen": "stenbänk, vita luckor",
         "bathroom": "helkaklat"
       },
-      "balcony": { "exists": true, "direction": "sydvÃ¤st", "size": "8 kvm", "type": "inglasad" },
+      "balcony": { "exists": true, "direction": "sydväst", "size": "8 kvm", "type": "inglasad" },
       "ceiling_height": "2.8 meter",
-      "layout": "genomgÃ¥ende planlÃ¶sning",
-      "storage": ["garderob i sovrum", "fÃ¶rrÃ¥d 4 kvm"],
-      "heating": "fjÃ¤rrvÃ¤rme",
+      "layout": "genomgående planlösning",
+      "storage": ["garderob i sovrum", "förråd 4 kvm"],
+      "heating": "fjärrvärme",
       "parking": "garage",
-      "special_features": ["golvvÃ¤rme badrum", "Ã¶ppen spis"]
+      "special_features": ["golvvärme badrum", "öppen spis"]
     },
     "economics": {
       "price": 4500000,
@@ -1092,17 +1092,17 @@ Kategorisera objektet utifrÃ¥n vad som FINNS i rÃ¥data:
       "association": { "name": "BRF Solhemmet", "status": "stabil ekonomi", "renovations": "stambytt 2019" }
     },
     "location": {
-      "area": "omrÃ¥desnamn frÃ¥n rÃ¥data",
-      "municipality": "kommun frÃ¥n rÃ¥data",
-      "character": "stadskÃ¤rna/villaomrÃ¥de/fÃ¶rort/etc",
+      "area": "områdesnamn från rådata",
+      "municipality": "kommun från rådata",
+      "character": "stadskärna/villaområde/förort/etc",
       "price_level": "budget/standard/premium/luxury",
-      "target_group": "baserat pÃ¥ storlek och lÃ¤ge",
-      "transport": "BARA frÃ¥n rÃ¥data, annars null",
-      "amenities": ["BARA platser nÃ¤mnda i rÃ¥data"],
-      "services": ["BARA service nÃ¤mnd i rÃ¥data"],
-      "parking": "frÃ¥n rÃ¥data eller null"
+      "target_group": "baserat på storlek och läge",
+      "transport": "BARA från rådata, annars null",
+      "amenities": ["BARA platser nämnda i rådata"],
+      "services": ["BARA service nämnd i rådata"],
+      "parking": "från rådata eller null"
     },
-    "unique_features": ["takhÃ¶jd 2.8m", "originaldetaljer", "inglasad balkong"]
+    "unique_features": ["takhöjd 2.8m", "originaldetaljer", "inglasad balkong"]
   },
   "tone_analysis": {
     "price_category": "budget/standard/premium/luxury",
@@ -1113,42 +1113,42 @@ Kategorisera objektet utifrÃ¥n vad som FINNS i rÃ¥data:
     "local_context": "kort geografisk kontext"
   },
   "writing_plan": {
-    "opening": "Adress + typ + unik egenskap (ALDRIG 'VÃ¤lkommen')",
+    "opening": "Adress + typ + unik egenskap (ALDRIG 'Välkommen')",
     "paragraphs": [
-      {"id": "p1", "goal": "Ã–ppning och lÃ¤ge", "must_include": ["adress", "typ", "storlek"]},
-      {"id": "p2", "goal": "PlanlÃ¶sning och rum", "must_include": ["rum", "material", "ljus"]},
-      {"id": "p3", "goal": "KÃ¶k och badrum", "must_include": ["utrustning", "renovering"]},
-      {"id": "p4", "goal": "Balkong/uteplats", "must_include": ["storlek", "vÃ¤derstreck"]},
-      {"id": "p5", "goal": "LÃ¤ge och kommunikationer", "must_include": ["transport", "service"]}
+      {"id": "p1", "goal": "Öppning och läge", "must_include": ["adress", "typ", "storlek"]},
+      {"id": "p2", "goal": "Planlösning och rum", "must_include": ["rum", "material", "ljus"]},
+      {"id": "p3", "goal": "Kök och badrum", "must_include": ["utrustning", "renovering"]},
+      {"id": "p4", "goal": "Balkong/uteplats", "must_include": ["storlek", "väderstreck"]},
+      {"id": "p5", "goal": "Läge och kommunikationer", "must_include": ["transport", "service"]}
     ],
     "claims": [
-      {"claim": "pÃ¥stÃ¥ende som fÃ¥r vara i texten", "evidence": "exakt vÃ¤rde frÃ¥n rÃ¥data"}
+      {"claim": "påstående som får vara i texten", "evidence": "exakt värde från rådata"}
     ],
-    "must_include": ["obligatoriska fakta som MÃ…STE med"],
-    "missing_info": ["info som saknas i rÃ¥data"],
-    "forbidden_phrases": ["erbjuder", "perfekt fÃ¶r", "i hjÃ¤rtat av", "vilket gÃ¶r det", "fÃ¶r den som", "drÃ¶mboende", "luftig kÃ¤nsla", "fantastisk", "vÃ¤lkommen till"]
+    "must_include": ["obligatoriska fakta som MÅSTE med"],
+    "missing_info": ["info som saknas i rådata"],
+    "forbidden_phrases": ["erbjuder", "perfekt för", "i hjärtat av", "vilket gör det", "för den som", "drömboende", "luftig känsla", "fantastisk", "välkommen till"]
   }
 }
 `;
 
-// Steg 2: Skapa plan/checklista som steg 3 mÃ¥ste fÃ¶lja
+// Steg 2: Skapa plan/checklista som steg 3 måste följa
 const PLAN_PROMPT = `
 # UPPGIFT
 
-Du ska skapa en tydlig plan fÃ¶r objektbeskrivningen utifrÃ¥n DISPOSITIONEN.
-Du ska INTE skriva sjÃ¤lva objektbeskrivningen. Du ska bara skapa en plan som steg 3 kan fÃ¶lja utan att behÃ¶va en lÃ¥ng regelprompt.
+Du ska skapa en tydlig plan för objektbeskrivningen utifrån DISPOSITIONEN.
+Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som steg 3 kan följa utan att behöva en lång regelprompt.
 
 # KRITISKA REGLER
 
-1. HITTA ALDRIG PÃ… â€“ anvÃ¤nd bara fakta som finns i dispositionen
+1. HITTA ALDRIG PÅ — använd bara fakta som finns i dispositionen
 2. Om fakta saknas: skriv in det i missing_info (och planera inte in det i texten)
-3. HÃ¥ll planen kort, konkret och kontrollerbar
-4. Anpassa ordantal och upplÃ¤gg efter PLATTFORM (HEMNET eller BOOLI/EGEN SIDA)
-5. EVIDENCE-GATE: Varje sakpÃ¥stÃ¥ende som fÃ¥r fÃ¶rekomma i texten MÃ…STE finnas som en post i claims med evidence_path + evidence_value frÃ¥n dispositionen
-6. HÃ–GRISK-PÃ…STÃ…ENDEN: Utsikt (t.ex. havsutsikt), eldstad/Ã¶ppen spis, balkongtyp (inglasad), vÃ¤derstreck och kommunikationstyp (pendeltÃ¥g/tunnelbana) fÃ¥r bara finnas i claims om det stÃ¥r explicit i dispositionen
-7. ANTI-AI-MALL: forbidden_words mÃ¥ste innehÃ¥lla en baslista med klassiska generiska fraser (plattformsspecifik). Writer kommer fÃ¶lja den listan strikt.
+3. Håll planen kort, konkret och kontrollerbar
+4. Anpassa ordantal och upplägg efter PLATTFORM (HEMNET eller BOOLI/EGEN SIDA)
+5. EVIDENCE-GATE: Varje sakpåstående som får förekomma i texten MÅSTE finnas som en post i claims med evidence_path + evidence_value från dispositionen
+6. HÖGRISK-PÅSTÅENDEN: Utsikt (t.ex. havsutsikt), eldstad/öppen spis, balkongtyp (inglasad), väderstreck och kommunikationstyp (pendeltåg/tunnelbana) får bara finnas i claims om det står explicit i dispositionen
+7. ANTI-AI-MALL: forbidden_words måste innehålla en baslista med klassiska generiska fraser (plattformsspecifik). Writer kommer följa den listan strikt.
 
-# BASLISTA FÃ–RBJUDNA FRASER (lÃ¤gg in i forbidden_words)
+# BASLISTA FÖRBJUDNA FRASER (lägg in i forbidden_words)
 
 För BOTH: "i hjärtat av", "vilket gör det enkelt", "vilket", "som ger en", "rymlig känsla", "härlig plats för", "plats för avkoppling", "generösa ytor", "generös takhöjd", "bjuder på", "präglas av", "genomsyras av", "andas lugn", "andas charm", "erbjuder", "fantastisk", "perfekt", "drömboende", "en sann pärla", "Välkommen", "Här finns", "här kan du", "faciliteter", "njut av", "livsstil", "livskvalitet", "smakfullt", "stilfullt", "elegant", "exklusivt", "imponerande", "harmonisk", "inbjudande", "tidlös", "ljus och luftig", "stilrent och modernt", "mysigt och ombonat", "inte bara", "utan också", "bidrar till", "förstärker", "skapar en känsla", "-möjligheter", "Det finns även", "Det finns också"
 
@@ -1158,7 +1158,7 @@ För BOOLI/EGEN SIDA: lägg även in "för den som", "vilket ger en", "en bostad
 
 {
   "platform": "hemnet" | "booli",
-  "tone": "professionell svensk mÃ¤klare, saklig och engagerande",
+  "tone": "professionell svensk mäklare, saklig och engagerande",
   "word_target": {
     "min": 0,
     "max": 0
@@ -1166,73 +1166,73 @@ För BOOLI/EGEN SIDA: lägg även in "för den som", "vilket ger en", "en bostad
   "paragraph_outline": [
     {
       "id": "p1",
-      "goal": "Vad stycket ska uppnÃ¥",
-      "must_include": ["exakta faktapunkter som MÃ…STE med om de finns"],
-      "do_not_include": ["fakta som inte ska vara hÃ¤r"],
-      "allowed_flair": "max 1 kort kÃ¤nslodetalj, men endast om den stÃ¶ds av fakta"
+      "goal": "Vad stycket ska uppnå",
+      "must_include": ["exakta faktapunkter som MÅSTE med om de finns"],
+      "do_not_include": ["fakta som inte ska vara här"],
+      "allowed_flair": "max 1 kort känslodetalj, men endast om den stöds av fakta"
     }
   ],
-  "must_include_global": ["lista med obligatoriska fakta Ã¶ver hela texten"],
-  "forbidden_words": ["ord/fraser som absolut inte fÃ¥r anvÃ¤ndas"],
+  "must_include_global": ["lista med obligatoriska fakta över hela texten"],
+  "forbidden_words": ["ord/fraser som absolut inte får användas"],
   "claims": [
     {
-      "claim": "kort pÃ¥stÃ¥ende som fÃ¥r fÃ¶rekomma i text",
-      "evidence_path": "JSONPath-liknande sÃ¶kvÃ¤g i dispositionen, t.ex. property.size",
-      "evidence_value": "vÃ¤rdet frÃ¥n dispositionen"
+      "claim": "kort påstående som får förekomma i text",
+      "evidence_path": "JSONPath-liknande sökväg i dispositionen, t.ex. property.size",
+      "evidence_value": "värdet från dispositionen"
     }
   ],
-  "missing_info": ["fakta som saknas men som normalt behÃ¶vs fÃ¶r komplett annons"],
-  "risk_notes": ["varningar: Ã¶verdrifter, oklara uppgifter, juridiska risker"]
+  "missing_info": ["fakta som saknas men som normalt behövs för komplett annons"],
+  "risk_notes": ["varningar: överdrifter, oklara uppgifter, juridiska risker"]
 }
 `;
 
-// === EXEMPELDATABAS â€" RIKSTÃ„CKANDE MÃ„KLARTEXTER ===
-// Kategoriserade efter BOSTADSTYP + STORLEK (fungerar fÃ¶r ALLA stÃ¤der i Sverige)
+// === EXEMPELDATABAS — RIKSTÄCKANDE MÄKLARTEXTER ===
+// Kategoriserade efter BOSTADSTYP + STORLEK (fungerar för ALLA städer i Sverige)
 const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, rooms: number, size: number}}[]> = {
-  // SMÃ… LÃ„GENHETER (1-2 rum, under 55 kvm)
+  // SMÅ LÄGENHETER (1-2 rum, under 55 kvm)
   small_apartment: [
     {
-      text: "Kyrkogatan 8, 3 tr, VÃ¤sterÃ¥s. Etta om 34 kvm med nymÃ¥lade vÃ¤ggar 2023.\n\nÃ–ppen planlÃ¶sning med kÃ¶k och vardagsrum i samma rum. KÃ¶ket har spis, kyl och frys. FÃ¶rvaring i vÃ¤ggskÃ¥p.\n\nLaminatgolv. FÃ¶nstren Ã¤r nya med bra ljusinslÃ¤pp.\n\nBadrummet Ã¤r helkaklat och renoverat 2022 med dusch, wc och handfat.\n\n5 minuter till tÃ¥gstationen. ICA Nära i kvarteret.",
-      metadata: { type: "lÃ¤genhet", rooms: 1, size: 34 }
+      text: "Kyrkogatan 8, 3 tr, Västerås. Etta om 34 kvm med nymålade väggar 2023.\n\nÖppen planlösning med kök och vardagsrum i samma rum. Köket har spis, kyl och frys. Förvaring i väggskåp.\n\nLaminatgolv. Fönstren är nya med bra ljusinsläpp.\n\nBadrummet är helkaklat och renoverat 2022 med dusch, wc och handfat.\n\n5 minuter till tågstationen. ICA Nära i kvarteret.",
+      metadata: { type: "lägenhet", rooms: 1, size: 34 }
     },
     {
-      text: "Andra LÃ¥nggatan 15, 2 tr, GÃ¶teborg. TvÃ¥a om 48 kvm med balkong mot gÃ¥rden.\n\nHallen har garderob. Vardagsrummet har tvÃ¥ fÃ¶nster och takhÃ¶jd 2,60 meter. Ekparkett genomgÃ¥ende.\n\nKÃ¶ket har vita luckor och vitvaror frÃ¥n Electrolux 2020. Plats fÃ¶r tvÃ¥ vid fÃ¶nstret.\n\nSovrummet rymmer dubbelsÃ¤ng. Badrummet Ã¤r helkaklat med dusch och tvÃ¤ttmaskin.\n\nBalkongen pÃ¥ 3 kvm vetter mot vÃ¤ster. Avgift 3 200 kr/mÃ¥n.\n\nSpÃ¥rvagn JÃ¤rntorget 2 minuter. Coop pÃ¥ Andra LÃ¥nggatan.",
-      metadata: { type: "lÃ¤genhet", rooms: 2, size: 48 }
+      text: "Andra Långgatan 15, 2 tr, Göteborg. Tvåa om 48 kvm med balkong mot gården.\n\nHallen har garderob. Vardagsrummet har två fönster och takhöjd 2,60 meter. Ekparkett genomgående.\n\nKöket har vita luckor och vitvaror från Electrolux 2020. Plats för två vid fönstret.\n\nSovrummet rymmer dubbelsäng. Badrummet är helkaklat med dusch och tvättmaskin.\n\nBalkongen på 3 kvm vetter mot väster. Avgift 3 200 kr/mån.\n\nSpårvagn Järntorget 2 minuter. Coop på Andra Långgatan.",
+      metadata: { type: "lägenhet", rooms: 2, size: 48 }
     }
   ],
 
-  // MELLANSTORA LÃ„GENHETER (2-3 rum, 55-85 kvm)
+  // MELLANSTORA LÄGENHETER (2-3 rum, 55-85 kvm)
   medium_apartment: [
     {
-      text: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm med genomgÃ¥ende planlÃ¶sning.\n\nHallen har garderob. Vardagsrummet mot gatan har tre fÃ¶nster och takhÃ¶jd 2,85 meter. Ekparkett genomgÃ¥ende.\n\nKÃ¶ket Ã¤r renoverat 2021 med luckor frÃ¥n BallingslÃ¶v och bÃ¤nkskiva i komposit. Vitvaror frÃ¥n Siemens. Plats fÃ¶r matbord vid fÃ¶nstret.\n\nSovrummet mot gÃ¥rden rymmer dubbelsÃ¤ng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet Ã¤r helkaklat, renoverat 2019, med dusch och tvÃ¤ttmaskin.\n\nBalkongen pÃ¥ 5 kvm vetter mot sÃ¶der. BRF SolgÃ¥rden har stambyte 2018. Avgift 4 100 kr/mÃ¥n.\n\nCentralstationen 8 minuters promenad. ICA NÃ¤ra i kvarteret. Stadstradgarden 200 meter.",
-      metadata: { type: "lÃ¤genhet", rooms: 3, size: 74 }
+      text: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm med genomgående planlösning.\n\nHallen har garderob. Vardagsrummet mot gatan har tre fönster och takhöjd 2,85 meter. Ekparkett genomgående.\n\nKöket är renoverat 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Plats för matbord vid fönstret.\n\nSovrummet mot gården rymmer dubbelsäng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet är helkaklat, renoverat 2019, med dusch och tvättmaskin.\n\nBalkongen på 5 kvm vetter mot söder. BRF Solgården har stambyte 2018. Avgift 4 100 kr/mån.\n\nCentralstationen 8 minuters promenad. ICA Nära i kvarteret. Stadstradgarden 200 meter.",
+      metadata: { type: "lägenhet", rooms: 3, size: 74 }
     },
     {
-      text: "RÃ¶nnvÃ¤gen 12, 1 tr, MalmÃ¶. TvÃ¥a om 62 kvm med balkong i sÃ¶derlÃ¤ge.\n\nHallen har platsbyggd garderob. Vardagsrummet har stort fÃ¶nsterparti och takhÃ¶jd 2,55 meter. Laminatgolv genomgÃ¥ende.\n\nKÃ¶ket har bÃ¤nkskiva i laminat och vitvaror frÃ¥n Bosch 2022. Matplats fÃ¶r fyra vid fÃ¶nstret.\n\nSovrummet rymmer dubbelsÃ¤ng och har garderob med skjutdÃ¶rrar. Badrummet Ã¤r helkaklat med dusch, wc och tvÃ¤ttmaskin. GolvvÃ¤rme.\n\nBalkongen pÃ¥ 4 kvm vetter mot sÃ¶der. Avgift 3 650 kr/mÃ¥n.\n\nBuss 5 minuter till Triangeln. Coop 300 meter. Pildammsparken 10 minuters promenad.",
-      metadata: { type: "lÃ¤genhet", rooms: 2, size: 62 }
+      text: "Rönnvägen 12, 1 tr, Malmö. Tvåa om 62 kvm med balkong i söderläge.\n\nHallen har platsbyggd garderob. Vardagsrummet har stort fönsterparti och takhöjd 2,55 meter. Laminatgolv genomgående.\n\nKöket har bänkskiva i laminat och vitvaror från Bosch 2022. Matplats för fyra vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat med dusch, wc och tvättmaskin. Golvvärme.\n\nBalkongen på 4 kvm vetter mot söder. Avgift 3 650 kr/mån.\n\nBuss 5 minuter till Triangeln. Coop 300 meter. Pildammsparken 10 minuters promenad.",
+      metadata: { type: "lägenhet", rooms: 2, size: 62 }
     }
   ],
 
-  // STORA LÃ„GENHETER (4+ rum, 85+ kvm)
+  // STORA LÄGENHETER (4+ rum, 85+ kvm)
   large_apartment: [
     {
-      text: "KungsgÃ¤rdsgatan 7, 2 tr, Uppsala. Fyra om 105 kvm med balkong i vÃ¤sterlÃ¤ge.\n\nHallen har platsbyggd garderob och klinker. Vardagsrummet har tre fÃ¶nster och takhÃ¶jd 2,70 meter. Ekparkett genomgÃ¥ende.\n\nKÃ¶ket Ã¤r frÃ¥n Marbodal 2020 med stenbÃ¤nkskiva och vitvaror frÃ¥n Siemens. Plats fÃ¶r matbord fÃ¶r sex.\n\nHuvudsovrummet rymmer dubbelsÃ¤ng och har garderob. TvÃ¥ mindre sovrum. Badrummet Ã¤r helkaklat med badkar och dusch. Separat toalett.\n\nBalkongen pÃ¥ 8 kvm vetter mot vÃ¤ster. BRF Kungsparken har stambyte 2020. Avgift 5 800 kr/mÃ¥n.\n\nCentralstationen 5 minuter. Coop Forum 400 meter.",
-      metadata: { type: "lÃ¤genhet", rooms: 4, size: 105 }
+      text: "Kungsgärdsgatan 7, 2 tr, Uppsala. Fyra om 105 kvm med balkong i västerläge.\n\nHallen har platsbyggd garderob och klinker. Vardagsrummet har tre fönster och takhöjd 2,70 meter. Ekparkett genomgående.\n\nKöket är från Marbodal 2020 med stenbänkskiva och vitvaror från Siemens. Plats för matbord för sex.\n\nHuvudsovrummet rymmer dubbelsäng och har garderob. Två mindre sovrum. Badrummet är helkaklat med badkar och dusch. Separat toalett.\n\nBalkongen på 8 kvm vetter mot väster. BRF Kungsparken har stambyte 2020. Avgift 5 800 kr/mån.\n\nCentralstationen 5 minuter. Coop Forum 400 meter.",
+      metadata: { type: "lägenhet", rooms: 4, size: 105 }
     }
   ],
 
   // VILLOR
   villa: [
     {
-      text: "TallvÃ¤gen 8, Djursholm. Villa om 180 kvm pÃ¥ tomt om 920 kvm. ByggÃ¥r 1962, tillbyggd 2015.\n\nEntrÃ©plan har hall, vardagsrum med eldstad, kÃ¶k och ett sovrum. KÃ¶ket Ã¤r frÃ¥n HTH 2015 med bÃ¤nkskiva i granit och induktionshÃ¤ll. Vardagsrummet har utgÃ¥ng till altanen.\n\nÃ–vervÃ¥ningen har tre sovrum och badrum med badkar och golvvÃ¤rme. Huvudsovrummet har garderob och fÃ¶nster Ã¥t tvÃ¥ hÃ¥ll.\n\nKÃ¤llaren har tvÃ¤ttstuga, fÃ¶rrÃ¥d och ett extra rum. Altanen i vÃ¤sterlÃ¤ge Ã¤r 25 kvm med pergola. Dubbelgarage och uppfart fÃ¶r tvÃ¥ bilar.\n\nDjursholms samskola 600 meter. MÃ¶rby centrum 10 minuters promenad.",
+      text: "Tallvägen 8, Djursholm. Villa om 180 kvm på tomt om 920 kvm. Byggår 1962, tillbyggd 2015.\n\nEntréplan har hall, vardagsrum med eldstad, kök och ett sovrum. Köket är från HTH 2015 med bänkskiva i granit och induktionshäll. Vardagsrummet har utgång till altanen.\n\nÖvervåningen har tre sovrum och badrum med badkar och golvvärme. Huvudsovrummet har garderob och fönster åt två håll.\n\nKällaren har tvättstuga, förråd och ett extra rum. Altanen i västerläge är 25 kvm med pergola. Dubbelgarage och uppfart för två bilar.\n\nDjursholms samskola 600 meter. Mörby centrum 10 minuters promenad.",
       metadata: { type: "villa", rooms: 5, size: 180 }
     },
     {
-      text: "BjÃ¶rkvÃ¤gen 14, LÃ¶ddeköpinge. Villa om 145 kvm pÃ¥ tomt om 750 kvm. ByggÃ¥r 1978, renoverad 2021.\n\nEntrÃ©plan har hall, vardagsrum, kÃ¶k och badrum. KÃ¶ket Ã¤r frÃ¥n IKEA 2021 med vitvaror frÃ¥n Bosch. Ã–ppen planlÃ¶sning mot vardagsrummet.\n\nÃ–vervÃ¥ningen har fyra sovrum. Badrummet Ã¤r helkaklat med dusch och badkar.\n\nTomten har grÃ¤smatta, stenlagd uteplats i sÃ¶derlÃ¤ge och garage. FÃ¶rrÃ¥d pÃ¥ 12 kvm.\n\nLÃ¶ddeköpinge skola 400 meter. Willys 5 minuters promenad. Malmö 15 minuter med bil.",
+      text: "Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm. Byggår 1978, renoverad 2021.\n\nEntréplan har hall, vardagsrum, kök och badrum. Köket är från IKEA 2021 med vitvaror från Bosch. Öppen planlösning mot vardagsrummet.\n\nÖvervåningen har fyra sovrum. Badrummet är helkaklat med dusch och badkar.\n\nTomten har gräsmatta, stenlagd uteplats i söderläge och garage. Förråd på 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys 5 minuters promenad. Malmö 15 minuter med bil.",
       metadata: { type: "villa", rooms: 5, size: 145 }
     },
     {
-      text: "GranlundsvÃ¤gen 3, UmeÃ¥. Villa om 160 kvm pÃ¥ tomt om 1 100 kvm. ByggÃ¥r 1985.\n\nEntrÃ©plan har hall, vardagsrum, kÃ¶k och gÃ¤strum. KÃ¶ket har vitvaror frÃ¥n Electrolux och bÃ¤nkskiva i trÃ¤. Vardagsrummet har eldstad.\n\nÃ–vervÃ¥ningen har tre sovrum och badrum med badkar. Huvudsovrummet har garderob.\n\nKÃ¤llare med tvÃ¤ttstuga och fÃ¶rrÃ¥d. Tomten har garage, grÃ¤smatta och uteplats. BergvÃ¤rme.\n\nGrubbeskolan 300 meter. ICA Maxi 5 minuter med bil. E4:an 3 km.",
+      text: "Granlundsvägen 3, Umeå. Villa om 160 kvm på tomt om 1 100 kvm. Byggår 1985.\n\nEntréplan ha hall, vardagsrum, kök och gästrum. Köket har vitvaror från Electrolux och bänkskiva i trä. Vardagsrummet har eldstad.\n\nÖvervåningen har tre sovrum och badrum med badkar. Huvudsovrummet har garderob.\n\nKällare med tvättstuga och förråd. Tomten har garage, gräsmatta och uteplats. Bergvärme.\n\nGrubbeskolan 300 meter. ICA Maxi 5 minuter med bil. E4:an 3 km.",
       metadata: { type: "villa", rooms: 5, size: 160 }
     }
   ],
@@ -1240,11 +1240,11 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
   // RADHUS
   radhus: [
     {
-      text: "SolnavÃ¤gen 23, Solna. Radhus om 120 kvm med 4 rum och kÃ¶k.\n\nBottenvÃ¥ningen har kÃ¶k och vardagsrum i Ã¶ppen planlÃ¶sning. KÃ¶ket Ã¤r frÃ¥n IKEA 2021 med vitvaror frÃ¥n Bosch. UtgÃ¥ng till trÃ¤dgÃ¥rden frÃ¥n vardagsrummet.\n\nÃ–vervÃ¥ningen har tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet Ã¤r helkaklat med dusch. Laminatgolv genomgÃ¥ende.\n\nTrÃ¤dgÃ¥rden har grÃ¤smatta och uteplats i sÃ¶derlÃ¤ge. FÃ¶rrÃ¥d 10 kvm. Carport fÃ¶r tvÃ¥ bilar.\n\nSkola och fÃ¶rskola i promenadavstÃ¥nd. Matbutik 300 meter.",
+      text: "Solnavägen 23, Solna. Radhus om 120 kvm med 4 rum och kök.\n\nBottenvåningen har kök och vardagsrum i öppen planlösning. Köket är från IKEA 2021 med vitvaror från Bosch. Utgång till trädgården från vardagsrummet.\n\nÖvervåningen har tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet är helkaklat med dusch. Laminatgolv genomgående.\n\nTrädgården har gräsmatta och uteplats i söderläge. Förråd 10 kvm. Carport för två bilar.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter.",
       metadata: { type: "radhus", rooms: 4, size: 120 }
     },
     {
-      text: "Ekbacken 5, Partille. Radhus om 110 kvm med 4 rum. ByggÃ¥r 1995.\n\nBottenvÃ¥ning med hall, kÃ¶k och vardagsrum. KÃ¶ket har vitvaror frÃ¥n Electrolux och laminatbÃ¤nk. UtgÃ¥ng till uteplats.\n\nÃ–vervÃ¥ning med tre sovrum och badrum med dusch. Laminatgolv genomgÃ¥ende.\n\nUteplats i sÃ¶derlÃ¤ge pÃ¥ 15 kvm. FÃ¶rrÃ¥d. P-plats.\n\nSkola 400 meter. ICA 5 minuter. SpÃ¥rvagn till GÃ¶teborg centrum 20 minuter.",
+      text: "Ekbacken 5, Partille. Radhus om 110 kvm med 4 rum. Byggår 1995.\n\nBottenvåning med hall, kök och vardagsrum. Köket har vitvaror från Electrolux och laminatbänk. Utgång till uteplats.\n\nÖvervåning med tre sovrum och badrum med dusch. Laminatgolv genomgående.\n\nUteplats i söderläge på 15 kvm. Förråd. P-plats.\n\nSkola 400 meter. ICA 5 minuter. Spårvagn till Göteborg centrum 20 minuter.",
       metadata: { type: "radhus", rooms: 4, size: 110 }
     }
   ]
@@ -1466,9 +1466,9 @@ Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Eldstad. Tomt 920 kv
 const _UNUSED_BOOLI_TEXT_PROMPT = `REMOVED`;
 const BOOLI_EXPERT_PROMPT = `REMOVED`;
 
-// Lokal exempelmatchning â€" enkel typ+storlek, fungerar fÃ¶r ALLA stÃ¤der i Sverige
+// Lokal exempelmatchning — enkel typ+storlek, fungerar för ALLA städer i Sverige
 function matchExamples(disposition: any, _toneAnalysis: any): string[] {
-  const type = (disposition?.property?.type || 'lÃ¤genhet').toLowerCase();
+  const type = (disposition?.property?.type || 'lägenhet').toLowerCase();
   const size = Number(disposition?.property?.size) || 0;
 
   let candidates: {text: string, metadata: any}[] = [];
@@ -1490,12 +1490,12 @@ function matchExamples(disposition: any, _toneAnalysis: any): string[] {
   return candidates.slice(0, 2).map((ex) => ex.text);
 }
 
-// Bygg disposition direkt frÃ¥n strukturerad formulÃ¤rdata â€" HOPPA Ã–VER AI-extraktion
+// Bygg disposition direkt från strukturerad formulärdata — HOPPA ÖVER AI-extraktion
 function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_analysis: any, writing_plan: any } {
   const typeLabels: Record<string, string> = {
-    apartment: "lÃ¤genhet", house: "villa", townhouse: "radhus", villa: "villa",
+    apartment: "lägenhet", house: "villa", townhouse: "radhus", villa: "villa",
   };
-  const propertyType = typeLabels[pd.propertyType] || pd.propertyType || "lÃ¤genhet";
+  const propertyType = typeLabels[pd.propertyType] || pd.propertyType || "lägenhet";
   const size = Number(pd.livingArea) || 0;
   
   const disposition = {
@@ -1644,7 +1644,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (err) {
       console.error("User status error:", err);
-      res.status(500).json({ message: "Kunde inte hÃ¤mta anvÃ¤ndarstatus" });
+      res.status(500).json({ message: "Kunde inte hämta användarstatus" });
     }
   });
 
@@ -1658,14 +1658,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const monthlyLimit = PLAN_LIMITS[plan];
       if (promptsUsedToday >= monthlyLimit) {
         return res.status(429).json({
-          message: `Du har nÃ¥tt din mÃ¥nadsgrÃ¤ns av ${monthlyLimit} objektbeskrivningar. Uppgradera till Pro fÃ¶r fler!`,
+          message: `Du har nått din månadsgräns av ${monthlyLimit} objektbeskrivningar. Uppgradera till Pro för fler!`,
           limitReached: true,
         });
       }
 
       const { prompt, type, platform, wordCountMin, wordCountMax, imageUrls } = req.body;
 
-      // BestÃ¤m AI-modell baserat pÃ¥ plan
+      // Bestäm AI-modell baserat på plan
       const aiModel = plan === "pro" ? "gpt-4o" : "gpt-4o-mini";
 
       // Konkurrentanalys (Pro-funktion)
@@ -1673,33 +1673,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (plan === "pro") {
         console.log(`[Competitor Analysis] Analyzing market position...`);
         
-        // Extrahera grundlÃ¤ggande info frÃ¥n prompten fÃ¶r analys
+        // Extrahera grundläggande info från prompten för analys
         const propertyInfo = {
-          area: prompt.match(/i\s+([A-Za-z-]+)/i)?.[1] || "okÃ¤nt omrÃ¥de",
-          type: type || "lÃ¤genhet",
+          area: prompt.match(/i\s+([A-Za-z-]+)/i)?.[1] || "okänt område",
+          type: type || "lägenhet",
           price: prompt.match(/(\d+\s*(?:k|tk|m|mn|kr))/i)?.[1] || "ej specificerat"
         };
 
         const competitorMessages = [
           {
             role: "system" as const,
-            content: `Du Ã¤r en expert pÃ¥ svensk fastighetsmarknad. Analysera konkurrenslÃ¤get fÃ¶r ett objekt och ge konkreta rÃ¥d fÃ¶r hur det ska positioneras fÃ¶r att sticka ut. Var realistisk och baserad pÃ¥ faktiska marknadsfÃ¶rhÃ¥llanden.`
+            content: `Du är en expert på svensk fastighetsmarknad. Analysera konkurrensläget för ett objekt och ge konkreta råd för hur det ska positioneras för att sticka ut. Var realistisk och baserad på faktiska marknadsförhållanden.`
           },
           {
             role: "user" as const,
             content: `Analysera detta objekt och ge konkreta positioningstips:
 
 OBJEKTINFO:
-- OmrÃ¥de: ${propertyInfo.area}
+- Område: ${propertyInfo.area}
 - Typ: ${propertyInfo.type}
 - Pris: ${propertyInfo.price}
 - Originalbeskrivning: ${prompt}
 
 Ge mig:
-1. Vanliga klyschor och svaga formuleringar som konkurrenterna anvÃ¤nder (undvik dessa)
-2. Unika sÃ¤ljpunkter som konkurrenterna sÃ¤llan nÃ¤mner (fokusera pÃ¥ dessa)
-3. Positioneringstips fÃ¶r att sticka ut i mÃ¤ngden
-4. Specifika detaljer som Ã¤r vÃ¤rda att lyfta fram
+1. Vanliga klyschor och svaga formuleringar som konkurrenterna använder (undvik dessa)
+2. Unika säljpunkter som konkurrenterna sällan nämner (fokusera på dessa)
+3. Positioneringstips för att sticka ut i mängden
+4. Specifika detaljer som är värda att lyfta fram
 
 Svara kortfattat och konkret.`
           }
@@ -1724,7 +1724,7 @@ Svara kortfattat och konkret.`
         const imageMessages = [
           {
             role: "system" as const,
-            content: "Du Ã¤r en expert pÃ¥ att analysera fastighetsbilder. Beskriv vad du ser i bilderna: rum, material, stil, skick, ljusfÃ¶rhÃ¥llanden, utsikt, och andra relevanta detaljer fÃ¶r en fastighetsbeskrivning. Var specifik och faktabaserad."
+            content: "Du är en expert på att analysera fastighetsbilder. Beskriv vad du ser i bilderna: rum, material, stil, skick, ljusförhållanden, utsikt, och andra relevanta detaljer för en fastighetsbeskrivning. Var specifik och faktabaserad."
           },
           {
             role: "user" as const,
@@ -1749,20 +1749,20 @@ Svara kortfattat och konkret.`
         console.log(`[Image Analysis] Completed: ${imageAnalysis.substring(0, 100)}...`);
       }
       
-      // BestÃ¤m ordgrÃ¤nser baserat pÃ¥ plan
+      // Bestäm ordgränser baserat på plan
       let targetWordMin: number;
       let targetWordMax: number;
       
       if (plan === "pro" && wordCountMin && wordCountMax) {
-        // Pro-anvÃ¤ndare kan vÃ¤lja eget intervall (inom grÃ¤nser)
+        // Pro-användare kan välja eget intervall (inom gränser)
         targetWordMin = Math.max(WORD_LIMITS.pro.min, Math.min(wordCountMin, WORD_LIMITS.pro.max));
         targetWordMax = Math.max(WORD_LIMITS.pro.min, Math.min(wordCountMax, WORD_LIMITS.pro.max));
       } else if (plan === "pro") {
-        // Pro-anvÃ¤ndare utan val fÃ¥r default
+        // Pro-användare utan val får default
         targetWordMin = WORD_LIMITS.pro.default.min;
         targetWordMax = WORD_LIMITS.pro.default.max;
       } else {
-        // Free-anvÃ¤ndare fÃ¥r fast intervall
+        // Free-användare får fast intervall
         targetWordMin = WORD_LIMITS.free.min;
         targetWordMax = WORD_LIMITS.free.max;
       }
@@ -1777,7 +1777,7 @@ Svara kortfattat och konkret.`
       let writingPlan: any;
 
       if (propertyData && propertyData.address) {
-        // SNABB VÃ„G: Strukturerad data frÃ¥n formulÃ¤ret â†' hoppa Ã¶ver AI-extraktion (0 API-anrop)
+        // SNABB VÄG: Strukturerad data från formuläret → hoppa över AI-extraktion (0 API-anrop)
         console.log("[Step 1] FAST PATH: Using structured form data directly (skipping AI extraction)");
         const structured = buildDispositionFromStructuredData(propertyData);
         disposition = structured.disposition;
@@ -1785,7 +1785,7 @@ Svara kortfattat och konkret.`
         writingPlan = structured.writing_plan;
         console.log("[Step 1] Structured disposition built from form data");
       } else {
-        // FALLBACK: FÃ¶r gammal klient eller API-anrop utan propertyData
+        // FALLBACK: För gammal klient eller API-anrop utan propertyData
         console.log("[Step 1] FALLBACK: AI extraction from raw text...");
         
         const dispositionMessages = [
@@ -1795,7 +1795,7 @@ Svara kortfattat och konkret.`
           },
           {
             role: "user" as const,
-            content: `RÃ…DATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}\n\nÃ–NSKAT ORDANTAL: ${targetWordMin}-${targetWordMax} ord`,
+            content: `RÅDATA: ${prompt}${imageAnalysis ? `\n\nBILDANALYS: ${imageAnalysis}` : ''}${competitorAnalysis ? `\n\nKONKURRENTANALYS: ${competitorAnalysis}` : ''}\n\nPLATTFORM: ${platform === "hemnet" ? "HEMNET" : "BOOLI/EGEN SIDA"}\n\nÖNSKAT ORDANTAL: ${targetWordMin}-${targetWordMax} ord`,
           },
         ];
 
@@ -1820,7 +1820,7 @@ Svara kortfattat och konkret.`
                 role: "system" as const,
                 content: COMBINED_EXTRACTION_PROMPT + "\n\nSvara ENDAST med ett giltigt JSON-objekt.",
               },
-              { role: "user" as const, content: `RÃ…DATA: ${prompt}` },
+              { role: "user" as const, content: `RÅDATA: ${prompt}` },
             ],
             max_tokens: 3000,
             temperature: 0.1,
@@ -1830,7 +1830,7 @@ Svara kortfattat och konkret.`
           try {
             rawDisposition = safeJsonParse(retryText);
           } catch (e2) {
-            return res.status(422).json({ message: "Kunde inte tolka data. FÃ¶rsÃ¶k igen." });
+            return res.status(422).json({ message: "Kunde inte tolka data. Försök igen." });
           }
         }
         
@@ -1928,7 +1928,7 @@ Svara kortfattat och konkret.`
       result.writingPlan = writingPlan;
       console.log("[Step 3] Text generated:", result.improvedPrompt?.substring(0, 200) + "...");
       
-      // Post-processing - rensa fÃ¶rbjudna fraser
+      // Post-processing - rensa förbjudna fraser
       if (result.improvedPrompt) {
         result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
       }
@@ -1949,7 +1949,7 @@ Svara kortfattat och konkret.`
       }
       console.log("[Post-processing] Automatic phrase cleanup done before validation");
 
-      // Validering - nu kÃ¶rs den pÃ¥ redan rensad text
+      // Validering - nu körs den på redan rensad text
       let violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
       console.log("[AI Validation] Text generation violations:", violations.length > 0 ? violations : "NONE");
       
@@ -2010,9 +2010,9 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten"}`,
                 currentText +
                 "\n\n---\n\nFEL ATT FIXA:\n" +
                 violationList +
-                "\n\n---\n\nDISPOSITION (fÃ¶r att lÃ¤gga till fakta om texten Ã¤r fÃ¶r kort):\n" +
+                "\n\n---\n\nDISPOSITION (för att lägga till fakta om texten är för kort):\n" +
                 JSON.stringify(disposition, null, 2) +
-                "\n\nFixa BARA felen ovan. Ã„ndra sÃ¥ lite som mÃ¶jligt av resten.",
+                "\n\nFixa BARA felen ovan. Ändra så lite som möjligt av resten.",
             },
           ],
           max_tokens: 4000,
@@ -2023,19 +2023,19 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten"}`,
         const retryText = retryCompletion.choices[0]?.message?.content || "{}";
         try {
           const retryResult = safeJsonParse(retryText);
-          // KRITISKT: ErsÃ¤tt BARA texten, behÃ¥ll original highlights/analysis/socialCopy/tips
+          // KRITISKT: Ersätt BARA texten, behåll original highlights/analysis/socialCopy/tips
           if (retryResult.improvedPrompt) {
             result.improvedPrompt = retryResult.improvedPrompt;
           }
-          // BehÃ¥ll socialCopy bara om retryn inte hade en â€” annars kan AI:n ha skrivit om den
-          // Original socialCopy frÃ¥n steg 3 Ã¤r alltid bÃ¤ttre
+          // Behåll socialCopy bara om retryn inte hade en â€” annars kan AI:n ha skrivit om den
+          // Original socialCopy från steg 3 är alltid bättre
         } catch (e) {
           console.warn("[AI Validation] Retry JSON parse failed, continuing to next attempt...", e);
           violations = ["Ogiltig JSON i modellens svar"]; 
           continue;
         }
         
-        // VIKTIGT: KÃ¶r cleanForbiddenPhrases efter varje retry ocksÃ¥
+        // VIKTIGT: Kör cleanForbiddenPhrases efter varje retry också
         if (result.improvedPrompt) {
           result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
         }
@@ -2099,37 +2099,37 @@ Returnera JSON: {"improvedPrompt": "den redigerade texten"}`,
         category: type,
         improvements: [
           result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
-          result.analysis?.target_group ? "MÃ¥lgrupp: " + result.analysis.target_group : null,
-          result.analysis?.area_advantage ? "OmrÃ¥de: " + result.analysis.area_advantage : null,
+          result.analysis?.target_group ? "Målgrupp: " + result.analysis.target_group : null,
+          result.analysis?.area_advantage ? "Område: " + result.analysis.area_advantage : null,
           result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
-          result.analysis?.association_status ? "FÃ¶rening: " + result.analysis.association_status : null,
+          result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
         ].filter(Boolean) as string[],
         suggestions: result.pro_tips || [],
         socialCopy: result.socialCopy || null,
       });
 
-      // AI-fÃ¶rbÃ¤ttringsanalys (kÃ¶rs efter textgenerering)
+      // AI-förbättringsanalys (körs efter textgenerering)
       let improvementSuggestions = undefined;
       if (plan === "pro") {
         console.log("[Improvement Analysis] Analyzing generated text for improvements...");
         
-        const improvementPrompt = `Analysera denna objektbeskrivning och ge fÃ¶rbÃ¤ttringsfÃ¶rslag:
+        const improvementPrompt = `Analysera denna objektbeskrivning och ge förbättringsförslag:
 
 OBJEKTBESKRIVNING:
 ${result.improvedPrompt}
 
-MÃ…LGRUPP: ${result.analysis?.target_group || "OkÃ¤nd"}
+MÅLGRUPP: ${result.analysis?.target_group || "Okänd"}
 
-Ge feedback pÃ¥:
-1. Ton och sprÃ¥k - passar det mÃ¥lgruppen?
-2. MÃ¥lgruppsanpassning - hur vÃ¤l passar texten mÃ¥lgruppen?
-3. Saknade element - vad skulle kunna fÃ¶rbÃ¤ttra texten?
-4. Styrkor - vad Ã¤r bra med texten?
+Ge feedback på:
+1. Ton och språk - passar det målgruppen?
+2. Målgruppsanpassning - hur väl passar texten målgruppen?
+3. Saknade element - vad skulle kunna förbättra texten?
+4. Styrkor - vad är bra med texten?
 
 Svara med JSON i formatet:
 {
   "tone": "beskrivning av ton och om den passar",
-  "target_audience_fit": "hur vÃ¤l texten passar mÃ¥lgruppen",
+  "target_audience_fit": "hur väl texten passar målgruppen",
   "missing_elements": ["element 1", "element 2"],
   "strengths": ["styrka 1", "styrka 2"]
 }`;
@@ -2137,7 +2137,7 @@ Svara med JSON i formatet:
         const improvementMessages = [
           {
             role: "system" as const,
-            content: "Du Ã¤r en expert pÃ¥ fastighetstexter och marknadsfÃ¶ring. Ge konstruktiv feedback.",
+            content: "Du är en expert på fastighetstexter och marknadsföring. Ge konstruktiv feedback.",
           },
           {
             role: "user" as const,
@@ -2511,7 +2511,7 @@ Svara med JSON:
       res.json(history);
     } catch (err) {
       console.error("History error:", err);
-      res.status(500).json({ message: "Kunde inte hÃ¤mta historik" });
+      res.status(500).json({ message: "Kunde inte hämta historik" });
     }
   });
 
@@ -2547,7 +2547,7 @@ Svara med JSON:
       res.json(teams);
     } catch (err) {
       console.error("Get teams error:", err);
-      res.status(500).json({ message: "Kunde inte hÃ¤mta team" });
+      res.status(500).json({ message: "Kunde inte hämta team" });
     }
   });
 
@@ -2635,7 +2635,7 @@ Svara med JSON:
       const canSend = await storage.canSendEmail(user.email, 'team_invite', MAX_INVITE_EMAILS_PER_HOUR);
       if (!canSend) {
         return res.status(429).json({ 
-          message: "Du har skickat fÃ¶r mÃ¥nga inbjudningar. VÃ¤nligen vÃ¤nta en timme." 
+          message: "Du har skickat för många inbjudningar. Vänligen vänta en timme." 
         });
       }
 
@@ -2898,7 +2898,7 @@ Svara med JSON:
     }
   });
 
-  // TEXTFÃ–RBÃ„TTRING - AI-assistent fÃ¶r att skriva om delar av texten
+  // TEXTFÖRBÄTTRING - AI-assistent för att skriva om delar av texten
   app.post("/api/improve-text", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.user.id);
@@ -2914,17 +2914,17 @@ Svara med JSON:
 
       const plan = user.plan;
       if (plan !== "pro") {
-        return res.status(403).json({ message: "Denna funktion Ã¤r endast fÃ¶r Pro-anvÃ¤ndare" });
+        return res.status(403).json({ message: "Denna funktion är endast för Pro-användare" });
       }
 
       console.log(`[Text Improvement] Improving text with type: ${improvementType}`);
 
       const improvementPrompts = {
-        more_descriptive: `GÃ¶r denna text mer beskrivande och levande fÃ¶r fastighetsmÃ¤klare. AnvÃ¤nd sensoriska detaljer och skapa en starkare bild fÃ¶r lÃ¤saren. BehÃ¥ll den faktiska informationen.`,
-        more_selling: `GÃ¶r denna text mer sÃ¤ljande och Ã¶vertygande. Fokusera pÃ¥ fÃ¶rdelar fÃ¶r kÃ¶paren, skapa brÃ¥dska och framhÃ¤va unika vÃ¤rden. AnvÃ¤nd mÃ¤klarbranschens bÃ¤sta praxis.`,
-        more_formal: `GÃ¶r denna text mer formell och professionell. AnvÃ¤nd korrekta fastighetstermer och en ton som passar fÃ¶r hÃ¶gkvalitativa objekt.`,
-        more_warm: `GÃ¶r denna text mer personlig och inbjudande. Skapa en kÃ¤nsla av hem och vÃ¤lbefinnande utan att fÃ¶rlora professionaliteten.`,
-        fix_claims: `FÃ¶rbÃ¤ttra denna text genom att ersÃ¤tta klyschor och svaga pÃ¥stÃ¥enden med konkreta fakta och starka argument. AnvÃ¤nd mÃ¤klarbranschen kunskaper.`
+        more_descriptive: `Gör denna text mer beskrivande och levande för fastighetsmäklare. Använd sensoriska detaljer och skapa en starkare bild för läsaren. Behåll den faktiska informationen.`,
+        more_selling: `Gör denna text mer säljande och övertygande. Fokusera på fördelar för köparen, skapa brådska och framhäva unika värden. Använd mäklarbranschens bästa praxis.`,
+        more_formal: `Gör denna text mer formell och professionell. Använd korrekta fastighetstermer och en ton som passar för högkvalitativa objekt.`,
+        more_warm: `Gör denna text mer personlig och inbjudande. Skapa en känsla av hem och välbefinnande utan att förlora professionaliteten.`,
+        fix_claims: `Förbättra denna text genom att ersätta klyschor och svaga påståenden med konkreta fakta och starka argument. Använd mäklarbranschen kunskaper.`
       };
 
       const prompt = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
@@ -2932,17 +2932,17 @@ Svara med JSON:
       const messages = [
         {
           role: "system" as const,
-          content: `Du Ã¤r en expert pÃ¥ svenska fastighetstexter med 15 Ã¥rs erfarenhet som mÃ¤klare. Du kan allt om svensk fastighetslagstiftning, marknadspsykologi och effektiva sÃ¤ljstrategier. Dina texter Ã¤r alltid klyschfria, faktabaserade och sÃ¤ljande.
+          content: `Du är en expert på svenska fastighetstexter med 15 års erfarenhet som mäklare. Du kan allt om svensk fastighetslagstiftning, marknadspsykologi och effektiva säljstrategier. Dina texter är alltid klyschfria, faktabaserade och säljande.
 
 KONTEXT: ${context || 'Ingen extra kontext'}
 
 ORIGINALTEXT: ${originalText}
 
-VALD TEXT ATT FÃ–RBÃ„TTRA: ${selectedText}
+VALD TEXT ATT FÖRBÄTTRA: ${selectedText}
 
 ${prompt}
 
-Svara ENDAST med den fÃ¶rbÃ¤ttrade texten, inga fÃ¶rklaringar.`
+Svara ENDAST med den förbättrade texten, inga förklaringar.`
         },
         {
           role: "user" as const,
@@ -2967,7 +2967,7 @@ Svara ENDAST med den fÃ¶rbÃ¤ttrade texten, inga fÃ¶rklaringar.`
 
     } catch (err: any) {
       console.error("Text improvement error:", err);
-      res.status(500).json({ message: err.message || "TextfÃ¶rbÃ¤ttring misslyckades" });
+      res.status(500).json({ message: err.message || "Textförbättring misslyckades" });
     }
   });
 
