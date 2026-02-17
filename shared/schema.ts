@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, date, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, date, varchar, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -18,9 +18,31 @@ export const optimizations = pgTable("optimizations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const personalStyles = pgTable("personal_styles", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  referenceTexts: jsonb("reference_texts").$type<string[]>().notNull(),
+  styleProfile: jsonb("style_profile").$type<{
+    formality: number; // 1-10
+    detailLevel: number; // 1-10
+    emotionalTone: number; // 1-10
+    sentenceLength: number; // avg words per sentence
+    adjectiveUsage: number; // 1-10
+    factFocus: number; // 1-10
+  }>().notNull(),
+  isActive: boolean("is_active", { mode: "boolean" }).default(true).notNull(),
+  teamShared: boolean("team_shared", { mode: "boolean" }).default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const insertOptimizationSchema = createInsertSchema(optimizations).omit({ id: true, createdAt: true });
 export type Optimization = typeof optimizations.$inferSelect;
 export type InsertOptimization = z.infer<typeof insertOptimizationSchema>;
+
+export const insertPersonalStyleSchema = createInsertSchema(personalStyles).omit({ id: true, createdAt: true, updatedAt: true });
+export type PersonalStyle = typeof personalStyles.$inferSelect;
+export type InsertPersonalStyle = z.infer<typeof insertPersonalStyleSchema>;
 
 export const optimizeRequestSchema = z.object({
   prompt: z.string().min(1, "Please enter a prompt to optimize"),

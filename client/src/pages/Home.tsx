@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
+import { PersonalStyle } from "@/components/PersonalStyle";
 import { AuthModal } from "@/components/AuthModal";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
@@ -342,6 +343,11 @@ export default function Home() {
                 {/* History panel — logged in users */}
                 {isAuthenticated && (
                   <HistoryPanel />
+                )}
+
+                {/* Personal Style — Pro users only */}
+                {isAuthenticated && plan === "pro" && (
+                  <PersonalStyle />
                 )}
 
                 {/* Not logged in CTA */}
