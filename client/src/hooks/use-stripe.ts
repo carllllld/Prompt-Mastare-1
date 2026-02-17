@@ -5,7 +5,7 @@ export function useStripeCheckout() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (tier: "basic" | "pro") => {
+    mutationFn: async (tier: "pro" | "premium") => {
       console.log("[Stripe Checkout] Starting checkout for tier:", tier);
 
       const response = await fetch("/api/stripe/create-checkout", {

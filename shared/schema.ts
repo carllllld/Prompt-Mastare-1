@@ -18,6 +18,20 @@ export const optimizations = pgTable("optimizations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const usageTracking = pgTable("usage_tracking", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  month: text("month").notNull(), // Format: '2024-02'
+  year: integer("year").notNull(),
+  textsGenerated: integer("texts_generated").default(0).notNull(),
+  areaSearchesUsed: integer("area_searches_used").default(0).notNull(),
+  textEditsUsed: integer("text_edits_used").default(0).notNull(),
+  personalStyleAnalyses: integer("personal_style_analyses").default(0).notNull(),
+  planType: text("plan_type").default("free").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const personalStyles = pgTable("personal_styles", {
   id: serial("id").primaryKey(),
   userId: text("user_id").references(() => users.id).notNull(),
@@ -39,6 +53,10 @@ export const personalStyles = pgTable("personal_styles", {
 export const insertOptimizationSchema = createInsertSchema(optimizations).omit({ id: true, createdAt: true });
 export type Optimization = typeof optimizations.$inferSelect;
 export type InsertOptimization = z.infer<typeof insertOptimizationSchema>;
+
+export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({ id: true, createdAt: true, updatedAt: true });
+export type UsageTracking = typeof usageTracking.$inferSelect;
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
 
 export const insertPersonalStyleSchema = createInsertSchema(personalStyles).omit({ id: true, createdAt: true, updatedAt: true });
 export type PersonalStyle = typeof personalStyles.$inferSelect;
@@ -93,10 +111,16 @@ export const optimizeResponseSchema = z.object({
 });
 
 export const userStatusSchema = z.object({
-  plan: z.enum(["free", "pro"]),
-  promptsUsedToday: z.number(),
-  promptsRemaining: z.number(),
-  monthlyLimit: z.number(),
+  plan: z.enum(["free", "pro", "premium"]),
+  textsUsedThisMonth: z.number(),
+  textsRemaining: z.number(),
+  monthlyTextLimit: z.number(),
+  areaSearchesUsed: z.number(),
+  areaSearchesLimit: z.number(),
+  textEditsUsed: z.number(),
+  textEditsLimit: z.number(),
+  personalStyleAnalyses: z.number(),
+  personalStyleAnalysesLimit: z.number(),
   isLoggedIn: z.boolean(),
   resetTime: z.string(),
   stripeCustomerId: z.string().optional().nullable(),
@@ -107,8 +131,16 @@ export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
 export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
-  free: 2,
-  pro: 20,
+  free: { texts: 3, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
+  pro: { texts: 10, areaSearches: 2, textEdits: 999999, personalStyleAnalyses: 1 },
+  premium: { texts: 999999, areaSearches: 999999, textEdits: 999999, personalStyleAnalyses: 999999 },
+} as const;
+
+// Feature access per plan
+export const FEATURE_ACCESS = {
+  free: { personalStyle: false, areaSearch: false, textEditing: false, teamFeatures: false, apiAccess: false },
+  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: false },
+  premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: true, apiAccess: true },
 } as const;
 
 // Ordgränser för objektbeskrivningar
@@ -118,7 +150,9 @@ export const WORD_LIMITS = {
 } as const;
 
 export const PLAN_PRICES = {
-  pro: { amount: 19900, currency: "sek", display: "199kr" },
+  pro: { amount: 29900, currency: "sek", display: "299kr/månad" },
+  premium: { amount: 59900, currency: "sek", display: "599kr/månad" },
 } as const;
 
-export type PlanType = "free" | "pro";
+export type PlanType = "free" | "pro" | "premium";
+export type FeatureAccess = typeof FEATURE_ACCESS[PlanType];

@@ -290,34 +290,47 @@ export default function Home() {
                 {isAuthenticated && (
                   <div className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Användning idag</span>
-                      <span className="text-xs font-medium" style={{ color: plan === "pro" ? "#D4AF37" : "#6B7280" }}>
-                        {plan === "pro" ? "Pro" : "Gratis"}
+                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Användning denna månad</span>
+                      <span className="text-xs font-medium" style={{ color: plan === "pro" ? "#D4AF37" : plan === "premium" ? "8B5CF6" : "#6B7280" }}>
+                        {plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratis"}
                       </span>
                     </div>
                     <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
                       <div
                         className="h-full rounded-full transition-all"
-                        style={{ background: "#2D6A4F", width: `${Math.min(100, (used / limit) * 100)}%` }}
+                        style={{ background: plan === "premium" ? "#8B5CF6" : "#2D6A4F", width: `${Math.min(100, (used / limit) * 100)}%` }}
                       />
                     </div>
                     <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
-                      {remaining} av {limit} textkits kvar
+                      {remaining} av {limit} texter kvar
                     </p>
                   </div>
                 )}
 
-                {/* Upgrade CTA — only for free users */}
-                {isAuthenticated && plan === "free" && (
+                {/* Upgrade CTA — only for free/pro users */}
+                {isAuthenticated && (plan === "free" || plan === "pro") && (
                   <div className="rounded-xl border p-6" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-                      Behöver du fler beskrivningar?
+                      {plan === "free" ? "Behöver du fler beskrivningar?" : "Uppgradera till Premium"}
                     </h3>
                     <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
-                      Pro ger dig 20 beskrivningar per dag, prioriterad AI och längre texter.
+                      {plan === "free" 
+                        ? "Pro ger dig 10 beskrivningar/månad, personlig stil och alla features."
+                        : "Premium ger dig obegränsat antal texter, team-funktioner och API-access."
+                      }
                     </p>
                     <ul className="space-y-2 mb-5">
-                      {["20 textkits / dag (5 texter per kit)", "Längre & mer detaljerade texter", "Visningsinbjudan & kortannons", "Prioriterad AI-bearbetning"].map((f) => (
+                      {plan === "free" ? [
+                        "10 texter / månad (perfekt för de flesta mäklare)",
+                        "Personlig skrivstil (AI lär din stil)",
+                        "Sök område & avancerade analyser",
+                        "Text-redigering & förbättring"
+                      ] : [
+                        "Obegränsat antal texter",
+                        "Team-funktioner (dela stil med kollegor)",
+                        "API-access (integration med CRM)",
+                        "Priority support & avancerade features"
+                      ].map((f) => (
                         <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
                           <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
                           {f}
@@ -325,17 +338,17 @@ export default function Home() {
                       ))}
                     </ul>
                     <Button
-                      onClick={() => startCheckout("pro")}
+                      onClick={() => startCheckout(plan === "free" ? "pro" : "premium")}
                       disabled={isCheckoutPending}
                       className="w-full font-medium"
-                      style={{ background: "#2D6A4F", color: "#fff" }}
+                      style={{ background: plan === "free" ? "#2D6A4F" : "#8B5CF6", color: "#fff" }}
                     >
                       {isCheckoutPending ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                       ) : (
                         <Crown className="w-4 h-4 mr-2" />
                       )}
-                      Uppgradera till Pro
+                      {plan === "free" ? "Uppgradera till Pro (299kr/mån)" : "Uppgradera till Premium (599kr/mån)"}
                     </Button>
                   </div>
                 )}
