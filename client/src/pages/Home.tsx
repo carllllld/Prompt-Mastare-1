@@ -109,7 +109,7 @@ export default function Home() {
                 <div className="hidden sm:flex items-center gap-2 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0EDE6", color: "#4B5563" }}>
                   <span className="font-medium" style={{ color: "#2D6A4F" }}>{remaining}</span>
                   <span className="text-xs">/</span>
-                  <span className="text-xs">{limit} idag</span>
+                  <span className="text-xs">{limit} denna månad</span>
                 </div>
 
                 {/* History link */}
@@ -180,11 +180,11 @@ export default function Home() {
         {isAuthenticated && remaining === 0 && !result && (
           <div className="mb-8 flex items-center gap-4 p-4 rounded-lg border" style={{ background: "#FFF7ED", borderColor: "#FDBA74" }}>
             <div className="flex-1">
-              <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar idag</p>
+              <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar denna månad</p>
               <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
                 {plan === "free"
-                  ? "Uppgradera till Pro för 20 beskrivningar per dag."
-                  : `Nästa reset: ${userStatus?.resetTime || "imorgon"}`}
+                  ? "Uppgradera till Pro för 10 beskrivningar per månad."
+                  : `Nästa reset: ${userStatus?.resetTime || "nästa månad"}`}
               </p>
             </div>
             {plan === "free" && (
