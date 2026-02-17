@@ -307,49 +307,107 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Upgrade CTA — only for free/pro users */}
-                {isAuthenticated && (plan === "free" || plan === "pro") && (
+                {/* Upgrade CTA — show relevant options based on current plan */}
+                {isAuthenticated && plan !== "premium" && (
                   <div className="rounded-xl border p-6" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
                       {plan === "free" ? "Behöver du fler beskrivningar?" : "Uppgradera till Premium"}
                     </h3>
                     <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
                       {plan === "free" 
-                        ? "Pro ger dig 10 beskrivningar/månad, personlig stil och alla features."
+                        ? "Välj mellan Pro (10 texter/månad) eller Premium (obegränsat)."
                         : "Premium ger dig obegränsat antal texter, team-funktioner och API-access."
                       }
                     </p>
-                    <ul className="space-y-2 mb-5">
-                      {plan === "free" ? [
-                        "10 texter / månad (perfekt för de flesta mäklare)",
-                        "Personlig skrivstil (AI lär din stil)",
-                        "Sök område & avancerade analyser",
-                        "Text-redigering & förbättring"
-                      ] : [
-                        "Obegränsat antal texter",
-                        "Team-funktioner (dela stil med kollegor)",
-                        "API-access (integration med CRM)",
-                        "Priority support & avancerade features"
-                      ].map((f) => (
-                        <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
-                          <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      onClick={() => startCheckout(plan === "free" ? "pro" : "premium")}
-                      disabled={isCheckoutPending}
-                      className="w-full font-medium"
-                      style={{ background: plan === "free" ? "#2D6A4F" : "#8B5CF6", color: "#fff" }}
-                    >
-                      {isCheckoutPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Crown className="w-4 h-4 mr-2" />
-                      )}
-                      {plan === "free" ? "Uppgradera till Pro (299kr/mån)" : "Uppgradera till Premium (599kr/mån)"}
-                    </Button>
+                    
+                    {/* Show both options for free users */}
+                    {plan === "free" && (
+                      <div className="space-y-3 mb-5">
+                        <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
+                          <h4 className="font-medium text-sm mb-2" style={{ color: "#2D6A4F" }}>Pro - 299kr/månad</h4>
+                          <ul className="space-y-1">
+                            {["10 texter / månad", "Personlig skrivstil", "Sök område & analyser", "Text-redigering"].map((f) => (
+                              <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
+                                <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#2D6A4F" }} />
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
+                          <Button
+                            onClick={() => startCheckout("pro")}
+                            disabled={isCheckoutPending}
+                            className="w-full mt-2 font-medium text-sm"
+                            style={{ background: "#2D6A4F", color: "#fff" }}
+                          >
+                            {isCheckoutPending ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                            ) : (
+                              <Crown className="w-3 h-3 mr-2" />
+                            )}
+                            Välj Pro
+                          </Button>
+                        </div>
+                        
+                        <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
+                          <h4 className="font-medium text-sm mb-2" style={{ color: "#8B5CF6" }}>Premium - 599kr/månad</h4>
+                          <ul className="space-y-1">
+                            {["Obegränsat antal texter", "Team-funktioner", "API-access", "Priority support"].map((f) => (
+                              <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
+                                <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#8B5CF6" }} />
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
+                          <Button
+                            onClick={() => startCheckout("premium")}
+                            disabled={isCheckoutPending}
+                            className="w-full mt-2 font-medium text-sm"
+                            style={{ background: "#8B5CF6", color: "#fff" }}
+                          >
+                            {isCheckoutPending ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                            ) : (
+                              <Crown className="w-3 h-3 mr-2" />
+                            )}
+                            Välj Premium
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show premium upgrade for pro users */}
+                    {plan === "pro" && (
+                      <ul className="space-y-2 mb-5">
+                        {[
+                          "Obegränsat antal texter",
+                          "Team-funktioner (dela stil med kollegor)",
+                          "API-access (integration med CRM)",
+                          "Priority support & avancerade features"
+                        ].map((f) => (
+                          <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
+                            <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#8B5CF6" }} />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    
+                    {/* Single premium button for pro users */}
+                    {plan === "pro" && (
+                      <Button
+                        onClick={() => startCheckout("premium")}
+                        disabled={isCheckoutPending}
+                        className="w-full font-medium"
+                        style={{ background: "#8B5CF6", color: "#fff" }}
+                      >
+                        {isCheckoutPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Crown className="w-4 h-4 mr-2" />
+                        )}
+                        Uppgradera till Premium (599kr/mån)
+                      </Button>
+                    )}
                   </div>
                 )}
 
