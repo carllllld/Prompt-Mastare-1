@@ -1720,15 +1720,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const planStartAt = new Date(user.planStartAt || user.createdAt || now);
           
           // Beräkna nästa reset baserat på användarens startdatum
-          const nextReset = new Date(userNow);
-          nextReset.setMonth(planStartAt.getMonth());
-          nextReset.setFullYear(planStartAt.getFullYear() + 1);
-          nextReset.setDate(planStartAt.getDate());
+          const nextReset = new Date(planStartAt);
+          nextReset.setMonth(nextReset.getMonth() + 1);  // +1 månad, inte +1 år
           nextReset.setHours(0, 0, 0, 0);
           
-          // Om nästa reset har passerat, lägg till ett år
+          // Om nästa reset har passerat, lägg till en månad
           if (nextReset <= userNow) {
-            nextReset.setFullYear(nextReset.getFullYear() + 1);
+            nextReset.setMonth(nextReset.getMonth() + 1);
           }
           
           const resetTime = new Date(nextReset.getTime() + tzOffset * 60000);
@@ -2637,8 +2635,36 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
             }
           }
         );
-        const nominatimData = await nominatimRes.json() as any;
-        const location = nominatimData[0];
+
+        if (!nominatimRes.ok) {
+          console.error("[OpenStreetMap] Nominatim API error:", nominatimRes.status, nominatimRes.statusText);
+          return res.status(500).json({ 
+            message: "Adresssökning misslyckades. Försök igen senare.",
+            error: `API error: ${nominatimRes.status}`
+          });
+        }
+
+        const contentType = nominatimRes.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error("[OpenStreetMap] Unexpected content type:", contentType);
+          return res.status(500).json({ 
+            message: "Adresssökning misslyckades. Försök igen senare.",
+            error: "Invalid API response format"
+          });
+        }
+
+        let nominatimData;
+        try {
+          nominatimData = await nominatimRes.json();
+        } catch (parseError) {
+          console.error("[OpenStreetMap] JSON parse error:", parseError);
+          return res.status(500).json({ 
+            message: "Adresssökning misslyckades. Försök igen senare.",
+            error: "Invalid JSON response"
+          });
+        }
+
+        const location = nominatimData?.[0];
 
         if (!location) {
           return res.json({ places: [], message: "Adressen kunde inte hittas" });
@@ -2671,7 +2697,25 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
             }
           }
         );
-        const overpassData = await overpassRes.json() as any;
+
+        if (!overpassRes.ok) {
+          console.error("[OpenStreetMap] Overpass API error:", overpassRes.status, overpassRes.statusText);
+          return res.status(500).json({ 
+            message: "Adresssökning misslyckades. Försök igen senare.",
+            error: `Overpass API error: ${overpassRes.status}`
+          });
+        }
+
+        let overpassData;
+        try {
+          overpassData = await overpassRes.json();
+        } catch (parseError) {
+          console.error("[OpenStreetMap] Overpass JSON parse error:", parseError);
+          return res.status(500).json({ 
+            message: "Adresssökning misslyckades. Försök igen senare.",
+            error: "Overpass API invalid response"
+          });
+        }
 
         // Step 3: Process and categorize results
         const places: any[] = [];
