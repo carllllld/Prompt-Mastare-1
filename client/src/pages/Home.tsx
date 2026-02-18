@@ -65,7 +65,7 @@ export default function Home() {
       onError: (error: any) => {
         if (error.limitReached) {
           toast({
-            title: "Dagskvot uppnådd",
+            title: "Månadskvot uppnådd",
             description: "Uppgradera till Pro för fler beskrivningar.",
           });
         } else {
