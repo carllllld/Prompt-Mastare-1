@@ -150,6 +150,7 @@ export class DatabaseStorage implements IStorage {
         plan,
         stripeCustomerId,
         stripeSubscriptionId,
+        planStartAt: new Date(),  // Sätt startdatum för månadsräkning
       })
       .where(eq(users.id, userId));
   }
