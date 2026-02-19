@@ -6,27 +6,19 @@ export function useStripeCheckout() {
 
   return useMutation({
     mutationFn: async (tier: "pro" | "premium") => {
-      console.log("[Stripe Checkout] Starting checkout for tier:", tier);
-
       const response = await fetch("/api/stripe/create-checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // ⬅️ KRITISKT
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ tier }),
       });
 
-      console.log("[Stripe Checkout] Response status:", response.status);
-
       if (!response.ok) {
         const error = await response.json();
-        console.error("[Stripe Checkout] Error response:", error);
         throw new Error(error.message || "Failed to create checkout session");
       }
 
       const data = await response.json();
-      console.log("[Stripe Checkout] Success, redirecting to:", data.url);
       return data;
     },
     onSuccess: (data) => {
