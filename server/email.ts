@@ -1,30 +1,73 @@
-import { Resend } from 'resend';
+import { queueEmail } from './lib/email-service';
+import { Request } from 'express';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-
-const FROM_EMAIL = process.env.FROM_EMAIL || 'OptiPrompt <noreply@optiprompt.se>';
 const APP_URL = process.env.APP_URL || 'https://optiprompt.se';
 
 export interface EmailResult {
   success: boolean;
   error?: string;
+  jobId?: string;
 }
 
-export async function sendVerificationEmail(email: string, token: string): Promise<EmailResult> {
-  if (!resend) {
-    console.log('[Email] Resend not configured, skipping email to:', email);
-    console.log('[Email] Verification link would be:', `${APP_URL}/verify-email?token=${token}`);
-    return { success: true };
-  }
+export async function sendVerificationEmail(email: string, token: string, ip?: string): Promise<EmailResult> {
+  const verificationUrl = `${APP_URL}/verify-email?token=${token}`;
+  
+  return queueEmail('verification', email, { verificationUrl }, ip);
+}
 
-  try {
-    const verificationUrl = `${APP_URL}/verify-email?token=${token}`;
-    
-    await resend.emails.send({
-      from: FROM_EMAIL,
-      to: email,
-      subject: 'Verifiera din e-postadress - OptiPrompt Mäklare',
-      html: `
+export async function sendTeamInviteEmail(
+  email: string, 
+  token: string, 
+  teamName: string, 
+  inviterEmail: string,
+  ip?: string
+): Promise<EmailResult> {
+  const verificationUrl = `${APP_URL}/accept-invite?token=${token}`;
+  
+  return queueEmail('team_invite', email, { 
+    teamName, 
+    inviterEmail, 
+    verificationUrl 
+  }, ip);
+}
+
+export async function sendPasswordResetEmail(
+  email: string, 
+  token: string, 
+  userName?: string,
+  ip?: string
+): Promise<EmailResult> {
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+  
+  return queueEmail('password_reset', email, { 
+    resetUrl, 
+    userName: userName || 'där' 
+  }, ip);
+}
+
+export async function sendWelcomeEmail(
+  email: string, 
+  userName?: string,
+  ip?: string
+): Promise<EmailResult> {
+  const loginUrl = `${APP_URL}/login`;
+  
+  return queueEmail('welcome', email, { 
+    userName: userName || 'där', 
+    loginUrl 
+  }, ip);
+}
+
+// Legacy functions for backward compatibility
+export async function sendEmailDirect(
+  to: string,
+  subject: string,
+  html: string,
+  text?: string
+): Promise<EmailResult> {
+  const { sendEmailWithRetry } = await import('./lib/email-service');
+  return sendEmailWithRetry('verification', to, { verificationUrl: '', subject, html, text });
+}
         <!DOCTYPE html>
         <html>
         <head>

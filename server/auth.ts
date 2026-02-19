@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { z } from "zod";
 import { storage } from "./storage";
-import { sendVerificationEmail } from "./email";
+import { sendVerificationEmail } from "./email-new";
 
 const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 
@@ -64,7 +64,8 @@ export function setupAuth(app: Express) {
       const canSend = await storage.canSendEmail(email, 'verification', MAX_VERIFICATION_EMAILS_PER_HOUR);
       if (canSend) {
         await storage.recordEmailSent(email, 'verification');
-        await sendVerificationEmail(email, verificationToken);
+        const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+        await sendVerificationEmail(email, verificationToken, clientIP);
         console.log("[Register] Verification email sent");
       } else {
         console.log("[Register] Rate limited, skipping verification email");
@@ -319,7 +320,8 @@ export function setupAuth(app: Express) {
       
       // Record and send email
       await storage.recordEmailSent(email, 'verification');
-      await sendVerificationEmail(email, verificationToken);
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      await sendVerificationEmail(email, verificationToken, clientIP);
       
       console.log("[Resend] Verification email sent to:", email);
       res.json({ message: "Nytt verifieringsmail skickat. Kontrollera din inkorg." });
