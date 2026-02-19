@@ -428,7 +428,7 @@ export default function Home() {
                       Skapa ett konto gratis
                     </h3>
                     <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
-                      Få 2 kostnadsfria objektbeskrivningar varje dag.
+                      Få 3 kostnadsfria objektbeskrivningar per månad.
                     </p>
                     <Button
                       onClick={() => setAuthModalOpen(true)}
