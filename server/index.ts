@@ -50,19 +50,6 @@ app.use(session({
   }
 }));
 
-// Debug-logging för session (valfritt, kan tas bort senare)
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    console.log('[Session Debug]', {
-      path: req.path,
-      sessionID: req.sessionID?.substring(0, 10) + '...',
-      userId: req.session?.userId,
-      hasCookie: !!req.headers.cookie
-    });
-  }
-  next();
-});
-
 // Request logging
 app.use((req, res, next) => {
   const start = Date.now();

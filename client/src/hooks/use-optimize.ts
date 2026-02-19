@@ -1,6 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { api, type OptimizeRequest, type OptimizeResponse } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { retryApiCall } from "@/lib/retry";
+import { ErrorHandler } from "@/lib/error-handler";
 
 interface LimitError extends Error {
   limitReached?: boolean;
@@ -11,48 +13,43 @@ export function useOptimize() {
 
   return useMutation({
     mutationFn: async (data: OptimizeRequest): Promise<OptimizeResponse> => {
-      console.log("[useOptimize Debug] mutationFn called with:", data);
       const validated = api.optimize.input.parse(data);
-      console.log("[useOptimize Debug] validated data:", validated);
-      const res = await fetch(api.optimize.path, {
-        method: api.optimize.method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(validated),
-        credentials: "include",
-      });
-
-      console.log("[useOptimize Debug] fetch response status:", res.status);
-      console.log("[useOptimize Debug] fetch response ok:", res.ok);
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ message: "An unexpected error occurred." }));
-        console.log("[useOptimize Debug] error data:", errorData);
-        
-        if (res.status === 403 && errorData.limitReached) {
-          const error: LimitError = new Error(errorData.message);
-          error.limitReached = true;
-          throw error;
+      
+      return retryApiCall(
+        api.optimize.path,
+        {
+          method: api.optimize.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(validated),
+          credentials: "include",
+        },
+        {
+          maxRetries: 2,
+          baseDelay: 1000,
+          onRetry: (error, attempt) => {
+            console.log(`Retry attempt ${attempt} for optimization:`, error.message);
+          }
         }
-        
-        if (res.status === 429) {
-          throw new Error(errorData.message || "Too many requests. Please wait a moment.");
-        }
-        
-        throw new Error(errorData.message || "Could not optimize the prompt. Please try again.");
-      }
-
-      const result = await res.json();
-      console.log("[useOptimize Debug] success response:", result);
-      return api.optimize.responses[200].parse(result);
+      );
     },
     onError: (error: LimitError) => {
-      console.log("[useOptimize Debug] onError called:", error);
-      if (!error.limitReached) {
+      if (error.limitReached) {
+        // Handle usage limit errors specifically
+        const appError = ErrorHandler.classifyError(error);
+        ErrorHandler.logError(appError, 'useOptimize - limit reached');
+        
         toast({
-          title: "Optimization failed",
-          description: error.message,
-          variant: "destructive",
+          title: 'Månadskvot uppnådd',
+          description: 'Uppgradera till Pro för fler beskrivningar.',
+          variant: 'destructive',
         });
+      } else {
+        // Handle other errors with improved error handling
+        const appError = ErrorHandler.classifyError(error);
+        ErrorHandler.logError(appError, 'useOptimize');
+        
+        const toastConfig = ErrorHandler.getToastConfig(appError);
+        toast(toastConfig);
       }
     },
   });

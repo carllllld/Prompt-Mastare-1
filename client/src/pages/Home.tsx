@@ -5,6 +5,7 @@ import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { AuthModal } from "@/components/AuthModal";
+import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout } from "@/hooks/use-stripe";
@@ -215,32 +216,10 @@ export default function Home() {
               />
             </div>
 
-            {/* Loading progress */}
+            {/* Loading progress with skeleton */}
             {isPending && (
               <div className="mt-4 bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
-                <div className="space-y-3">
-                  {LOADING_STEPS.map((step, i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{
-                        background: i < loadingStep ? "#2D6A4F" : i === loadingStep ? "#E8F5E9" : "#F0EDE6",
-                      }}>
-                        {i < loadingStep ? (
-                          <Check className="w-3 h-3 text-white" />
-                        ) : i === loadingStep ? (
-                          <Loader2 className="w-3 h-3 animate-spin" style={{ color: "#2D6A4F" }} />
-                        ) : (
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#D1D5DB" }} />
-                        )}
-                      </div>
-                      <span className="text-sm" style={{
-                        color: i <= loadingStep ? "#1D2939" : "#9CA3AF",
-                        fontWeight: i === loadingStep ? 500 : 400,
-                      }}>
-                        {step}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                <PromptGenerationSkeleton />
               </div>
             )}
           </div>
