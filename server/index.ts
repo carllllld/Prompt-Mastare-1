@@ -1,13 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import { registerRoutes } from "./routes";
-import { setupAuth } from "./auth";
-import { setupVite } from "./vite";
 import { createServer } from "http";
-import { pool, initializeDatabase } from "./db";
 import path from "path";
 import fs from "fs";
+import { PostgresStore } from "connect-pg-simple";
+import { eq } from "drizzle-orm";
+import { users } from "./shared/schema";
+import { db } from "./shared/db";
+import { initializeDatabase, setupAuth } from "./auth";
+import { registerRoutes } from "./routes";
+import { setupVite } from "./vite";
+import { log } from "./vite";
+import emailWebhooks from './routes/email-webhooks';
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 
 const PostgresStore = connectPgSimple(session);
 const app = express();
@@ -85,6 +91,9 @@ app.use((req, res, next) => {
   // Setup auth routes
   await initializeDatabase();
   setupAuth(app);
+  
+  // Setup email webhook routes
+  app.use('/api/email', emailWebhooks);
   
   // Create HTTP server
   const server = createServer(app);
