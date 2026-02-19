@@ -11,6 +11,11 @@ const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 declare module "express-session" {
   interface SessionData {
     userId: string;
+    deviceInfo?: {
+      userAgent: string;
+      ip: string;
+      loginTime: Date;
+    };
   }
 }
 
@@ -66,8 +71,17 @@ export function setupAuth(app: Express) {
       }
 
       // Set session (user can use the app but with limited features until verified)
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const userAgent = req.get('User-Agent') || 'unknown';
+      
       req.session.userId = user.id;
-      console.log("[Register] Session userId set, saving session...");
+      req.session.deviceInfo = {
+        userAgent,
+        ip: clientIP,
+        loginTime: new Date()
+      };
+      
+      console.log("[Register] Session userId set with device info, saving session...");
       
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
@@ -126,9 +140,19 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Set session
+      // Set session with device info
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const userAgent = req.get('User-Agent') || 'unknown';
+      
       req.session.userId = user.id;
-      console.log("[Login] Session userId set, saving session...");
+      req.session.deviceInfo = {
+        userAgent,
+        ip: clientIP,
+        loginTime: new Date()
+      };
+      
+      console.log("[Login] Session userId set with device info, saving session...");
+      console.log("[Login] Device:", { userAgent: userAgent.substring(0, 50), ip: clientIP });
       
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
@@ -210,8 +234,16 @@ export function setupAuth(app: Express) {
       await storage.markEmailVerified(user.id);
       console.log("[Verify] Email verified for user:", user.id);
 
-      // Log the user in automatically
+      // Log the user in automatically with device info
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const userAgent = req.get('User-Agent') || 'unknown';
+      
       req.session.userId = user.id;
+      req.session.deviceInfo = {
+        userAgent,
+        ip: clientIP,
+        loginTime: new Date()
+      };
       req.session.save((err) => {
         if (err) {
           console.error("[Verify] Session save error:", err);
@@ -227,6 +259,29 @@ export function setupAuth(app: Express) {
     } catch (err: any) {
       console.error("[Verify] Error:", err);
       res.status(500).json({ message: "Verifiering misslyckades" });
+    }
+  });
+
+  // Get user's active sessions/devices
+  app.get("/auth/sessions", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      // This would require extending the session store to track multiple sessions
+      // For now, return current session info
+      res.json({
+        currentSession: {
+          deviceInfo: req.session.deviceInfo,
+          sessionId: req.sessionID,
+          loginTime: req.session.deviceInfo?.loginTime
+        },
+        message: "Multi-device session tracking coming soon"
+      });
+    } catch (error) {
+      console.error("[Sessions] Error:", error);
+      res.status(500).json({ message: "Kunde inte hämta sessioner" });
     }
   });
 
