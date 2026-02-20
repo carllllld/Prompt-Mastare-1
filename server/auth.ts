@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { z } from "zod";
 import { storage } from "./storage";
-import { sendVerificationEmail } from "./email-new";
+import { sendVerificationEmail } from "./email";
 
 const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 

@@ -1,5 +1,4 @@
 import { queueEmail } from './lib/email-service';
-import { Request } from 'express';
 
 const APP_URL = process.env.APP_URL || 'https://optiprompt.se';
 
@@ -58,13 +57,3 @@ export async function sendWelcomeEmail(
   }, ip);
 }
 
-// Legacy functions for backward compatibility
-export async function sendEmailDirect(
-  to: string,
-  subject: string,
-  html: string,
-  text?: string
-): Promise<EmailResult> {
-  const { sendEmailWithRetry } = await import('./lib/email-service');
-  return sendEmailWithRetry('verification', to, { verificationUrl: '', subject, html, text });
-}

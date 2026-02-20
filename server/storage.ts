@@ -28,7 +28,7 @@ export interface IStorage {
   // Subscription methods
   upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
-  setUserPlan(userId: string, plan: "free" | "basic" | "pro"): Promise<void>; // Admin function
+  setUserPlan(userId: string, plan: "free" | "pro" | "premium"): Promise<void>; // Admin function
   // Optimization history methods
   createOptimization(optimization: InsertOptimization): Promise<void>;
   getOptimizationHistory(userId: string, limit?: number): Promise<Optimization[]>;
@@ -156,7 +156,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Admin function to set plan directly (no Stripe required)
-  async setUserPlan(userId: string, plan: "free" | "basic" | "pro"): Promise<void> {
+  async setUserPlan(userId: string, plan: "free" | "pro" | "premium"): Promise<void> {
     await db.update(users)
       .set({ plan })
       .where(eq(users.id, userId));
