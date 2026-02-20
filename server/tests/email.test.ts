@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { sendVerificationEmail, sendTeamInviteEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../email-new';
+import { sendVerificationEmail, sendTeamInviteEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../email';
 import { emailQueue } from '../lib/email-queue';
 import { rateLimiter } from '../lib/email-rate-limiter';
 

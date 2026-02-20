@@ -1544,27 +1544,15 @@ Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Eldstad. Tomt 920 kv
 7. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
 8. Generera ALLA fält: headline, instagramCaption, showingInvitation, shortAd, socialCopy.
 
-# SMART PERSONLIGHET (Gör texten säljande utan klichéer)
+# GÖR TEXTEN SÄLJANDE UTAN KLICHÉER
 
-9. ANVÄND MÄKLARENS EGENA ORD: Bevara unika beskrivningar från layoutDescription, kitchenDescription etc.
-10. SKAPA BILDER: "Köket vetter mot söder där morgonsolen strömmar in" (om det stämmer).
-11. LÄGG TILL KÄNSLA (faktabaserad): "Här startar dagen med kaffe i soligt kök" (om kök ligger i söder).
-12. HUMAN TOUCH: "Familjens samlingsplats", "Din egen oas", "Perfekt för late morgnar".
-13. SÄLJANDE MEN ÄRLIGT: "Utsikten är din varje morgon", "Här finns plats för livets alla stunder".
+9. ANVÄND MÄKLARENS EGNA ORD: Bevara unika beskrivningar från layoutDescription, kitchenDescription etc.
+10. SKAPA BILDER MED FAKTA: "Köket vetter mot söder" (om det stämmer). Låt fakta tala.
+11. VARIERA MENINGSLÄNGD: Blanda korta faktameningar (4 ord) med lite längre (10-12 ord).
+12. KONKRETA DETALJER säljer mer än adjektiv: "Ballingslöv-kök 2021" > "modernt kök".
+13. PRISSKLASS-ANPASSNING: Dyrare objekt = fler detaljer om material/märken. Billigare = fokus på läge/potential. MEN använd ALDRIG förbjudna ord oavsett prisklass.
 
-# PRISSKLASS-ANPASSAT SPRÅK
-
-14. LUXURY (price_per_kvm > avg * 1.3): Använd exklusiva termer som "exklusivt", "unik", "exceptionell", "genomgående högsta standard", "privat ingång", "panoramavy", "sjurumsyta". Fokusera på status, unikhet och exklusivitet.
-15. PREMIUM (avg * 0.7 < price_per_kvm <= avg * 1.3): Använd termer som "generös", "spatiös", "luftig", "modern", "bekväm", "hög kvalitet". Fokusera på komfort, kvalitet och livskvalitet.
-16. BUDGET (price_per_kvm < avg * 0.7): Använd termer som "prisvärt", "smart", "praktisk", "chans", "potential", "perfekt start". Fokusera på värde, möjligheter och framtid.
-
-VIKTIGT: All personlighet MUSTE vara baserad på fakta från dispositionen!
-
-12. Skriv som en riktig mäklare med hjärta, men med fakta som grund. Anpassa språket efter prisklass. Kort. Rakt. Specifikt. Mänskligt.`;
-
-// [Dead code removed: _UNUSED_BOOLI_TEXT_PROMPT + BOOLI_EXPERT_PROMPT — ~300 lines of unused prompts]
-const _UNUSED_BOOLI_TEXT_PROMPT = `REMOVED`;
-const BOOLI_EXPERT_PROMPT = `REMOVED`;
+Skriv som en riktig mäklare — kort, rakt, specifikt, mänskligt.`;
 
 // Lokal exempelmatchning — enkel typ+storlek, fungerar för ALLA städer i Sverige
 function matchExamples(disposition: any, _toneAnalysis: any): string[] {
@@ -2065,52 +2053,228 @@ Svara kortfattat och konkret.`
       
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
 
-      // === OPTIMAL AI PIPELINE ===
-      // Använd nya optimala pipelinen för 100% success rate
-      const { optimalAIPipeline } = await import('./lib/optimal-ai-pipeline');
-      
-      console.log("[Optimal Pipeline] Using enhanced AI pipeline for 100% success rate");
-      
+      // === LEGACY AI PIPELINE (FULL PROMPT ENGINEERING) ===
       const propertyData = req.body.propertyData;
-      const optimalResult = await optimalAIPipeline.generateOptimalText(
-        propertyData || { address: "Okänd", propertyType: "apartment", livingArea: 0, totalRooms: 0, price: 0 },
-        platform as 'hemnet' | 'booli',
-        { min: targetWordMin, max: targetWordMax }
-      );
       
-      // Konvertera till befintligt format
-      const result = {
-        improvedPrompt: optimalResult.text,
-        headline: optimalResult.headline,
-        instagramCaption: optimalResult.instagramCaption,
-        showingInvitation: optimalResult.showingInvitation,
-        shortAd: optimalResult.shortAd,
-        socialCopy: optimalResult.socialCopy,
-        quality: optimalResult.quality,
-        analysis: {
-          target_group: optimalResult.quality.compliance ? "Optimerad för målgrupp" : "Behöver justering",
-          area_advantage: "Lägesfördelar analyserade",
-          pricing_factors: "Priskontroll utförd"
-        },
-        text_tips: optimalResult.quality.violations.length > 0 ? 
-          optimalResult.quality.violations.map(v => `Korrektion: ${v}`) : 
-          ["Texten följer alla regler och är redo för publicering"],
-        highlights: ["Optimerad textgenerering"],
-        missing_info: [],
-        critical_gaps: [],
-        factCheck: { passed: optimalResult.quality.compliance, issues: optimalResult.quality.violations }
-      };
-      
-      console.log(`[Optimal Pipeline] Generated with quality score: ${optimalResult.quality.score}%`);
-      
-      // Fallback till gamla pipelinen om optimal misslyckas
-      if (!optimalResult.quality.compliance) {
-        console.log("[Optimal Pipeline] Quality issues detected, falling back to legacy pipeline");
-        // ... befintlig kod som fallback
+      // STEG 1: Bygg disposition — structured data fast path ELLER AI-extraktion
+      let disposition: any = null;
+      let toneAnalysis: any = null;
+      let writingPlan: any = null;
+
+      if (propertyData && propertyData.address) {
+        // FAST PATH: Structured form data → skippa AI-extraktion
+        console.log("[Step 1] Using structured form data — 0 API calls for extraction");
+        const structured = buildDispositionFromStructuredData(propertyData);
+        disposition = structured.disposition;
+        toneAnalysis = structured.tone_analysis;
+        writingPlan = structured.writing_plan;
+      } else {
+        // FALLBACK: AI-extraktion från fri text
+        console.log("[Step 1] Extracting with AI (no structured data)");
+        const extractionMessages = [
+          { role: "system" as const, content: COMBINED_EXTRACTION_PROMPT },
+          { role: "user" as const, content: `RÅDATA:\n${prompt}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}` },
+        ];
+
+        let extractionResult: any = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const extractionCompletion = await openai.chat.completions.create({
+              model: aiModel,
+              messages: extractionMessages,
+              max_tokens: 2000,
+              temperature: 0.1,
+              response_format: { type: "json_object" },
+            });
+            extractionResult = safeJsonParse(extractionCompletion.choices[0]?.message?.content || "{}");
+            break;
+          } catch (e) {
+            console.warn(`[Step 1] Extraction attempt ${attempt + 1} failed:`, e);
+          }
+        }
+
+        if (extractionResult) {
+          disposition = extractionResult.disposition || {};
+          toneAnalysis = extractionResult.tone_analysis || {};
+          writingPlan = extractionResult.writing_plan || {};
+        } else {
+          disposition = { property: { type: "lägenhet", address: "Okänd" } };
+          toneAnalysis = { price_category: "standard" };
+          writingPlan = { opening: "Okänd adress" };
+        }
       }
 
-      // Increment usage
-      await storage.incrementUserPrompts(user.id);
+      // Enrichment: Intelligence modules (Pro/Premium)
+      if (plan !== "free" && disposition?.property?.address) {
+        try {
+          const addr = disposition.property.address;
+          // Geographic context — works with address string
+          const geoContext = getGeographicContext(addr);
+          if (geoContext) disposition.geo_context = geoContext;
+
+          // Market position — needs (price, size, city)
+          const price = disposition?.economics?.price;
+          const size = disposition?.property?.size;
+          const city = addr.split(",").pop()?.trim() || "";
+          if (price && size && city) {
+            const marketPosition = analyzeMarketPosition(price, size, city);
+            if (marketPosition) toneAnalysis.market_position = marketPosition;
+          }
+
+          // Architectural value — needs (year, materials[], features[])
+          const yearBuilt = disposition?.property?.year_built;
+          const materials = Object.values(disposition?.property?.materials || {}).filter(Boolean) as string[];
+          const features = disposition?.property?.special_features || [];
+          if (yearBuilt) {
+            const archAnalysis = analyzeArchitecturalValue(yearBuilt, materials, features);
+            if (archAnalysis) toneAnalysis.architectural_value = archAnalysis;
+          }
+
+          // Market trends
+          if (city) {
+            const trends = getMarketTrends2025(city);
+            if (trends) toneAnalysis.market_trends = trends;
+          }
+        } catch (e) {
+          console.warn("[Intelligence] Enrichment failed, continuing without:", e);
+        }
+      }
+
+      // Matcha exempel från EXAMPLE_DATABASE
+      const matchedExamples = matchExamples(disposition, toneAnalysis);
+      console.log(`[Step 2] Matched ${matchedExamples.length} examples`);
+
+      // Hämta personlig stil om den finns
+      let personalStylePrompt = "";
+      if (plan !== "free") {
+        try {
+          const personalStyle = await storage.getPersonalStyle(user.id);
+          if (personalStyle && personalStyle.isActive) {
+            personalStylePrompt = generatePersonalizedPrompt(personalStyle.referenceTexts, personalStyle.styleProfile);
+            console.log("[Personal Style] Applied user's personal writing style");
+          }
+        } catch (e) {
+          console.warn("[Personal Style] Failed to load, continuing without:", e);
+        }
+      }
+
+      // STEG 3: Textgenerering med full prompt engineering
+      const isHemnet = platform === "hemnet";
+      const textPrompt = isHemnet ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
+
+      const textMessages = [
+        {
+          role: "system" as const,
+          content: `${personalStylePrompt}\n\n${textPrompt}`,
+        },
+        {
+          role: "user" as const,
+          content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `KONKURRENTANALYS:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL:\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n"Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket erbjuder gott om arbetsyta vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!"\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n"Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet har tre fönster och ekparkett. Takhöjd 2,70 meter.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch och tvättmaskin.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter."`,
+        },
+      ];
+
+      console.log("[Step 3] Generating text with full prompt engineering...");
+
+      const textCompletion = await openai.chat.completions.create({
+        model: aiModel,
+        messages: textMessages,
+        max_tokens: 3000,
+        temperature: 0.25,
+        response_format: { type: "json_object" },
+      });
+
+      let result: any;
+      try {
+        result = safeJsonParse(textCompletion.choices[0]?.message?.content || "{}");
+      } catch (e) {
+        console.error("[Step 3] Failed to parse AI response:", e);
+        result = { improvedPrompt: prompt };
+      }
+
+      // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
+      if (result.improvedPrompt) {
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+        result.improvedPrompt = addParagraphs(result.improvedPrompt);
+      }
+      // Rensa alla extra textfält också
+      for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
+        if (result[field]) {
+          result[field] = cleanForbiddenPhrases(result[field]);
+        }
+      }
+
+      // STEG 5: Validering
+      const violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
+      if (violations.length > 0) {
+        console.log(`[Step 5] Found ${violations.length} violations, attempting AI correction...`);
+
+        // Försök AI-korrigering vid allvarliga violations
+        if (violations.length <= 5) {
+          try {
+            const correctionMessages = [
+              {
+                role: "system" as const,
+                content: `Du är en korrekturläsare för svenska fastighetstexter. Fixa BARA de angivna felen. Behåll ALL korrekt text. Svara med JSON: {"corrected_text": "korrigerad text"}`,
+              },
+              {
+                role: "user" as const,
+                content: `TEXT:\n${result.improvedPrompt}\n\nFEL ATT FIXA:\n${violations.map(v => `- ${v}`).join("\n")}\n\nERSÄTTNINGAR:\n- "erbjuder" → "har"\n- "bjuder på" → "har"\n- "generös" → ta bort eller använd exakt mått\n- "vilket" → dela i två meningar\n- "för den som" → ta bort\n- "fantastisk" → ta bort`,
+              },
+            ];
+
+            const correctionCompletion = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: correctionMessages,
+              max_tokens: 2000,
+              temperature: 0.05,
+              response_format: { type: "json_object" },
+            });
+
+            const corrected = safeJsonParse(correctionCompletion.choices[0]?.message?.content || "{}");
+            if (corrected.corrected_text) {
+              result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text);
+              result.improvedPrompt = addParagraphs(result.improvedPrompt);
+              console.log("[Step 5] AI correction applied successfully");
+            }
+          } catch (e) {
+            console.warn("[Step 5] AI correction failed, using original:", e);
+          }
+        }
+      }
+
+      // STEG 6: Faktagranskning (Pro/Premium)
+      let factCheckResult: any = null;
+      if (plan !== "free" && result.improvedPrompt) {
+        try {
+          const factCheckMessages = [
+            { role: "system" as const, content: FACT_CHECK_PROMPT },
+            {
+              role: "user" as const,
+              content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`,
+            },
+          ];
+
+          const factCheckCompletion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: factCheckMessages,
+            max_tokens: 1500,
+            temperature: 0.1,
+            response_format: { type: "json_object" },
+          });
+
+          factCheckResult = safeJsonParse(factCheckCompletion.choices[0]?.message?.content || "{}");
+
+          if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
+            result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text);
+            result.improvedPrompt = addParagraphs(result.improvedPrompt);
+            console.log("[Step 6] Fact-check corrections applied");
+          }
+        } catch (e) {
+          console.warn("[Step 6] Fact-check failed, continuing:", e);
+        }
+      }
+
+      // Spara resultat
       await storage.createOptimization({
         userId: user.id,
         originalPrompt: prompt,
@@ -2123,7 +2287,7 @@ Svara kortfattat och konkret.`
           result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
           result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
         ].filter(Boolean) as string[],
-        suggestions: result.text_tips || [],
+        suggestions: result.text_tips || result.pro_tips || [],
         socialCopy: result.socialCopy || null,
       });
 
@@ -2187,14 +2351,15 @@ Svara med JSON i formatet:
       await storage.incrementUsage(user.id, 'texts');
       console.log(`[Usage] Incremented text generation for user ${user.id}`);
 
+      const tips = result.text_tips || result.pro_tips || [];
       res.json({
         originalPrompt: prompt,
         improvedPrompt: result.improvedPrompt || prompt,
         highlights: result.highlights || [],
         analysis: result.analysis || {},
         improvements: result.missing_info || [],
-        suggestions: result.text_tips || [],
-        text_tips: result.text_tips || [],
+        suggestions: tips,
+        text_tips: tips,
         critical_gaps: result.critical_gaps || [],
         socialCopy: result.socialCopy || null,
         headline: result.headline || null,
@@ -2202,7 +2367,7 @@ Svara med JSON i formatet:
         showingInvitation: result.showingInvitation || null,
         shortAd: result.shortAd || null,
         improvement_suggestions: improvementSuggestions,
-        factCheck: result.factCheck || null,
+        factCheck: factCheckResult ? { passed: factCheckResult.fact_check_passed !== false, issues: factCheckResult.issues || [] } : { passed: violations.length === 0, issues: violations },
         wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
       });
     } catch (err: any) {
@@ -2981,17 +3146,17 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
   // Query param: ?adminKey=YOUR_SECRET_KEY (set ADMIN_KEY env variable)
   app.post("/api/admin/set-plan", async (req, res) => {
     try {
-      const adminKey = req.query.adminKey as string;
-      const expectedKey = process.env.ADMIN_KEY || "change-this-secret-key";
+      const adminKey = req.headers['x-admin-key'] as string || req.query.adminKey as string;
+      const expectedKey = process.env.ADMIN_KEY;
 
-      if (adminKey !== expectedKey) {
+      if (!expectedKey || adminKey !== expectedKey) {
         return res.status(403).json({ message: "Invalid admin key" });
       }
 
       const { userId, email, plan } = req.body;
 
-      if (!plan || !["free", "basic", "pro"].includes(plan)) {
-        return res.status(400).json({ message: "Invalid plan. Must be 'free', 'basic', or 'pro'" });
+      if (!plan || !["free", "pro", "premium"].includes(plan)) {
+        return res.status(400).json({ message: "Invalid plan. Must be 'free', 'pro', or 'premium'" });
       }
 
       let targetUser: User | null = null;
@@ -3030,7 +3195,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
   // TEXTFÖRBÄTTRING - AI-assistent för att skriva om delar av texten
   app.post("/api/improve-text", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.user.id);
+      const user = (req as any).user as User;
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -3041,9 +3206,9 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return res.status(400).json({ message: "Missing required fields" });
       }
 
-      const plan = user.plan;
-      if (plan !== "pro") {
-        return res.status(403).json({ message: "Denna funktion är endast för Pro-användare" });
+      const plan = user.plan as PlanType;
+      if (plan === "free") {
+        return res.status(403).json({ message: "Denna funktion är endast för Pro/Premium-användare" });
       }
 
       console.log(`[Text Improvement] Improving text with type: ${improvementType}`);
@@ -3056,7 +3221,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         fix_claims: `Förbättra denna text genom att ersätta klyschor och svaga påståenden med konkreta fakta och starka argument. Använd mäklarbranschen kunskaper.`
       };
 
-      const prompt = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
+      const prompt = improvementPrompts[improvementType as keyof typeof improvementPrompts] || improvementPrompts.more_descriptive;
 
       const messages = [
         {
