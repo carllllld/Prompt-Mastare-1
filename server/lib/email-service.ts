@@ -32,7 +32,7 @@ if (process.env.RESEND_API_KEY) {
 
 // Smart email sending with retry logic
 export async function sendEmailWithRetry(
-  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome',
+  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'subscription_confirmed',
   to: string,
   data: TemplateVariables,
   ip?: string
@@ -81,7 +81,7 @@ export async function sendEmailWithRetry(
 
 // Queue-based email sending
 export async function queueEmail(
-  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome',
+  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'subscription_confirmed',
   to: string,
   data: TemplateVariables,
   ip?: string
@@ -168,7 +168,7 @@ async function getUserEmailPreferences(email: string): Promise<EmailPreferences 
 
 // Check if user allows this type of email
 function canSendEmail(
-  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome',
+  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'subscription_confirmed',
   preferences: EmailPreferences | null
 ): boolean {
   if (!preferences) return true; // No preferences set, allow by default

@@ -13,6 +13,8 @@ export interface TemplateVariables {
   resetUrl?: string;
   loginUrl?: string;
   supportEmail?: string;
+  planName?: string;
+  planPrice?: string;
 }
 
 export class EmailTemplateEngine {
@@ -45,6 +47,14 @@ export class EmailTemplateEngine {
       html: this.getPasswordResetTemplate(),
       text: this.getPasswordResetTextTemplate(),
       variables: { resetUrl: '', userName: '' }
+    });
+
+    // Subscription Confirmed Template
+    this.templates.set('subscription_confirmed', {
+      subject: 'Din {{planName}}-prenumeration är aktiverad — OptiPrompt',
+      html: this.getSubscriptionConfirmedTemplate(),
+      text: this.getSubscriptionConfirmedTextTemplate(),
+      variables: { userName: '', planName: '', planPrice: '', loginUrl: '' }
     });
 
     // Welcome Email Template
@@ -260,6 +270,77 @@ Klicka på länken nedan för att återställa ditt lösenord:
 {{resetUrl}}
 
 Länken är giltig i 1 timme. Efter det behöver du begära en ny återställning.
+
+Med vänliga hälsningar,
+OptiPrompt Mäklare Teamet`;
+  }
+
+  private getSubscriptionConfirmedTemplate(): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Prenumeration aktiverad</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+        .header h1 { color: white; margin: 0; font-size: 24px; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; background: #2D6A4F; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+        .footer { color: #6b7280; font-size: 14px; margin-top: 20px; }
+        .plan-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2D6A4F; }
+        .feature-item { padding: 8px 0; }
+        .check { color: #10b981; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>OptiPrompt Mäklare</h1>
+        </div>
+        <div class="content">
+          <h2 style="color: #1f2937; margin-top: 0;">Tack för ditt köp!</h2>
+          <p>Hej {{userName}},</p>
+          <p>Din <strong>{{planName}}</strong>-prenumeration är nu aktiverad. Du har tillgång till alla funktioner direkt.</p>
+          
+          <div class="plan-box">
+            <p style="margin: 0 0 5px 0;"><strong>Plan:</strong> {{planName}}</p>
+            <p style="margin: 0 0 5px 0;"><strong>Pris:</strong> {{planPrice}} kr/månad</p>
+            <p style="margin: 0;"><strong>Förnyas:</strong> Automatiskt varje månad</p>
+          </div>
+
+          <p>Du kan hantera din prenumeration (uppgradera, nedgradera eller avsluta) via kundportalen inne i appen.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="{{loginUrl}}" class="button">Börja skapa texter</a>
+          </div>
+          
+          <p class="footer">Frågor? Kontakta oss på <a href="mailto:support@optiprompt.se" style="color: #2D6A4F;">support@optiprompt.se</a>.</p>
+        </div>
+      </div>
+    </body>
+    </html>`;
+  }
+
+  private getSubscriptionConfirmedTextTemplate(): string {
+    return `Tack för ditt köp — OptiPrompt Mäklare
+
+Hej {{userName}},
+
+Din {{planName}}-prenumeration är nu aktiverad.
+
+Plan: {{planName}}
+Pris: {{planPrice}} kr/månad
+Förnyas: Automatiskt varje månad
+
+Du kan hantera din prenumeration via kundportalen inne i appen.
+
+Börja skapa texter: {{loginUrl}}
+
+Frågor? Kontakta oss på support@optiprompt.se.
 
 Med vänliga hälsningar,
 OptiPrompt Mäklare Teamet`;

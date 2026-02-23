@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { z } from "zod";
 import { storage } from "./storage";
-import { sendVerificationEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 
 const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 
@@ -330,6 +330,83 @@ export function setupAuth(app: Express) {
       res.status(500).json({ message: "Kunde inte skicka verifieringsmail" });
     }
   });
+
+  // Request password reset
+  app.post("/auth/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ message: "Ange en giltig e-postadress" });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      
+      // Always return success to prevent email enumeration
+      if (!user) {
+        return res.json({ message: "Om e-postadressen finns i vårt system skickas en återställningslänk." });
+      }
+
+      // Rate limit
+      const canSend = await storage.canSendEmail(email, 'password_reset', 3);
+      if (!canSend) {
+        return res.status(429).json({ 
+          message: "Du har begärt för många återställningar. Vänligen vänta en timme." 
+        });
+      }
+
+      // Generate reset token (1 hour expiry)
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+      await storage.setPasswordResetToken(user.id, resetToken, tokenExpires);
+      
+      // Record and send email
+      await storage.recordEmailSent(email, 'password_reset');
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      await sendPasswordResetEmail(email, resetToken, user.email, clientIP);
+      
+      console.log("[ForgotPassword] Reset email sent to:", email);
+      res.json({ message: "Om e-postadressen finns i vårt system skickas en återställningslänk." });
+    } catch (err: any) {
+      console.error("[ForgotPassword] Error:", err);
+      res.status(500).json({ message: "Kunde inte skicka återställningsmail" });
+    }
+  });
+
+  // Reset password with token
+  app.post("/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Återställningslänk saknas" });
+      }
+      
+      if (!password || password.length < 8) {
+        return res.status(400).json({ message: "Lösenordet måste vara minst 8 tecken" });
+      }
+
+      const user = await storage.getUserByPasswordResetToken(token);
+      if (!user) {
+        return res.status(400).json({ message: "Ogiltig eller utgången återställningslänk" });
+      }
+
+      // Check if token has expired
+      if (user.passwordResetExpires && new Date() > new Date(user.passwordResetExpires)) {
+        return res.status(400).json({ message: "Återställningslänken har gått ut. Vänligen begär en ny." });
+      }
+
+      // Hash new password and update
+      const passwordHash = await bcrypt.hash(password, 12);
+      await storage.updatePassword(user.id, passwordHash);
+      
+      console.log("[ResetPassword] Password updated for user:", user.id);
+      res.json({ message: "Lösenordet har uppdaterats! Du kan nu logga in." });
+    } catch (err: any) {
+      console.error("[ResetPassword] Error:", err);
+      res.status(500).json({ message: "Kunde inte återställa lösenordet" });
+    }
+  });
 }
 
 // Middleware: Require authentication
@@ -359,9 +436,9 @@ export const requirePro: RequestHandler = async (req, res, next) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  if (user.plan !== "pro") {
+  if (user.plan !== "pro" && user.plan !== "premium") {
     return res.status(403).json({ 
-      message: "Denna funktion kräver en Pro-prenumeration",
+      message: "Denna funktion kräver en Pro- eller Premium-prenumeration",
       requiresPro: true 
     });
   }

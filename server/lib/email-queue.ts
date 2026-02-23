@@ -3,7 +3,7 @@ import { emailRateLimits } from "./schema";
 
 export interface EmailJob {
   id: string;
-  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome';
+  type: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'subscription_confirmed';
   to: string;
   data: Record<string, any>;
   attempts: number;

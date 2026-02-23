@@ -14,6 +14,31 @@ import OpenAI from "openai";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
+// Rate limiting for /api/optimize (per user, per minute)
+const optimizeRateMap = new Map<string, { count: number; resetAt: number }>();
+const OPTIMIZE_RATE_LIMIT = 10; // max requests per minute
+const OPTIMIZE_RATE_WINDOW = 60 * 1000; // 1 minute
+
+function checkOptimizeRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const entry = optimizeRateMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    optimizeRateMap.set(userId, { count: 1, resetAt: now + OPTIMIZE_RATE_WINDOW });
+    return true;
+  }
+  if (entry.count >= OPTIMIZE_RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+// Cleanup stale rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of optimizeRateMap) {
+    if (now > entry.resetAt) optimizeRateMap.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -1935,6 +1960,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
       
+      // Rate limit check (per minute)
+      if (!checkOptimizeRateLimit(user.id)) {
+        return res.status(429).json({
+          message: "För många förfrågningar. Vänta en minut och försök igen.",
+        });
+      }
+      
       // Check monthly usage limits
       const usage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0,
@@ -2798,9 +2830,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         console.log("[Stripe Checkout] Using existing Stripe customer:", customerId);
       }
 
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+      const baseUrl = process.env.APP_URL || 'https://optiprompt.se';
 
       console.log("[Stripe Checkout] Creating checkout session with base URL:", baseUrl);
 
@@ -2831,9 +2861,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return res.status(400).json({ message: "No subscription found" });
       }
 
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+      const baseUrl = process.env.APP_URL || 'https://optiprompt.se';
 
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,
@@ -2881,6 +2909,20 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
               session.subscription as string
             );
             console.log(`User ${userId} upgraded to ${targetPlan}`);
+
+            // Send subscription confirmation email
+            try {
+              const user = await storage.getUserById(userId);
+              if (user) {
+                const { sendSubscriptionConfirmedEmail } = await import('./email');
+                const planLabel = targetPlan === 'premium' ? 'Premium' : 'Pro';
+                const planPrice = targetPlan === 'premium' ? '599' : '299';
+                await sendSubscriptionConfirmedEmail(user.email, planLabel, planPrice, user.email);
+                console.log(`[Stripe Webhook] Confirmation email sent to ${user.email}`);
+              }
+            } catch (emailErr) {
+              console.error('[Stripe Webhook] Failed to send confirmation email:', emailErr);
+            }
           }
           break;
         }

@@ -6,13 +6,14 @@ import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { AuthModal } from "@/components/AuthModal";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
+import { LandingPage } from "@/components/LandingPage";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
-import { useStripeCheckout } from "@/hooks/use-stripe";
+import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
@@ -22,6 +23,7 @@ export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus } = useUserStatus();
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
+  const { mutate: openPortal, isPending: isPortalPending } = useStripePortal();
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
@@ -142,6 +144,20 @@ export default function Home() {
                   </Button>
                 )}
 
+                {/* Manage subscription (Pro/Premium only) */}
+                {(plan === "pro" || plan === "premium") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openPortal()}
+                    disabled={isPortalPending}
+                    className="text-gray-500 hover:text-gray-700 gap-1.5"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-xs">Konto</span>
+                  </Button>
+                )}
+
                 {/* User email + logout */}
                 <div className="hidden md:flex items-center gap-2 pl-3 border-l" style={{ borderColor: "#E8E5DE" }}>
                   <span className="text-xs text-gray-500 max-w-[140px] truncate">{user?.email}</span>
@@ -164,11 +180,22 @@ export default function Home() {
         </div>
       </header>
 
+      {/* ── LANDING PAGE for visitors ── */}
+      {!isAuthenticated && !authLoading && (
+        <LandingPage
+          onGetStarted={() => setAuthModalOpen(true)}
+          onStartCheckout={(tier) => {
+            setAuthModalOpen(true);
+          }}
+          isCheckoutPending={isCheckoutPending}
+        />
+      )}
+
       {/* ── MAIN ── */}
       <main className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* Hero — only when no result is showing */}
-        {!result && (
+        {/* Hero — only when no result is showing (logged in users) */}
+        {isAuthenticated && !result && (
           <div className="mb-8">
             <h1 className="text-2xl sm:text-3xl leading-snug mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
               5 texter. 1 klick. Redo att publicera.
@@ -404,7 +431,7 @@ export default function Home() {
                   <PersonalStyle />
                 )}
 
-                {/* Not logged in CTA */}
+                {/* Not logged in — minimal CTA in sidebar */}
                 {!isAuthenticated && (
                   <div className="rounded-xl border p-6 text-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
@@ -436,6 +463,8 @@ export default function Home() {
           <div className="flex gap-4">
             <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>
             <Link href="/teams" className="hover:underline" style={{ color: "#9CA3AF" }}>Teams</Link>
+            <Link href="/privacy" className="hover:underline" style={{ color: "#9CA3AF" }}>Integritetspolicy</Link>
+            <Link href="/terms" className="hover:underline" style={{ color: "#9CA3AF" }}>Villkor</Link>
           </div>
         </div>
       </footer>

@@ -62,7 +62,7 @@ class EmailPreferencesManager {
 
   async canSendEmail(
     userId: string,
-    emailType: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'marketing' | 'notification'
+    emailType: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'subscription_confirmed' | 'marketing' | 'notification'
   ): Promise<boolean> {
     const prefs = await this.getUserPreferences(userId);
     

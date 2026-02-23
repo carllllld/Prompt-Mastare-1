@@ -80,6 +80,11 @@ export interface IStorage {
   getUserByVerificationToken(token: string): Promise<User | null>;
   markEmailVerified(userId: string): Promise<void>;
   
+  // Password reset methods
+  setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void>;
+  getUserByPasswordResetToken(token: string): Promise<User | null>;
+  updatePassword(userId: string, passwordHash: string): Promise<void>;
+
   // Email rate limiting methods
   canSendEmail(email: string, emailType: string, maxPerHour: number): Promise<boolean>;
   recordEmailSent(email: string, emailType: string): Promise<void>;
@@ -483,6 +488,34 @@ export class DatabaseStorage implements IStorage {
         emailVerified: true, 
         verificationToken: null, 
         verificationTokenExpires: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void> {
+    await db.update(users)
+      .set({ 
+        passwordResetToken: token, 
+        passwordResetExpires: expires,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserByPasswordResetToken(token: string): Promise<User | null> {
+    const result = await db.select()
+      .from(users)
+      .where(eq(users.passwordResetToken, token));
+    return result[0] || null;
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    await db.update(users)
+      .set({ 
+        passwordHash,
+        passwordResetToken: null, 
+        passwordResetExpires: null,
         updatedAt: new Date()
       })
       .where(eq(users.id, userId));

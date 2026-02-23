@@ -48,7 +48,7 @@ export default function CookieBanner() {
             Dina sessionsdata lagras säkert i 30 dagar för att du ska förbli inloggad.
           </p>
           <p className="text-xs text-gray-400 mt-1">
-            Inga spårnings- eller marknadsföringscookies används.
+            Inga spårnings- eller marknadsföringscookies används. <a href="/privacy" className="underline hover:text-gray-300">Integritetspolicy</a>
           </p>
         </div>
         

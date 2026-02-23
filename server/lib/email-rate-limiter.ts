@@ -61,6 +61,7 @@ export const EMAIL_LIMITS = {
   team_invite: { max: 10, windowMs: 24 * 60 * 60 * 1000 }, // 10 per day
   password_reset: { max: 5, windowMs: 60 * 60 * 1000 }, // 5 per hour
   welcome: { max: 1, windowMs: 24 * 60 * 60 * 1000 }, // 1 per day per user
+  subscription_confirmed: { max: 3, windowMs: 60 * 60 * 1000 }, // 3 per hour
   general: { max: 20, windowMs: 60 * 60 * 1000 } // 20 per hour total
 };
 

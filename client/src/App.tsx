@@ -10,6 +10,9 @@ import PromptEditor from "@/pages/PromptEditor";
 import JoinTeam from "@/pages/JoinTeam";
 import HistoryPage from "@/pages/HistoryPage";
 import VerifyEmail from "@/pages/VerifyEmail";
+import ResetPassword from "@/pages/ResetPassword";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import Terms from "@/pages/Terms";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +24,9 @@ function Router() {
       <Route path="/prompts/:id" component={PromptEditor} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={Terms} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -12,11 +12,12 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ open, onOpenChange }: AuthModalProps) {
-  const [mode, setMode] = useState<"login" | "register" | "verify-pending" | "resend-verification">("login");
+  const [mode, setMode] = useState<"login" | "register" | "verify-pending" | "resend-verification" | "forgot-password">("login");
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string>("");
   const [isResending, setIsResending] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const { login, register, isLoggingIn, isRegistering } = useAuth();
   
   const loginEmailRef = useRef<HTMLInputElement>(null);
@@ -25,6 +26,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const registerPasswordRef = useRef<HTMLInputElement>(null);
   const registerConfirmRef = useRef<HTMLInputElement>(null);
   const resendEmailRef = useRef<HTMLInputElement>(null);
+  const forgotEmailRef = useRef<HTMLInputElement>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,12 +148,14 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             {mode === "register" && "Skapa konto"}
             {mode === "verify-pending" && "Verifiera e-post"}
             {mode === "resend-verification" && "Skicka verifieringsmail"}
+            {mode === "forgot-password" && "Glömt lösenord"}
           </DialogTitle>
           <DialogDescription className="sr-only">
             {mode === "login" && "Logga in på ditt konto"}
             {mode === "register" && "Skapa ett nytt konto"}
             {mode === "verify-pending" && "Verifiera din e-postadress"}
             {mode === "resend-verification" && "Skicka nytt verifieringsmail"}
+            {mode === "forgot-password" && "Återställ ditt lösenord"}
           </DialogDescription>
         </DialogHeader>
 
@@ -252,6 +256,65 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           </form>
         )}
 
+        {mode === "forgot-password" && (
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setError(null);
+            setSuccessMessage(null);
+            setIsResettingPassword(true);
+            const email = forgotEmailRef.current?.value || "";
+            if (!email || !email.includes("@")) {
+              setError("Ange en giltig e-postadress");
+              setIsResettingPassword(false);
+              return;
+            }
+            try {
+              const response = await fetch("/auth/forgot-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+              });
+              const data = await response.json();
+              if (!response.ok) {
+                setError(data.message || "Kunde inte skicka återställningsmail");
+              } else {
+                setSuccessMessage(data.message);
+              }
+            } catch (err: any) {
+              setError("Ett fel uppstod. Försök igen senare.");
+            } finally {
+              setIsResettingPassword(false);
+            }
+          }} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Ange din e-postadress så skickar vi en länk för att återställa ditt lösenord.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">E-postadress</Label>
+              <Input
+                id="forgot-email"
+                ref={forgotEmailRef}
+                type="email"
+                placeholder="din@email.se"
+                autoComplete="email"
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={isResettingPassword}>
+              {isResettingPassword ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Skickar...
+                </>
+              ) : (
+                "Skicka återställningslänk"
+              )}
+            </Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={goToLogin}>
+              Tillbaka till inloggning
+            </Button>
+          </form>
+        )}
+
         {mode === "login" && (
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
@@ -329,6 +392,12 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 data-testid="input-register-confirm-password"
               />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Genom att skapa konto godkänner du våra{" "}
+              <a href="/terms" className="underline hover:text-primary" target="_blank">användarvillkor</a>{" "}
+              och{" "}
+              <a href="/privacy" className="underline hover:text-primary" target="_blank">integritetspolicy</a>.
+            </p>
             <Button 
               type="submit" 
               className="w-full" 
@@ -363,8 +432,16 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 <br />
                 <button 
                   type="button"
+                  onClick={() => { setMode("forgot-password"); setError(null); setSuccessMessage(null); }} 
+                  className="text-muted-foreground hover:text-primary hover:underline mt-1 inline-block"
+                >
+                  Glömt lösenord?
+                </button>
+                <br />
+                <button 
+                  type="button"
                   onClick={() => setMode("resend-verification")} 
-                  className="text-muted-foreground hover:text-primary hover:underline mt-2 inline-block"
+                  className="text-muted-foreground hover:text-primary hover:underline mt-1 inline-block"
                   data-testid="button-go-to-resend"
                 >
                   Fått inget verifieringsmail?

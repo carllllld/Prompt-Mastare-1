@@ -44,6 +44,23 @@ export async function sendPasswordResetEmail(
   }, ip);
 }
 
+export async function sendSubscriptionConfirmedEmail(
+  email: string,
+  planName: string,
+  planPrice: string,
+  userName?: string,
+  ip?: string
+): Promise<EmailResult> {
+  const loginUrl = `${APP_URL}`;
+  
+  return queueEmail('subscription_confirmed', email, {
+    userName: userName || 'där',
+    planName,
+    planPrice,
+    loginUrl
+  }, ip);
+}
+
 export async function sendWelcomeEmail(
   email: string, 
   userName?: string,
