@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone } from "lucide-react";
+import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { TextEditor } from "./TextEditor";
@@ -8,6 +8,8 @@ import { PdfExport } from "./PdfExport";
 interface ResultSectionProps {
   result: OptimizeResponse;
   onNewPrompt: () => void;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
 function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
@@ -42,7 +44,7 @@ function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
   );
 }
 
-export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
+export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
 
@@ -258,10 +260,22 @@ export function ResultSection({ result, onNewPrompt }: ResultSectionProps) {
         </p>
       </div>
 
-      {/* ── NEW PROMPT ── */}
-      <div className="flex justify-center pt-2">
+      {/* ── ACTION BUTTONS ── */}
+      <div className="flex justify-center gap-3 pt-2">
+        {onRegenerate && (
+          <Button
+            variant="outline"
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            className="text-sm transition-colors font-medium"
+            style={{ borderColor: "#2D6A4F", color: isRegenerating ? "#9CA3AF" : "#2D6A4F" }}
+          >
+            {isRegenerating ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-2" />}
+            {isRegenerating ? "Genererar..." : "Generera igen"}
+          </Button>
+        )}
         <Button variant="ghost" onClick={onNewPrompt} className="text-sm transition-colors" style={{ color: "#9CA3AF" }}>
-          <RefreshCw className="w-3.5 h-3.5 mr-2" /> Skapa ny beskrivning
+          <RefreshCw className="w-3.5 h-3.5 mr-2" /> Ny beskrivning
         </Button>
       </div>
     </div>

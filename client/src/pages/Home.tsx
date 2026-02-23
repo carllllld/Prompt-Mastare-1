@@ -26,6 +26,7 @@ export default function Home() {
   const { toast } = useToast();
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [lastSubmitData, setLastSubmitData] = useState<any>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,7 @@ export default function Home() {
       setAuthModalOpen(true);
       return;
     }
+    setLastSubmitData(data);
     mutate(data, {
       onSuccess: (res: OptimizeResponse) => {
         setResult(res);
@@ -231,6 +233,8 @@ export default function Home() {
                 <ResultSection
                   result={result}
                   onNewPrompt={() => setResult(null)}
+                  onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
+                  isRegenerating={isPending}
                 />
               </div>
             ) : (

@@ -94,8 +94,11 @@ export const optimizeResponseSchema = z.object({
   improvement_suggestions: z.object({
     tone: z.string().optional(),
     target_audience_fit: z.string().optional(),
+    structure_quality: z.string().optional(),
+    information_density: z.string().optional(),
     missing_elements: z.array(z.string()).optional(),
     strengths: z.array(z.string()).optional(),
+    text_improvements: z.array(z.string()).optional(),
   }).optional(),
   factCheck: z.object({
     fact_check_passed: z.boolean().optional(),

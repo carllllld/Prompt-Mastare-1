@@ -1086,17 +1086,36 @@ function addParagraphs(text: string): string {
   const sentences = text.split(/(?<=[.!?])\s+/);
   if (sentences.length < 4) return text;
   
-  // Dela upp i stycken om ~3-4 meningar vardera
+  // Ämnesord som indikerar nytt stycke (rumsnamn, sektioner)
+  const topicStarters = /^(Hallen|Hall\b|Vardagsrummet|Vardagsrum\b|Köket|Kök\b|Sovrummet|Sovrum\b|Huvudsovrummet|Badrummet|Badrum\b|Balkongen|Balkong\b|Altanen|Altan\b|Trädgården|Trädgård\b|Tomten|Tomt\b|Källaren|Källare\b|Övervåning|Entréplan|Bottenvåning|BRF\b|Förening|Avgift\b|Garage|Carport|Förråd|Tvättstuga|Gäst-wc)/i;
+  const locationStarters = /^(Centralstation|Resecentrum|Buss\b|Spårvagn|Tåg\b|Pendeltåg|Tunnelbana|ICA\b|Coop\b|Hemköp|Willys|Matbutik|Skola|Förskola|Centrum\b|Avstånd|Kommunikation)/i;
+  
   const paragraphs: string[] = [];
   let currentParagraph: string[] = [];
+  let lastWasLocation = false;
   
   for (let i = 0; i < sentences.length; i++) {
-    currentParagraph.push(sentences[i]);
-    // Skapa nytt stycke efter 3-4 meningar
-    if (currentParagraph.length >= 3 && i < sentences.length - 2) {
+    const sentence = sentences[i];
+    const isTopicStart = topicStarters.test(sentence);
+    const isLocationStart = locationStarters.test(sentence);
+    
+    // Bryt stycke vid ämnesbyte (men inte för första meningen)
+    if (i > 0 && currentParagraph.length >= 2) {
+      // Nytt ämne = nytt stycke
+      if (isTopicStart || (isLocationStart && !lastWasLocation)) {
+        paragraphs.push(currentParagraph.join(" "));
+        currentParagraph = [];
+      }
+    }
+    
+    // Fallback: bryt efter 4 meningar om inga ämnesord hittas
+    if (currentParagraph.length >= 4 && i < sentences.length - 1) {
       paragraphs.push(currentParagraph.join(" "));
       currentParagraph = [];
     }
+    
+    currentParagraph.push(sentence);
+    lastWasLocation = isLocationStart;
   }
   
   if (currentParagraph.length > 0) {
@@ -1281,18 +1300,34 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
     {
       text: "Andra Långgatan 15, 2 tr, Göteborg. Tvåa om 48 kvm med balkong mot gården.\n\nHallen har garderob. Vardagsrummet har två fönster och takhöjd 2,60 meter. Ekparkett genomgående.\n\nKöket har vita luckor och vitvaror från Electrolux 2020. Plats för två vid fönstret.\n\nSovrummet rymmer dubbelsäng. Badrummet är helkaklat med dusch och tvättmaskin.\n\nBalkongen på 3 kvm vetter mot väster. Avgift 3 200 kr/mån.\n\nSpårvagn Järntorget 2 minuter. Coop på Andra Långgatan.",
       metadata: { type: "lägenhet", rooms: 2, size: 48 }
+    },
+    {
+      text: "Nygatan 22, 4 tr, Norrköping. Tvåa om 42 kvm med balkong mot innergården.\n\nHall med hatthylla. Vardagsrummet har fönster åt söder och ekparkett.\n\nKöket har vita luckor och Electrolux-vitvaror. Diskmaskin. Matplats för två.\n\nSovrummet rymmer 120-säng och har garderob. Badrummet renoverat 2021 med dusch och tvättmaskin.\n\nBalkong 2 kvm mot söder. BRF Stadshagen, avgift 2 900 kr/mån.\n\nResecentrum 5 minuter. Willys Hemma 200 meter.",
+      metadata: { type: "lägenhet", rooms: 2, size: 42 }
+    },
+    {
+      text: "Storgatan 45, 1 tr, Jönköping. Etta om 28 kvm med sjöutsikt.\n\nÖppen planlösning. Köket har nya vitvaror och laminatbänk. Kyl, frys och spis.\n\nBadrummet helkaklat med dusch. Laminatgolv.\n\nFönster mot Vättern. BRF Sjögläntan, avgift 2 400 kr/mån.\n\nBuss till centrum 3 minuter. ICA 400 meter.",
+      metadata: { type: "lägenhet", rooms: 1, size: 28 }
     }
   ],
 
   // MELLANSTORA LÄGENHETER (2-3 rum, 55-85 kvm)
   medium_apartment: [
     {
-      text: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm med genomgående planlösning.\n\nHallen har garderob. Vardagsrummet mot gatan har tre fönster och takhöjd 2,85 meter. Ekparkett genomgående.\n\nKöket är renoverat 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Plats för matbord vid fönstret.\n\nSovrummet mot gården rymmer dubbelsäng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet är helkaklat, renoverat 2019, med dusch och tvättmaskin.\n\nBalkongen på 5 kvm vetter mot söder. BRF Solgården har stambyte 2018. Avgift 4 100 kr/mån.\n\nCentralstationen 8 minuters promenad. ICA Nära i kvarteret. Stadstradgarden 200 meter.",
+      text: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm med genomgående planlösning.\n\nHallen har garderob. Vardagsrummet mot gatan har tre fönster och takhöjd 2,85 meter. Ekparkett genomgående.\n\nKöket är renoverat 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Plats för matbord vid fönstret.\n\nSovrummet mot gården rymmer dubbelsäng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet är helkaklat, renoverat 2019, med dusch och tvättmaskin.\n\nBalkongen på 5 kvm vetter mot söder. BRF Solgården har stambyte 2018. Avgift 4 100 kr/mån.\n\nCentralstationen 8 minuters promenad. ICA Nära i kvarteret. Stadsparken 200 meter.",
       metadata: { type: "lägenhet", rooms: 3, size: 74 }
     },
     {
       text: "Rönnvägen 12, 1 tr, Malmö. Tvåa om 62 kvm med balkong i söderläge.\n\nHallen har platsbyggd garderob. Vardagsrummet har stort fönsterparti och takhöjd 2,55 meter. Laminatgolv genomgående.\n\nKöket har bänkskiva i laminat och vitvaror från Bosch 2022. Matplats för fyra vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat med dusch, wc och tvättmaskin. Golvvärme.\n\nBalkongen på 4 kvm vetter mot söder. Avgift 3 650 kr/mån.\n\nBuss 5 minuter till Triangeln. Coop 300 meter. Pildammsparken 10 minuters promenad.",
       metadata: { type: "lägenhet", rooms: 2, size: 62 }
+    },
+    {
+      text: "Vasagatan 18, 3 tr, Linköping. Trea om 78 kvm. Byggår 1945, stambyte 2020.\n\nHall med garderob och klinker. Vardagsrummet har två fönster mot gatan. Takhöjd 2,80 meter. Ekparkett.\n\nKöket renoverat 2020 med Kvik-luckor och Bosch-vitvaror. Bänkskiva i sten. Matplats för fyra.\n\nHuvudsovrummet rymmer dubbelsäng. Det andra sovrummet passar som barnrum eller kontor. Badrummet helkaklat med badkar och tvättmaskin.\n\nBalkong 4 kvm mot gården. BRF Eken, avgift 4 500 kr/mån.\n\nResecentrum 6 minuter. Hemköp i kvarteret.",
+      metadata: { type: "lägenhet", rooms: 3, size: 78 }
+    },
+    {
+      text: "Bergsgatan 9, 2 tr, Örebro. Tvåa om 58 kvm med nytt kök.\n\nHall med förvaring. Vardagsrummet har fönster i två väderstreck och laminatgolv.\n\nKöket nytt 2023 med IKEA-stomme och Siemens-vitvaror. Matplats vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob. Badrummet med dusch och tvättmaskin.\n\nIngen balkong. BRF Svalan, avgift 3 100 kr/mån. Stambyte planerat 2026.\n\nCentrum 5 minuters promenad. Tågstation 8 minuter.",
+      metadata: { type: "lägenhet", rooms: 2, size: 58 }
     }
   ],
 
@@ -1301,6 +1336,14 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
     {
       text: "Kungsgärdsgatan 7, 2 tr, Uppsala. Fyra om 105 kvm med balkong i västerläge.\n\nHallen har platsbyggd garderob och klinker. Vardagsrummet har tre fönster och takhöjd 2,70 meter. Ekparkett genomgående.\n\nKöket är från Marbodal 2020 med stenbänkskiva och vitvaror från Siemens. Plats för matbord för sex.\n\nHuvudsovrummet rymmer dubbelsäng och har garderob. Två mindre sovrum. Badrummet är helkaklat med badkar och dusch. Separat toalett.\n\nBalkongen på 8 kvm vetter mot väster. BRF Kungsparken har stambyte 2020. Avgift 5 800 kr/mån.\n\nCentralstationen 5 minuter. Coop Forum 400 meter.",
       metadata: { type: "lägenhet", rooms: 4, size: 105 }
+    },
+    {
+      text: "Strandvägen 32, 4 tr, Helsingborg. Fyra om 112 kvm med havsutsikt.\n\nHall med platsbyggd garderob. Vardagsrummet har tre fönster mot Öresund och takhöjd 2,90 meter. Ekparkett genomgående.\n\nKöket från Ballingslöv 2019 med granitbänk och Gaggenau-vitvaror. Matplats för sex vid fönstret.\n\nTre sovrum. Huvudsovrummet med garderob och fönster mot havet. Badrum med badkar och dusch, helkaklat. Separat gäst-wc.\n\nBalkong 10 kvm mot väster. BRF Strandgården, avgift 6 200 kr/mån.\n\nKnutpunkten 8 minuter. ICA Kvantum 5 minuters promenad.",
+      metadata: { type: "lägenhet", rooms: 4, size: 112 }
+    },
+    {
+      text: "Södra Vägen 15, 5 tr, Göteborg. Femma om 130 kvm med hiss.\n\nHall med garderob och klinker. Vardagsrummet har öppen spis och fönster åt två håll. Takhöjd 3,10 meter. Fiskbensparkett.\n\nKöket renoverat 2022 med Noblessa-luckor och Miele-vitvaror. Bänkskiva i marmor. Köksö med barsittning.\n\nFyra sovrum. Huvudsovrummet med walk-in-closet. Badrum med badkar och dusch. Gäst-wc.\n\nBalkong 6 kvm i söderläge. BRF Victoriaparken, stambyte 2017. Avgift 7 100 kr/mån.\n\nKungsportsplatsen 4 minuter. Saluhallen Briggen 300 meter.",
+      metadata: { type: "lägenhet", rooms: 5, size: 130 }
     }
   ],
 
@@ -1315,8 +1358,16 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
       metadata: { type: "villa", rooms: 5, size: 145 }
     },
     {
-      text: "Granlundsvägen 3, Umeå. Villa om 160 kvm på tomt om 1 100 kvm. Byggår 1985.\n\nEntréplan ha hall, vardagsrum, kök och gästrum. Köket har vitvaror från Electrolux och bänkskiva i trä. Vardagsrummet har eldstad.\n\nÖvervåningen har tre sovrum och badrum med badkar. Huvudsovrummet har garderob.\n\nKällare med tvättstuga och förråd. Tomten har garage, gräsmatta och uteplats. Bergvärme.\n\nGrubbeskolan 300 meter. ICA Maxi 5 minuter med bil. E4:an 3 km.",
+      text: "Granlundsvägen 3, Umeå. Villa om 160 kvm på tomt om 1 100 kvm. Byggår 1985.\n\nEntréplan med hall, vardagsrum, kök och gästrum. Köket har vitvaror från Electrolux och bänkskiva i trä. Vardagsrummet har eldstad.\n\nÖvervåningen har tre sovrum och badrum med badkar. Huvudsovrummet har garderob.\n\nKällare med tvättstuga och förråd. Tomten har garage, gräsmatta och uteplats. Bergvärme.\n\nGrubbeskolan 300 meter. ICA Maxi 5 minuter med bil. E4:an 3 km.",
       metadata: { type: "villa", rooms: 5, size: 160 }
+    },
+    {
+      text: "Ekvägen 7, Täby. Villa om 210 kvm på tomt om 1 050 kvm. Byggår 2018.\n\nEntréplan med hall, vardagsrum med dubbelsidig eldstad, kök och gäst-wc. Köket från Ballingslöv med granitbänk och Miele-vitvaror. Köksö med barsittning.\n\nÖvervåning med fyra sovrum och två badrum. Huvudsovrummet med walk-in-closet och eget badrum med badkar.\n\nAltan 35 kvm i sydvästläge med inbyggd utekök. Dubbelgarage. Gräsmatta och planteringar.\n\nTäby centrum 8 minuter med bil. Roslagsbanan 5 minuters promenad.",
+      metadata: { type: "villa", rooms: 6, size: 210 }
+    },
+    {
+      text: "Sjövägen 12, Växjö. Villa om 125 kvm på tomt om 680 kvm. Byggår 1972.\n\nEntréplan med hall, vardagsrum och kök. Köket har laminatbänk och vitvaror från Electrolux. Vardagsrummet har parkettgolv.\n\nÖvervåning med tre sovrum och badrum med dusch. Laminatgolv.\n\nTomten har gräsmatta och uteplats. Carport. Förråd. Fjärrvärme.\n\nPåvelundsskolan 500 meter. Coop 5 minuter. Centrum 10 minuter med cykel.",
+      metadata: { type: "villa", rooms: 4, size: 125 }
     }
   ],
 
@@ -1329,40 +1380,22 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
     {
       text: "Ekbacken 5, Partille. Radhus om 110 kvm med 4 rum. Byggår 1995.\n\nBottenvåning med hall, kök och vardagsrum. Köket har vitvaror från Electrolux och laminatbänk. Utgång till uteplats.\n\nÖvervåning med tre sovrum och badrum med dusch. Laminatgolv genomgående.\n\nUteplats i söderläge på 15 kvm. Förråd. P-plats.\n\nSkola 400 meter. ICA 5 minuter. Spårvagn till Göteborg centrum 20 minuter.",
       metadata: { type: "radhus", rooms: 4, size: 110 }
+    },
+    {
+      text: "Ängsgatan 14, Lund. Radhus om 95 kvm med 3 rum. Byggår 2010.\n\nBottenvåning med hall, kök och vardagsrum. Köket från Marbodal med Siemens-vitvaror. Utgång till altanen.\n\nÖvervåning med två sovrum och badrum med dusch och badkar. Ekparkett.\n\nAltan i västerläge, 12 kvm. Förråd 6 kvm. P-plats.\n\nLunds centralstation 10 minuter med buss. ICA Supermarket 300 meter.",
+      metadata: { type: "radhus", rooms: 3, size: 95 }
+    },
+    {
+      text: "Hasslevägen 8, Västerås. Radhus om 135 kvm med 5 rum. Byggår 1988, renoverat 2020.\n\nBottenvåning med hall, kök, vardagsrum och gäst-wc. Köket renoverat 2020 med IKEA-stomme och Bosch-vitvaror. Öppen planlösning.\n\nÖvervåning med fyra sovrum och badrum med dusch och badkar. Golvvärme i badrum.\n\nTrädgård med gräsmatta och stenlagd uteplats i söderläge. Garage. Förråd 8 kvm.\n\nSkola 300 meter. Hemköp 5 minuter. Mälaren 10 minuters promenad.",
+      metadata: { type: "radhus", rooms: 5, size: 135 }
     }
   ]
 };
 
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
-const HEMNET_TEXT_PROMPT = `Du skriver Hemnet-annonser som Sveriges bästa mäklare. Studera exemplen nedan — imitera stilen EXAKT.
+const HEMNET_TEXT_PROMPT = `Du skriver Hemnet-annonser som Sveriges bästa mäklare. Studera MATCHADE EXEMPEL i user-meddelandet — imitera stilen EXAKT.
 
-# SÅ HÄR LÅTER EN RIKTIG MÄKLARE (memorera rytmen)
-
-EXEMPEL A — Lägenhet:
-"Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm med genomgående planlösning.
-
-Hallen har garderob. Vardagsrummet mot gatan har tre fönster och takhöjd 2,85 meter. Ekparkett genomgående.
-
-Köket renoverat 2021 med Ballingslöv-luckor, kompositbänk och Siemens-vitvaror. Matplats vid fönstret.
-
-Sovrummet mot gården rymmer dubbelsäng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet helkaklat, renoverat 2019, med dusch och tvättmaskin.
-
-Balkong 5 kvm i söderläge. BRF Solgården, stambyte 2018. Avgift 4 100 kr/mån.
-
-Centralstationen 8 minuters promenad. ICA Nära i kvarteret. Stadsparken 200 meter."
-
-EXEMPEL B — Villa:
-"Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm. Byggår 1978, renoverad 2021.
-
-Entréplan med hall, vardagsrum, kök och badrum. Köket från IKEA 2021 med Bosch-vitvaror. Öppen planlösning mot vardagsrummet.
-
-Övervåning med fyra sovrum. Helkaklat badrum med dusch och badkar.
-
-Stenlagd uteplats i söderläge. Gräsmatta. Garage. Förråd 12 kvm.
-
-Löddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 min med bil."
-
-# ANALYS AV EXEMPLEN — DET HÄR GÖR DEM BRA:
+# STILREGLER (det här gör riktiga mäklartexter bra):
 - Första meningen: gatuadress + typ + kvm. Punkt. Klar.
 - Varje mening = ETT nytt faktum. Noll utfyllnad.
 - Rumsnamnet startar meningen: "Köket har...", "Balkongen vetter...", "Hallen har..."
@@ -1446,35 +1479,9 @@ Ex: "Drottninggatan 42, Uppsala. 3 rok, 74 kvm. Ballingslöv-kök 2021. Balkong 
 9. Skriv som exemplen ovan. Kort. Rakt. Specifikt. Mänskligt.`;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du skriver objektbeskrivningar för Booli/egen mäklarsida som Sveriges bästa mäklare. Studera exemplen — imitera stilen EXAKT. Booli tillåter mer detalj och pris.
+const BOOLI_TEXT_PROMPT_WRITER = `Du skriver objektbeskrivningar för Booli/egen mäklarsida som Sveriges bästa mäklare. Studera MATCHADE EXEMPEL i user-meddelandet — imitera stilen EXAKT. Booli tillåter mer detalj och pris.
 
-# SÅ HÄR LÅTER EN RIKTIG MÄKLARE (memorera rytmen)
-
-EXEMPEL A — Lägenhet:
-"Kungsgärdsgatan 7, 2 tr, Uppsala. Fyra om 105 kvm med balkong i västerläge.
-
-Hallen har platsbyggd garderob och klinker. Vardagsrummet har tre fönster och takhöjd 2,70 meter. Ekparkett genomgående.
-
-Köket från Marbodal 2020 med stenbänkskiva och Siemens-vitvaror. Matplats för sex personer.
-
-Huvudsovrummet rymmer dubbelsäng och har garderob. Två mindre sovrum. Badrummet helkaklat med badkar och dusch. Separat toalett.
-
-Balkong 8 kvm i västerläge. BRF Kungsparken, stambyte 2020. Avgift 5 800 kr/mån.
-
-Centralstationen 5 minuter. Coop Forum 400 meter. Utgångspris 4 200 000 kr."
-
-EXEMPEL B — Villa:
-"Tallvägen 8, Djursholm. Villa om 180 kvm på tomt om 920 kvm. Byggår 1962, tillbyggd 2015.
-
-Entréplan med hall, vardagsrum med eldstad, kök och ett sovrum. Köket från HTH 2015 med granitbänk och induktionshäll. Vardagsrummet har utgång till altanen.
-
-Övervåning med tre sovrum och badrum med badkar och golvvärme. Huvudsovrummet har garderob och fönster åt två håll.
-
-Källare med tvättstuga, förråd och extra rum. Altan 25 kvm i västerläge med pergola. Dubbelgarage och uppfart för två bilar.
-
-Djursholms samskola 600 meter. Mörby centrum ca 10 minuters promenad. Utgångspris 12 500 000 kr."
-
-# DET HÄR GÖR EXEMPLEN BRA:
+# STILREGLER (det här gör riktiga mäklartexter bra):
 - Gatuadress + typ + kvm i första meningen. Punkt.
 - Varje mening = ETT nytt faktum. Noll utfyllnad.
 - Rumsnamnet startar meningen. ALDRIG "Det finns" eller "Den har" som meningsstart (max 1x).
@@ -1950,52 +1957,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Bestäm AI-modell baserat på plan
       const aiModel = (plan === "pro" || plan === "premium") ? "gpt-4o" : "gpt-4o-mini";
 
-      // Konkurrentanalys (Pro + Premium-funktion)
+      // Konkurrentanalys (Pro + Premium-funktion) — använder disposition-data
       let competitorAnalysis = "";
       if (plan === "pro" || plan === "premium") {
-        console.log(`[Competitor Analysis] Analyzing market position...`);
-        
-        // Extrahera grundläggande info från prompten för analys
-        const propertyInfo = {
-          area: prompt.match(/i\s+([A-Za-z-]+)/i)?.[1] || "okänt område",
-          type: type || "lägenhet",
-          price: prompt.match(/(\d+\s*(?:k|tk|m|mn|kr))/i)?.[1] || "ej specificerat"
-        };
+        try {
+          const pd = req.body.propertyData;
+          const area = pd?.area || pd?.address?.split(",").pop()?.trim() || "";
+          const propType = type || "lägenhet";
+          const price = pd?.price || "";
+          const size = pd?.livingArea || "";
+          
+          if (area || price) {
+            console.log(`[Competitor Analysis] Analyzing: ${propType} in ${area}...`);
+            const competitorMessages = [
+              {
+                role: "system" as const,
+                content: `Du är en expert på svensk fastighetsmarknad. Ge KORTA, KONKRETA positioneringstips. Max 150 ord. Svara som punktlista.`
+              },
+              {
+                role: "user" as const,
+                content: `Objekt: ${propType}, ${size} kvm i ${area}. Pris: ${price} kr.
 
-        const competitorMessages = [
-          {
-            role: "system" as const,
-            content: `Du är en expert på svensk fastighetsmarknad. Analysera konkurrensläget för ett objekt och ge konkreta råd för hur det ska positioneras för att sticka ut. Var realistisk och baserad på faktiska marknadsförhållanden.`
-          },
-          {
-            role: "user" as const,
-            content: `Analysera detta objekt och ge konkreta positioningstips:
+Ge mig exakt 3 punkter:
+1. UNDVIK: En vanlig klyscha som konkurrenterna använder för denna typ av objekt
+2. LYFT: En konkret detalj som sällan nämns men som köpare värdesätter
+3. VINKEL: En positioneringsstrategi för just detta läge/typ`
+              }
+            ];
 
-OBJEKTINFO:
-- Område: ${propertyInfo.area}
-- Typ: ${propertyInfo.type}
-- Pris: ${propertyInfo.price}
-- Originalbeskrivning: ${prompt}
+            const competitorCompletion = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: competitorMessages,
+              max_tokens: 300,
+              temperature: 0.3,
+            });
 
-Ge mig:
-1. Vanliga klyschor och svaga formuleringar som konkurrenterna använder (undvik dessa)
-2. Unika säljpunkter som konkurrenterna sällan nämner (fokusera på dessa)
-3. Positioneringstips för att sticka ut i mängden
-4. Specifika detaljer som är värda att lyfta fram
-
-Svara kortfattat och konkret.`
+            competitorAnalysis = competitorCompletion.choices[0]?.message?.content || "";
+            console.log(`[Competitor Analysis] Done`);
           }
-        ];
-
-        const competitorCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: competitorMessages,
-          max_tokens: 800,
-          temperature: 0.3,
-        });
-
-        competitorAnalysis = competitorCompletion.choices[0]?.message?.content || "";
-        console.log(`[Competitor Analysis] Completed: ${competitorAnalysis.substring(0, 100)}...`);
+        } catch (e) {
+          console.warn("[Competitor Analysis] Failed, continuing:", e);
+        }
       }
       
       // Bildanalys om bilder finns
@@ -2140,9 +2142,39 @@ Svara kortfattat och konkret.`
         }
       }
 
+      // STEG 2: Skapa evidence-gated skrivplan med PLAN_PROMPT (Pro/Premium)
+      if (plan !== "free") {
+        try {
+          console.log("[Step 2] Creating evidence-gated writing plan...");
+          const planMessages = [
+            { role: "system" as const, content: PLAN_PROMPT },
+            {
+              role: "user" as const,
+              content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}`,
+            },
+          ];
+
+          const planCompletion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: planMessages,
+            max_tokens: 1500,
+            temperature: 0.1,
+            response_format: { type: "json_object" },
+          });
+
+          const aiPlan = safeJsonParse(planCompletion.choices[0]?.message?.content || "{}");
+          if (aiPlan.paragraph_outline || aiPlan.claims) {
+            writingPlan = aiPlan;
+            console.log(`[Step 2] Writing plan created with ${aiPlan.claims?.length || 0} evidence-gated claims`);
+          }
+        } catch (e) {
+          console.warn("[Step 2] Plan generation failed, using basic plan:", e);
+        }
+      }
+
       // Matcha exempel från EXAMPLE_DATABASE
       const matchedExamples = matchExamples(disposition, toneAnalysis);
-      console.log(`[Step 2] Matched ${matchedExamples.length} examples`);
+      console.log(`[Step 2b] Matched ${matchedExamples.length} examples`);
 
       // Hämta personlig stil om den finns
       let personalStylePrompt = "";
@@ -2162,6 +2194,34 @@ Svara kortfattat och konkret.`
       const isHemnet = platform === "hemnet";
       const textPrompt = isHemnet ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
 
+      // Typspecifika negativa/positiva exempel
+      const propType = (disposition?.property?.type || "lägenhet").toLowerCase();
+      let negativeExample: string;
+      let positiveExample: string;
+      
+      if (propType.includes("villa") || propType.includes("hus")) {
+        negativeExample = `"Välkommen till denna fantastiska villa som erbjuder generösa ytor och en ljus och luftig atmosfär. Huset präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla av rymd. Trädgården erbjuder en grön oas perfekt för den som söker lugn och avkoppling. Den strategiskt placerade villan ger en unik möjlighet att njuta av natursköna omgivningar. Kontakta oss för visning!"`;
+        positiveExample = `"Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm. Byggår 1978, renoverad 2021.\n\nEntréplan med hall, vardagsrum, kök och badrum. Köket från IKEA 2021 med Bosch-vitvaror. Öppen planlösning mot vardagsrummet.\n\nÖvervåning med fyra sovrum. Helkaklat badrum med dusch och badkar.\n\nStenlagd uteplats i söderläge. Gräsmatta. Garage. Förråd 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 min med bil."`;
+      } else if (propType.includes("radhus")) {
+        negativeExample = `"Välkommen till detta charmiga och välplanerade radhus som erbjuder en perfekt kombination av modern komfort och klassisk charm. Den genomtänkta planlösningen bjuder på generösa ytor som skapar en harmonisk känsla. Trädgården erbjuder en härlig plats för avkoppling och sociala tillställningar. Kontakta oss för visning!"`;
+        positiveExample = `"Solnavägen 23, Solna. Radhus om 120 kvm med 4 rum och kök.\n\nBottenvåning med kök och vardagsrum i öppen planlösning. Köket från IKEA 2021 med Bosch-vitvaror. Utgång till trädgården.\n\nÖvervåning med tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet helkaklat med dusch. Laminatgolv.\n\nTrädgård med gräsmatta och uteplats i söderläge. Förråd 10 kvm. Carport.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter."`;
+      } else {
+        negativeExample = `"Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket erbjuder gott om arbetsyta vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!"`;
+        positiveExample = `"Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet har tre fönster och ekparkett. Takhöjd 2,70 meter.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch och tvättmaskin.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter."`;
+      }
+
+      // Instruktion om intelligence-data om den finns
+      let intelligenceInstruction = "";
+      if (toneAnalysis.market_position) {
+        intelligenceInstruction += `\nMARKNADSPOSITION: Segmentet är "${toneAnalysis.market_position.segment}". Anpassa detaljnivå: luxury=fler material/märken, budget=fokus läge/potential.\n`;
+      }
+      if (toneAnalysis.architectural_value?.era) {
+        intelligenceInstruction += `ARKITEKTUR-EPOK: ${toneAnalysis.architectural_value.era.name || ""}. Nämn husepoken korrekt om det passar.\n`;
+      }
+      if (toneAnalysis.market_trends) {
+        intelligenceInstruction += `MARKNADSTREND: Använd trenddata för att lyfta rätt säljpunkter.\n`;
+      }
+
       const textMessages = [
         {
           role: "system" as const,
@@ -2169,7 +2229,7 @@ Svara kortfattat och konkret.`
         },
         {
           role: "user" as const,
-          content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `KONKURRENTANALYS:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL:\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n"Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket erbjuder gott om arbetsyta vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!"\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n"Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet har tre fönster och ekparkett. Takhöjd 2,70 meter.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch och tvättmaskin.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter."`,
+          content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${intelligenceInstruction}${competitorAnalysis ? `KONKURRENTANALYS:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`,
         },
       ];
 
@@ -2203,42 +2263,79 @@ Svara kortfattat och konkret.`
         }
       }
 
-      // STEG 5: Validering
+      // STEG 5: Validering + kirurgisk korrigering
       const violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
       if (violations.length > 0) {
-        console.log(`[Step 5] Found ${violations.length} violations, attempting AI correction...`);
+        console.log(`[Step 5] Found ${violations.length} violations, attempting surgical correction...`);
 
-        // Försök AI-korrigering vid allvarliga violations
-        if (violations.length <= 5) {
-          try {
+        try {
+          // Filtrera bort ordräknings-violations (kan inte fixas genom textredigering)
+          const textViolations = violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
+          
+          if (textViolations.length > 0) {
             const correctionMessages = [
               {
                 role: "system" as const,
-                content: `Du är en korrekturläsare för svenska fastighetstexter. Fixa BARA de angivna felen. Behåll ALL korrekt text. Svara med JSON: {"corrected_text": "korrigerad text"}`,
+                content: `Du är en kirurgisk korrekturläsare för svenska fastighetstexter.
+
+DITT JOBB: Ersätt EXAKT de felaktiga fraserna med korrekta ersättningar. Ändra INGET annat.
+
+REGLER:
+1. Kopiera HELA texten exakt som den är
+2. Byt BARA ut de markerade felen — rör INTE resten
+3. Om en fras ska tas bort: ta bort den och städa meningen grammatiskt
+4. Om en fras ska ersättas: byt ut den och behåll meningsstrukturen
+5. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är
+6. Lägg ALDRIG till nya meningar eller information
+7. Svara med JSON: {"corrected_text": "hela texten med bara felen fixade"}
+
+ERSÄTTNINGSTABELL:
+- "erbjuder" → "har"
+- "bjuder på" → "har"
+- "generös/generösa/generöst" → ta bort ordet, använd exakt mått om det finns
+- "vilket" → dela meningen i två vid "vilket": "X, vilket Y" → "X. Y"
+- "för den som" → ta bort hela frasen
+- "fantastisk/fantastiskt" → ta bort
+- "perfekt" → "passar bra" eller ta bort
+- "ljus och luftig" → "ljus"
+- "stilrent och modernt" → "modernt"
+- Alla "X och Y"-adjektivpar → behåll bara det första
+- "Det finns även/också" → börja med vad som finns istället`,
               },
               {
                 role: "user" as const,
-                content: `TEXT:\n${result.improvedPrompt}\n\nFEL ATT FIXA:\n${violations.map(v => `- ${v}`).join("\n")}\n\nERSÄTTNINGAR:\n- "erbjuder" → "har"\n- "bjuder på" → "har"\n- "generös" → ta bort eller använd exakt mått\n- "vilket" → dela i två meningar\n- "för den som" → ta bort\n- "fantastisk" → ta bort`,
+                content: `ORIGINALTEXT (ändra BARA de markerade felen, behåll allt annat exakt):\n\n${result.improvedPrompt}\n\nFEL SOM MÅSTE FIXAS (${textViolations.length} st):\n${textViolations.map((v, i) => `${i + 1}. ${v}`).join("\n")}`,
               },
             ];
 
             const correctionCompletion = await openai.chat.completions.create({
               model: "gpt-4o-mini",
               messages: correctionMessages,
-              max_tokens: 2000,
+              max_tokens: 3000,
               temperature: 0.05,
               response_format: { type: "json_object" },
             });
 
             const corrected = safeJsonParse(correctionCompletion.choices[0]?.message?.content || "{}");
             if (corrected.corrected_text) {
-              result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text);
-              result.improvedPrompt = addParagraphs(result.improvedPrompt);
-              console.log("[Step 5] AI correction applied successfully");
+              // Verifiera att korrigeringen inte ändrade för mycket (max 30% ändring)
+              const originalWords = result.improvedPrompt.split(/\s+/).length;
+              const correctedWords = corrected.corrected_text.split(/\s+/).length;
+              const wordDiff = Math.abs(originalWords - correctedWords);
+              
+              if (wordDiff / originalWords < 0.3) {
+                result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text);
+                result.improvedPrompt = addParagraphs(result.improvedPrompt);
+                console.log(`[Step 5] Surgical correction applied (${textViolations.length} violations fixed, ${wordDiff} words changed)`);
+              } else {
+                console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff/originalWords*100)}%), keeping original`);
+                // Kör ändå cleanForbiddenPhrases som fallback
+                result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+              }
             }
-          } catch (e) {
-            console.warn("[Step 5] AI correction failed, using original:", e);
           }
+        } catch (e) {
+          console.warn("[Step 5] AI correction failed, using original:", e);
         }
       }
 
@@ -2332,7 +2429,7 @@ Svara med JSON i formatet:
 
         try {
           const improvementCompletion = await openai.chat.completions.create({
-            model: aiModel,
+            model: "gpt-4o-mini",
             messages: improvementMessages,
             max_tokens: 800,
             temperature: 0.3,
@@ -2367,7 +2464,19 @@ Svara med JSON i formatet:
         showingInvitation: result.showingInvitation || null,
         shortAd: result.shortAd || null,
         improvement_suggestions: improvementSuggestions,
-        factCheck: factCheckResult ? { passed: factCheckResult.fact_check_passed !== false, issues: factCheckResult.issues || [] } : { passed: violations.length === 0, issues: violations },
+        factCheck: factCheckResult ? {
+          fact_check_passed: factCheckResult.fact_check_passed !== false,
+          issues: (factCheckResult.issues || []).map((issue: any) =>
+            typeof issue === "string" ? { quote: issue, reason: "" } : issue
+          ),
+          quality_score: factCheckResult.quality_score ?? null,
+          broker_tips: factCheckResult.broker_tips || [],
+        } : {
+          fact_check_passed: violations.length === 0,
+          issues: violations.map(v => ({ quote: v, reason: "" })),
+          quality_score: null,
+          broker_tips: [],
+        },
         wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
       });
     } catch (err: any) {
