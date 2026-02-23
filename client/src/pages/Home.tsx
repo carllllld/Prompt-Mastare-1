@@ -82,9 +82,9 @@ export default function Home() {
   };
 
   const plan = userStatus?.plan || "free";
-  const remaining = userStatus?.promptsRemaining ?? 0;
-  const limit = userStatus?.monthlyLimit ?? 2;
-  const used = userStatus?.promptsUsedToday ?? 0;
+  const remaining = userStatus?.textsRemaining ?? 0;
+  const limit = userStatus?.monthlyTextLimit ?? 2;
+  const used = userStatus?.textsUsedThisMonth ?? 0;
 
   return (
     <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
@@ -123,11 +123,11 @@ export default function Home() {
                   </Button>
                 </Link>
 
-                {/* Pro badge or upgrade */}
-                {plan === "pro" ? (
-                  <div className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: "#D4AF37", color: "#fff" }}>
+                {/* Pro/Premium badge or upgrade */}
+                {(plan === "pro" || plan === "premium") ? (
+                  <div className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: plan === "premium" ? "#8B5CF6" : "#D4AF37", color: "#fff" }}>
                     <Crown className="w-3 h-3" />
-                    Pro
+                    {plan === "premium" ? "Premium" : "Pro"}
                   </div>
                 ) : (
                   <Button
@@ -214,7 +214,7 @@ export default function Home() {
                 onSubmit={handleSubmit}
                 isPending={isPending}
                 disabled={isAuthenticated && remaining === 0}
-                isPro={plan === "pro"}
+                isPro={plan === "pro" || plan === "premium"}
               />
             </div>
 
@@ -274,7 +274,7 @@ export default function Home() {
                   <div className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Användning denna månad</span>
-                      <span className="text-xs font-medium" style={{ color: plan === "pro" ? "#D4AF37" : plan === "premium" ? "8B5CF6" : "#6B7280" }}>
+                      <span className="text-xs font-medium" style={{ color: plan === "pro" ? "#D4AF37" : plan === "premium" ? "#8B5CF6" : "#6B7280" }}>
                         {plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratis"}
                       </span>
                     </div>
@@ -399,8 +399,8 @@ export default function Home() {
                   <HistoryPanel />
                 )}
 
-                {/* Personal Style — Pro users only */}
-                {isAuthenticated && plan === "pro" && (
+                {/* Personal Style — Pro & Premium users */}
+                {isAuthenticated && (plan === "pro" || plan === "premium") && (
                   <PersonalStyle />
                 )}
 

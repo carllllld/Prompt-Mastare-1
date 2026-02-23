@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { TextEditor } from "./TextEditor";
 import { PdfExport } from "./PdfExport";
@@ -47,6 +47,11 @@ function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
 export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
+
+  // Sync editedText when result changes (e.g. regenerate)
+  useEffect(() => {
+    setEditedText(result.improvedPrompt);
+  }, [result.improvedPrompt]);
 
   // Build a live result object that reflects edits for PDF export
   const liveResult = { ...result, improvedPrompt: editedText };
@@ -242,6 +247,22 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
               {result.improvement_suggestions.strengths.map((s, i) => (
                 <li key={i} className="text-xs flex gap-2" style={{ color: "#4C1D95" }}>
                   <span style={{ color: "#8B5CF6" }}>★</span> {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {result.improvement_suggestions?.text_improvements && result.improvement_suggestions.text_improvements.length > 0 && (
+          <div className="rounded-xl border p-5" style={{ background: "#FFF7ED", borderColor: "#FED7AA" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="w-3.5 h-3.5" style={{ color: "#EA580C" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9A3412" }}>Textförbättringar</span>
+            </div>
+            <ul className="space-y-1.5">
+              {result.improvement_suggestions.text_improvements.map((s, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#7C2D12" }}>
+                  <span style={{ color: "#F97316" }}>→</span> {s}
                 </li>
               ))}
             </ul>

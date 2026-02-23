@@ -69,6 +69,7 @@ export const optimizeRequestSchema = z.object({
   wordCountMin: z.number().optional(),
   wordCountMax: z.number().optional(),
   imageUrls: z.array(z.string()).optional(),
+  propertyData: z.record(z.any()).optional(),
 });
 
 export const optimizeResponseSchema = z.object({
@@ -107,7 +108,7 @@ export const optimizeResponseSchema = z.object({
       quote: z.string().optional(),
       reason: z.string().optional(),
     })).optional(),
-    quality_score: z.number().optional(),
+    quality_score: z.number().optional().nullable(),
     broker_tips: z.array(z.string()).optional(),
   }).optional().nullable(),
   wordCount: z.number().optional(),

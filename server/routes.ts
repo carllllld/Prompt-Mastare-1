@@ -1464,7 +1464,7 @@ Gatuadress + typ + kvm + 1-2 unika säljpunkter. Kompakt. För print/banner.
 Ex: "Drottninggatan 42, Uppsala. 3 rok, 74 kvm. Ballingslöv-kök 2021. Balkong söderläge. Ekparkett."
 
 # OUTPUT (JSON)
-{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Hemnet-texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram-text + hashtags på egen rad","showingInvitation":"Visningsinbjudan max 80 ord","shortAd":"Kompakt annons max 40 ord","socialCopy":"Max 280 tecken, gatunamn + 2 fakta","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande"},"missing_info":["Saknad info"],"pro_tips":["Tips"]}
+{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Hemnet-texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram-text + hashtags på egen rad","showingInvitation":"Visningsinbjudan max 80 ord","shortAd":"Kompakt annons max 40 ord","socialCopy":"Max 280 tecken, gatunamn + 2 fakta","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande"},"missing_info":["Saknad info"],"text_tips":["Texttips för förbättring"]}
 
 # LÄS DETTA SIST — DET VIKTIGASTE
 
@@ -2003,34 +2003,38 @@ Ge mig exakt 3 punkter:
       // Bildanalys om bilder finns
       let imageAnalysis = "";
       if (imageUrls && imageUrls.length > 0 && (plan === "pro" || plan === "premium")) {
-        console.log(`[Image Analysis] Analyzing ${imageUrls.length} images (Pro + Premium feature)...`);
-        
-        const imageMessages = [
-          {
-            role: "system" as const,
-            content: "Du är en expert på att analysera fastighetsbilder. Beskriv vad du ser i bilderna: rum, material, stil, skick, ljusförhållanden, utsikt, och andra relevanta detaljer för en fastighetsbeskrivning. Var specifik och faktabaserad."
-          },
-          {
-            role: "user" as const,
-            content: [
-              { type: "text" as const, text: "Analysera dessa fastighetsbilder och beskriv vad du ser:" },
-              ...imageUrls.slice(0, 5).map((url: string) => ({
-                type: "image_url" as const,
-                image_url: { url }
-              }))
-            ]
-          }
-        ];
+        try {
+          console.log(`[Image Analysis] Analyzing ${imageUrls.length} images (Pro + Premium feature)...`);
+          
+          const imageMessages = [
+            {
+              role: "system" as const,
+              content: "Du är en expert på att analysera fastighetsbilder. Beskriv vad du ser i bilderna: rum, material, stil, skick, ljusförhållanden, utsikt, och andra relevanta detaljer för en fastighetsbeskrivning. Var specifik och faktabaserad."
+            },
+            {
+              role: "user" as const,
+              content: [
+                { type: "text" as const, text: "Analysera dessa fastighetsbilder och beskriv vad du ser:" },
+                ...imageUrls.slice(0, 5).map((url: string) => ({
+                  type: "image_url" as const,
+                  image_url: { url }
+                }))
+              ]
+            }
+          ];
 
-        const imageCompletion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: imageMessages,
-          max_tokens: 1000,
-          temperature: 0.3,
-        });
+          const imageCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: imageMessages,
+            max_tokens: 1000,
+            temperature: 0.3,
+          });
 
-        imageAnalysis = imageCompletion.choices[0]?.message?.content || "";
-        console.log(`[Image Analysis] Completed: ${imageAnalysis.substring(0, 100)}...`);
+          imageAnalysis = imageCompletion.choices[0]?.message?.content || "";
+          console.log(`[Image Analysis] Completed: ${imageAnalysis.substring(0, 100)}...`);
+        } catch (e) {
+          console.warn("[Image Analysis] Failed, continuing without:", e);
+        }
       }
       
       // Bestäm ordgränser baserat på plan

@@ -29,8 +29,10 @@ export async function retryWithBackoff<T>(
         error.message.includes('401') || // Unauthorized
         error.message.includes('403') || // Forbidden
         error.message.includes('404') || // Not found
+        error.message.includes('429') || // Rate limit / usage limit
         error.message.includes('validation') ||
-        error.message.includes('invalid')
+        error.message.includes('invalid') ||
+        (error as any).limitReached // Usage limit from backend
       )) {
         throw error;
       }
@@ -69,7 +71,18 @@ export async function retryApiCall<T>(
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      
+      // Try to parse JSON error responses (e.g. 429 with limitReached)
+      let parsed: any = null;
+      try { parsed = JSON.parse(errorText); } catch {}
+      
+      const error: any = new Error(parsed?.message || `HTTP ${response.status}: ${errorText}`);
+      if (parsed?.limitReached) error.limitReached = true;
+      // Don't retry 429 (rate limit) or 401/403 (auth)
+      if (response.status === 429 || response.status === 401 || response.status === 403) {
+        error.message = parsed?.message || error.message;
+      }
+      throw error;
     }
     
     return response.json();

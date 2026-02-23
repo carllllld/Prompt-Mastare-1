@@ -27,7 +27,7 @@ export function PromptHistory() {
     queryKey: ["/api/user/status"],
   });
 
-  const isPro = userStatus?.plan === "pro";
+  const isPro = userStatus?.plan === "pro" || userStatus?.plan === "premium";
 
   const { data: history, isLoading, error } = useQuery<Optimization[]>({
     queryKey: ["/api/history"],
