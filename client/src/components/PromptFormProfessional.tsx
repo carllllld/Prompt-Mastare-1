@@ -42,6 +42,7 @@ interface PropertyFormData {
   specialFeatures: string;
   otherInfo: string;
   platform: "hemnet" | "booli" | "general";
+  writingStyle: "factual" | "balanced" | "selling";
 }
 
 const PROPERTY_CONDITIONS = [
@@ -63,6 +64,7 @@ interface PromptFormProps {
     prompt: string;
     type: string;
     platform: string;
+    writingStyle?: string;
     propertyData?: any;
     wordCountMin?: number;
     wordCountMax?: number;
@@ -125,11 +127,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       specialFeatures: "",
       otherInfo: "",
       platform: "hemnet",
+      writingStyle: "balanced",
     },
   });
 
   const selectedPlatform = form.watch("platform");
   const selectedType = form.watch("propertyType");
+  const selectedStyle = form.watch("writingStyle");
 
   const onLocalSubmit = (values: PropertyFormData) => {
     const isApartmentType = values.propertyType === "apartment" || values.propertyType === "townhouse";
@@ -224,6 +228,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       prompt: d,
       type: values.propertyType,
       platform: values.platform,
+      writingStyle: values.writingStyle,
       propertyData: values,
       ...(isPro && { wordCountMin, wordCountMax }),
       ...(uploadedImages.length > 0 && { imageUrls: uploadedImages }),
@@ -462,7 +467,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <FormField control={form.control} name="storage" render={({ field }) => (
               <FormItem className="col-span-2">
                 <FormLabel className="text-xs text-gray-500">Förråd/Förvaring</FormLabel>
-                <FormControl><Input placeholder="Förråd 5 kvm i källare" {...field} className="h-10" /></FormControl>
+                <FormControl><Input placeholder="T.ex: Förråd 8 kvm i källare + cykelrum" {...field} className="h-10" /></FormControl>
               </FormItem>
             )} />
           </div>
@@ -480,7 +485,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormLabel className="text-xs text-gray-500">Planlösning & rum</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="T.ex: Öppen planlösning med kök och vardagsrum i söderläge. 2 sovrum varav det större har garderobsvägg. Rymlig hall med förvaring."
+                    placeholder="T.ex: Hall med garderob. Öppen planlösning kök/vardagsrum. Takhöjd 2,70 m. Ekparkett. 2 sovrum, det större ca 12 kvm med garderobsvägg. Gäst-wc vid hall."
                     {...field}
                     className="min-h-[80px] resize-none text-sm"
                   />
@@ -494,7 +499,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormLabel className="text-xs text-gray-500">Kök</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="T.ex: Nytt kök 2022, vita luckor, stenbänk, integrerade vitvaror från Siemens"
+                      placeholder="T.ex: Ballingslöv-kök renoverat 2021. Kvartssten bänkskiva. Siemens ugn/spis. Bosch diskmaskin. Integrerat kylskåp. Matplats för 6 pers."
                       {...field}
                       className="min-h-[72px] resize-none text-sm"
                     />
@@ -506,7 +511,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormLabel className="text-xs text-gray-500">Badrum</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="T.ex: Helkaklat, renoverat 2020, dusch och badkar, golvvärme"
+                      placeholder="T.ex: Helkaklat badrum renoverat 2019. Dusch och badkar. Golvvärme. Tvättmaskin/torktumlare. Klinkergolv."
                       {...field}
                       className="min-h-[72px] resize-none text-sm"
                     />
@@ -520,7 +525,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormLabel className="text-xs text-gray-500">Vad gör objektet speciellt?</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="T.ex: Högt i tak, originalplank, söderläge med balkong, sjöutsikt, lugn innergård"
+                    placeholder="Skriv de 2-3 starkaste säljpunkterna. Var specifik: 'Balkong 7 kvm i söderläge', 'Originalparkett från 1920-tal', 'Sjöutsikt från vardagsrum'. Undvik vaga ord som 'fint' och 'bra läge'."
                     {...field}
                     className="min-h-[72px] resize-none text-sm"
                   />
@@ -564,7 +569,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="T.ex: Populärt familjeområde nära parker, skolor och matbutiker. Lugnt men centralt."
+                      placeholder="T.ex: Lugnt bostadsområde med blandad bebyggelse. ICA 300 m, grundskola 500 m, pendeltåg 8 min. Nära Hultabergsparken."
                       {...field}
                       className="min-h-[68px] resize-none text-sm"
                     />
@@ -576,7 +581,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormField control={form.control} name="flooring" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Golvmaterial</FormLabel>
-                    <FormControl><Input placeholder="T.ex: Ekparkett i vardagsrum, klinker i hall" {...field} className="h-10" /></FormControl>
+                    <FormControl><Input placeholder="T.ex: Ekparkett vardagsrum/sovrum, klinker hall/kök, klinkergolv badrum" {...field} className="h-10" /></FormControl>
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="heating" render={({ field }) => (
@@ -634,7 +639,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormLabel className="text-xs text-gray-500">Särskilda egenskaper</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="T.ex: Golvvärme i badrum, öppen spis, originaldetaljer, takbjälkar"
+                      placeholder="T.ex: Golvvärme i badrum och hall. Öppen spis i vardagsrum. Originalstuckatur. Fönster bytta 2018."
                       {...field}
                       className="min-h-[68px] resize-none text-sm"
                     />
@@ -647,7 +652,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Allt annat som AI:n bör veta om objektet"
+                      placeholder="T.ex: Nytt tak 2022. Stambyte genomfört 2015. Energiklass C. Fullt möblerad om köparen vill."
                       {...field}
                       className="min-h-[60px] resize-none text-sm"
                     />
@@ -684,6 +689,42 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   {p.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Writing style */}
+          <div className="flex items-start gap-3 flex-wrap">
+            <span className="text-xs text-gray-400 font-medium shrink-0 pt-1.5">Textstil:</span>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex gap-2 flex-wrap">
+                {([
+                  { value: "factual" as const, label: "PM-stil", desc: "Ren fakta, maximalt trovärdigt. Kronologisk struktur, noll säljspråk." },
+                  { value: "balanced" as const, label: "Balanserad", desc: "Fakta i fokus men med rytm. Lyfter rätt säljpunkter utan klyschor." },
+                  { value: "selling" as const, label: "Säljande", desc: "Klyschfritt men övertygande. Köpargruppsanpassad betoning, starkare avslut." },
+                ]).map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => form.setValue("writingStyle", s.value)}
+                    title={s.desc}
+                    className="px-3.5 py-1.5 text-xs rounded-full border transition-all font-medium"
+                    style={{
+                      background: selectedStyle === s.value ? "#1B4332" : "#fff",
+                      color: selectedStyle === s.value ? "#fff" : "#6B7280",
+                      borderColor: selectedStyle === s.value ? "#1B4332" : "#E8E5DE",
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              {selectedStyle && (
+                <p className="text-[10px]" style={{ color: "#9CA3AF" }}>
+                  {selectedStyle === "factual" && "Ren fakta, maximalt trovärdigt. Kronologisk struktur, noll säljspråk."}
+                  {selectedStyle === "balanced" && "Fakta i fokus men med rytm. Lyfter rätt säljpunkter utan klyschor."}
+                  {selectedStyle === "selling" && "Klyschfritt men övertygande. Köpargruppsanpassad betoning, starkare avslut."}
+                </p>
+              )}
             </div>
           </div>
 

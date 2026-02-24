@@ -1,6 +1,7 @@
 ﻿import type { Express } from "express";
 import type { Server } from "http";
 import Stripe from "stripe";
+import { createClient, type RedisClientType } from "redis";
 import { storage } from "./storage";
 import { getGeographicContext } from "./geographic-intelligence";
 import { analyzeMarketPosition, getMarketTrends2025 } from "./market-intelligence";
@@ -16,10 +17,20 @@ const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
 // Rate limiting for /api/optimize (per user, per minute)
 const optimizeRateMap = new Map<string, { count: number; resetAt: number }>();
-const OPTIMIZE_RATE_LIMIT = 10; // max requests per minute
-const OPTIMIZE_RATE_WINDOW = 60 * 1000; // 1 minute
+const OPTIMIZE_RATE_LIMIT = (() => {
+  const n = Number.parseInt(process.env.OPTIMIZE_RATE_LIMIT || "", 10);
+  return Number.isFinite(n) && n > 0 ? n : 10;
+})(); // max requests per minute
+const OPTIMIZE_RATE_WINDOW = (() => {
+  const n = Number.parseInt(process.env.OPTIMIZE_RATE_WINDOW_MS || "", 10);
+  return Number.isFinite(n) && n > 0 ? n : 60 * 1000;
+})(); // 1 minute
+const REDIS_CONNECT_COOLDOWN_MS = (() => {
+  const n = Number.parseInt(process.env.REDIS_CONNECT_COOLDOWN_MS || "", 10);
+  return Number.isFinite(n) && n >= 0 ? n : 30_000;
+})();
 
-function checkOptimizeRateLimit(userId: string): boolean {
+function checkOptimizeRateLimitInMemory(userId: string): boolean {
   const now = Date.now();
   const entry = optimizeRateMap.get(userId);
   if (!entry || now > entry.resetAt) {
@@ -29,6 +40,69 @@ function checkOptimizeRateLimit(userId: string): boolean {
   if (entry.count >= OPTIMIZE_RATE_LIMIT) return false;
   entry.count++;
   return true;
+}
+
+const optimizeRateLuaScript =
+  "local current = redis.call('INCR', KEYS[1])\n" +
+  "if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end\n" +
+  "return current";
+
+let redisClient: RedisClientType | null = null;
+let redisInitPromise: Promise<RedisClientType | null> | null = null;
+let redisDisabledUntil = 0;
+
+async function getRedisClient(): Promise<RedisClientType | null> {
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) return null;
+  if (Date.now() < redisDisabledUntil) return null;
+  if (redisClient?.isReady) return redisClient;
+  if (redisInitPromise) return redisInitPromise;
+
+  redisInitPromise = (async () => {
+    let client: RedisClientType | null = null;
+    try {
+      client = createClient({ url: redisUrl });
+      client.on("error", (err: unknown) => {
+        console.warn("[Redis] error:", err);
+      });
+
+      await client.connect();
+      redisClient = client;
+      console.log("[Redis] connected");
+      return client;
+    } catch (err) {
+      console.warn("[Redis] connect failed, falling back to in-memory rate limiting:", err);
+      redisDisabledUntil = Date.now() + REDIS_CONNECT_COOLDOWN_MS;
+      try {
+        await client?.disconnect();
+      } catch {
+      }
+      redisClient = null;
+      return null;
+    } finally {
+      redisInitPromise = null;
+    }
+  })();
+
+  return redisInitPromise;
+}
+
+async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
+  const client = await getRedisClient();
+  if (!client) return checkOptimizeRateLimitInMemory(userId);
+
+  const key = `rl:optimize:${userId}`;
+  try {
+    const count = (await client.eval(optimizeRateLuaScript, {
+      keys: [key],
+      arguments: [String(OPTIMIZE_RATE_WINDOW)],
+    })) as number;
+
+    return count <= OPTIMIZE_RATE_LIMIT;
+  } catch (err) {
+    console.warn("[Rate Limit] Redis error, falling back to in-memory:", err);
+    return checkOptimizeRateLimitInMemory(userId);
+  }
 }
 
 // Cleanup stale rate limit entries every 5 minutes
@@ -1418,9 +1492,20 @@ const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, r
 };
 
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
-const HEMNET_TEXT_PROMPT = `Du skriver Hemnet-annonser som Sveriges bästa mäklare. Studera MATCHADE EXEMPEL i user-meddelandet — imitera stilen EXAKT.
+const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver Hemnet-annonser som faktiskt säljer — klyschfritt, specifikt, mänskligt. Studera MATCHADE EXEMPEL i user-meddelandet och imitera stilen.
 
-# STILREGLER (det här gör riktiga mäklartexter bra):
+# SMART SLUTLEDNING (det här skiljer bra från mediokra mäklartexter)
+Fakta i dispositionen kan berätta mer än de säger rakt ut. Dra korrekta slutsatser:
+- Byggår 1910–1940 + parkett → troligen originalparkett → skriv "originalparkett" om det stämmer med materialbeskrivningen
+- Byggår 1960–1975 + renoverat kök/badrum → totalrenovering → nämn renoveringsår konkret
+- Balkong söderläge → konkret fördel för köparen → skriv "Balkongen vetter mot söder"
+- Takhöjd ≥ 2,70 m → värt att nämna med exakt mått
+- Hiss + hög våning → lyft det (köpargruppsanpassat)
+- Pris/kvm > 80 000 → premiuobjekt → fler detaljer om material, märken, finish
+- Pris/kvm < 40 000 → budgetobjekt → betona läge, potential, kommunikationer
+MEN: Hitta ALDRIG på fakta som inte finns i dispositionen. Slutled bara från vad som faktiskt anges.
+
+# STILREGLER
 - Första meningen: gatuadress + typ + kvm. Punkt. Klar.
 - Varje mening = ETT nytt faktum. Noll utfyllnad.
 - Rumsnamnet startar meningen: "Köket har...", "Balkongen vetter...", "Hallen har..."
@@ -1430,14 +1515,14 @@ const HEMNET_TEXT_PROMPT = `Du skriver Hemnet-annonser som Sveriges bästa mäkl
 - Avstånd varieras: "8 minuters promenad", "i kvarteret", "200 meter", "15 min med bil"
 - Slutar med LÄGE — aldrig med känsla eller uppmaning
 
-# FÖRBJUDET (använd ALDRIG dessa — de avslöjar AI direkt)
+# FÖRBJUDET
 erbjuder, bjuder på, präglas av, genomsyras av, generös, fantastisk, perfekt, idealisk, underbar, magisk, unik, dröm-, en sann pärla, faciliteter, njut av, livsstil, livskvalitet, hög standard, smakfullt, stilfullt, elegant, exklusivt, omsorgsfullt, genomtänkt, imponerande, harmonisk, inbjudande, lockande, inspirerande, karaktärsfull, tidlös, betagande
 vilket, som ger en, för den som, i hjärtat av, skapar en, bidrar till, förstärker, adderar, inte bara...utan också
 kontakta oss, boka visning, missa inte, välkommen till, välkommen hem, här finns, här kan du
-ljus och luftig, stilrent och modernt, mysigt och ombonat, elegant och tidlös (alla "X och Y"-adjektivpar)
-Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter, odlingsmöjligheter etc)
+ljus och luftig, stilrent och modernt, mysigt och ombonat (alla "X och Y"-adjektivpar)
+Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
 
-# MENINGSRYTM (följ detta mönster)
+# MENINGSRYTM
 - Starta VARJE mening med ett NYTT subjekt: rumsnamn, material, platsnamn, årtal
 - BRA: "Köket har...", "Ekparkett genomgående.", "Balkong 5 kvm.", "Centralstationen 8 min."
 - DÅLIGT: "Det finns golvvärme.", "Den har garderob.", "Det finns även förråd."
@@ -1446,7 +1531,7 @@ Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter, odlin
 
 # STRUKTUR
 1. ÖPPNING: Gatuadress, ort, typ, kvm, rum. MAX 2 meningar.
-2. PLANLÖSNING: Hall → vardagsrum. Takhöjd, golv, ljus om det finns.
+2. PLANLÖSNING: Hall → vardagsrum. Takhöjd (om ≥2,50m — med exakt mått), golv, ljus.
 3. KÖK: Märke, årtal, bänkskiva, vitvaror — BARA från dispositionen.
 4. SOVRUM: Antal, storlek, garderober.
 5. BADRUM: Renoveringsår, material, utrustning.
@@ -1456,57 +1541,78 @@ Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter, odlin
 9. LÄGE: Platser med namn + avstånd. VARIERA format. Hitta inte på.
 Saknas info → HOPPA ÖVER punkten. Hitta ALDRIG på.
 
-# EXTRA TEXTER (generera ALLA)
+# EXTRA TEXTER — VIKTIGT: dessa ska låta som en människa, inte som AI
 
 RUBRIK (headline, max 70 tecken):
-Format: "Gatuadress — Typ + unik egenskap"
-Ex: "Drottninggatan 42 — Ljus trea med balkong i söderläge"
-Ex: "Björkvägen 14 — Renoverad villa med garage och stor tomt"
+Välj den STARKASTE konkreta egenskapen — inte den mest uppenbara.
+INTE: "Lägenhet i Vasastan" (för generisk)
+INTE: "Välplanerad och ljus trea" (adjektivpar = AI-signal)
+BRA: "Upplandsgatan 12 — Trea med originalparkett och tyst innergård"
+BRA: "Björkvägen 8 — Villa med dubbelgarage och 940 kvm tomt"
 
-INSTAGRAM (instagramCaption, 3-5 meningar):
-Börja med gatunamnet. Lyft 2-3 konkreta fakta (kvm, material, årtal). Avsluta med storlek.
-Inga emoji. Inga utropstecken. Inga "njut av" eller "faciliteter".
-Lägg till exakt 5 relevanta hashtags på EGEN rad.
-Ex: "Drottninggatan 42, Uppsala. Trea med Ballingslöv-kök och balkong i söderläge. Ekparkett och takhöjd 2,85 m. 74 kvm.
+INSTAGRAM (instagramCaption):
+Skriv 4-6 meningar som känns som att en riktig mäklare skrivit dem för sin Instagram.
+- Börja med gatunamnet och den starkaste säljpunkten direkt
+- Lägg till EN mening om läget (nämn specifikt stadsdelens karaktär om det finns i datan)
+- Avsluta med storlek och pris OM det finns
+- Inga emoji, inga utropstecken
+- Ton: professionell men personlig — som om du just visat objektet och berättar för dina följare
+- 5 hashtags på EGEN rad: stadsnamn, stadsdel (om känd), bostadstyp, #Hemnet, #TillSalu
+Ex: "Upplandsgatan 12, Vasastan. Trea om 78 kvm med originalparkett från 1932 och utsikt mot den tysta innergården. Köket renoverat 2019 med Siemens-vitvaror. Badrum från 2020. BRF Vasahem, avgift 3 800 kr/mån.
+Vasastan är ett av Stockholms mest efterfrågade områden — matbutik 100 meter, tunnelbana 4 minuter.
 
-#Uppsala #Hemnet #Lägenhet #Balkong #TillSalu"
+#Stockholm #Vasastan #Lägenhet #Hemnet #TillSalu"
 
-VISNINGSINBJUDAN (showingInvitation, max 80 ord):
-Börja "Visning — [gatuadress]". Nämn typ + kvm + 2 konkreta höjdpunkter med mått/märke/årtal.
-ALDRIG "njut av", "välkommen", "missa inte", "faciliteter".
-Avsluta med:
-"Tid: [TID]
-Plats: [ADRESS]
-Anmälan: [KONTAKT]"
-Ex: "Visning — Drottninggatan 42, Uppsala. Trea om 74 kvm med Ballingslöv-kök renoverat 2021 och balkong i söderläge. Ekparkett och takhöjd 2,85 meter.
+VISNINGSINBJUDAN (showingInvitation):
+Skriv som ett kort, faktabaserat meddelande — tänk: ett SMS från mäklaren till intressenter.
+- Börja: "Visning — [gatuadress]"
+- Rad 2: typ + kvm + 2 konkreta höjdpunkter (aldrig vaga)
+- Inga uppmaningar, inga "välkommen", inga klyschor
+- Avsluta med Tid/Plats/Anmälan på separata rader
+Ex: "Visning — Upplandsgatan 12, Vasastan.
+Trea om 78 kvm med originalparkett och renoverat badrum 2020.
 
 Tid: [TID]
-Plats: Drottninggatan 42, 4 tr
+Plats: Upplandsgatan 12, 3 tr
 Anmälan: [KONTAKT]"
 
 KORTANNONS (shortAd, max 40 ord):
-Gatuadress + typ + kvm + 1-2 unika säljpunkter. Kompakt. För print/banner.
-Ex: "Drottninggatan 42, Uppsala. 3 rok, 74 kvm. Ballingslöv-kök 2021. Balkong söderläge. Ekparkett."
+Faktapåstående, inte säljtext. Tänk: rubrik i en tidning.
+Ex: "Upplandsgatan 12, Vasastan. Trea, 78 kvm. Originalparkett 1932. Renoverat 2019–2020. BRF, avgift 3 800 kr/mån."
+
+SOCIALCOPY (socialCopy, max 280 tecken):
+Twitter/LinkedIn-stil. En mening om objektet + en om läget.
+Ex: "Upplandsgatan 12 i Vasastan — trea om 78 kvm med originalparkett från 1932 och renoverat kök och badrum. Tunnelbana 4 minuter."
 
 # OUTPUT (JSON)
-{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Hemnet-texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram-text + hashtags på egen rad","showingInvitation":"Visningsinbjudan max 80 ord","shortAd":"Kompakt annons max 40 ord","socialCopy":"Max 280 tecken, gatunamn + 2 fakta","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande"},"missing_info":["Saknad info"],"text_tips":["Texttips för förbättring"]}
+{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Hemnet-texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram-text + hashtags på EGEN rad","showingInvitation":"Visningsinbjudan","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Exakt målgrupp med motivering","area_advantage":"Konkret lägesfördel","pricing_factors":"Vad höjer/sänker värdet"},"missing_info":["Vilken info saknas och varför den hade hjälpt"],"text_tips":["Konkreta förbättringstips för mäklaren"]}
 
 # LÄS DETTA SIST — DET VIKTIGASTE
 
 1. Börja med gatuadressen. ALDRIG "Välkommen", "Här", "Denna", "I".
-2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen.
+2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen — men SLUTLED gärna från fakta.
 3. NOLL förbjudna ord. Noll "erbjuder", "bjuder på", "generös", "fantastisk", "vilket".
 4. Varje mening = ny fakta. Noll utfyllnad. Noll upprepning.
-5. VARIERA meningsstarter. Max 1x "Det finns" i hela texten. Börja med rummet.
-6. VARIERA avstånd. Aldrig 2x "ligger X bort". Blanda: meter, minuter, "nära X".
-7. Sista stycket = LÄGE. Aldrig känsla, aldrig uppmaning, aldrig sammanfattning.
-8. Generera ALLA fält: headline, instagramCaption, showingInvitation, shortAd, socialCopy.
-9. Skriv som exemplen ovan. Kort. Rakt. Specifikt. Mänskligt.`;
+5. VARIERA meningsstarter. Max 1x "Det finns" i hela texten.
+6. Sista stycket = LÄGE. Aldrig känsla, aldrig uppmaning.
+7. De extra texterna (Instagram, visning, kortannons) ska kännas mänskliga och specifika — inte som copy-paste från AI.
+8. Generera ALLA fält i JSON.`;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du skriver objektbeskrivningar för Booli/egen mäklarsida som Sveriges bästa mäklare. Studera MATCHADE EXEMPEL i user-meddelandet — imitera stilen EXAKT. Booli tillåter mer detalj och pris.
+const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver objektbeskrivningar för Booli/egen mäklarsida — klyschfritt, specifikt, mänskligt. Studera MATCHADE EXEMPEL och imitera stilen. Booli tillåter mer detalj och pris.
 
-# STILREGLER (det här gör riktiga mäklartexter bra):
+# SMART SLUTLEDNING (det här skiljer bra från mediokra mäklartexter)
+Fakta i dispositionen kan berätta mer än de säger rakt ut. Dra korrekta slutsatser:
+- Byggår 1910–1940 + parkett → troligen originalparkett → nämn "originalparkett" om materialbeskrivningen bekräftar det
+- Byggår 1960–1975 + renoverat kök/badrum → nämn renoveringsår konkret
+- Balkong söderläge → skriv "Balkongen vetter mot söder" (aldrig "sol hela dagen")
+- Takhöjd ≥ 2,70 m → värt att nämna med exakt mått
+- Stor tomt + villa → lyft specifika ytor (tomt kvm, uteplats kvm)
+- Pris/kvm > 80 000 → premiumobjekt → fler detaljer om material, märken, finish
+- Pris/kvm < 40 000 → betona läge, potential, kommunikationer
+MEN: Hitta ALDRIG på fakta. Slutled bara från vad som faktiskt anges.
+
+# STILREGLER
 - Gatuadress + typ + kvm i första meningen. Punkt.
 - Varje mening = ETT nytt faktum. Noll utfyllnad.
 - Rumsnamnet startar meningen. ALDRIG "Det finns" eller "Den har" som meningsstart (max 1x).
@@ -1515,7 +1621,7 @@ const BOOLI_TEXT_PROMPT_WRITER = `Du skriver objektbeskrivningar för Booli/egen
 - Avstånd varieras: "5 minuter", "400 meter", "ca 10 minuters promenad"
 - Slutar med LÄGE + PRIS — aldrig känsla
 
-# FÖRBJUDET (avslöjar AI direkt)
+# FÖRBJUDET
 erbjuder, bjuder på, präglas av, genomsyras av, generös, fantastisk, perfekt, idealisk, underbar, magisk, unik, dröm-, en sann pärla, faciliteter, njut av, livsstil, livskvalitet, hög standard, smakfullt, stilfullt, elegant, exklusivt, omsorgsfullt, genomtänkt, imponerande, harmonisk, inbjudande, tidlös
 vilket, som ger en, för den som, i hjärtat av, skapar en, bidrar till, inte bara...utan också
 kontakta oss, boka visning, missa inte, välkommen till, här finns, här kan du
@@ -1530,7 +1636,7 @@ Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
 
 # STRUKTUR (mer detalj än Hemnet — inkludera pris)
 1. ÖPPNING: Gatuadress, ort, typ, kvm, rum. MAX 2 meningar.
-2. PLANLÖSNING: Hall → vardagsrum. Takhöjd, golv, ljus.
+2. PLANLÖSNING: Hall → vardagsrum. Takhöjd (med exakt mått om ≥2,50m), golv, ljus.
 3. KÖK: Märke, årtal, bänkskiva, vitvaror, matplats.
 4. SOVRUM: Antal, storlek, garderober.
 5. BADRUM: Renoveringsår, material, utrustning.
@@ -1541,48 +1647,60 @@ Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
 10. PRIS: Utgångspris om det finns.
 Saknas info → HOPPA ÖVER. Hitta ALDRIG på.
 
-# EXTRA TEXTER (generera ALLA)
+# EXTRA TEXTER — ska låta som en människa, inte som AI
 
 RUBRIK (headline, max 70 tecken):
-"Gatuadress — Typ + unik egenskap"
-Ex: "Tallvägen 8 — Villa med eldstad och dubbelgarage"
+Välj den STARKASTE konkreta egenskapen.
+INTE: "Välplanerad villa med bra läge" (för generisk)
+BRA: "Tallvägen 8 — Villa med dubbelgarage och 920 kvm tomt"
+BRA: "Storgatan 4 — Trea med originalparkett och renoverat 2021"
 
-INSTAGRAM (instagramCaption, 3-5 meningar):
-Gatunamnet först. 2-3 konkreta fakta. Avsluta med storlek. Inga emoji/utropstecken.
-5 hashtags på EGEN rad.
-Ex: "Tallvägen 8, Djursholm. Villa med HTH-kök, eldstad och altan i västerläge. Tomt 920 kvm. Dubbelgarage. 180 kvm.
+INSTAGRAM (instagramCaption):
+Skriv 4-6 meningar som en riktig mäklare skulle skriva för sin Instagram.
+- Börja med gatunamnet och objektets starkaste egenskap
+- Nämn läget specifikt (stadsdelens karaktär, inte "centralt")
+- Avsluta med storlek och pris OM det finns
+- Inga emoji, inga utropstecken
+- Ton: professionell men personlig, som om du just visat objektet
+- 5 hashtags på EGEN rad
+Ex: "Tallvägen 8, Djursholm. Villa om 180 kvm med HTH-kök från 2015, dubbelgarage och altan i västerläge. Tomt 920 kvm. Djursholm är ett av norra Stockholms mest söka villaområden — lugnt, grönt, 20 minuter till city.
 
-#Djursholm #Villa #Hemnet #TillSalu #Stockholm"
+#Djursholm #Villa #TillSalu #Hemnet #Stockholm"
 
-VISNINGSINBJUDAN (showingInvitation, max 80 ord):
-"Visning — [gatuadress]". Typ + kvm + 2 konkreta höjdpunkter.
-Avsluta: "Tid: [TID]\\nPlats: [ADRESS]\\nAnmälan: [KONTAKT]"
+VISNINGSINBJUDAN (showingInvitation):
+Faktabaserat SMS-format från mäklaren till intressenter.
+- Börja: "Visning — [gatuadress]"
+- Rad 2: typ + kvm + 2 konkreta höjdpunkter med specifika detaljer
+- Inga klyschor, inga uppmaningar
+- Avsluta med Tid/Plats/Anmälan
+Ex: "Visning — Tallvägen 8, Djursholm.
+Villa om 180 kvm med HTH-kök 2015 och altan i västerläge. Tomt 920 kvm. Dubbelgarage.
+
+Tid: [TID]
+Plats: Tallvägen 8
+Anmälan: [KONTAKT]"
 
 KORTANNONS (shortAd, max 40 ord):
-Gatuadress + typ + kvm + 1-2 säljpunkter. Kompakt.
-Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Eldstad. Tomt 920 kvm. Dubbelgarage."
+Faktapåstående. Tänk: rubrik i en tidning.
+Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Dubbelgarage. Tomt 920 kvm. Altan västerläge."
+
+SOCIALCOPY (socialCopy, max 280 tecken):
+En mening om objektet + en om läget.
+Ex: "Tallvägen 8 i Djursholm — villa om 180 kvm med HTH-kök och dubbelgarage på 920 kvm tomt. Lugnt villaområde 20 minuter från Stockholm city."
 
 # OUTPUT (JSON)
-{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram + hashtags","showingInvitation":"Max 80 ord","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Målgrupp","area_advantage":"Lägesfördelar","pricing_factors":"Värdehöjande"},"missing_info":["Saknad info"],"text_tips":["Texttips för förbättring"]}
+{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram + hashtags på EGEN rad","showingInvitation":"Visningsinbjudan","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Exakt målgrupp med motivering","area_advantage":"Konkret lägesfördel","pricing_factors":"Vad höjer/sänker värdet"},"missing_info":["Saknad info och varför den hade hjälpt"],"text_tips":["Konkreta förbättringstips för mäklaren"]}
 
 # LÄS DETTA SIST — DET VIKTIGASTE
 
 1. Börja med gatuadressen. ALDRIG "Välkommen", "Här", "Denna", "I".
-2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen.
+2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen — men SLUTLED gärna från fakta.
 3. NOLL förbjudna ord. Noll "erbjuder", "bjuder på", "generös", "fantastisk", "vilket".
 4. Varje mening = ny fakta. Noll utfyllnad. Noll upprepning.
 5. VARIERA meningsstarter. Max 1x "Det finns" i hela texten.
-6. VARIERA avstånd. Aldrig 2x "ligger X bort".
-7. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
-8. Generera ALLA fält: headline, instagramCaption, showingInvitation, shortAd, socialCopy.
-
-# GÖR TEXTEN SÄLJANDE UTAN KLICHÉER
-
-9. ANVÄND MÄKLARENS EGNA ORD: Bevara unika beskrivningar från layoutDescription, kitchenDescription etc.
-10. SKAPA BILDER MED FAKTA: "Köket vetter mot söder" (om det stämmer). Låt fakta tala.
-11. VARIERA MENINGSLÄNGD: Blanda korta faktameningar (4 ord) med lite längre (10-12 ord).
-12. KONKRETA DETALJER säljer mer än adjektiv: "Ballingslöv-kök 2021" > "modernt kök".
-13. PRISSKLASS-ANPASSNING: Dyrare objekt = fler detaljer om material/märken. Billigare = fokus på läge/potential. MEN använd ALDRIG förbjudna ord oavsett prisklass.
+6. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
+7. De extra texterna ska kännas mänskliga och specifika — inte som copy-paste från AI.
+8. Generera ALLA fält i JSON.
 
 Skriv som en riktig mäklare — kort, rakt, specifikt, mänskligt.`;
 
@@ -1961,7 +2079,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const plan = (user.plan as PlanType) || "free";
       
       // Rate limit check (per minute)
-      if (!checkOptimizeRateLimit(user.id)) {
+      if (!(await checkOptimizeRateLimit(user.id))) {
         return res.status(429).json({
           message: "För många förfrågningar. Vänta en minut och försök igen.",
         });
@@ -1989,7 +2107,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
 
-      const { prompt, type, platform, wordCountMin, wordCountMax, imageUrls } = req.body;
+      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls } = req.body;
+      const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
       // Bestäm AI-modell baserat på plan
       const aiModel = (plan === "pro" || plan === "premium") ? "gpt-4o" : "gpt-4o-mini";
@@ -2235,6 +2354,26 @@ Ge mig exakt 3 punkter:
       const isHemnet = platform === "hemnet";
       const textPrompt = isHemnet ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
 
+      // Stilinstruktion baserat på mäklarens val
+      const styleInstruction = style === "factual"
+        ? `\n# TEXTSTIL: PM-STIL (STRIKT FAKTABASERAD)
+Mäklaren vill ha ett faktadokument, inte en säljtext.
+- Kronologisk rumsordning: hall → vardagsrum → kök → sovrum → badrum → uteplats → övrigt → läge
+- Varje rum = max 2 meningar. Bara mått, material, utrustning.
+- INGA säljpunkter, INGA "lyfter", INGA betoning på fördelar.
+- Avsluta med fakta om läge (avstånd/namn). Punkt. Slut.
+- Tänk: besiktningsprotokoll skrivet av en människa, inte mäklare.\n`
+        : style === "selling"
+        ? `\n# TEXTSTIL: SÄLJANDE (KLYSCHFRITT ÖVERTYGANDE)
+Mäklaren vill maximera intresset — men UTAN klyschor.
+- Öppna med de 1-2 starkaste konkreta säljpunkterna (inte känsla, utan fakta som säljer: "Balkong i söderläge 8 kvm" > "fantastisk balkong").
+- Betona det som gör objektet unikt TIDIGT — inte sist.
+- Välj aktivt VAD du lyfter: hoppa snabbt förbi svaga delar, ge mer utrymme åt starka.
+- Sista stycke: läge + en konkret köparnytta (pendlingstid, skola, affär).
+- Fortfarande noll klyschor. Sälj med fakta, inte adjektiv.\n`
+        : `\n# TEXTSTIL: BALANSERAD (STANDARD)
+Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n`;
+
       // Typspecifika negativa/positiva exempel
       const propType = (disposition?.property?.type || "lägenhet").toLowerCase();
       let negativeExample: string;
@@ -2266,7 +2405,7 @@ Ge mig exakt 3 punkter:
       const textMessages = [
         {
           role: "system" as const,
-          content: `${personalStylePrompt}\n\n${textPrompt}`,
+          content: `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`,
         },
         {
           role: "user" as const,
@@ -2548,22 +2687,34 @@ Svara med JSON i formatet:
         messages: [
           {
             role: "system" as const,
-            content: `Du är en svensk fastighetsmäklare. Skriver om en del av en objektbeskrivning med samma professionella stil som riktiga mäklare.
+            content: `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver om delar av objektbeskrivningar på begäran — klyschfritt, specifikt, mänskligt.
 
-# EXEMPEL PÅ RIKTIG MÄKLARSTIL
-"Balkongen vetter mot söder. Köket renoverat 2021 med Ballingslöv-luckor. Skolan 400 meter. ICA 5 minuter."
+# DIN UPPGIFT
+Skriv om den markerade texten enligt instruktionen. Behåll stilen från hela texten.
 
-NOTERA: Korta meningar. Fakta-fokuserat. Inga adjektiv som "fantastisk", "generös". Inga bisatser med "vilket".
+# RIKTIG MÄKLARSTIL — SÅ HÄR LÅTER DET
+BRA: "Balkongen vetter mot söder. Köket renoverat 2021 med Ballingslöv-luckor. Skolan 400 meter."
+BRA: "Takhöjd 2,85 meter. Ekparkett genomgående. Hall med garderob."
+BRA: "Två sovrum. Huvudsovrummet rymmer dubbelsäng med nattduksbord."
+DÅLIGT: "En fantastisk balkong som erbjuder sol hela dagen och ger en harmonisk känsla."
+DÅLIGT: "Köket är genomtänkt och stilfullt renoverat vilket gör det perfekt för den matlagningsintresserade."
 
-# FÖRBJUDET (använd ALDRIG)
-erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, idealisk, vilket, som ger en, för den som, i hjärtat av, faciliteter, njut av, livsstil, smakfullt, stilfullt, elegant, imponerande, harmonisk, inbjudande, tidlös, ljus och luftig, stilrent och modernt, mysigt och ombonat, inte bara, utan också, bidrar till, förstärker, skapar en känsla, -möjligheter, Det finns även, Det finns också
+# FÖRBJUDET — ALDRIG DESSA ORD
+erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, idealisk, underbar, magisk, unik
+vilket, som ger en, för den som, i hjärtat av, skapar en, bidrar till, förstärker
+inbjudande, harmonisk, tidlös, smakfullt, stilfullt, elegant, exklusivt, imponerande
+ljus och luftig, stilrent och modernt, mysigt och ombonat (alla "X och Y"-adjektivpar)
+njut av, faciliteter, livsstil, livskvalitet, hög standard, inte bara, utan också
+Det finns även, Det finns också, -möjligheter
 
-# INSTRUKTIONER
-1. Skriv om BARA den markerade texten enligt instruktionen
-2. Behåll ALLA fakta från originaltexten. HITTA ALDRIG PÅ ny fakta.
-3. Använd samma korta, direkta stil som exemplet ovan
-4. Korta meningar. Presens. Ingen utfyllnad.
-5. Om instruktionen säger "gör mer säljande" → lägg till KONKRETA fakta, inte adjektiv
+# REGLER
+1. Skriv om BARA den markerade texten — inte resten
+2. Behåll ALLA fakta. HITTA ALDRIG PÅ ny fakta som inte finns i originaltexten
+3. Korta, direkta meningar. Presens. Varje mening = ett nytt faktum.
+4. "Gör mer säljande" = lyft de starkaste befintliga fakta tydligare, inte lägg till adjektiv
+5. "Kondensera" = ta bort utfyllnad, behåll alla konkreta fakta
+6. "Mer fakta" = be om fler detaljer OM det finns i kontexten — annars kondensera och stärk det som finns
+7. Matcha stilen i hela texten exakt
 
 Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           },
@@ -2572,8 +2723,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
             content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`,
           },
         ],
-        max_tokens: 500,
-        temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
+        max_tokens: 600,
+        temperature: 0.15,
         response_format: { type: "json_object" },
       });
 

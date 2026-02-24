@@ -19,6 +19,80 @@ import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+const BEFORE_AFTER = [
+  {
+    label: "Objektbeskrivning",
+    before: `Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket är genomtänkt och stilfullt renoverat vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!`,
+    after: `Storgatan 12, 3 tr, Uppsala. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet med tre fönster och ekparkett, takhöjd 2,70 m.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch, renoverat 2020.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter.`,
+  },
+  {
+    label: "Instagram",
+    before: `Fantastisk lägenhet i Uppsala! Ljus och luftig med generösa ytor och genomtänkt planlösning. Perfekt för den som söker ett modernt och stilrent boende i hjärtat av staden. Kontakta oss för mer info! ❤️ #Uppsala #Lägenhet #Drömboende`,
+    after: `Storgatan 12, Uppsala. Trea om 76 kvm med Ballingslöv-kök från 2022 och balkong i söderläge. Ekparkett och takhöjd 2,70 m. Badrum renoverat 2020. BRF Storgården, avgift 3 900 kr/mån.\nUppsala resecentrum 5 minuter — pendlingsavstånd till Stockholm.\n\n#Uppsala #Hemnet #Lägenhet #Balkong #TillSalu`,
+  },
+  {
+    label: "Visningsinbjudan",
+    before: `Välkommen på visning av denna underbara lägenhet! Missa inte chansen att se denna fantastiska bostad som erbjuder allt du kan önska dig. Vi ser fram emot att träffa dig!\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]`,
+    after: `Visning — Storgatan 12, 3 tr, Uppsala.\nTrea om 76 kvm med renoverat kök 2022 och balkong i söderläge. Ekparkett, takhöjd 2,70 m. Badrum 2020.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]`,
+  },
+];
+
+function BeforeAfterDemo() {
+  const [activeTab, setActiveTab] = useState(0);
+  const item = BEFORE_AFTER[activeTab];
+
+  return (
+    <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: "#E8E5DE" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+            Vad AI:n skriver — på riktigt
+          </span>
+        </div>
+        <div className="flex gap-1">
+          {BEFORE_AFTER.map((t, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveTab(i)}
+              className="px-2.5 py-1 text-[11px] rounded-full border transition-all font-medium"
+              style={{
+                background: activeTab === i ? "#2D6A4F" : "#fff",
+                color: activeTab === i ? "#fff" : "#9CA3AF",
+                borderColor: activeTab === i ? "#2D6A4F" : "#E8E5DE",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="p-5 space-y-4">
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "#FEE2E2", color: "#DC2626" }}>
+              Vanlig AI / ChatGPT
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#9CA3AF", fontStyle: "italic" }}>
+            {item.before}
+          </p>
+        </div>
+        <div className="border-t pt-4" style={{ borderColor: "#F3F4F6" }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "#DCFCE7", color: "#16A34A" }}>
+              OptiPrompt
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#1D2939" }}>
+            {item.after}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { mutate, isPending } = useOptimize();
   const { data: userStatus } = useUserStatus();
@@ -283,35 +357,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="space-y-5 lg:sticky lg:top-24">
-                {/* Preview card */}
-                <div className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
-                      Så här funkar det
-                    </span>
-                  </div>
-                  <ol className="space-y-3">
-                    {[
-                      { step: "1", text: "Fyll i fastighetens data" },
-                      { step: "2", text: "Välj plattform (Hemnet, Booli...)" },
-                      { step: "3", text: "AI:n genererar 5 texter direkt" },
-                      { step: "4", text: "Kopiera varje text med ett klick" },
-                    ].map((item) => (
-                      <li key={item.step} className="flex items-start gap-3">
-                        <span
-                          className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-                          style={{ background: "#E8F5E9", color: "#2D6A4F" }}
-                        >
-                          {item.step}
-                        </span>
-                        <span className="text-sm leading-relaxed" style={{ color: "#4B5563" }}>
-                          {item.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </div>
+                {/* Before/After demo */}
+                <BeforeAfterDemo />
 
                 {/* Usage indicator for logged in */}
                 {isAuthenticated && (

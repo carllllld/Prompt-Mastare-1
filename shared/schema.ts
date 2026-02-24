@@ -70,6 +70,7 @@ export const optimizeRequestSchema = z.object({
   prompt: z.string().min(1, "Please enter a prompt to optimize"),
   type: z.string().default("General"),
   platform: z.string().default("general"),
+  writingStyle: z.enum(["factual", "balanced", "selling"]).default("balanced"),
   wordCountMin: z.number().optional(),
   wordCountMax: z.number().optional(),
   imageUrls: z.array(z.string()).optional(),
