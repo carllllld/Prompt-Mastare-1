@@ -13,12 +13,14 @@ import VerifyEmail from "@/pages/VerifyEmail";
 import ResetPassword from "@/pages/ResetPassword";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import Terms from "@/pages/Terms";
+import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Landing} />
+      <Route path="/app" component={Home} />
       <Route path="/teams" component={Teams} />
       <Route path="/teams/join/:token" component={JoinTeam} />
       <Route path="/prompts/:id" component={PromptEditor} />

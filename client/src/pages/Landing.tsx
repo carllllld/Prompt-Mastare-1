@@ -1,13 +1,14 @@
-import { Crown, Check, ArrowRight, Zap, Shield, Clock, FileText, Sparkles, Star, BarChart3, Users, Pen } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Crown, Check, ArrowRight, Zap, Shield, FileText,
+  Sparkles, BarChart3, Users, Pen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuthModal } from "@/components/AuthModal";
 
-interface LandingPageProps {
-  onGetStarted: () => void;
-  onStartCheckout: (tier: "pro" | "premium") => void;
-  isCheckoutPending: boolean;
-}
-
-// ─── BEFORE / AFTER DEMO DATA ───
+// ─── BEFORE / AFTER DEMO ───
 const BEFORE_TEXT = `Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en härlig balkong. Bostaden präglas av ljusa och luftiga rum som bjuder på en underbar känsla. Det moderna köket är perfekt för den som älskar att laga mat. Här kan du njuta av lugnet i ett attraktivt och eftertraktat område. Missa inte denna unika möjlighet!`;
 
 const AFTER_TEXT = `Storgatan 15, 3 tr, Vasastan. Trea om 78 kvm med genomgående planlösning och balkong mot innergård.
@@ -18,29 +19,7 @@ Två sovrum: 14 kvm respektive 10 kvm. Badrum med kakel och golvvärme, renovera
 
 Visning söndag 13–14.`;
 
-// ─── TESTIMONIALS DATA ───
-const TESTIMONIALS = [
-  {
-    name: "Maria Lindström",
-    role: "Fastighetsmäklare, Bjurfors Göteborg",
-    text: "Vi testade OptiPrompt på ett svårsålt radhus i Partille. Texten var klar på 15 sekunder och vi behövde knappt ändra ett ord. Köparen sa att annonsen fick dem att boka visning direkt.",
-    rating: 5,
-  },
-  {
-    name: "Erik Johansson",
-    role: "Mäklarassistent, Svensk Fastighetsförmedling",
-    text: "Jag skrev objektbeskrivningar manuellt i 3 år. Det tog minst 45 minuter per objekt. Nu tar det 20 sekunder och texterna är ärligt talat bättre än mina egna. Sparar mig 5-6 timmar i veckan.",
-    rating: 5,
-  },
-  {
-    name: "Anna Bergqvist",
-    role: "Franchise-ägare, HusmanHagberg Uppsala",
-    text: "Det bästa med OptiPrompt är att texterna inte låter AI-genererade. Inga klyschor, inga 'generösa ytor' eller 'bjuder på'. Ren faktabaserad svenska som våra kunder förtjänar.",
-    rating: 5,
-  },
-];
-
-// ─── FEATURES DATA ───
+// ─── FEATURES ───
 const FEATURES = [
   {
     icon: Zap,
@@ -54,8 +33,8 @@ const FEATURES = [
   },
   {
     icon: Pen,
-    title: "Klyschfri svenska",
-    desc: "283 förbjudna AI-klyschor filtreras bort. Ingen 'generös planlösning' eller 'bjuder på utsikt'.",
+    title: "283 klyschor filtreras bort",
+    desc: "Ingen 'generös planlösning', 'bjuder på utsikt' eller 'välkommen till'. Ren faktabaserad svenska.",
   },
   {
     icon: BarChart3,
@@ -74,21 +53,107 @@ const FEATURES = [
   },
 ];
 
-export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }: LandingPageProps) {
+// ─── PRICING ───
+const PLANS = [
+  {
+    name: "Gratis",
+    price: "0",
+    desc: "Perfekt för att testa",
+    color: "#9CA3AF",
+    features: [
+      "3 genereringar / månad",
+      "Hemnet + Booli-texter",
+      "Rubrik, Instagram & kortannons",
+      "Grundläggande AI-pipeline",
+    ],
+    cta: "Kom igång gratis",
+    tier: null as null | "pro" | "premium",
+    highlight: false,
+  },
+  {
+    name: "Pro",
+    price: "299",
+    desc: "För aktiva mäklare",
+    color: "#2D6A4F",
+    features: [
+      "10 genereringar / månad",
+      "Personlig skrivstil",
+      "Områdesanalys & marknadsdata",
+      "Text-redigering med AI",
+      "Faktagranskning",
+      "Förbättringsförslag",
+    ],
+    cta: "Välj Pro",
+    tier: "pro" as "pro",
+    highlight: true,
+  },
+  {
+    name: "Premium",
+    price: "599",
+    desc: "För team & storproducenter",
+    color: "#8B5CF6",
+    features: [
+      "Obegränsat antal genereringar",
+      "Allt i Pro, plus:",
+      "Team-funktioner (dela stil)",
+      "Priority support",
+      "Avancerad marknadsanalys",
+    ],
+    cta: "Välj Premium",
+    tier: "premium" as "premium",
+    highlight: false,
+  },
+];
+
+export default function Landing() {
+  const [authOpen, setAuthOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Already logged in → go straight to app
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      setLocation("/app");
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
+
+  function openRegister() {
+    setAuthOpen(true);
+  }
+  function openLogin() {
+    setAuthOpen(true);
+  }
+
   return (
-    <div className="space-y-0">
+    <div className="min-h-screen" style={{ background: "#FAFAF8", fontFamily: "system-ui, sans-serif" }}>
+
+      {/* ════════ HEADER ════════ */}
+      <header className="sticky top-0 z-40 border-b" style={{ background: "rgba(250,250,248,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <span className="font-semibold text-lg tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+            OptiPrompt
+          </span>
+          <nav className="hidden sm:flex items-center gap-6 text-sm" style={{ color: "#6B7280" }}>
+            <a href="#hur-det-funkar" className="hover:text-gray-900 transition-colors">Hur det funkar</a>
+            <a href="#funktioner" className="hover:text-gray-900 transition-colors">Funktioner</a>
+            <a href="#priser" className="hover:text-gray-900 transition-colors">Priser</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={openLogin} className="text-sm font-medium">
+              Logga in
+            </Button>
+            <Button size="sm" onClick={openRegister} className="text-sm font-medium" style={{ background: "#2D6A4F", color: "#fff" }}>
+              Testa gratis
+            </Button>
+          </div>
+        </div>
+      </header>
 
       {/* ════════ HERO ════════ */}
-      <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24">
+      <section className="pt-16 pb-20 sm:pt-24 sm:pb-28">
         <div className="max-w-4xl mx-auto text-center px-6">
-          {/* Social proof badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
-            <div className="flex -space-x-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-current" style={{ color: "#D4AF37" }} />
-              ))}
-            </div>
-            Används av 200+ svenska mäklare
+            Byggt för svenska fastighetsmäklare
           </div>
 
           <h1
@@ -107,7 +172,7 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
             <Button
-              onClick={onGetStarted}
+              onClick={openRegister}
               className="text-base px-8 py-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
               style={{ background: "#2D6A4F", color: "#fff" }}
             >
@@ -117,13 +182,13 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
             <span className="text-xs" style={{ color: "#9CA3AF" }}>Inget kort krävs</span>
           </div>
 
-          {/* Quick stats */}
+          {/* Stats — bara produktfakta, inga användarsiffror */}
           <div className="flex flex-wrap items-center justify-center gap-8 mt-12 pt-8 border-t" style={{ borderColor: "#E8E5DE" }}>
             {[
-              { value: "15 sek", label: "per text" },
-              { value: "5 texter", label: "per generering" },
+              { value: "15 sek", label: "per generering" },
+              { value: "5 texter", label: "på en gång" },
               { value: "283", label: "klyschor filtreras" },
-              { value: "100%", label: "svensk AI" },
+              { value: "6 steg", label: "AI-pipeline" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-xl sm:text-2xl font-bold" style={{ color: "#2D6A4F" }}>{stat.value}</div>
@@ -134,12 +199,38 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
         </div>
       </section>
 
+      {/* ════════ HUR DET FUNKAR ════════ */}
+      <section id="hur-det-funkar" className="py-16 sm:py-20" style={{ background: "#F8F6F1" }}>
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+              Tre steg. Klart.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            {[
+              { step: "1", title: "Fyll i fastighetsdata", desc: "Adress, yta, rum, skick, balkong, renovering — allt i ett strukturerat formulär." },
+              { step: "2", title: "AI genererar 5 texter", desc: "6-stegs pipeline: extraktion → analys → textgenerering → klyschfilter → faktagranskning → förbättringsförslag." },
+              { step: "3", title: "Kopiera & publicera", desc: "Texterna är redo för Hemnet, Booli, Instagram och visningsinbjudan. Redigera om du vill." },
+            ].map((s) => (
+              <div key={s.step} className="text-center">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-4" style={{ background: "#2D6A4F", color: "#fff" }}>
+                  {s.step}
+                </div>
+                <h3 className="font-semibold mb-2" style={{ color: "#1D2939" }}>{s.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: "#6B7280" }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ════════ BEFORE / AFTER ════════ */}
-      <section className="py-16 sm:py-20" style={{ background: "#F8F6F1" }}>
+      <section className="py-16 sm:py-20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-4" style={{ background: "#FEE2E2", color: "#991B1B" }}>
-              Före & Efter
+              Före &amp; Efter
             </div>
             <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
               Ser du skillnaden?
@@ -190,7 +281,7 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
       </section>
 
       {/* ════════ FEATURES ════════ */}
-      <section className="py-16 sm:py-20">
+      <section id="funktioner" className="py-16 sm:py-20" style={{ background: "#F8F6F1" }}>
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
@@ -215,38 +306,8 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
         </div>
       </section>
 
-      {/* ════════ TESTIMONIALS ════════ */}
-      <section className="py-16 sm:py-20" style={{ background: "#F8F6F1" }}>
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-              Mäklare som sparar timmar varje vecka
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="bg-white rounded-xl border p-6" style={{ borderColor: "#E8E5DE" }}>
-                <div className="flex gap-0.5 mb-3">
-                  {[...Array(t.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current" style={{ color: "#D4AF37" }} />
-                  ))}
-                </div>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: "#4B5563" }}>
-                  "{t.text}"
-                </p>
-                <div className="pt-3 border-t" style={{ borderColor: "#F3F4F6" }}>
-                  <div className="font-semibold text-sm" style={{ color: "#1D2939" }}>{t.name}</div>
-                  <div className="text-xs" style={{ color: "#9CA3AF" }}>{t.role}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ════════ PRICING ════════ */}
-      <section className="py-16 sm:py-20" id="pricing">
+      <section id="priser" className="py-16 sm:py-20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
@@ -258,101 +319,44 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* FREE */}
-            <div className="bg-white rounded-xl border p-6" style={{ borderColor: "#E8E5DE" }}>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>Gratis</div>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>0 kr</span>
-                <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
-              </div>
-              <p className="text-xs mb-6" style={{ color: "#6B7280" }}>Perfekt för att testa</p>
-              <ul className="space-y-2.5 mb-6">
-                {["3 genereringar / månad", "Hemnet + Booli-texter", "Rubrik + Instagram + kortannons", "Grundläggande AI-pipeline"].map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: "#374151" }}>
-                    <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#2D6A4F" }} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                onClick={onGetStarted}
-                variant="outline"
-                className="w-full font-medium"
+            {PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`bg-white rounded-xl p-6 relative ${plan.highlight ? "border-2 shadow-lg" : "border"}`}
+                style={{ borderColor: plan.highlight ? plan.color : "#E8E5DE" }}
               >
-                Kom igång gratis
-              </Button>
-            </div>
-
-            {/* PRO — highlighted */}
-            <div className="bg-white rounded-xl border-2 p-6 relative shadow-lg" style={{ borderColor: "#2D6A4F" }}>
-              <div className="absolute -top-3 right-4 px-3 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: "#2D6A4F" }}>
-                Populärast
+                {plan.highlight && (
+                  <div className="absolute -top-3 right-4 px-3 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: plan.color }}>
+                    Populärast
+                  </div>
+                )}
+                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: plan.color }}>
+                  {plan.name}
+                </div>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>{plan.price} kr</span>
+                  <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
+                </div>
+                <p className="text-xs mb-6" style={{ color: "#6B7280" }}>{plan.desc}</p>
+                <ul className="space-y-2.5 mb-6">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm" style={{ color: "#374151" }}>
+                      <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  onClick={openRegister}
+                  variant={plan.highlight ? "default" : "outline"}
+                  className="w-full font-medium"
+                  style={plan.highlight ? { background: plan.color, color: "#fff" } : {}}
+                >
+                  {plan.tier && <Crown className="w-4 h-4 mr-2" />}
+                  {plan.cta}
+                </Button>
               </div>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#2D6A4F" }}>Pro</div>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>299 kr</span>
-                <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
-              </div>
-              <p className="text-xs mb-6" style={{ color: "#6B7280" }}>För aktiva mäklare</p>
-              <ul className="space-y-2.5 mb-6">
-                {[
-                  "10 genereringar / månad",
-                  "Personlig skrivstil",
-                  "Områdesanalys & marknadsdata",
-                  "Text-redigering med AI",
-                  "Faktagranskning",
-                  "Förbättringsförslag",
-                ].map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: "#374151" }}>
-                    <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#2D6A4F" }} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                onClick={() => onStartCheckout("pro")}
-                disabled={isCheckoutPending}
-                className="w-full font-medium text-white"
-                style={{ background: "#2D6A4F" }}
-              >
-                <Crown className="w-4 h-4 mr-2" />
-                Välj Pro
-              </Button>
-            </div>
-
-            {/* PREMIUM */}
-            <div className="bg-white rounded-xl border p-6 relative" style={{ borderColor: "#E8E5DE" }}>
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#8B5CF6" }}>Premium</div>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>599 kr</span>
-                <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
-              </div>
-              <p className="text-xs mb-6" style={{ color: "#6B7280" }}>För team & storproducenter</p>
-              <ul className="space-y-2.5 mb-6">
-                {[
-                  "Obegränsat antal genereringar",
-                  "Allt i Pro, plus:",
-                  "Team-funktioner (dela stil)",
-                  "API-access",
-                  "Priority support",
-                  "Avancerad marknadsanalys",
-                ].map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm" style={{ color: "#374151" }}>
-                    <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#8B5CF6" }} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                onClick={() => onStartCheckout("premium")}
-                disabled={isCheckoutPending}
-                className="w-full font-medium text-white"
-                style={{ background: "#8B5CF6" }}
-              >
-                <Crown className="w-4 h-4 mr-2" />
-                Välj Premium
-              </Button>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -361,13 +365,13 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
       <section className="py-16 sm:py-20" style={{ background: "#2D6A4F" }}>
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-2xl sm:text-3xl font-semibold mb-4 text-white" style={{ fontFamily: "'Lora', Georgia, serif" }}>
-            Redo att spara 5 timmar i veckan?
+            Redo att testa?
           </h2>
           <p className="text-sm mb-8" style={{ color: "#A7F3D0" }}>
             Skapa ditt konto på 30 sekunder. Ingen bindningstid. Inga dolda avgifter. 3 gratis genereringar direkt.
           </p>
           <Button
-            onClick={onGetStarted}
+            onClick={openRegister}
             className="text-base px-8 py-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
             style={{ background: "#fff", color: "#2D6A4F" }}
           >
@@ -384,6 +388,29 @@ export function LandingPage({ onGetStarted, onStartCheckout, isCheckoutPending }
           </div>
         </div>
       </section>
+
+      {/* ════════ FOOTER ════════ */}
+      <footer className="py-10 border-t" style={{ background: "#1D2939", borderColor: "#374151" }}>
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#F9FAFB" }}>
+            OptiPrompt
+          </span>
+          <div className="flex items-center gap-6 text-xs" style={{ color: "#9CA3AF" }}>
+            <Link href="/privacy" className="hover:text-white transition-colors">Integritetspolicy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Villkor</Link>
+            <a href="mailto:support@optiprompt.se" className="hover:text-white transition-colors">support@optiprompt.se</a>
+          </div>
+          <p className="text-xs" style={{ color: "#6B7280" }}>
+            © {new Date().getFullYear()} OptiPrompt
+          </p>
+        </div>
+      </footer>
+
+      {/* Auth modal */}
+      <AuthModal
+        open={authOpen}
+        onOpenChange={setAuthOpen}
+      />
     </div>
   );
 }

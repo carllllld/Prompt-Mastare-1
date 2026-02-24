@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { AuthModal } from "@/components/AuthModal";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
-import { LandingPage } from "@/components/LandingPage";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
@@ -26,6 +25,14 @@ export default function Home() {
   const { mutate: openPortal, isPending: isPortalPending } = useStripePortal();
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  // Redirect unauthenticated users to landing page
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [lastSubmitData, setLastSubmitData] = useState<any>(null);
@@ -179,17 +186,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-
-      {/* ── LANDING PAGE for visitors ── */}
-      {!isAuthenticated && !authLoading && (
-        <LandingPage
-          onGetStarted={() => setAuthModalOpen(true)}
-          onStartCheckout={(tier) => {
-            setAuthModalOpen(true);
-          }}
-          isCheckoutPending={isCheckoutPending}
-        />
-      )}
 
       {/* ── MAIN ── */}
       <main className="max-w-7xl mx-auto px-6 py-8">
