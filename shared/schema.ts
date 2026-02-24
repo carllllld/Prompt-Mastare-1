@@ -12,6 +12,10 @@ export const optimizations = pgTable("optimizations", {
   originalPrompt: text("original_prompt").notNull(),
   improvedPrompt: text("improved_prompt").notNull(),
   socialCopy: text("social_copy"),
+  headline: text("headline"),
+  instagramCaption: text("instagram_caption"),
+  showingInvitation: text("showing_invitation"),
+  shortAd: text("short_ad"),
   category: text("category").notNull(),
   improvements: jsonb("improvements").$type<string[]>().notNull(),
   suggestions: jsonb("suggestions").$type<string[]>().notNull(),
@@ -135,9 +139,9 @@ export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
 export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
-  free: { texts: 3, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
-  pro: { texts: 10, areaSearches: 2, textEdits: 999999, personalStyleAnalyses: 1 },
-  premium: { texts: 999999, areaSearches: 999999, textEdits: 999999, personalStyleAnalyses: 999999 },
+  free: { texts: 5, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
+  pro: { texts: 15, areaSearches: 10, textEdits: 999999, personalStyleAnalyses: 5 },
+  premium: { texts: 50, areaSearches: 30, textEdits: 999999, personalStyleAnalyses: 15 },
 } as const;
 
 // Feature access per plan

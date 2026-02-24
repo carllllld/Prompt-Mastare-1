@@ -61,7 +61,7 @@ const PLANS = [
     desc: "Perfekt för att testa",
     color: "#9CA3AF",
     features: [
-      "3 genereringar / månad",
+      "5 genereringar / månad",
       "Hemnet + Booli-texter",
       "Rubrik, Instagram & kortannons",
       "Grundläggande AI-pipeline",
@@ -76,7 +76,7 @@ const PLANS = [
     desc: "För aktiva mäklare",
     color: "#2D6A4F",
     features: [
-      "10 genereringar / månad",
+      "15 genereringar / månad",
       "Personlig skrivstil",
       "Områdesanalys & marknadsdata",
       "Text-redigering med AI",
@@ -93,7 +93,7 @@ const PLANS = [
     desc: "För team & storproducenter",
     color: "#8B5CF6",
     features: [
-      "Obegränsat antal genereringar",
+      "50 genereringar / månad",
       "Allt i Pro, plus:",
       "Team-funktioner (dela stil)",
       "Priority support",
@@ -176,7 +176,7 @@ export default function Landing() {
               className="text-base px-8 py-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
               style={{ background: "#2D6A4F", color: "#fff" }}
             >
-              Testa gratis — 3 texter/månad
+              Testa gratis — 5 texter/månad
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <span className="text-xs" style={{ color: "#9CA3AF" }}>Inget kort krävs</span>
@@ -368,7 +368,7 @@ export default function Landing() {
             Redo att testa?
           </h2>
           <p className="text-sm mb-8" style={{ color: "#A7F3D0" }}>
-            Skapa ditt konto på 30 sekunder. Ingen bindningstid. Inga dolda avgifter. 3 gratis genereringar direkt.
+            Skapa ditt konto på 30 sekunder. Ingen bindningstid. Inga dolda avgifter. 5 gratis genereringar direkt.
           </p>
           <Button
             onClick={openRegister}

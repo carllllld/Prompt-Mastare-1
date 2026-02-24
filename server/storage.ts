@@ -127,19 +127,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async resetUserPromptsIfNewDay(user: User): Promise<User> {
-    const today = new Date().toISOString().split('T')[0];
+    // Kalenderbaserad månadsreset: nollställ den 1:a varje månad
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastReset = user.lastResetDate ? String(user.lastResetDate) : '';
 
-    // For all users, reset monthly (30 days after creation or last reset)
-    const createdAt = new Date(user.createdAt || user.lastResetDate || today);
-    const thirtyDaysLater = new Date(createdAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const resetDate = thirtyDaysLater.toISOString().split('T')[0];
-    
-    if (lastReset !== resetDate && new Date() >= thirtyDaysLater) {
+    if (lastReset !== currentMonth) {
       const [updated] = await db.update(users)
         .set({ 
           promptsUsedToday: 0, 
-          lastResetDate: resetDate 
+          lastResetDate: currentMonth
         })
         .where(eq(users.id, user.id))
         .returning();
@@ -189,7 +186,11 @@ export class DatabaseStorage implements IStorage {
       userId: optimization.userId,
       originalPrompt: optimization.originalPrompt,
       improvedPrompt: optimization.improvedPrompt,
-      socialCopy: optimization.socialCopy ?? "",
+      socialCopy: optimization.socialCopy ?? null,
+      headline: (optimization as any).headline ?? null,
+      instagramCaption: (optimization as any).instagramCaption ?? null,
+      showingInvitation: (optimization as any).showingInvitation ?? null,
+      shortAd: (optimization as any).shortAd ?? null,
       category: optimization.category,
       improvements: optimization.improvements,
       suggestions: optimization.suggestions,

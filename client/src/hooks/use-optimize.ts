@@ -40,7 +40,7 @@ export function useOptimize() {
         
         toast({
           title: 'Månadskvot uppnådd',
-          description: 'Uppgradera till Pro för fler beskrivningar.',
+          description: error.message || 'Du har nått din månadsgräns. Uppgradera för fler genereringar.',
           variant: 'destructive',
         });
       } else {

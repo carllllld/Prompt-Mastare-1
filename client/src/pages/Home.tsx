@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearch } from "wouter";
 import { Link, useLocation } from "wouter";
 import { PromptFormProfessional } from "@/components/PromptFormProfessional";
 import { ResultSection } from "@/components/ResultSection";
@@ -26,6 +27,7 @@ export default function Home() {
   const { user, isLoading: authLoading, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const search = useSearch();
 
   // Redirect unauthenticated users to landing page
   useEffect(() => {
@@ -33,6 +35,25 @@ export default function Home() {
       setLocation("/");
     }
   }, [authLoading, isAuthenticated, setLocation]);
+
+  // Show toast after Stripe redirect
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    if (params.get("success") === "true") {
+      toast({
+        title: "Prenumeration aktiverad!",
+        description: "Välkommen! Ditt konto är nu uppgraderat. Ladda om sidan om status inte uppdateras.",
+      });
+      window.history.replaceState({}, "", "/app");
+    } else if (params.get("canceled") === "true") {
+      toast({
+        title: "Betalning avbruten",
+        description: "Ingen betalning genomfördes. Du kan uppgradera när du vill.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/app");
+    }
+  }, [search, toast]);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [lastSubmitData, setLastSubmitData] = useState<any>(null);
@@ -209,7 +230,7 @@ export default function Home() {
               <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar denna månad</p>
               <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
                 {plan === "free"
-                  ? "Uppgradera till Pro för 10 beskrivningar per månad."
+                  ? "Uppgradera till Pro för 15 beskrivningar per månad."
                   : `Nästa reset: ${userStatus?.resetTime || "nästa månad"}`}
               </p>
             </div>
@@ -321,8 +342,8 @@ export default function Home() {
                     </h3>
                     <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
                       {plan === "free" 
-                        ? "Välj mellan Pro (10 texter/månad) eller Premium (obegränsat)."
-                        : "Premium ger dig obegränsat antal texter, team-funktioner och API-access."
+                        ? "Välj mellan Pro (15 texter/månad) eller Premium (50 texter/månad)."
+                        : "Premium ger dig 50 texter/mån, team-funktioner och priority support."
                       }
                     </p>
                     
@@ -332,7 +353,7 @@ export default function Home() {
                         <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
                           <h4 className="font-medium text-sm mb-2" style={{ color: "#2D6A4F" }}>Pro - 299kr/månad</h4>
                           <ul className="space-y-1">
-                            {["10 texter / månad", "Personlig skrivstil", "Sök område & analyser", "Text-redigering"].map((f) => (
+                            {["15 texter / månad", "Personlig skrivstil", "Sök område & analyser", "Text-redigering"].map((f) => (
                               <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
                                 <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#2D6A4F" }} />
                                 {f}
@@ -385,10 +406,10 @@ export default function Home() {
                     {plan === "pro" && (
                       <ul className="space-y-2 mb-5">
                         {[
-                          "Obegränsat antal texter",
+                          "50 texter / månad",
                           "Team-funktioner (dela stil med kollegor)",
-                          "API-access (integration med CRM)",
-                          "Priority support & avancerade features"
+                          "Priority support & avancerade features",
+                          "30 områdessökningar per månad"
                         ].map((f) => (
                           <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
                             <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#8B5CF6" }} />

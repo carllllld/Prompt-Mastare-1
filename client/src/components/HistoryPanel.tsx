@@ -7,6 +7,10 @@ interface HistoryItem {
   originalPrompt: string;
   improvedPrompt: string;
   socialCopy?: string;
+  headline?: string;
+  instagramCaption?: string;
+  showingInvitation?: string;
+  shortAd?: string;
   category: string;
   improvements: string[];
   suggestions: string[];
@@ -23,6 +27,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<Record<number, string>>({});
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -172,37 +177,73 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
                 </button>
 
                 {/* Expanded content */}
-                {isExpanded && (
-                  <div className="px-4 pb-3" style={{ background: "#FAFAF8" }}>
-                    <div
-                      className="text-xs leading-relaxed whitespace-pre-wrap rounded-lg p-3 border mb-2"
-                      style={{ color: "#4B5563", borderColor: "#E8E5DE", background: "#FFFFFF", maxHeight: "200px", overflowY: "auto" }}
-                    >
-                      {item.improvedPrompt}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyText(item.improvedPrompt, item.id)}
-                        className="h-6 text-[10px] px-2"
-                        style={{ color: "#6B7280" }}
+                {isExpanded && (() => {
+                  const hasExtras = !!(item.headline || item.instagramCaption || item.showingInvitation || item.shortAd);
+                  const tabs = [
+                    { key: "description", label: "Beskrivning", text: item.improvedPrompt },
+                    ...(item.headline ? [{ key: "headline", label: "Rubrik", text: item.headline }] : []),
+                    ...(item.instagramCaption ? [{ key: "instagram", label: "Instagram", text: item.instagramCaption }] : []),
+                    ...(item.showingInvitation ? [{ key: "showing", label: "Visning", text: item.showingInvitation }] : []),
+                    ...(item.shortAd ? [{ key: "shortad", label: "Kortannons", text: item.shortAd }] : []),
+                  ];
+                  const currentTab = activeTab[item.id] || "description";
+                  const currentText = tabs.find(t => t.key === currentTab)?.text || item.improvedPrompt;
+                  return (
+                    <div className="px-4 pb-3" style={{ background: "#FAFAF8" }}>
+                      {/* Info för äldre poster */}
+                      {!hasExtras && (
+                        <p className="text-[10px] mb-2 italic" style={{ color: "#9CA3AF" }}>
+                          Äldre post — rubrik och sociala texter sparas från och med nu.
+                        </p>
+                      )}
+                      {/* Tab bar */}
+                      {tabs.length > 1 && (
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {tabs.map(tab => (
+                            <button
+                              key={tab.key}
+                              onClick={() => setActiveTab(prev => ({ ...prev, [item.id]: tab.key }))}
+                              className="px-2 py-0.5 rounded text-[10px] font-medium transition-colors"
+                              style={{
+                                background: currentTab === tab.key ? "#2D6A4F" : "#F0EDE6",
+                                color: currentTab === tab.key ? "#fff" : "#6B7280",
+                              }}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div
+                        className="text-xs leading-relaxed whitespace-pre-wrap rounded-lg p-3 border mb-2"
+                        style={{ color: "#4B5563", borderColor: "#E8E5DE", background: "#FFFFFF", maxHeight: "200px", overflowY: "auto" }}
                       >
-                        {copiedId === item.id ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
-                        {copiedId === item.id ? "Kopierad" : "Kopiera"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteItem(item.id)}
-                        className="h-6 text-[10px] px-2 hover:text-red-600"
-                        style={{ color: "#D1D5DB" }}
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" /> Ta bort
-                      </Button>
+                        {currentText}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyText(currentText, item.id)}
+                          className="h-6 text-[10px] px-2"
+                          style={{ color: "#6B7280" }}
+                        >
+                          {copiedId === item.id ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                          {copiedId === item.id ? "Kopierad" : "Kopiera"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteItem(item.id)}
+                          className="h-6 text-[10px] px-2 hover:text-red-600"
+                          style={{ color: "#D1D5DB" }}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Ta bort
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })

@@ -58,12 +58,11 @@ export function PersonalStyle() {
   };
 
   const handleSave = async () => {
-    // Validera att alla texter är tillräckligt långa
     const validTexts = referenceTexts.filter(text => text.trim().length >= 100);
-    if (validTexts.length !== 3) {
+    if (validTexts.length < 1) {
       toast({
         title: "Valideringsfel",
-        description: "Alla exempeltexter måste vara minst 100 tecken långa",
+        description: "Minst en exempeltext måste vara minst 100 tecken lång",
         variant: "destructive",
       });
       return;
@@ -197,7 +196,7 @@ export function PersonalStyle() {
             Personlig Skrivstil
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Lär AI:n din unika skrivstil med 3 exempeltexter
+            Lär AI:n din unika skrivstil med 1–3 exempeltexter
           </p>
         </div>
         
@@ -280,8 +279,8 @@ export function PersonalStyle() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Klistra in 3 av dina bästa objektbeskrivningar (minst 100 tecken vardera). 
-              AI:n analyserar din stil och anpassar framtida texter efter dessa exempel.
+              Klistra in 1–3 av dina bästa objektbeskrivningar (minst 100 tecken vardera).
+              Fler exempel ger AI:n bättre förståelse för din skrivstil.
             </AlertDescription>
           </Alert>
 
@@ -289,9 +288,9 @@ export function PersonalStyle() {
             <div key={index} className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">
-                  Exempel {index + 1}
+                  Exempel {index + 1}{index === 0 ? " (obligatorisk)" : " (valfri)"}
                 </label>
-                <Badge variant={text.length >= 100 ? "default" : "destructive"}>
+                <Badge variant={text.length >= 100 ? "default" : text.length > 0 ? "destructive" : "secondary"}>
                   {text.length}/100 tecken
                 </Badge>
               </div>
@@ -311,7 +310,7 @@ export function PersonalStyle() {
           <div className="flex items-center gap-2 pt-4">
             <Button
               onClick={handleSave}
-              disabled={saving || referenceTexts.some(text => text.trim().length < 100)}
+              disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
               className="flex-1"
             >
               {saving ? (

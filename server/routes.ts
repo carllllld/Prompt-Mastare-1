@@ -1977,10 +1977,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       
       const limits = PLAN_LIMITS[plan];
       if (usage.textsGenerated >= limits.texts) {
+        const upgradeMsg = plan === "free"
+          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 15 per månad!`
+          : plan === "pro"
+          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 50 per månad!`
+          : `Du har nått din månadsgräns av ${limits.texts} genereringar. Kontakta oss om du behöver mer.`;
         return res.status(429).json({
-          message: `Du har nått din månadsgräns av ${limits.texts} objektbeskrivningar. Uppgradera till Pro för fler!`,
+          message: upgradeMsg,
           limitReached: true,
-          upgradeTo: plan === "free" ? "pro" : "premium",
+          upgradeTo: plan === "free" ? "pro" : plan === "pro" ? "premium" : null,
         });
       }
 
@@ -2422,6 +2427,10 @@ ERSÄTTNINGSTABELL:
         ].filter(Boolean) as string[],
         suggestions: result.text_tips || result.pro_tips || [],
         socialCopy: result.socialCopy || null,
+        headline: result.headline || null,
+        instagramCaption: result.instagramCaption || null,
+        showingInvitation: result.showingInvitation || null,
+        shortAd: result.shortAd || null,
       });
 
       // AI-förbättringsanalys (körs efter textgenerering)
@@ -2524,6 +2533,10 @@ Svara med JSON i formatet:
 
   // ── AI REWRITE: Inline text editing ──
   app.post("/api/rewrite", requireAuth, async (req, res) => {
+    const rewriteUser = (req as any).user as User;
+    if ((rewriteUser.plan as PlanType) === "free") {
+      return res.status(403).json({ message: "Text-omskrivning är endast för Pro/Premium-användare" });
+    }
     try {
       const { selectedText, fullText, instruction } = req.body;
       if (!selectedText || !fullText || !instruction) {
@@ -2774,6 +2787,10 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           .map((p: any) => `${p.name} (${p.type.toLowerCase()}) ${p.distance}`)
           .join(". ") || null;
 
+        // Increment usage BEFORE sending response (atomic)
+        await storage.incrementUsage(user.id, 'areaSearches');
+        console.log(`[Usage] Incremented area search for user ${user.id} (OpenStreetMap)`);
+
         res.json({ 
           formattedAddress, 
           places: places.slice(0, 6), 
@@ -2781,10 +2798,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           neighborhood,
           source: "openstreetmap"
         });
-        
-        // Increment usage for area search
-        await storage.incrementUsage(user.id, 'areaSearches');
-        console.log(`[Usage] Incremented area search for user ${user.id} (OpenStreetMap)`);
         
       } catch (osmError: any) {
         console.error("[OpenStreetMap] Error:", osmError);
@@ -2839,8 +2852,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         payment_method_types: ["card"],
         line_items: [{ price: priceId, quantity: 1 }],
         mode: "subscription",
-        success_url: `${baseUrl}?success=true`,
-        cancel_url: `${baseUrl}?canceled=true`,
+        success_url: `${baseUrl}/app?success=true`,
+        cancel_url: `${baseUrl}/app?canceled=true`,
         metadata: { userId: user.id, targetPlan: tier },
       });
 
@@ -2865,7 +2878,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,
-        return_url: baseUrl,
+        return_url: `${baseUrl}/app`,
       });
 
       res.json({ url: portalSession.url });
@@ -3368,20 +3381,20 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       console.log(`[Text Improvement] Improving text with type: ${improvementType}`);
 
-      const improvementPrompts = {
-        more_descriptive: `Gör denna text mer beskrivande och levande för fastighetsmäklare. Använd sensoriska detaljer och skapa en starkare bild för läsaren. Behåll den faktiska informationen.`,
-        more_selling: `Gör denna text mer säljande och övertygande. Fokusera på fördelar för köparen, skapa brådska och framhäva unika värden. Använd mäklarbranschens bästa praxis.`,
-        more_formal: `Gör denna text mer formell och professionell. Använd korrekta fastighetstermer och en ton som passar för högkvalitativa objekt.`,
-        more_warm: `Gör denna text mer personlig och inbjudande. Skapa en känsla av hem och välbefinnande utan att förlora professionaliteten.`,
-        fix_claims: `Förbättra denna text genom att ersätta klyschor och svaga påståenden med konkreta fakta och starka argument. Använd mäklarbranschen kunskaper.`
+      const improvementPrompts: Record<string, string> = {
+        more_descriptive: `Gör denna text mer beskrivande genom att lyfta fram KONKRETA detaljer (material, mått, märken, läge). Behåll alla faktapåståenden exakt.`,
+        more_selling: `Gör denna text mer säljande genom att lyfta fram KONKRETA fakta och mått. Ersätt vaga påståenden med specifika detaljer (märken, årtal, kvm). Inga klyschor.`,
+        more_formal: `Gör denna text mer formell och professionell. Använd korrekta fastighetstermer. Inga AI-klyschor.`,
+        more_warm: `Gör denna text mer personlig utan att förlora professionaliteten. Behåll alla faktapåståenden.`,
+        fix_claims: `Ersätt klyschor och vaga påståenden med konkreta fakta. Inga "erbjuder", "bjuder på", "generös", "fantastisk", "perfekt".`
       };
 
-      const prompt = improvementPrompts[improvementType as keyof typeof improvementPrompts] || improvementPrompts.more_descriptive;
+      const improvementInstruction = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
 
       const messages = [
         {
           role: "system" as const,
-          content: `Du är en expert på svenska fastighetstexter med 15 års erfarenhet som mäklare. Du kan allt om svensk fastighetslagstiftning, marknadspsykologi och effektiva säljstrategier. Dina texter är alltid klyschfria, faktabaserade och säljande.
+          content: `Du är en expert på svenska fastighetstexter. Dina texter är klyschfria, faktabaserade och säljande.
 
 KONTEXT: ${context || 'Ingen extra kontext'}
 
@@ -3389,7 +3402,9 @@ ORIGINALTEXT: ${originalText}
 
 VALD TEXT ATT FÖRBÄTTRA: ${selectedText}
 
-${prompt}
+${improvementInstruction}
+
+FÖRBJUDET: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, för den som, drömboende, i hjärtat av, faciliteter, njut av, livsstil, smakfullt, elegant, exklusivt, imponerande, harmonisk, inbjudande, tidlös, inte bara, utan också.
 
 Svara ENDAST med den förbättrade texten, inga förklaringar.`
         },
@@ -3406,11 +3421,12 @@ Svara ENDAST med den förbättrade texten, inga förklaringar.`
         temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
       });
 
-      const improvedText = completion.choices[0]?.message?.content || selectedText;
+      const rawImprovedText = completion.choices[0]?.message?.content || selectedText;
+      const improvedText = cleanForbiddenPhrases(rawImprovedText.trim());
 
       res.json({
         originalText: selectedText,
-        improvedText: improvedText.trim(),
+        improvedText: improvedText,
         improvementType: improvementType
       });
 
