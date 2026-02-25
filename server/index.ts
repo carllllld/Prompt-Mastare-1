@@ -5,12 +5,16 @@ import * as Sentry from "@sentry/node";
 import { createServer } from "http";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import connectPgSimple from "connect-pg-simple";
 import { initializeDatabase, pool } from "./db";
 import { setupAuth } from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite } from "./vite";
 import emailWebhooks from './routes/email-webhooks';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PgStore = connectPgSimple(session);
 const app = express();
@@ -264,7 +268,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // Setup Vite or static serving
   if (isProduction) {
-    const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
+    const distPath = path.resolve(__dirname, "..", "dist", "public");
     
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
