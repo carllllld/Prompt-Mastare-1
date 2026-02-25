@@ -360,13 +360,27 @@ export function setupAuth(app: Express) {
       const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
       await storage.setPasswordResetToken(user.id, resetToken, tokenExpires);
       
-      // Record and send email
+      // Record and send email immediately for password reset
       await storage.recordEmailSent(email, 'password_reset');
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-      await sendPasswordResetEmail(email, resetToken, user.email, clientIP);
       
-      console.log("[ForgotPassword] Reset email sent to:", email);
-      res.json({ message: "Om e-postadressen finns i vårt system skickas en återställningslänk." });
+      // Send immediately for security emails (no queue delay)
+      try {
+        const { sendEmailWithRetry } = await import('./lib/email-service');
+        await sendEmailWithRetry('password_reset', email, { 
+          resetUrl: `${process.env.APP_URL || 'https://optiprompt.se'}/reset-password?token=${resetToken}`,
+          userName: user.email 
+        }, clientIP);
+        console.log("[ForgotPassword] Reset email sent immediately to:", email);
+      } catch (emailError) {
+        console.error("[ForgotPassword] Email send failed:", emailError);
+        // Fallback to queue if immediate send fails
+        await sendPasswordResetEmail(email, resetToken, user.email, clientIP);
+        console.log("[ForgotPassword] Fallback to queue for:", email);
+      }
+      
+      console.log("[ForgotPassword] Reset email sent immediately to:", email);
+      res.json({ message: "Återställningslänk skickad! Kontrollera din inkorg inom 1 minut." });
     } catch (err: any) {
       console.error("[ForgotPassword] Error:", err);
       res.status(500).json({ message: "Kunde inte skicka återställningsmail" });
