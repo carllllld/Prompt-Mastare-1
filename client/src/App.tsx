@@ -4,31 +4,70 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import CookieBanner from "@/components/CookieBanner";
-import Home from "@/pages/Home";
-import Teams from "@/pages/Teams";
-import PromptEditor from "@/pages/PromptEditor";
-import JoinTeam from "@/pages/JoinTeam";
-import HistoryPage from "@/pages/HistoryPage";
-import VerifyEmail from "@/pages/VerifyEmail";
-import ResetPassword from "@/pages/ResetPassword";
-import PrivacyPolicy from "@/pages/PrivacyPolicy";
-import Terms from "@/pages/Terms";
+import { Suspense, lazy } from "react";
 import Landing from "@/pages/Landing";
 import NotFound from "@/pages/not-found";
+
+// Lazy load pages for code splitting
+const Home = lazy(() => import("@/pages/Home"));
+const Teams = lazy(() => import("@/pages/Teams"));
+const PromptEditor = lazy(() => import("@/pages/PromptEditor"));
+const JoinTeam = lazy(() => import("@/pages/JoinTeam"));
+const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
+const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
+const Terms = lazy(() => import("@/pages/Terms"));
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
-      <Route path="/app" component={Home} />
-      <Route path="/teams" component={Teams} />
-      <Route path="/teams/join/:token" component={JoinTeam} />
-      <Route path="/prompts/:id" component={PromptEditor} />
-      <Route path="/history" component={HistoryPage} />
-      <Route path="/verify-email" component={VerifyEmail} />
-      <Route path="/reset-password" component={ResetPassword} />
-      <Route path="/privacy" component={PrivacyPolicy} />
-      <Route path="/terms" component={Terms} />
+      <Route path="/app">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <Home />
+        </Suspense>
+      </Route>
+      <Route path="/teams">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <Teams />
+        </Suspense>
+      </Route>
+      <Route path="/teams/join/:token">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <JoinTeam />
+        </Suspense>
+      </Route>
+      <Route path="/prompts/:id">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <PromptEditor />
+        </Suspense>
+      </Route>
+      <Route path="/history">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <HistoryPage />
+        </Suspense>
+      </Route>
+      <Route path="/verify-email">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <VerifyEmail />
+        </Suspense>
+      </Route>
+      <Route path="/reset-password">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <ResetPassword />
+        </Suspense>
+      </Route>
+      <Route path="/privacy">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <PrivacyPolicy />
+        </Suspense>
+      </Route>
+      <Route path="/terms">
+        <Suspense fallback={<div>Laddar...</div>}>
+          <Terms />
+        </Suspense>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
