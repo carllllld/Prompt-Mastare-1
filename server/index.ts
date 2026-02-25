@@ -13,8 +13,12 @@ import { registerRoutes } from "./routes";
 import { setupVite } from "./vite";
 import emailWebhooks from './routes/email-webhooks';
 
+// Polyfill __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Make __dirname available globally for connect-pg-simple
+(global as any).__dirname = __dirname;
 
 const PgStore = connectPgSimple(session);
 const app = express();
