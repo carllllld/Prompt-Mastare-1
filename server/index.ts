@@ -259,6 +259,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       path: req.path,
       sentryEventId,
       errorName: err?.name,
+      errorMessage: err?.message,
+      stack: err?.stack,
     });
 
     const responseBody: Record<string, unknown> = { message, requestId };
