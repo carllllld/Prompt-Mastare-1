@@ -48,16 +48,8 @@ function Router() {
           <HistoryPage />
         </Suspense>
       </Route>
-      <Route path="/verify-email">
-        <Suspense fallback={<div>Laddar...</div>}>
-          <VerifyEmail />
-        </Suspense>
-      </Route>
-      <Route path="/reset-password">
-        <Suspense fallback={<div>Laddar...</div>}>
-          <ResetPassword />
-        </Suspense>
-      </Route>
+      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/privacy">
         <Suspense fallback={<div>Laddar...</div>}>
           <PrivacyPolicy />
