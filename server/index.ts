@@ -277,17 +277,18 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const distPath = path.resolve(__dirname, "..", "dist", "public");
 
     if (fs.existsSync(distPath)) {
-      // API routes first - BEFORE static files
+      // API routes BEFORE static serving
       app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
           return next();
         }
-        // Serve index.html for all non-API routes
-        res.sendFile(path.resolve(distPath, "index.html"));
+        next();
       });
 
-      // Static files (CSS, JS, images)
       app.use(express.static(distPath));
+      app.use("*", (_req: Request, res: Response) => {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
     } else {
       console.error("Production build not found at:", distPath);
     }
