@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2, Mail } from "lucide-react";
@@ -7,8 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 
 export default function VerifyEmail() {
-  const searchString = useSearch();
-  const params = new URLSearchParams(searchString);
+  const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
@@ -73,8 +72,8 @@ export default function VerifyEmail() {
             <>
               <XCircle className="h-16 w-16 text-destructive" />
               <p className="text-center text-muted-foreground">{message}</p>
-              <Button 
-                onClick={() => setLocation("/")} 
+              <Button
+                onClick={() => setLocation("/")}
                 className="mt-4"
                 data-testid="button-go-to-home"
               >

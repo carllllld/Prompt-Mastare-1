@@ -50,7 +50,7 @@ export function setupAuth(app: Express) {
       // Hash password and create user
       const passwordHash = await bcrypt.hash(password, 12);
       console.log("[Register] Password hashed");
-      
+
       const user = await storage.createUser(email, passwordHash);
       console.log("[Register] User created:", user.id);
 
@@ -74,16 +74,16 @@ export function setupAuth(app: Express) {
       // Set session (user can use the app but with limited features until verified)
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent') || 'unknown';
-      
+
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
         ip: clientIP,
         loginTime: new Date()
       };
-      
+
       console.log("[Register] Session userId set with device info, saving session...");
-      
+
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
         if (err) {
@@ -91,7 +91,7 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ message: "Registration failed" });
         }
         console.log("[Register] Session saved successfully");
-        
+
         res.status(201).json({
           id: user.id,
           email: user.email,
@@ -134,7 +134,7 @@ export function setupAuth(app: Express) {
       // Check if email is verified
       if (!user.emailVerified) {
         console.log("[Login] Email not verified for:", email);
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: "Vänligen verifiera din e-postadress innan du loggar in. Kontrollera din inkorg.",
           emailNotVerified: true,
           email: user.email,
@@ -144,17 +144,17 @@ export function setupAuth(app: Express) {
       // Set session with device info
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent') || 'unknown';
-      
+
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
         ip: clientIP,
         loginTime: new Date()
       };
-      
+
       console.log("[Login] Session userId set with device info, saving session...");
       console.log("[Login] Device:", { userAgent: userAgent.substring(0, 50), ip: clientIP });
-      
+
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
         if (err) {
@@ -162,7 +162,7 @@ export function setupAuth(app: Express) {
           return res.status(500).json({ message: "Login failed" });
         }
         console.log("[Login] Session saved successfully");
-        
+
         res.json({
           id: user.id,
           email: user.email,
@@ -200,7 +200,7 @@ export function setupAuth(app: Express) {
 
     const user = await storage.getUserById(req.session.userId);
     if (!user) {
-      req.session.destroy(() => {});
+      req.session.destroy(() => { });
       return res.status(401).json({ message: "User not found" });
     }
 
@@ -216,7 +216,7 @@ export function setupAuth(app: Express) {
   app.get("/auth/verify-email", async (req: Request, res: Response) => {
     try {
       const { token } = req.query;
-      
+
       if (!token || typeof token !== 'string') {
         return res.status(400).json({ message: "Verifieringslänk saknas" });
       }
@@ -238,7 +238,7 @@ export function setupAuth(app: Express) {
       // Log the user in automatically with device info
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent') || 'unknown';
-      
+
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
@@ -249,7 +249,7 @@ export function setupAuth(app: Express) {
         if (err) {
           console.error("[Verify] Session save error:", err);
         }
-        res.json({ 
+        res.json({
           message: "E-postadressen har verifierats!",
           id: user.id,
           email: user.email,
@@ -290,7 +290,7 @@ export function setupAuth(app: Express) {
   app.post("/auth/resend-verification", async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-      
+
       if (!email || typeof email !== 'string') {
         return res.status(400).json({ message: "E-postadress krävs" });
       }
@@ -308,8 +308,8 @@ export function setupAuth(app: Express) {
       // Check rate limit
       const canSend = await storage.canSendEmail(email, 'verification', MAX_VERIFICATION_EMAILS_PER_HOUR);
       if (!canSend) {
-        return res.status(429).json({ 
-          message: "Du har begärt för många verifieringsmejl. Vänligen vänta en timme." 
+        return res.status(429).json({
+          message: "Du har begärt för många verifieringsmejl. Vänligen vänta en timme."
         });
       }
 
@@ -317,12 +317,12 @@ export function setupAuth(app: Express) {
       const verificationToken = crypto.randomBytes(32).toString('hex');
       const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await storage.setVerificationToken(user.id, verificationToken, tokenExpires);
-      
+
       // Record and send email
       await storage.recordEmailSent(email, 'verification');
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       await sendVerificationEmail(email, verificationToken, clientIP);
-      
+
       console.log("[Resend] Verification email sent to:", email);
       res.json({ message: "Nytt verifieringsmail skickat. Kontrollera din inkorg." });
     } catch (err: any) {
@@ -335,13 +335,13 @@ export function setupAuth(app: Express) {
   app.post("/auth/forgot-password", async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
-      
+
       if (!email || typeof email !== 'string' || !email.includes('@')) {
         return res.status(400).json({ message: "Ange en giltig e-postadress" });
       }
 
       const user = await storage.getUserByEmail(email.toLowerCase());
-      
+
       // Always return success to prevent email enumeration
       if (!user) {
         return res.json({ message: "Om e-postadressen finns i vårt system skickas en återställningslänk." });
@@ -350,35 +350,35 @@ export function setupAuth(app: Express) {
       // Rate limit
       const canSend = await storage.canSendEmail(email, 'password_reset', 3);
       if (!canSend) {
-        return res.status(429).json({ 
-          message: "Du har begärt för många återställningar. Vänligen vänta en timme." 
+        return res.status(429).json({
+          message: "Du har begärt för många återställningar. Vänligen vänta en timme."
         });
       }
 
       // Generate reset token (1 hour expiry)
       const resetToken = crypto.randomBytes(32).toString('hex');
       const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
-      
+
       console.log("[ForgotPassword] Setting token for user:", user.id);
       console.log("[ForgotPassword] Token:", resetToken);
       console.log("[ForgotPassword] Expires:", tokenExpires);
-      
+
       await storage.setPasswordResetToken(user.id, resetToken, tokenExpires);
-      
+
       // Verify token was saved
       const verifyUser = await storage.getUserByPasswordResetToken(resetToken);
       console.log("[ForgotPassword] Token verification:", verifyUser ? "SUCCESS" : "FAILED");
-      
+
       // Record and send email immediately for password reset
       await storage.recordEmailSent(email, 'password_reset');
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-      
+
       // Send immediately for security emails (no queue delay)
       try {
         const { sendEmailWithRetry } = await import('./lib/email-service');
-        await sendEmailWithRetry('password_reset', email, { 
-          resetUrl: `${process.env.APP_URL || 'https://optiprompt.se'}/reset-password?token=${resetToken}`,
-          userName: user.email 
+        await sendEmailWithRetry('password_reset', email, {
+          resetUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/reset-password?token=${resetToken}`,
+          userName: user.email
         }, clientIP);
         console.log("[ForgotPassword] Reset email sent immediately to:", email);
       } catch (emailError) {
@@ -387,7 +387,7 @@ export function setupAuth(app: Express) {
         await sendPasswordResetEmail(email, resetToken, user.email, clientIP);
         console.log("[ForgotPassword] Fallback to queue for:", email);
       }
-      
+
       console.log("[ForgotPassword] Reset email sent immediately to:", email);
       res.json({ message: "Återställningslänk skickad! Kontrollera din inkorg inom 1 minut." });
     } catch (err: any) {
@@ -400,13 +400,13 @@ export function setupAuth(app: Express) {
   app.post("/auth/reset-password", async (req: Request, res: Response) => {
     try {
       const { token, password } = req.body;
-      
+
       console.log("[ResetPassword] Request received with token:", token?.substring(0, 10) + "...");
-      
+
       if (!token || typeof token !== 'string') {
         return res.status(400).json({ message: "Återställningslänk saknas" });
       }
-      
+
       if (!password || password.length < 8) {
         return res.status(400).json({ message: "Lösenordet måste vara minst 8 tecken" });
       }
@@ -414,7 +414,7 @@ export function setupAuth(app: Express) {
       console.log("[ResetPassword] Looking up token in database...");
       const user = await storage.getUserByPasswordResetToken(token);
       console.log("[ResetPassword] User found:", user ? user.id : "NULL");
-      
+
       if (!user) {
         console.log("[ResetPassword] Token not found in database");
         return res.status(400).json({ message: "Ogiltig eller utgången återställningslänk" });
@@ -431,7 +431,7 @@ export function setupAuth(app: Express) {
       // Hash new password and update
       const passwordHash = await bcrypt.hash(password, 12);
       await storage.updatePassword(user.id, passwordHash);
-      
+
       console.log("[ResetPassword] Password updated successfully");
       res.json({ message: "Lösenordet har uppdaterats! Du kan nu logga in." });
     } catch (err: any) {
@@ -469,9 +469,9 @@ export const requirePro: RequestHandler = async (req, res, next) => {
   }
 
   if (user.plan !== "pro" && user.plan !== "premium") {
-    return res.status(403).json({ 
+    return res.status(403).json({
       message: "Denna funktion kräver en Pro- eller Premium-prenumeration",
-      requiresPro: true 
+      requiresPro: true
     });
   }
 

@@ -168,7 +168,7 @@ Svara ENDAST med JSON i detta format:
     });
 
     const analysis = safeJsonParse(response.choices[0]?.message?.content || "{}");
-    
+
     // Validera och normalisera värden
     return {
       formality: Math.max(1, Math.min(10, Number(analysis.formality) || 5)),
@@ -249,11 +249,11 @@ const FORBIDDEN_PHRASES = [
   "forma framtiden",
   "för den som",
   "vilket säkerställer",
-  
+
   // "erbjuder" i alla former
   " erbjuder ",
   " erbjuds ",
-  
+
   // NYA AI-KLYSCHOR FRÅN OUTPUT-ANALYS
   "erbjuder en bra plats",
   "erbjuder en perfekt",
@@ -270,7 +270,7 @@ const FORBIDDEN_PHRASES = [
   "vilket ger ytterligare utrymme",
   "den södervända placeringen",
   "den södervända placeringen ger",
-  
+
   // Atmosfär/luftig-fraser
   "trivsam atmosfär",
   "härlig atmosfär",
@@ -278,25 +278,25 @@ const FORBIDDEN_PHRASES = [
   "inbjudande atmosfär",
   "luftig atmosfär",
   "luftig och",
-  
+
   // Rofylld/lugn klyschor
   "rofyllt",
   "rofylld",
-  
+
   // Trygg-fraser
   "trygg boendemiljö",
   "trygg boendeekonomi",
   "tryggt boende",
-  
+
   // Sociala klyschor
   "sociala sammanhang",
   "sociala tillställningar",
   "socialt umgänge",
-  
+
   // Komfort-fraser
   "extra komfort",
   "maximal komfort",
-  
+
   // Överdrivna adjektiv
   "fantastisk",
   "underbar",
@@ -306,30 +306,30 @@ const FORBIDDEN_PHRASES = [
   "drömlägenhet",
   "drömhem",
   "en sann pärla",
-  
+
   // Vardags-klyschor
   "underlättar vardagen",
   "bekvämlighet i vardagen",
   "den matlagningsintresserade",
   "god natts sömn",
-  
+
   // Läges-klyschor
   "eftertraktat boendealternativ",
   "attraktivt läge",
   "attraktivt med närhet",
   "inom räckhåll",
   "stadens puls",
-  
+
   // Hjärta-klyschor
   "hjärtat i hemmet",
   "husets hjärta",
   "hemmets hjärta",
-  
+
   // Andra
   "inte bara ett hem",
   "stark efterfrågan",
   "goda arbetsytor",
-  
+
   // AI-fraser som riktiga mäklare ALDRIG använder
   "generösa ytor",
   "generös takhöjd",
@@ -355,7 +355,7 @@ const FORBIDDEN_PHRASES = [
   "här bor du",
   "strategiskt placerad",
   "strategiskt läge",
-  
+
   // NYA FRASER FRÅN OUTPUT-TEST 2026-02
   "skapa minnen",
   "utmärkt val",
@@ -369,7 +369,7 @@ const FORBIDDEN_PHRASES = [
   "ett område för familjer",
   "i mycket gott skick",
   "ligger centralt i",
-  
+
   // NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys)
   "faciliteter",
   "nyrenoverade faciliteter",
@@ -504,14 +504,14 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   const violations: string[] = [];
   const lowerText = text.toLowerCase().trim();
   const sentences = text.split(/(?<=[.!?])\s+/);
-  
+
   // 1. Check all forbidden phrases
   for (const phrase of FORBIDDEN_PHRASES) {
     if (lowerText.includes(phrase.toLowerCase())) {
       violations.push(`Förbjuden fras: "${phrase}"`);
     }
   }
-  
+
   // 2. Check forbidden openings
   if (lowerText.startsWith('välkommen')) {
     violations.push('Börjar med "Välkommen" — börja med gatuadress');
@@ -525,7 +525,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   if (lowerText.startsWith('i ') && !lowerText.match(/^i [a-zåäö]+(gatan|vägen|stigen|gränd)/)) {
     violations.push('Börjar med "I" — börja med gatuadress');
   }
-  
+
   // 3. "Det finns" / "Den har" repetition (max 1 allowed)
   const detFinnsCount = (lowerText.match(/\bdet finns\b/g) || []).length;
   const denHarCount = (lowerText.match(/\bden har\b/g) || []).length;
@@ -535,7 +535,7 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
   if (denHarCount > 2) {
     violations.push(`"Den har" upprepas ${denHarCount} gånger (max 2). Variera meningsstarter.`);
   }
-  
+
   // 4. "ligger X bort/meter/km" repetition (max 1 allowed)
   const liggerCount = (lowerText.match(/\bligger\s+\d+/g) || []).length;
   if (liggerCount > 1) {
@@ -572,13 +572,13 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
       violations.push(`Emotionellt/CTA-slut: "${ending}" — avsluta med LÄGE eller PRIS`);
     }
   }
-  
+
   // 7. "vilket" connector check (AI signature - max 1 allowed)
   const vilketCount = (lowerText.match(/\bvilket\b/g) || []).length;
   if (vilketCount > 1) {
     violations.push(`"vilket" upprepas ${vilketCount} gånger (max 1). Dela upp i korta meningar.`);
   }
-  
+
   return violations;
 }
 
@@ -586,11 +586,11 @@ function findRuleViolations(text: string, platform: string = "hemnet"): string[]
 function checkWordCount(text: string, platform: string, targetMin?: number, targetMax?: number): string[] {
   const violations: string[] = [];
   const wordCount = text.split(/\s+/).length;
-  
+
   // Använd användarens valda längd om den finns, annars plattformens standard
   const minWords = targetMin || (platform === "hemnet" ? 180 : 200);
   const maxWords = targetMax || (platform === "hemnet" ? 500 : 600);
-  
+
   if (wordCount < minWords) {
     violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
   }
@@ -629,7 +629,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["välkommen hem till", ""],
   ["här möts du av", ""],
   ["här erbjuds", ""],
-  
+
   // === ERBJUDER-VARIANTER (vanligaste AI-frasen) ===
   ["lägenheten erbjuder", "lägenheten har"],
   ["bostaden erbjuder", "bostaden har"],
@@ -642,7 +642,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   [" erbjuds ", " finns "],
   ["erbjuder", "har"],
   ["erbjuds", "finns"],
-  
+
   // === "VILKET GER/GÖR" - vanlig AI-konstruktion ===
   ["vilket gör det enkelt att ta sig", "med nära till"],
   ["vilket gör det enkelt", ""],
@@ -650,7 +650,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["vilket ger en", "med"],
   ["vilket ger", "med"],
   ["som ger en", "med"],
-  
+
   // === "FÖR DEN SOM" - vanlig AI-fras ===
   ["perfekt för den som", "passar"],
   ["idealisk för den som", "passar"],
@@ -662,7 +662,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["för den som", ""],
   ["perfekt för", "passar"],
   ["idealisk för", "passar"],
-  
+
   // === KONTAKT/CTA - ta bort helt ===
   ["kontakta oss för visning", ""],
   ["kontakta oss", ""],
@@ -670,21 +670,21 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["tveka inte", ""],
   ["boka visning", ""],
   ["hör av dig", ""],
-  
+
   // === PLATS-KLYSCHOR ===
   ["i hjärtat av stockholm", "centralt i stockholm"],
   ["i hjärtat av", "centralt i"],
   ["hjärtat av", "centrala"],
   ["stadens puls", "stadskärnan"],
   ["mitt i stadens liv", "centralt"],
-  
+
   // === DRÖM-ORD ===
   ["drömboende", "bostad"],
   ["drömhem", "hem"],
   ["drömlägenhet", "lägenhet"],
   ["en sann pärla", ""],
   ["en riktig pärla", ""],
-  
+
   // === LUFTIG/ATMOSFÄR ===
   ["luftig och inbjudande atmosfär", ""],
   ["luftig atmosfär", ""],
@@ -694,23 +694,23 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["inbjudande atmosfär", ""],
   ["trivsam atmosfär", ""],
   ["härlig atmosfär", ""],
-  
+
   // === ROFYLLD ===
   ["rofyllt läge", "lugnt läge"],
   ["rofylld miljö", "lugn miljö"],
   ["rofyllt", "lugnt"],
   ["rofylld", "lugn"],
-  
+
   // === VARDAGEN ===
   ["underlättar vardagen", ""],
   ["bekvämlighet i vardagen", ""],
   ["i vardagen", ""],
-  
+
   // === ATTRAKTIVT ===
   ["attraktivt läge", "bra läge"],
   ["attraktivt med närhet", "nära"],
   ["attraktivt", ""],
-  
+
   // === SUPERLATIV ===
   ["fantastisk utsikt", "fin utsikt"],
   ["fantastiskt läge", "bra läge"],
@@ -719,7 +719,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["magisk", ""],
   ["otrolig", ""],
   ["enastående", ""],
-  
+
   // === ÖVRIGT ===
   ["unik möjlighet", ""],
   ["unik chans", ""],
@@ -734,7 +734,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["trygg boendeekonomi", "stabil ekonomi"],
   ["goda arbetsytor", "bänkyta"],
   ["gott om arbetsyta", "bänkyta"],
-  
+
   // === NYA FRASER FRÅN GRANSKNING ===
   ["säker boendemiljö", ""],
   ["stadens liv och rörelse", ""],
@@ -757,7 +757,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["imponerande", ""],
   ["unik karaktär", "karaktär"],
   ["lugn atmosfär", ""],
-  
+
   // === "VILKET"-KONSTRUKTIONER (vanlig AI-mönster) ===
   ["vilket bidrar till en rymlig", "med rymlig"],
   ["vilket bidrar till", "med"],
@@ -780,7 +780,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["vilket är uppskattat av många", ""],
   ["vilket är uppskattat", ""],
   ["vilket är", "och är"],
-  
+
   // === FLER AI-FRASER FRÅN GRANSKNING 2 ===
   ["rymlig atmosfär", "rymd"],
   ["med god isolering och energibesparing", ""],
@@ -797,7 +797,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["kommunikationsmöjligheter", "kommunikationer"],
   ["rekreation och avkoppling", "friluftsliv"],
   ["karaktär och charm", "karaktär"],
-  
+
   // === FLER AI-FRASER FRÅN GRANSKNING 3 ===
   ["stilren och funktionell matlagningsmiljö", "funktionellt kök"],
   ["funktionell matlagningsmiljö", "funktionellt kök"],
@@ -821,7 +821,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["enhetlig och elegant känsla", ""],
   ["enhetlig och stilren känsla", ""],
   ["för .", ". "],
-  
+
   // === FLER AI-FRASER FRÅN GRANSKNING 4 ===
   ["tidslös och elegant känsla", ""],
   ["släpper in rikligt med ljus", ""],
@@ -837,7 +837,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["moderna bekvämligheter", ""],
   ["moderna", ""],
   ["bekvämligheter", ""],
-  
+
   // === FLER AI-FRASER FRÅN GRANSKNING 5 ===
   ["högkvalitativa material och finish", "högkvalitativa material"],
   ["material och finish", "material"],
@@ -855,7 +855,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["medkel tillgång", "lättillgänglig"],
   ["medkel", "lätt"],
   ["stor fördel", "fördel"],
-  
+
   // === AI-FRASER SOM RIKTIGA MÄKLARE ALDRIG ANVÄNDER ===
   ["generösa ytor", "stora ytor"],
   ["generös takhöjd", "hög takhöjd"],
@@ -878,7 +878,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["här finns", "det finns"],
   ["här kan du", ""],
   ["här bor du", ""],
-  
+
   // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 ===
   ["skapa minnen", ""],
   ["utmärkt val för den som", ""],
@@ -896,7 +896,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["i mycket gott skick", "i gott skick"],
   ["ligger centralt i ett område", ""],
   ["ligger centralt i", "ligger i"],
-  
+
   // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys) ===
   // "faciliteter" — inte naturligt mäklarspråk
   ["nyrenoverade faciliteter om", "nyrenoverat,"],
@@ -904,12 +904,12 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["nyrenoverade faciliteter", "nyrenoverade ytor"],
   ["renoverade faciliteter", "renoverade utrymmen"],
   ["faciliteter", "utrymmen"],
-  
+
   // "Njut av" — AI-klyscha
   ["njut av en jacuzzi", "jacuzzi"],
   ["njut av jacuzzi", "jacuzzi"],
   ["njut av", ""],
-  
+
   // "Det finns även/också" — lat meningsstart
   ["det finns även en", ""],
   ["det finns även ett", ""],
@@ -917,7 +917,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["det finns också en", ""],
   ["det finns också ett", ""],
   ["det finns också", ""],
-  
+
   // "-möjligheter" — byråkratiskt
   ["förvaringsmöjligheter inkluderar ett förråd", "förråd"],
   ["förvaringsmöjligheter inkluderar", "förvaring:"],
@@ -925,7 +925,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["odlingsmöjligheter", "plats för odling"],
   ["boendemöjligheter", "boende"],
   ["parkeringsmöjligheter", "parkering"],
-  
+
   // "En X finns på" — passiv konstruktion
   ["en jacuzzi finns på", "jacuzzi på"],
   ["en bastu finns", "bastu"],
@@ -1077,7 +1077,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["en pärla", ""],
   ["ett stenkast från", "nära"],
 
-  ];
+];
 
 // Haversine distance between two lat/lng points in meters
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -1092,7 +1092,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 function cleanForbiddenPhrases(text: string): string {
   if (!text) return text;
   let cleaned = text;
-  
+
   // Först: Fixa trasiga ord som AI:n genererar (HELA ORD, inte delar)
   const brokenWordFixes: [RegExp, string][] = [
     [/\bmmångaa\b/gi, "många"],
@@ -1152,17 +1152,17 @@ function cleanForbiddenPhrases(text: string): string {
     // Fixa "Kad" till "med"
     [/\bKad komfort\b/gi, "med komfort"],
   ];
-  
+
   for (const [regex, replacement] of brokenWordFixes) {
     cleaned = cleaned.replace(regex, replacement);
   }
-  
+
   // Sedan: Ersätt förbjudna fraser
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     const regex = new RegExp(phrase, "gi");
     cleaned = cleaned.replace(regex, replacement);
   }
-  
+
   // Ta bort dubbla mellanslag
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
   // Ta bort meningar som börjar med tomt efter ersättning
@@ -1174,30 +1174,30 @@ function cleanForbiddenPhrases(text: string): string {
   // Fixa "Priset . Enna" -> "Priset för denna"
   cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset för denna");
   cleaned = cleaned.replace(/\. Enna/gi, ". Denna");
-  
+
   return cleaned;
 }
 
 // Lägg till styckeindelning om texten saknar radbrytningar
 function addParagraphs(text: string): string {
   if (!text || text.includes("\n\n")) return text; // Redan styckeindelad
-  
+
   const sentences = text.split(/(?<=[.!?])\s+/);
   if (sentences.length < 4) return text;
-  
+
   // Ämnesord som indikerar nytt stycke (rumsnamn, sektioner)
   const topicStarters = /^(Hallen|Hall\b|Vardagsrummet|Vardagsrum\b|Köket|Kök\b|Sovrummet|Sovrum\b|Huvudsovrummet|Badrummet|Badrum\b|Balkongen|Balkong\b|Altanen|Altan\b|Trädgården|Trädgård\b|Tomten|Tomt\b|Källaren|Källare\b|Övervåning|Entréplan|Bottenvåning|BRF\b|Förening|Avgift\b|Garage|Carport|Förråd|Tvättstuga|Gäst-wc)/i;
   const locationStarters = /^(Centralstation|Resecentrum|Buss\b|Spårvagn|Tåg\b|Pendeltåg|Tunnelbana|ICA\b|Coop\b|Hemköp|Willys|Matbutik|Skola|Förskola|Centrum\b|Avstånd|Kommunikation)/i;
-  
+
   const paragraphs: string[] = [];
   let currentParagraph: string[] = [];
   let lastWasLocation = false;
-  
+
   for (let i = 0; i < sentences.length; i++) {
     const sentence = sentences[i];
     const isTopicStart = topicStarters.test(sentence);
     const isLocationStart = locationStarters.test(sentence);
-    
+
     // Bryt stycke vid ämnesbyte (men inte för första meningen)
     if (i > 0 && currentParagraph.length >= 2) {
       // Nytt ämne = nytt stycke
@@ -1206,21 +1206,21 @@ function addParagraphs(text: string): string {
         currentParagraph = [];
       }
     }
-    
+
     // Fallback: bryt efter 4 meningar om inga ämnesord hittas
     if (currentParagraph.length >= 4 && i < sentences.length - 1) {
       paragraphs.push(currentParagraph.join(" "));
       currentParagraph = [];
     }
-    
+
     currentParagraph.push(sentence);
     lastWasLocation = isLocationStart;
   }
-  
+
   if (currentParagraph.length > 0) {
     paragraphs.push(currentParagraph.join(" "));
   }
-  
+
   return paragraphs.join("\n\n");
 }
 
@@ -1389,7 +1389,7 @@ För BOOLI/EGEN SIDA: lägg även in "för den som", "vilket ger en", "en bostad
 
 // === EXEMPELDATABAS — RIKSTÄCKANDE MÄKLARTEXTER ===
 // Kategoriserade efter BOSTADSTYP + STORLEK (fungerar för ALLA städer i Sverige)
-const EXAMPLE_DATABASE: Record<string, {text: string, metadata: {type: string, rooms: number, size: number}}[]> = {
+const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string, rooms: number, size: number } }[]> = {
   // SMÅ LÄGENHETER (1-2 rum, under 55 kvm)
   small_apartment: [
     {
@@ -1709,7 +1709,7 @@ function matchExamples(disposition: any, _toneAnalysis: any): string[] {
   const type = (disposition?.property?.type || 'lägenhet').toLowerCase();
   const size = Number(disposition?.property?.size) || 0;
 
-  let candidates: {text: string, metadata: any}[] = [];
+  let candidates: { text: string, metadata: any }[] = [];
 
   if (type.includes('villa')) {
     candidates = [...EXAMPLE_DATABASE.villa];
@@ -1735,7 +1735,7 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
   };
   const propertyType = typeLabels[pd.propertyType] || pd.propertyType || "lägenhet";
   const size = Number(pd.livingArea) || 0;
-  
+
   const disposition = {
     property: {
       type: propertyType,
@@ -1856,17 +1856,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (user) {
           // ANVÄNDAR-SPECIFIK MÅNAD - baserat på när användaren startade sin plan
           const planStartAt = new Date(user.planStartAt || user.createdAt || now);
-          
+
           // Beräkna nästa reset baserat på användarens startdatum
           const nextReset = new Date(planStartAt);
           nextReset.setMonth(nextReset.getMonth() + 1);  // +1 månad, inte +1 år
           nextReset.setHours(0, 0, 0, 0);
-          
+
           // Om nästa reset har passerat, lägg till en månad
           if (nextReset <= userNow) {
             nextReset.setMonth(nextReset.getMonth() + 1);
           }
-          
+
           const resetTime = new Date(nextReset.getTime() + tzOffset * 60000);
           const plan = (user.plan as PlanType) || "free";
           const usage = await storage.getMonthlyUsage(userId) || {
@@ -1875,7 +1875,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             textEditsUsed: 0,
             personalStyleAnalyses: 0,
           };
-          
+
           const limits = PLAN_LIMITS[plan];
           const textsRemaining = Math.max(0, limits.texts - usage.textsGenerated);
           const areaSearchesRemaining = Math.max(0, limits.areaSearches - usage.areaSearchesUsed);
@@ -1936,11 +1936,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const personalStyle = await storage.getPersonalStyle(user.id);
-      
+
       if (!personalStyle) {
-        return res.json({ 
-          hasStyle: false, 
-          message: "Ingen personlig stil har satts upp än" 
+        return res.json({
+          hasStyle: false,
+          message: "Ingen personlig stil har satts upp än"
         });
       }
 
@@ -1962,12 +1962,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
-      
+
       // Check feature access
       if (!FEATURE_ACCESS[plan].personalStyle) {
         return res.status(403).json({ message: "Personlig stil är endast för Pro/Premium-användare" });
       }
-      
+
       // Check usage limits for personal style analysis
       const usage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0,
@@ -1975,7 +1975,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         textEditsUsed: 0,
         personalStyleAnalyses: 0,
       };
-      
+
       const limits = PLAN_LIMITS[plan];
       if (usage.personalStyleAnalyses >= limits.personalStyleAnalyses) {
         return res.status(429).json({
@@ -1984,7 +1984,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           upgradeTo: "premium",
         });
       }
-      
+
       const { referenceTexts, teamShared } = req.body;
 
       if (!referenceTexts || !Array.isArray(referenceTexts) || referenceTexts.length !== 3) {
@@ -1999,10 +1999,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       console.log("[Personal Style] Analyzing writing style from 3 reference texts...");
-      
+
       // Analysera skrivstilen med AI
       const styleProfile = await analyzeWritingStyle(referenceTexts);
-      
+
       console.log("[Personal Style] Style analysis completed:", styleProfile);
 
       // Spara till databasen
@@ -2015,11 +2015,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       };
 
       const savedStyle = await storage.createPersonalStyle(personalStyleData);
-      
+
       // Increment usage for personal style analysis
       await storage.incrementUsage(user.id, 'personalStyleAnalyses');
       console.log(`[Usage] Incremented personal style analysis for user ${user.id}`);
-      
+
       res.json({
         success: true,
         styleProfile,
@@ -2036,12 +2036,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const user = (req as any).user as User;
       const { isActive, teamShared } = req.body;
 
-      const updatedStyle = await storage.updatePersonalStyle(user.id, { 
-        isActive, 
+      const updatedStyle = await storage.updatePersonalStyle(user.id, {
+        isActive,
         teamShared,
         updatedAt: new Date()
       });
-      
+
       if (!updatedStyle) {
         return res.status(404).json({ message: "Ingen personlig stil hittades" });
       }
@@ -2059,9 +2059,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.delete("/api/personal-style", requireAuth, requirePro, async (req, res) => {
     try {
       const user = (req as any).user as User;
-      
+
       await storage.deletePersonalStyle(user.id);
-      
+
       res.json({
         success: true,
         message: "Personlig stil har raderats"
@@ -2077,14 +2077,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
-      
+
       // Rate limit check (per minute)
       if (!(await checkOptimizeRateLimit(user.id))) {
         return res.status(429).json({
           message: "För många förfrågningar. Vänta en minut och försök igen.",
         });
       }
-      
+
       // Check monthly usage limits
       const usage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0,
@@ -2092,14 +2092,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         textEditsUsed: 0,
         personalStyleAnalyses: 0,
       };
-      
+
       const limits = PLAN_LIMITS[plan];
       if (usage.textsGenerated >= limits.texts) {
         const upgradeMsg = plan === "free"
           ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 15 per månad!`
           : plan === "pro"
-          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 50 per månad!`
-          : `Du har nått din månadsgräns av ${limits.texts} genereringar. Kontakta oss om du behöver mer.`;
+            ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 50 per månad!`
+            : `Du har nått din månadsgräns av ${limits.texts} genereringar. Kontakta oss om du behöver mer.`;
         return res.status(429).json({
           message: upgradeMsg,
           limitReached: true,
@@ -2122,7 +2122,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const propType = type || "lägenhet";
           const price = pd?.price || "";
           const size = pd?.livingArea || "";
-          
+
           if (area || price) {
             console.log(`[Competitor Analysis] Analyzing: ${propType} in ${area}...`);
             const competitorMessages = [
@@ -2155,13 +2155,13 @@ Ge mig exakt 3 punkter:
           console.warn("[Competitor Analysis] Failed, continuing:", e);
         }
       }
-      
+
       // Bildanalys om bilder finns
       let imageAnalysis = "";
       if (imageUrls && imageUrls.length > 0 && (plan === "pro" || plan === "premium")) {
         try {
           console.log(`[Image Analysis] Analyzing ${imageUrls.length} images (Pro + Premium feature)...`);
-          
+
           const imageMessages = [
             {
               role: "system" as const,
@@ -2192,11 +2192,11 @@ Ge mig exakt 3 punkter:
           console.warn("[Image Analysis] Failed, continuing without:", e);
         }
       }
-      
+
       // Bestäm ordgränser baserat på plan
       let targetWordMin: number;
       let targetWordMax: number;
-      
+
       if ((plan === "pro" || plan === "premium") && wordCountMin && wordCountMax) {
         // Pro + Premium-användare kan välja eget intervall (inom gränser)
         const limits = plan === "premium" ? WORD_LIMITS.premium : WORD_LIMITS.pro;
@@ -2212,12 +2212,12 @@ Ge mig exakt 3 punkter:
         targetWordMin = WORD_LIMITS.free.min;
         targetWordMax = WORD_LIMITS.free.max;
       }
-      
+
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
 
       // === LEGACY AI PIPELINE (FULL PROMPT ENGINEERING) ===
       const propertyData = req.body.propertyData;
-      
+
       // STEG 1: Bygg disposition — structured data fast path ELLER AI-extraktion
       let disposition: any = null;
       let toneAnalysis: any = null;
@@ -2364,21 +2364,21 @@ Mäklaren vill ha ett faktadokument, inte en säljtext.
 - Avsluta med fakta om läge (avstånd/namn). Punkt. Slut.
 - Tänk: besiktningsprotokoll skrivet av en människa, inte mäklare.\n`
         : style === "selling"
-        ? `\n# TEXTSTIL: SÄLJANDE (KLYSCHFRITT ÖVERTYGANDE)
+          ? `\n# TEXTSTIL: SÄLJANDE (KLYSCHFRITT ÖVERTYGANDE)
 Mäklaren vill maximera intresset — men UTAN klyschor.
 - Öppna med de 1-2 starkaste konkreta säljpunkterna (inte känsla, utan fakta som säljer: "Balkong i söderläge 8 kvm" > "fantastisk balkong").
 - Betona det som gör objektet unikt TIDIGT — inte sist.
 - Välj aktivt VAD du lyfter: hoppa snabbt förbi svaga delar, ge mer utrymme åt starka.
 - Sista stycke: läge + en konkret köparnytta (pendlingstid, skola, affär).
 - Fortfarande noll klyschor. Sälj med fakta, inte adjektiv.\n`
-        : `\n# TEXTSTIL: BALANSERAD (STANDARD)
+          : `\n# TEXTSTIL: BALANSERAD (STANDARD)
 Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n`;
 
       // Typspecifika negativa/positiva exempel
       const propType = (disposition?.property?.type || "lägenhet").toLowerCase();
       let negativeExample: string;
       let positiveExample: string;
-      
+
       if (propType.includes("villa") || propType.includes("hus")) {
         negativeExample = `"Välkommen till denna fantastiska villa som erbjuder generösa ytor och en ljus och luftig atmosfär. Huset präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla av rymd. Trädgården erbjuder en grön oas perfekt för den som söker lugn och avkoppling. Den strategiskt placerade villan ger en unik möjlighet att njuta av natursköna omgivningar. Kontakta oss för visning!"`;
         positiveExample = `"Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm. Byggår 1978, renoverad 2021.\n\nEntréplan med hall, vardagsrum, kök och badrum. Köket från IKEA 2021 med Bosch-vitvaror. Öppen planlösning mot vardagsrummet.\n\nÖvervåning med fyra sovrum. Helkaklat badrum med dusch och badkar.\n\nStenlagd uteplats i söderläge. Gräsmatta. Garage. Förråd 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 min med bil."`;
@@ -2451,7 +2451,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
         try {
           // Filtrera bort ordräknings-violations (kan inte fixas genom textredigering)
           const textViolations = violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
-          
+
           if (textViolations.length > 0) {
             const correctionMessages = [
               {
@@ -2502,13 +2502,13 @@ ERSÄTTNINGSTABELL:
               const originalWords = result.improvedPrompt.split(/\s+/).length;
               const correctedWords = corrected.corrected_text.split(/\s+/).length;
               const wordDiff = Math.abs(originalWords - correctedWords);
-              
+
               if (wordDiff / originalWords < 0.3) {
                 result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text);
                 result.improvedPrompt = addParagraphs(result.improvedPrompt);
                 console.log(`[Step 5] Surgical correction applied (${textViolations.length} violations fixed, ${wordDiff} words changed)`);
               } else {
-                console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff/originalWords*100)}%), keeping original`);
+                console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
                 // Kör ändå cleanForbiddenPhrases som fallback
                 result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
               }
@@ -2576,7 +2576,7 @@ ERSÄTTNINGSTABELL:
       let improvementSuggestions = undefined;
       if (plan !== "free") {
         console.log("[Improvement Analysis] Analyzing generated text for improvements...");
-        
+
         const improvementPrompt = `Analysera denna objektbeskrivning ur ett rent text- och kommunikationsperspektiv:
 
 OBJEKTBESKRIVNING:
@@ -2733,7 +2733,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       try { parsed = JSON.parse(raw); } catch { parsed = { rewritten: selectedText }; }
 
       const rewritten = cleanForbiddenPhrases(parsed.rewritten || selectedText);
-      
+
       // More robust text replacement - handle edge cases
       let newFullText = fullText;
       if (fullText.includes(selectedText)) {
@@ -2757,15 +2757,15 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
     try {
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
-      
+
       // Check API access
       if (!FEATURE_ACCESS[plan].apiAccess) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: "Adress-sökning är endast för Pro- och Premium-användare",
           upgradeTo: "pro"
         });
       }
-      
+
       // Check usage limits
       const usage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0,
@@ -2773,7 +2773,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         textEditsUsed: 0,
         personalStyleAnalyses: 0,
       };
-      
+
       const limits = PLAN_LIMITS[plan];
       if (usage.areaSearchesUsed >= limits.areaSearches) {
         return res.status(429).json({
@@ -2782,13 +2782,13 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           upgradeTo: "premium",
         });
       }
-      
+
       const { address } = req.body;
       if (!address) return res.status(400).json({ message: "Adress krävs" });
 
       // OpenStreetMap: Nominatim + Overpass API (FREE)
       console.log("[Address Lookup] Using OpenStreetMap APIs");
-      
+
       try {
         // Step 1: Geocode with Nominatim
         const nominatimRes = await fetch(
@@ -2802,7 +2802,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
         if (!nominatimRes.ok) {
           console.error("[OpenStreetMap] Nominatim API error:", nominatimRes.status, nominatimRes.statusText);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Adresssökning misslyckades. Försök igen senare.",
             error: `API error: ${nominatimRes.status}`
           });
@@ -2811,7 +2811,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         const contentType = nominatimRes.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
           console.error("[OpenStreetMap] Unexpected content type:", contentType);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Adresssökning misslyckades. Försök igen senare.",
             error: "Invalid API response format"
           });
@@ -2822,7 +2822,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           nominatimData = await nominatimRes.json();
         } catch (parseError) {
           console.error("[OpenStreetMap] JSON parse error:", parseError);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Adresssökning misslyckades. Försök igen senare.",
             error: "Invalid JSON response"
           });
@@ -2864,7 +2864,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
         if (!overpassRes.ok) {
           console.error("[OpenStreetMap] Overpass API error:", overpassRes.status, overpassRes.statusText);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Adresssökning misslyckades. Försök igen senare.",
             error: `Overpass API error: ${overpassRes.status}`
           });
@@ -2875,7 +2875,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           overpassData = await overpassRes.json();
         } catch (parseError) {
           console.error("[OpenStreetMap] Overpass JSON parse error:", parseError);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Adresssökning misslyckades. Försök igen senare.",
             error: "Overpass API invalid response"
           });
@@ -2884,16 +2884,16 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         // Step 3: Process and categorize results
         const places: any[] = [];
         const transportPlaces: any[] = [];
-        
+
         overpassData.elements.forEach((element: any) => {
           if (!element.tags || !element.tags.name) return;
-          
+
           const dist = haversineDistance(lat, lon, element.lat, element.lon);
           const distanceStr = dist < 1000 ? `${Math.round(dist)} m` : `${(dist / 1000).toFixed(1)} km`;
-          
+
           let category = "";
           let label = "";
-          
+
           if (element.tags.amenity === "school" || element.tags.amenity === "college" || element.tags.amenity === "university") {
             category = "school";
             label = "Skola";
@@ -2917,7 +2917,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
             category = "restaurant";
             label = "Restaurang";
           }
-          
+
           if (category) {
             places.push({
               name: element.tags.name,
@@ -2942,17 +2942,17 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         await storage.incrementUsage(user.id, 'areaSearches');
         console.log(`[Usage] Incremented area search for user ${user.id} (OpenStreetMap)`);
 
-        res.json({ 
-          formattedAddress, 
-          places: places.slice(0, 6), 
-          transport, 
+        res.json({
+          formattedAddress,
+          places: places.slice(0, 6),
+          transport,
           neighborhood,
           source: "openstreetmap"
         });
-        
+
       } catch (osmError: any) {
         console.error("[OpenStreetMap] Error:", osmError);
-        res.status(500).json({ 
+        res.status(500).json({
           message: "Adresssökning misslyckades. Försök igen senare.",
           error: osmError.message
         });
@@ -2967,7 +2967,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
   app.post("/api/admin/reset-password", async (req, res) => {
     try {
       const { email, newPassword } = req.body;
-      
+
       if (!email || !newPassword) {
         return res.status(400).json({ message: "Email och lösenord krävs" });
       }
@@ -2980,10 +2980,10 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       // Hash new password
       const bcrypt = await import('bcrypt');
       const passwordHash = await bcrypt.hash(newPassword, 12);
-      
+
       // Update password
       await storage.updatePassword(user.id, passwordHash);
-      
+
       console.log("[Admin Reset] Password updated for user:", user.id);
       res.json({ message: "Lösenord uppdaterat! Du kan nu logga in." });
     } catch (err: any) {
@@ -3023,7 +3023,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         console.log("[Stripe Checkout] Using existing Stripe customer:", customerId);
       }
 
-      const baseUrl = process.env.APP_URL || 'https://optiprompt.se';
+      const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
 
       console.log("[Stripe Checkout] Creating checkout session with base URL:", baseUrl);
 
@@ -3054,7 +3054,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return res.status(400).json({ message: "No subscription found" });
       }
 
-      const baseUrl = process.env.APP_URL || 'https://optiprompt.se';
+      const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
 
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,
@@ -3276,13 +3276,13 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       // Check rate limit for invites
       const canSend = await storage.canSendEmail(user.email, 'team_invite', MAX_INVITE_EMAILS_PER_HOUR);
       if (!canSend) {
-        return res.status(429).json({ 
-          message: "Du har skickat för många inbjudningar. Vänligen vänta en timme." 
+        return res.status(429).json({
+          message: "Du har skickat för många inbjudningar. Vänligen vänta en timme."
         });
       }
 
       const invite = await storage.createTeamInvite(teamId, email.trim().toLowerCase(), user.id);
-      
+
       // Get team name for the email
       const team = await storage.getTeamById(teamId);
       if (team) {
@@ -3290,7 +3290,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         await sendTeamInviteEmail(invite.email, invite.token, team.name, user.email);
         console.log("[Invite] Team invite email sent to:", invite.email);
       }
-      
+
       res.json({ token: invite.token, email: invite.email, emailSent: true });
     } catch (err) {
       console.error("Create invite error:", err);
@@ -3487,7 +3487,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
   });
 
   // ==================== ADMIN ROUTES ====================
-  
+
   // Admin endpoint to set user plan manually (no Stripe required)
   // Usage: POST /api/admin/set-plan
   // Body: { userId: "user-id", plan: "pro" } OR { email: "user@example.com", plan: "pro" }
@@ -3522,11 +3522,11 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       }
 
       await storage.setUserPlan(targetUser.id, plan);
-      
+
       console.log(`[Admin] User ${targetUser.email} (${targetUser.id}) plan set to ${plan}`);
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         message: `User ${targetUser.email} plan set to ${plan}`,
         user: {
           id: targetUser.id,
