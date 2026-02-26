@@ -174,8 +174,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use(session({
-  store: new PgStore({ 
-    pool, 
+  store: new PgStore({
+    pool,
     tableName: "session",
     createTableIfMissing: true,
   }),
@@ -184,7 +184,7 @@ app.use(session({
   saveUninitialized: false,
   name: "maklartexter.sid",
   proxy: true,
-  cookie: { 
+  cookie: {
     secure: isProduction,
     httpOnly: true,
     sameSite: "lax",
@@ -228,10 +228,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       res.status(500).json({ ok: false });
     }
   });
-  
+
   // Setup email webhook routes
   app.use('/api/email', emailWebhooks);
-  
+
   // Create HTTP server
   const server = createServer(app);
 
@@ -275,10 +275,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Setup Vite or static serving
   if (isProduction) {
     const distPath = path.resolve(__dirname, "..", "dist", "public");
-    
+
     if (fs.existsSync(distPath)) {
       app.use(express.static(distPath));
-      app.use("*", (_req: Request, res: Response) => {
+      // Only serve index.html for non-API routes
+      app.use((req: Request, res: Response, next: NextFunction) => {
+        if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+          return next();
+        }
         res.sendFile(path.resolve(distPath, "index.html"));
       });
     } else {
