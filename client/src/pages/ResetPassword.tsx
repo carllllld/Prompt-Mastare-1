@@ -51,6 +51,7 @@ export default function ResetPassword() {
         setMessage(data.message || "Kunde inte återställa lösenordet");
       }
     } catch (err) {
+      console.error("Reset password error:", err);
       setStatus("error");
       setMessage("Ett fel uppstod. Försök igen senare.");
     }
