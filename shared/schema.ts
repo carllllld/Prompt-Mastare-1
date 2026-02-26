@@ -140,16 +140,16 @@ export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
 export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
-  free: { texts: 5, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
-  pro: { texts: 15, areaSearches: 10, textEdits: 999999, personalStyleAnalyses: 5 },
-  premium: { texts: 50, areaSearches: 30, textEdits: 999999, personalStyleAnalyses: 15 },
+  free: { texts: 2, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
+  pro: { texts: 10, areaSearches: 999999, textEdits: 30, personalStyleAnalyses: 999999 },
+  premium: { texts: 25, areaSearches: 999999, textEdits: 100, personalStyleAnalyses: 999999 },
 } as const;
 
 // Feature access per plan
 export const FEATURE_ACCESS = {
   free: { personalStyle: false, areaSearch: false, textEditing: false, teamFeatures: false, apiAccess: false },
   pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true },
-  premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: true, apiAccess: true },
+  premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true },
 } as const;
 
 // Ordgränser för objektbeskrivningar

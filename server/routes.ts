@@ -3,11 +3,8 @@ import type { Server } from "http";
 import Stripe from "stripe";
 import { createClient, type RedisClientType } from "redis";
 import { storage } from "./storage";
-import { getGeographicContext } from "./geographic-intelligence";
 import { analyzeMarketPosition, getMarketTrends2025 } from "./market-intelligence";
 import { analyzeArchitecturalValue } from "./architectural-intelligence";
-import { analyzeBRFEconomy, generateBRFWarningSigns } from "./brf-intelligence";
-import { identifyBuyerSegment, generatePsychologicalProfile } from "./buyer-psychology";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
@@ -208,7 +205,7 @@ STILPROFIL:
 - Faktafokus: ${styleProfile.factFocus}/10
 
 VIKTIGT: Använd samma ton, men UNDVIK dessa klyschor:
-${FORBIDDEN_PHRASES.slice(0, 20).join(', ')}
+${FORBIDDEN_PHRASES.slice(0, 50).join(', ')}
 
 Skriv som en erfaren svensk mäklare med exakt samma stil som exemplen ovan.`;
 }
@@ -1095,62 +1092,36 @@ function cleanForbiddenPhrases(text: string): string {
 
   // Först: Fixa trasiga ord som AI:n genererar (HELA ORD, inte delar)
   const brokenWordFixes: [RegExp, string][] = [
+    // Trasiga sammansättningar
     [/\bmmångaa\b/gi, "många"],
     [/\bgmångaavstånd\b/gi, "gångavstånd"],
-    [/\bVkoppling\b/gi, "Avkoppling"],
-    [/\bEnna\b/gi, "Denna"],
-    [/\bMgänge\b/gi, "umgänge"],
-    [/\bAmiljer\b/gi, "Familjer"],
-    [/\bamiljer\b/gi, "familjer"],
-    [/\bperfekt plats\b/gi, "bra plats"],
-    [/\bperfekt för\b/gi, "passar"],
-    [/\bmed mer plats \.\b/gi, "med mer plats."],
-    [/\bmed rymd och ljus\.\b/gi, "med god rymd."],
+    [/\bsprojsade\b/gi, "spröjsade"],
+    // Avhuggna prefix — ordning spelar roll (specifika före generella)
     [/\bPriset \. Enna\b/gi, "Priset för denna"],
     [/\bPriset \.\b/gi, "Priset för denna"],
-    [/\b\. Enna\b/gi, ". Denna"],
-    [/\bmed , med\b/gi, "med"],
-    [/\bmed rymd\b/gi, "med god rymd"],
-    [/\bmed mer plats \./gi, "med mer plats."],
-    [/\bär en perfekt plats \./gi, "passar bra."],
-    [/\bperfekt plats \./gi, "bra plats."],
-    [/\bFamiljer\./gi, "familjer."],
-    // Nya trasiga ord från output
-    [/\bsprojsade\b/gi, "spröjsade"],
+    [/\bAmiljer\b/gi, "Familjer"],
+    [/\bamiljer\b/gi, "familjer"],
+    [/\bVkoppling\b/gi, "Avkoppling"],
+    [/\bMgänge\b/gi, "umgänge"],
+    [/\bKad komfort\b/gi, "med komfort"],
+    [/\bEnna\b/gi, "Denna"],
+    // "Tt" artefakter
     [/\bTt skapa\b/gi, "för att skapa"],
     [/\bTt ge\b/gi, "för att ge"],
-    [/\b. Tt\b/gi, ". För att"],
-    [/\b. Vkoppling\b/gi, ". För avkoppling"],
-    [/\b. Mgänge\b/gi, ". För umgänge"],
-    [/\b. Kad komfort\b/gi, ". Komfort"],
-    [/\b. En \./gi, ". En "],
-    [/\b. Med\b/gi, ". Med"],
-    [/\b. Villan är passar\b/gi, ". Villan passar"],
-    [/\b. Villan har även\b/gi, ". Villan har"],
-    [/\b. Området är familjevänligt och har en\b/gi, ". Området är familjevänligt"],
-    [/\b. Med närhet till kollektivtrafik\b/gi, ". Med närhet till kollektivtrafik"],
-    // Fixa ofullständiga meningar
-    [/\bMaterialvalet är noggrant utvalda\b/gi, "Materialen är noggrant utvalda"],
-    [/\bSovrummen är utformade\b/gi, "Sovrummen är utformade"],
-    [/\bTerrassen vetter mot söder\b/gi, "Terrassen vetter mot söder"],
-    [/\bDen är passar soliga dagar\b/gi, "Den passar för soliga dagar"],
-    [/\bDet finns ett nybyggt uterum\b/gi, "Det finns ett nybyggt uterum"],
-    [/\bVillan har även golvvärme\b/gi, "Villan har golvvärme"],
-    [/\bDen generösa takhöjden bidrar till\b/gi, "Den höga takhöjden bidrar till"],
-    [/\bDen generösa takhöjden\b/gi, "Den höga takhöjden"],
-    // Fixa "Tt" i början av meningar
     [/\bTt\b/gi, "för att"],
-    // Fixa ". En" och ". Med" i slutet av meningar
-    [/\b\. En\b/gi, ". En"],
-    [/\b\. Med\b/gi, ". Med"],
-    // Fixa "Enna" till "Denna"
-    [/\bEnna\b/gi, "Denna"],
-    // Fixa "Vkoppling" till "Avkoppling"
-    [/\bVkoppling\b/gi, "Avkoppling"],
-    // Fixa "Mgänge" till "umgänge"
-    [/\bMgänge\b/gi, "umgänge"],
-    // Fixa "Kad" till "med"
-    [/\bKad komfort\b/gi, "med komfort"],
+    // "perfekt"-ersättningar (förbjudet ord)
+    [/\bär en perfekt plats\b/gi, "passar bra"],
+    [/\bperfekt plats\b/gi, "bra plats"],
+    [/\bperfekt för\b/gi, "passar"],
+    // Grammatikfel
+    [/\bmed rymd och ljus\b/gi, "med god rymd"],
+    [/\bmed rymd\b/gi, "med god rymd"],
+    [/\bmed , med\b/gi, "med"],
+    [/\bmed mer plats \./gi, "med mer plats."],
+    [/\bDen generösa takhöjden\b/gi, "Den höga takhöjden"],
+    [/\bDen är passar\b/gi, "Den passar"],
+    [/\bVillan är passar\b/gi, "Villan passar"],
+    [/\bMaterialvalet är noggrant utvalda\b/gi, "Materialen är noggrant utvalda"],
   ];
 
   for (const [regex, replacement] of brokenWordFixes) {
@@ -1163,17 +1134,37 @@ function cleanForbiddenPhrases(text: string): string {
     cleaned = cleaned.replace(regex, replacement);
   }
 
-  // Ta bort dubbla mellanslag
+  // === GRAMMAR CLEANUP AFTER PHRASE REMOVAL ===
+  // Multiple passes to catch cascading issues
+
+  // Pass 1: Whitespace and basic punctuation
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
-  // Ta bort meningar som börjar med tomt efter ersättning
-  cleaned = cleaned.replace(/\.\s*\./g, ".").replace(/,\s*,/g, ",");
-  // Fixa meningar som börjar med liten bokstav efter borttagning
-  cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (match, letter) => `. ${letter.toUpperCase()}`);
-  // Ta bort meningar som bara är ett ord eller tomma
-  cleaned = cleaned.replace(/\.\s*\./g, ".");
-  // Fixa "Priset . Enna" -> "Priset för denna"
+  cleaned = cleaned.replace(/\.\s*\./g, ".").replace(/,\s*,/g, ",").replace(/,\s*\./g, ".");
+  cleaned = cleaned.replace(/\.\s*\./g, "."); // second pass
+
+  // Pass 2: Fix dangling prepositions at end of sentence (common after phrase removal)
+  // "Köket har med." → "Köket har." | "Villan är en bostad med." → "Villan är en bostad."
+  cleaned = cleaned.replace(/\s+(med|för|i|på|av|till|om|från|och|eller|som|en|ett)\s*\./g, ".");
+
+  // Pass 3: Fix sentences starting with lowercase after removal
+  cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (_match, letter) => `. ${letter.toUpperCase()}`);
+
+  // Pass 4: Remove orphaned short fragments (1-2 words ending with period, likely broken)
+  // But keep valid short sentences like "Hiss." "Balkong." "Förråd."
+  const validShortSentences = /^(Hiss|Balkong|Förråd|Garage|Carport|Golvvärme|Fjärrvärme|Bergvärme|Diskmaskin|Tvättmaskin|Parkering)\./i;
+  cleaned = cleaned.replace(/(?:^|\. )([A-ZÅÄÖa-zåäö]{1,3})\./g, (match, word) => {
+    if (validShortSentences.test(word + ".")) return match;
+    return ". ";
+  });
+
+  // Pass 5: Fix "Priset . Enna" and similar known broken patterns
   cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset för denna");
   cleaned = cleaned.replace(/\. Enna/gi, ". Denna");
+
+  // Pass 6: Final whitespace cleanup
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
+  cleaned = cleaned.replace(/^\.\s*/, ""); // Remove leading period if text starts with one
+  cleaned = cleaned.replace(/\.\s*\./g, "."); // Final double-period cleanup
 
   return cleaned;
 }
@@ -1725,6 +1716,11 @@ function matchExamples(disposition: any, _toneAnalysis: any): string[] {
     }
   }
 
+  // Sort by size similarity — closest match first (instead of blindly picking first 2)
+  if (size > 0) {
+    candidates.sort((a, b) => Math.abs(a.metadata.size - size) - Math.abs(b.metadata.size - size));
+  }
+
   return candidates.slice(0, 2).map((ex) => ex.text);
 }
 
@@ -1968,23 +1964,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(403).json({ message: "Personlig stil är endast för Pro/Premium-användare" });
       }
 
-      // Check usage limits for personal style analysis
-      const usage = await storage.getMonthlyUsage(user.id) || {
-        textsGenerated: 0,
-        areaSearchesUsed: 0,
-        textEditsUsed: 0,
-        personalStyleAnalyses: 0,
-      };
-
-      const limits = PLAN_LIMITS[plan];
-      if (usage.personalStyleAnalyses >= limits.personalStyleAnalyses) {
-        return res.status(429).json({
-          message: `Du har nått din gräns för personlig stil-analys. Uppgradera till Premium för obegränsad användning!`,
-          limitReached: true,
-          upgradeTo: "premium",
-        });
-      }
-
       const { referenceTexts, teamShared } = req.body;
 
       if (!referenceTexts || !Array.isArray(referenceTexts) || referenceTexts.length !== 3) {
@@ -2015,10 +1994,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       };
 
       const savedStyle = await storage.createPersonalStyle(personalStyleData);
-
-      // Increment usage for personal style analysis
-      await storage.incrementUsage(user.id, 'personalStyleAnalyses');
-      console.log(`[Usage] Incremented personal style analysis for user ${user.id}`);
 
       res.json({
         success: true,
@@ -2096,10 +2071,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const limits = PLAN_LIMITS[plan];
       if (usage.textsGenerated >= limits.texts) {
         const upgradeMsg = plan === "free"
-          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 15 per månad!`
+          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 10 per månad!`
           : plan === "pro"
-            ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 50 per månad!`
-            : `Du har nått din månadsgräns av ${limits.texts} genereringar. Kontakta oss om du behöver mer.`;
+            ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 per månad!`
+            : `Du har nått din månadsgräns av ${limits.texts} genereringar. Behöver du mer? Kontakta oss för en Byrå-plan.`;
         return res.status(429).json({
           message: upgradeMsg,
           limitReached: true,
@@ -2112,49 +2087,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Bestäm AI-modell baserat på plan
       const aiModel = (plan === "pro" || plan === "premium") ? "gpt-4o" : "gpt-4o-mini";
-
-      // Konkurrentanalys (Pro + Premium-funktion) — använder disposition-data
-      let competitorAnalysis = "";
-      if (plan === "pro" || plan === "premium") {
-        try {
-          const pd = req.body.propertyData;
-          const area = pd?.area || pd?.address?.split(",").pop()?.trim() || "";
-          const propType = type || "lägenhet";
-          const price = pd?.price || "";
-          const size = pd?.livingArea || "";
-
-          if (area || price) {
-            console.log(`[Competitor Analysis] Analyzing: ${propType} in ${area}...`);
-            const competitorMessages = [
-              {
-                role: "system" as const,
-                content: `Du är en expert på svensk fastighetsmarknad. Ge KORTA, KONKRETA positioneringstips. Max 150 ord. Svara som punktlista.`
-              },
-              {
-                role: "user" as const,
-                content: `Objekt: ${propType}, ${size} kvm i ${area}. Pris: ${price} kr.
-
-Ge mig exakt 3 punkter:
-1. UNDVIK: En vanlig klyscha som konkurrenterna använder för denna typ av objekt
-2. LYFT: En konkret detalj som sällan nämns men som köpare värdesätter
-3. VINKEL: En positioneringsstrategi för just detta läge/typ`
-              }
-            ];
-
-            const competitorCompletion = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
-              messages: competitorMessages,
-              max_tokens: 300,
-              temperature: 0.3,
-            });
-
-            competitorAnalysis = competitorCompletion.choices[0]?.message?.content || "";
-            console.log(`[Competitor Analysis] Done`);
-          }
-        } catch (e) {
-          console.warn("[Competitor Analysis] Failed, continuing:", e);
-        }
-      }
 
       // Bildanalys om bilder finns
       let imageAnalysis = "";
@@ -2270,9 +2202,9 @@ Ge mig exakt 3 punkter:
       if (plan !== "free" && disposition?.property?.address) {
         try {
           const addr = disposition.property.address;
-          // Geographic context — works with address string
-          const geoContext = getGeographicContext(addr);
-          if (geoContext) disposition.geo_context = geoContext;
+          // NOTE: geo_context removed — it used city center coordinates (not actual address)
+          // which injected wrong district data and conflicted with "BARA från rådata" rule.
+          // The address-lookup endpoint (OpenStreetMap) provides real nearby places when needed.
 
           // Market position — needs (price, size, city)
           const price = disposition?.economics?.price;
@@ -2297,6 +2229,39 @@ Ge mig exakt 3 punkter:
             const trends = getMarketTrends2025(city);
             if (trends) toneAnalysis.market_trends = trends;
           }
+
+          // BRF enrichment — if association data exists, add context for the writer
+          const brfData = disposition?.economics?.association;
+          if (brfData?.name) {
+            toneAnalysis.brf_context = {
+              name: brfData.name,
+              status: brfData.status || null,
+              renovations: brfData.renovations || null,
+              fee: disposition?.economics?.fee || null,
+            };
+            console.log(`[Intelligence] BRF context added: ${brfData.name}`);
+          }
+
+          // Buyer segment inference — infer likely buyer from property data
+          const propType = (disposition?.property?.type || "").toLowerCase();
+          const rooms = Number(disposition?.property?.rooms) || 0;
+          if (size > 0) {
+            let inferredBuyer = "";
+            if (propType.includes("villa") || propType.includes("radhus")) {
+              if (size > 150 && rooms >= 5) inferredBuyer = "etablerade familjer med äldre barn — betona utrymme, tomt, garage, skolor";
+              else if (rooms >= 4) inferredBuyer = "barnfamiljer — betona sovrum, trädgård, skolor, lekplatser i närheten";
+              else inferredBuyer = "par eller liten familj — betona underhåll, praktisk tomt, pendling";
+            } else {
+              if (size < 40) inferredBuyer = "unga yrkesverksamma eller studenter — betona läge, kommunikationer, pris";
+              else if (size < 65) inferredBuyer = "par eller singlar — betona planlösning, balkong, närhet till restauranger/butiker";
+              else if (size < 90) inferredBuyer = "par eller liten familj — betona sovrum, kök, förvaring, närhet till skolor";
+              else inferredBuyer = "familjer eller etablerade par — betona utrymme, sovrum, badrum, förening";
+            }
+            if (inferredBuyer) {
+              toneAnalysis.inferred_buyer = inferredBuyer;
+              console.log(`[Intelligence] Inferred buyer: ${inferredBuyer.split(" — ")[0]}`);
+            }
+          }
         } catch (e) {
           console.warn("[Intelligence] Enrichment failed, continuing without:", e);
         }
@@ -2315,7 +2280,7 @@ Ge mig exakt 3 punkter:
           ];
 
           const planCompletion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: plan === "premium" ? "gpt-4o" : "gpt-4o-mini",
             messages: planMessages,
             max_tokens: 1500,
             temperature: 0.1,
@@ -2329,6 +2294,38 @@ Ge mig exakt 3 punkter:
           }
         } catch (e) {
           console.warn("[Step 2] Plan generation failed, using basic plan:", e);
+        }
+      }
+
+      // Positioneringsguide (Pro + Premium) — byggd från enrichment-data, INGEN extra AI-call
+      let competitorAnalysis = "";
+      if (plan === "pro" || plan === "premium") {
+        const parts: string[] = [];
+        const mp = toneAnalysis.market_position;
+        if (mp?.segment === "luxury") {
+          parts.push("POSITIONERING: Premiumobjekt — lyft material, märken och finish. Skriv med precision, undvik generiska adjektiv ännu mer.");
+        } else if (mp?.segment === "budget") {
+          parts.push("POSITIONERING: Prisvärt objekt — lyft läge, potential och kommunikationer. Fokusera på konkreta fördelar för förstagångsköpare.");
+        } else if (mp) {
+          parts.push("POSITIONERING: Standardsegment — balansera fakta om bostad och läge. Lyft det som skiljer objektet från likvärdiga.");
+        }
+        if (toneAnalysis.inferred_buyer) {
+          parts.push(`MÅLGRUPP: ${toneAnalysis.inferred_buyer}`);
+        }
+        if (toneAnalysis.architectural_value?.era?.name) {
+          parts.push(`ARKITEKTUR: ${toneAnalysis.architectural_value.era.name} (${toneAnalysis.architectural_value.era.period}) — nämn epokens konkreta detaljer om de finns i dispositionen.`);
+        }
+        if (toneAnalysis.brf_context?.name) {
+          const brf = toneAnalysis.brf_context;
+          let brfNote = `BRF: ${brf.name}`;
+          if (brf.renovations) brfNote += `, ${brf.renovations}`;
+          if (brf.status) brfNote += `, ${brf.status}`;
+          if (brf.fee) brfNote += `. Avgift ${brf.fee} kr/mån`;
+          parts.push(brfNote + " — nämn föreningen positivt om data finns.");
+        }
+        if (parts.length > 0) {
+          competitorAnalysis = parts.join("\n");
+          console.log(`[Positioning] Built ${parts.length} positioning hints from enrichment data (0 API calls)`);
         }
       }
 
@@ -2390,18 +2387,6 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
         positiveExample = `"Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet har tre fönster och ekparkett. Takhöjd 2,70 meter.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch och tvättmaskin.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter."`;
       }
 
-      // Instruktion om intelligence-data om den finns
-      let intelligenceInstruction = "";
-      if (toneAnalysis.market_position) {
-        intelligenceInstruction += `\nMARKNADSPOSITION: Segmentet är "${toneAnalysis.market_position.segment}". Anpassa detaljnivå: luxury=fler material/märken, budget=fokus läge/potential.\n`;
-      }
-      if (toneAnalysis.architectural_value?.era) {
-        intelligenceInstruction += `ARKITEKTUR-EPOK: ${toneAnalysis.architectural_value.era.name || ""}. Nämn husepoken korrekt om det passar.\n`;
-      }
-      if (toneAnalysis.market_trends) {
-        intelligenceInstruction += `MARKNADSTREND: Använd trenddata för att lyfta rätt säljpunkter.\n`;
-      }
-
       const textMessages = [
         {
           role: "system" as const,
@@ -2409,7 +2394,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
         },
         {
           role: "user" as const,
-          content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${intelligenceInstruction}${competitorAnalysis ? `KONKURRENTANALYS:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`,
+          content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`,
         },
       ];
 
@@ -2673,10 +2658,26 @@ Svara med JSON i formatet:
   // ── AI REWRITE: Inline text editing ──
   app.post("/api/rewrite", requireAuth, async (req, res) => {
     const rewriteUser = (req as any).user as User;
-    if ((rewriteUser.plan as PlanType) === "free") {
+    const rewritePlan = rewriteUser.plan as PlanType;
+    if (rewritePlan === "free") {
       return res.status(403).json({ message: "Text-omskrivning är endast för Pro/Premium-användare" });
     }
     try {
+      // Check textEdits usage limit
+      const rewriteUsage = await storage.getMonthlyUsage(rewriteUser.id) || {
+        textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
+      };
+      const rewriteLimits = PLAN_LIMITS[rewritePlan];
+      if (rewriteUsage.textEditsUsed >= rewriteLimits.textEdits) {
+        return res.status(429).json({
+          message: rewritePlan === "pro"
+            ? `Du har nått din gräns för AI-textredigeringar (${rewriteLimits.textEdits}/månad). Uppgradera till Premium för 100 per månad!`
+            : `Du har nått din gräns för AI-textredigeringar (${rewriteLimits.textEdits}/månad). Behöver du mer? Kontakta oss för en Byrå-plan.`,
+          limitReached: true,
+          upgradeTo: rewritePlan === "pro" ? "premium" : null,
+        });
+      }
+
       const { selectedText, fullText, instruction } = req.body;
       if (!selectedText || !fullText || !instruction) {
         return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
@@ -2745,6 +2746,9 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         newFullText = fullText.replace(regex, rewritten);
       }
 
+      // Track text edit usage
+      await storage.incrementUsage(rewriteUser.id, 'textEdits');
+
       res.json({ rewritten, newFullText });
     } catch (err: any) {
       console.error("Rewrite error:", err);
@@ -2763,23 +2767,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return res.status(403).json({
           message: "Adress-sökning är endast för Pro- och Premium-användare",
           upgradeTo: "pro"
-        });
-      }
-
-      // Check usage limits
-      const usage = await storage.getMonthlyUsage(user.id) || {
-        textsGenerated: 0,
-        areaSearchesUsed: 0,
-        textEditsUsed: 0,
-        personalStyleAnalyses: 0,
-      };
-
-      const limits = PLAN_LIMITS[plan];
-      if (usage.areaSearchesUsed >= limits.areaSearches) {
-        return res.status(429).json({
-          message: `Du har nått din gräns för adress-sökningar. Uppgradera till Premium för obegränsad användning!`,
-          limitReached: true,
-          upgradeTo: "premium",
         });
       }
 
@@ -2938,9 +2925,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           .map((p: any) => `${p.name} (${p.type.toLowerCase()}) ${p.distance}`)
           .join(". ") || null;
 
-        // Increment usage BEFORE sending response (atomic)
-        await storage.incrementUsage(user.id, 'areaSearches');
-        console.log(`[Usage] Incremented area search for user ${user.id} (OpenStreetMap)`);
+        // No usage increment needed — OpenStreetMap APIs are free
 
         res.json({
           formattedAddress,
@@ -3011,7 +2996,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       const priceId = tier === "pro" ? STRIPE_PRO_PRICE_ID : STRIPE_PREMIUM_PRICE_ID;
       if (!priceId) {
         console.error("[Stripe Checkout] Price ID not configured for tier:", tier);
-        return res.status(500).json({ message: "Stripe price not configured" });
+        return res.status(500).json({ message: "Stripe-pris är inte konfigurerat" });
       }
 
       let customerId = user.stripeCustomerId;
@@ -3059,7 +3044,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       const user = (req as any).user as User;
 
       if (!user.stripeCustomerId) {
-        return res.status(400).json({ message: "No subscription found" });
+        return res.status(400).json({ message: "Ingen prenumeration hittades" });
       }
 
       const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
@@ -3072,7 +3057,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       res.json({ url: portalSession.url });
     } catch (err: any) {
       console.error("Portal error:", err);
-      res.status(500).json({ message: err.message || "Could not open portal" });
+      res.status(500).json({ message: "Kunde inte öppna kundportalen" });
     }
   });
 
@@ -3128,6 +3113,27 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           break;
         }
 
+        case "customer.subscription.updated": {
+          const updatedSub = event.data.object as Stripe.Subscription;
+          const priceId = updatedSub.items?.data?.[0]?.price?.id;
+          let newPlan: "pro" | "premium" | null = null;
+
+          if (priceId === STRIPE_PRO_PRICE_ID) newPlan = "pro";
+          else if (priceId === STRIPE_PREMIUM_PRICE_ID) newPlan = "premium";
+
+          if (newPlan && updatedSub.status === "active") {
+            // Find user by subscription ID and update their plan
+            const subUser = await storage.getUserByStripeSubscriptionId(updatedSub.id);
+            if (subUser) {
+              await storage.setUserPlan(subUser.id, newPlan);
+              console.log(`[Stripe Webhook] Subscription updated: user ${subUser.id} → ${newPlan}`);
+            }
+          } else if (updatedSub.status === "past_due" || updatedSub.status === "unpaid") {
+            console.log(`[Stripe Webhook] Subscription ${updatedSub.id} status: ${updatedSub.status}`);
+          }
+          break;
+        }
+
         case "customer.subscription.deleted": {
           const subscription = event.data.object as Stripe.Subscription;
           await storage.downgradeUserToFree(subscription.id);
@@ -3141,6 +3147,15 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
           if (subscriptionId) {
             await storage.downgradeUserToFree(subscriptionId as string);
             console.log(`Payment failed for subscription ${subscriptionId}`);
+          }
+          break;
+        }
+
+        case "invoice.paid": {
+          const paidInvoice = event.data.object as Stripe.Invoice;
+          const paidSubId = (paidInvoice as any).subscription;
+          if (paidSubId) {
+            console.log(`[Stripe Webhook] Invoice paid for subscription ${paidSubId}`);
           }
           break;
         }
@@ -3207,7 +3222,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       const { name } = req.body;
 
       if (!name || typeof name !== "string" || name.trim().length === 0) {
-        return res.status(400).json({ message: "Team name is required" });
+        return res.status(400).json({ message: "Teamnamn kr\u00e4vs" });
       }
 
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -3237,14 +3252,14 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const membership = await storage.getUserTeamMembership(user.id, teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const team = await storage.getTeamById(teamId);
       res.json(team);
     } catch (err) {
       console.error("Get team error:", err);
-      res.status(500).json({ message: "Failed to get team" });
+      res.status(500).json({ message: "Kunde inte hämta team" });
     }
   });
 
@@ -3255,14 +3270,14 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const membership = await storage.getUserTeamMembership(user.id, teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const members = await storage.getTeamMembers(teamId);
       res.json(members);
     } catch (err) {
       console.error("Get team members error:", err);
-      res.status(500).json({ message: "Failed to get team members" });
+      res.status(500).json({ message: "Kunde inte hämta teammedlemmar" });
     }
   });
 
@@ -3273,12 +3288,12 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       const { email } = req.body;
 
       if (!email || typeof email !== "string") {
-        return res.status(400).json({ message: "Email is required" });
+        return res.status(400).json({ message: "E-postadress krävs" });
       }
 
       const membership = await storage.getUserTeamMembership(user.id, teamId);
       if (!membership || !["owner", "admin"].includes(membership.role)) {
-        return res.status(403).json({ message: "Only owners and admins can invite members" });
+        return res.status(403).json({ message: "Bara ägare och admins kan bjuda in medlemmar" });
       }
 
       // Check rate limit for invites
@@ -3302,7 +3317,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       res.json({ token: invite.token, email: invite.email, emailSent: true });
     } catch (err) {
       console.error("Create invite error:", err);
-      res.status(500).json({ message: "Failed to create invite" });
+      res.status(500).json({ message: "Kunde inte skapa inbjudan" });
     }
   });
 
@@ -3313,16 +3328,16 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const invite = await storage.getInviteByToken(token);
       if (!invite) {
-        return res.status(404).json({ message: "Invalid or expired invite" });
+        return res.status(404).json({ message: "Ogiltig eller utgången inbjudan" });
       }
 
       if (new Date(invite.expiresAt) < new Date()) {
         await storage.deleteInvite(invite.id);
-        return res.status(410).json({ message: "This invite has expired" });
+        return res.status(410).json({ message: "Denna inbjudan har gått ut" });
       }
 
       if (invite.email && user.email && invite.email.toLowerCase() !== user.email.toLowerCase()) {
-        return res.status(403).json({ message: "This invite is for a different email address" });
+        return res.status(403).json({ message: "Denna inbjudan är för en annan e-postadress" });
       }
 
       const existingMembership = await storage.getUserTeamMembership(user.id, invite.teamId);
@@ -3343,7 +3358,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       res.json(team);
     } catch (err) {
       console.error("Join team error:", err);
-      res.status(500).json({ message: "Failed to join team" });
+      res.status(500).json({ message: "Kunde inte gå med i teamet" });
     }
   });
 
@@ -3354,14 +3369,14 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const membership = await storage.getUserTeamMembership(user.id, teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const prompts = await storage.getTeamSharedPrompts(teamId);
       res.json(prompts);
     } catch (err) {
       console.error("Get team prompts error:", err);
-      res.status(500).json({ message: "Failed to get prompts" });
+      res.status(500).json({ message: "Kunde inte hämta prompter" });
     }
   });
 
@@ -3373,7 +3388,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const membership = await storage.getUserTeamMembership(user.id, teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const prompt = await storage.createSharedPrompt({
@@ -3388,7 +3403,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       res.json(prompt);
     } catch (err) {
       console.error("Create prompt error:", err);
-      res.status(500).json({ message: "Failed to create prompt" });
+      res.status(500).json({ message: "Kunde inte skapa prompt" });
     }
   });
 
@@ -3399,19 +3414,19 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const existingPrompt = await storage.getSharedPromptById(promptId);
       if (!existingPrompt) {
-        return res.status(404).json({ message: "Prompt not found" });
+        return res.status(404).json({ message: "Prompten hittades inte" });
       }
 
       const membership = await storage.getUserTeamMembership(user.id, existingPrompt.teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const prompt = await storage.updateSharedPrompt(promptId, req.body);
       res.json(prompt);
     } catch (err) {
       console.error("Update prompt error:", err);
-      res.status(500).json({ message: "Failed to update prompt" });
+      res.status(500).json({ message: "Kunde inte uppdatera prompt" });
     }
   });
 
@@ -3422,23 +3437,23 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const existingPrompt = await storage.getSharedPromptById(promptId);
       if (!existingPrompt) {
-        return res.status(404).json({ message: "Prompt not found" });
+        return res.status(404).json({ message: "Prompten hittades inte" });
       }
 
       const membership = await storage.getUserTeamMembership(user.id, existingPrompt.teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       if (!["owner", "admin"].includes(membership.role) && existingPrompt.creatorId !== user.id) {
-        return res.status(403).json({ message: "Only team owners, admins, or the creator can delete prompts" });
+        return res.status(403).json({ message: "Bara teamägare, admins eller skaparen kan ta bort prompter" });
       }
 
       await storage.deleteSharedPrompt(promptId);
       res.json({ success: true });
     } catch (err) {
       console.error("Delete prompt error:", err);
-      res.status(500).json({ message: "Failed to delete prompt" });
+      res.status(500).json({ message: "Kunde inte ta bort prompt" });
     }
   });
 
@@ -3449,19 +3464,19 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const prompt = await storage.getSharedPromptById(promptId);
       if (!prompt) {
-        return res.status(404).json({ message: "Prompt not found" });
+        return res.status(404).json({ message: "Prompten hittades inte" });
       }
 
       const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const comments = await storage.getPromptComments(promptId);
       res.json(comments);
     } catch (err) {
       console.error("Get comments error:", err);
-      res.status(500).json({ message: "Failed to get comments" });
+      res.status(500).json({ message: "Kunde inte hämta kommentarer" });
     }
   });
 
@@ -3473,12 +3488,12 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
 
       const prompt = await storage.getSharedPromptById(promptId);
       if (!prompt) {
-        return res.status(404).json({ message: "Prompt not found" });
+        return res.status(404).json({ message: "Prompten hittades inte" });
       }
 
       const membership = await storage.getUserTeamMembership(user.id, prompt.teamId);
       if (!membership) {
-        return res.status(403).json({ message: "Not a member of this team" });
+        return res.status(403).json({ message: "Du är inte medlem i detta team" });
       }
 
       const comment = await storage.createComment({
@@ -3490,7 +3505,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       res.json(comment);
     } catch (err) {
       console.error("Create comment error:", err);
-      res.status(500).json({ message: "Failed to create comment" });
+      res.status(500).json({ message: "Kunde inte skapa kommentar" });
     }
   });
 
@@ -3544,7 +3559,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       });
     } catch (err: any) {
       console.error("Admin set-plan error:", err);
-      res.status(500).json({ message: err.message || "Failed to set user plan" });
+      res.status(500).json({ message: err.message || "Kunde inte ställa in användarplan" });
     }
   });
 
@@ -3553,18 +3568,33 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
     try {
       const user = (req as any).user as User;
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        return res.status(404).json({ message: "Användare hittades inte" });
       }
 
       const { originalText, selectedText, improvementType, context } = req.body;
 
       if (!selectedText || !improvementType) {
-        return res.status(400).json({ message: "Missing required fields" });
+        return res.status(400).json({ message: "Markerad text och förbättringstyp krävs" });
       }
 
       const plan = user.plan as PlanType;
       if (plan === "free") {
         return res.status(403).json({ message: "Denna funktion är endast för Pro/Premium-användare" });
+      }
+
+      // Check textEdits usage limit
+      const improveUsage = await storage.getMonthlyUsage(user.id) || {
+        textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
+      };
+      const improveLimits = PLAN_LIMITS[plan];
+      if (improveUsage.textEditsUsed >= improveLimits.textEdits) {
+        return res.status(429).json({
+          message: plan === "pro"
+            ? `Du har nått din gräns för AI-textredigeringar (${improveLimits.textEdits}/månad). Uppgradera till Premium för 100 per månad!`
+            : `Du har nått din gräns för AI-textredigeringar (${improveLimits.textEdits}/månad). Behöver du mer? Kontakta oss för en Byrå-plan.`,
+          limitReached: true,
+          upgradeTo: plan === "pro" ? "premium" : null,
+        });
       }
 
       console.log(`[Text Improvement] Improving text with type: ${improvementType}`);
@@ -3609,8 +3639,16 @@ Svara ENDAST med den förbättrade texten, inga förklaringar.`
         temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
       });
 
-      const rawImprovedText = completion.choices[0]?.message?.content || selectedText;
+      let rawImprovedText = completion.choices[0]?.message?.content || selectedText;
+      // Strip quotes, markdown code blocks, and leading/trailing whitespace
+      rawImprovedText = rawImprovedText.trim();
+      rawImprovedText = rawImprovedText.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, ""); // code blocks
+      rawImprovedText = rawImprovedText.replace(/^[""]|[""]$/g, ""); // smart quotes
+      rawImprovedText = rawImprovedText.replace(/^"|"$/g, ""); // regular quotes
       const improvedText = cleanForbiddenPhrases(rawImprovedText.trim());
+
+      // Track text edit usage
+      await storage.incrementUsage(user.id, 'textEdits');
 
       res.json({
         originalText: selectedText,

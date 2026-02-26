@@ -44,7 +44,6 @@ export default function ResetPassword() {
       if (response.ok) {
         setStatus("success");
         setMessage(data.message || "Lösenordet har uppdaterats!");
-        setTimeout(() => setLocation("/"), 3000);
       } else {
         setStatus("error");
         setMessage(data.message || "Kunde inte återställa lösenordet");
@@ -111,7 +110,9 @@ export default function ResetPassword() {
             <>
               <CheckCircle className="h-16 w-16 text-green-500" />
               <p className="text-center text-sm" style={{ color: "#4B5563" }}>{message}</p>
-              <p className="text-xs" style={{ color: "#9CA3AF" }}>Du skickas automatiskt till startsidan...</p>
+              <Button onClick={() => setLocation("/")} className="mt-4" style={{ background: "#2D6A4F", color: "#fff" }}>
+                Gå till inloggningen
+              </Button>
             </>
           )}
           {status === "error" && (

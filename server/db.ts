@@ -12,13 +12,13 @@ if (!process.env.DATABASE_URL) {
 
 // Use SSL for external databases (Render, etc.) - detect by checking if DATABASE_URL contains common cloud hosts
 const databaseUrl = process.env.DATABASE_URL;
-const needsSSL = databaseUrl.includes('render.com') || 
-                 databaseUrl.includes('neon.tech') || 
-                 databaseUrl.includes('supabase.co') ||
-                 databaseUrl.includes('railway.app') ||
-                 process.env.DATABASE_SSL === 'true';
+const needsSSL = databaseUrl.includes('render.com') ||
+  databaseUrl.includes('neon.tech') ||
+  databaseUrl.includes('supabase.co') ||
+  databaseUrl.includes('railway.app') ||
+  process.env.DATABASE_SSL === 'true';
 
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString: databaseUrl,
   ssl: needsSSL ? { rejectUnauthorized: false } : undefined,
 });
@@ -39,7 +39,7 @@ export async function initializeDatabase() {
     await pool.query(`
       CREATE INDEX IF NOT EXISTS IDX_user_sessions_expire ON user_sessions (expire)
     `);
-    
+
     // Create session_usage table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS session_usage (
@@ -48,7 +48,7 @@ export async function initializeDatabase() {
         last_reset_date DATE DEFAULT CURRENT_DATE
       )
     `);
-    
+
     // Create users table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -65,7 +65,7 @@ export async function initializeDatabase() {
         verification_token_expires TIMESTAMP
       )
     `);
-    
+
     // Add email verification columns if they don't exist
     await pool.query(`
       ALTER TABLE users 
@@ -73,7 +73,7 @@ export async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS verification_token TEXT,
       ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP
     `);
-    
+
     // Create email rate limits table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS email_rate_limits (
@@ -83,7 +83,7 @@ export async function initializeDatabase() {
         sent_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    
+
     // Create optimizations table if it doesn't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS optimizations (
@@ -97,7 +97,18 @@ export async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    
+
+    // Performance indexes for frequently queried columns
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_stripe_sub ON users (stripe_subscription_id) WHERE stripe_subscription_id IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users (verification_token) WHERE verification_token IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_email_rate_limits_lookup ON email_rate_limits (email, email_type, sent_at)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_optimizations_user_id ON optimizations (user_id, created_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_team_members_user_id ON team_members (user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_team_members_team_id ON team_members (team_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_presence_sessions_user ON presence_sessions (user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_shared_prompts_team ON shared_prompts (team_id, updated_at DESC)`);
+
     console.log("Database tables initialized");
   } catch (error) {
     console.error("Error initializing database:", error);

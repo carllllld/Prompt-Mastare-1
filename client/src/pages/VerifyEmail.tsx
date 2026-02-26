@@ -31,8 +31,8 @@ export default function VerifyEmail() {
           queryClient.invalidateQueries({ queryKey: ["/auth/me"] });
           queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
           setTimeout(() => {
-            setLocation("/");
-          }, 3000);
+            setLocation("/app");
+          }, 2000);
         } else {
           setStatus("error");
           setMessage(data.message || "Verifiering misslyckades");
@@ -65,7 +65,7 @@ export default function VerifyEmail() {
             <>
               <CheckCircle className="h-16 w-16 text-green-500" />
               <p className="text-center text-muted-foreground">{message}</p>
-              <p className="text-sm text-muted-foreground">Du skickas automatiskt till startsidan...</p>
+              <p className="text-sm text-muted-foreground">Du skickas automatiskt vidare...</p>
             </>
           )}
           {status === "error" && (

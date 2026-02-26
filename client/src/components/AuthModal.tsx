@@ -1,25 +1,39 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { PasswordStrength } from "@/components/PasswordStrength";
 import { Loader2, Mail, CheckCircle } from "lucide-react";
 
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialMode?: "login" | "register";
 }
 
-export function AuthModal({ open, onOpenChange }: AuthModalProps) {
-  const [mode, setMode] = useState<"login" | "register" | "verify-pending" | "resend-verification" | "forgot-password">("login");
+export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthModalProps) {
+  const [mode, setMode] = useState<"login" | "register" | "verify-pending" | "resend-verification" | "forgot-password">(initialMode);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [pendingEmail, setPendingEmail] = useState<string>("");
   const [isResending, setIsResending] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [registerPassword, setRegisterPassword] = useState("");
   const { login, register, isLoggingIn, isRegistering } = useAuth();
-  
+
+  // Reset state when dialog opens or initialMode changes
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      setError(null);
+      setSuccessMessage(null);
+      setPendingEmail("");
+      setRegisterPassword("");
+    }
+  }, [open, initialMode]);
+
   const loginEmailRef = useRef<HTMLInputElement>(null);
   const loginPasswordRef = useRef<HTMLInputElement>(null);
   const registerEmailRef = useRef<HTMLInputElement>(null);
@@ -32,10 +46,10 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
-    
+
     const email = loginEmailRef.current?.value || "";
     const password = loginPasswordRef.current?.value || "";
-    
+
     if (!email || !email.includes("@")) {
       setError("Ange en giltig e-postadress");
       return;
@@ -44,7 +58,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       setError("Lösenord krävs");
       return;
     }
-    
+
     try {
       await login({ email, password });
       onOpenChange(false);
@@ -63,11 +77,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     e.preventDefault();
     setError(null);
     setSuccessMessage(null);
-    
+
     const email = registerEmailRef.current?.value || "";
     const password = registerPasswordRef.current?.value || "";
     const confirmPassword = registerConfirmRef.current?.value || "";
-    
+
     if (!email || !email.includes("@")) {
       setError("Ange en giltig e-postadress");
       return;
@@ -80,7 +94,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       setError("Lösenorden matchar inte");
       return;
     }
-    
+
     try {
       await register({ email, password });
       setPendingEmail(email);
@@ -96,15 +110,15 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     setError(null);
     setSuccessMessage(null);
     setIsResending(true);
-    
+
     const email = resendEmailRef.current?.value || pendingEmail;
-    
+
     if (!email || !email.includes("@")) {
       setError("Ange en giltig e-postadress");
       setIsResending(false);
       return;
     }
-    
+
     try {
       const response = await fetch("/auth/resend-verification", {
         method: "POST",
@@ -112,9 +126,9 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
         credentials: "include",
         body: JSON.stringify({ email }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         setError(data.message || "Kunde inte skicka verifieringsmail");
       } else {
@@ -181,7 +195,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
               <div className="text-center space-y-2">
                 <p className="font-medium">Kontrollera din inkorg</p>
                 <p className="text-sm text-muted-foreground">
-                  Vi har skickat ett verifieringsmail till <strong>{pendingEmail}</strong>. 
+                  Vi har skickat ett verifieringsmail till <strong>{pendingEmail}</strong>.
                   Klicka på länken i mailet för att aktivera ditt konto.
                 </p>
               </div>
@@ -219,19 +233,19 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <form onSubmit={handleResendVerification} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="resend-email">E-postadress</Label>
-              <Input 
+              <Input
                 id="resend-email"
                 ref={resendEmailRef}
-                type="email" 
+                type="email"
                 placeholder="din@email.se"
                 defaultValue={pendingEmail}
                 autoComplete="email"
                 data-testid="input-resend-email"
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isResending}
               data-testid="button-resend-submit"
             >
@@ -319,29 +333,29 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="login-email">E-postadress</Label>
-              <Input 
+              <Input
                 id="login-email"
                 ref={loginEmailRef}
-                type="email" 
-                placeholder="din@email.se" 
+                type="email"
+                placeholder="din@email.se"
                 autoComplete="email"
                 data-testid="input-login-email"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="login-password">Lösenord</Label>
-              <Input 
+              <Input
                 id="login-password"
                 ref={loginPasswordRef}
-                type="password" 
-                placeholder="Ange ditt lösenord" 
+                type="password"
+                placeholder="Ange ditt lösenord"
                 autoComplete="current-password"
                 data-testid="input-login-password"
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isLoggingIn}
               data-testid="button-login-submit"
             >
@@ -361,33 +375,35 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="register-email">E-postadress</Label>
-              <Input 
+              <Input
                 id="register-email"
                 ref={registerEmailRef}
-                type="email" 
-                placeholder="din@email.se" 
+                type="email"
+                placeholder="din@email.se"
                 autoComplete="email"
                 data-testid="input-register-email"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="register-password">Lösenord</Label>
-              <Input 
+              <Input
                 id="register-password"
                 ref={registerPasswordRef}
-                type="password" 
-                placeholder="Minst 8 tecken" 
+                type="password"
+                placeholder="Minst 8 tecken"
                 autoComplete="new-password"
                 data-testid="input-register-password"
+                onChange={(e) => setRegisterPassword(e.target.value)}
               />
+              <PasswordStrength password={registerPassword} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="register-confirm">Bekräfta lösenord</Label>
-              <Input 
+              <Input
                 id="register-confirm"
                 ref={registerConfirmRef}
-                type="password" 
-                placeholder="Bekräfta ditt lösenord" 
+                type="password"
+                placeholder="Bekräfta ditt lösenord"
                 autoComplete="new-password"
                 data-testid="input-register-confirm-password"
               />
@@ -398,9 +414,9 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
               och{" "}
               <a href="/privacy" className="underline hover:text-primary" target="_blank">integritetspolicy</a>.
             </p>
-            <Button 
-              type="submit" 
-              className="w-full" 
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isRegistering}
               data-testid="button-register-submit"
             >
@@ -421,26 +437,26 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             {mode === "login" ? (
               <>
                 Har du inget konto?{" "}
-                <button 
+                <button
                   type="button"
-                  onClick={switchMode} 
+                  onClick={switchMode}
                   className="text-primary hover:underline"
                   data-testid="button-switch-to-register"
                 >
                   Skapa konto
                 </button>
                 <br />
-                <button 
+                <button
                   type="button"
-                  onClick={() => { setMode("forgot-password"); setError(null); setSuccessMessage(null); }} 
+                  onClick={() => { setMode("forgot-password"); setError(null); setSuccessMessage(null); }}
                   className="text-muted-foreground hover:text-primary hover:underline mt-1 inline-block"
                 >
                   Glömt lösenord?
                 </button>
                 <br />
-                <button 
+                <button
                   type="button"
-                  onClick={() => setMode("resend-verification")} 
+                  onClick={() => setMode("resend-verification")}
                   className="text-muted-foreground hover:text-primary hover:underline mt-1 inline-block"
                   data-testid="button-go-to-resend"
                 >
@@ -450,9 +466,9 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             ) : (
               <>
                 Har du redan ett konto?{" "}
-                <button 
+                <button
                   type="button"
-                  onClick={switchMode} 
+                  onClick={switchMode}
                   className="text-primary hover:underline"
                   data-testid="button-switch-to-login"
                 >

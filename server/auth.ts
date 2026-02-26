@@ -7,6 +7,45 @@ import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 
 const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 
+// ─── LOGIN RATE LIMITING (brute-force protection) ───
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkLoginRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) return false;
+  entry.count++;
+  return true;
+}
+
+function recordFailedLogin(key: string): void {
+  const now = Date.now();
+  const entry = loginAttempts.get(key);
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    entry.count++;
+  }
+}
+
+function clearLoginAttempts(key: string): void {
+  loginAttempts.delete(key);
+}
+
+// Cleanup stale entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of loginAttempts) {
+    if (now > entry.resetAt) loginAttempts.delete(key);
+  }
+}, 10 * 60 * 1000);
+
 // Session user type stored in req.session
 declare module "express-session" {
   interface SessionData {
@@ -21,13 +60,13 @@ declare module "express-session" {
 
 // Validation schemas
 const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  email: z.string().email("Ange en giltig e-postadress"),
+  password: z.string().min(8, "Lösenordet måste vara minst 8 tecken"),
 });
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Ange en giltig e-postadress"),
+  password: z.string().min(1, "Lösenord krävs"),
 });
 
 // Setup auth routes (session middleware is configured in server/index.ts)
@@ -45,7 +84,7 @@ export function setupAuth(app: Express) {
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         console.log("[Register] Email already exists:", email);
-        return res.status(400).json({ message: "Email already registered" });
+        return res.status(400).json({ message: "E-postadressen är redan registrerad" });
       }
       console.log("[Register] Email available");
 
@@ -90,7 +129,7 @@ export function setupAuth(app: Express) {
       req.session.save((err) => {
         if (err) {
           console.error("[Register] Session save error:", err);
-          return res.status(500).json({ message: "Registration failed" });
+          return res.status(500).json({ message: "Registrering misslyckades" });
         }
         console.log("[Register] Session saved successfully");
 
@@ -108,7 +147,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: err.errors[0].message });
       }
       console.error("[Register] Error:", err.message || err);
-      res.status(500).json({ message: "Registration failed" });
+      res.status(500).json({ message: "Registrering misslyckades" });
     }
   });
 
@@ -119,20 +158,34 @@ export function setupAuth(app: Express) {
       const parsed = loginSchema.parse(req.body);
       const email = parsed.email.toLowerCase();
       const password = parsed.password;
-      console.log("[Login] Validation passed");
+
+      // Rate limit by IP + email to prevent brute-force
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const rateLimitKey = `${clientIP}:${email}`;
+
+      if (!checkLoginRateLimit(rateLimitKey)) {
+        console.log("[Login] Rate limited:", email, "from IP:", clientIP);
+        return res.status(429).json({
+          message: "För många inloggningsförsök. Vänligen vänta 15 minuter och försök igen."
+        });
+      }
 
       const user = await storage.getUserByEmail(email);
       if (!user) {
         console.log("[Login] User not found:", email);
-        return res.status(401).json({ message: "Invalid email or password" });
+        recordFailedLogin(rateLimitKey);
+        return res.status(401).json({ message: "Felaktig e-postadress eller lösenord" });
       }
-      console.log("[Login] User found:", user.id);
 
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
         console.log("[Login] Invalid password for:", email);
-        return res.status(401).json({ message: "Invalid email or password" });
+        recordFailedLogin(rateLimitKey);
+        return res.status(401).json({ message: "Felaktig e-postadress eller lösenord" });
       }
+
+      // Clear rate limit on successful login
+      clearLoginAttempts(rateLimitKey);
       console.log("[Login] Password valid");
 
       // Check if email is verified
@@ -145,8 +198,7 @@ export function setupAuth(app: Express) {
         });
       }
 
-      // Set session with device info
-      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      // Set session with device info (clientIP already declared above for rate limiting)
       const userAgent = req.get('User-Agent') || 'unknown';
 
       req.session.userId = user.id;
@@ -163,7 +215,7 @@ export function setupAuth(app: Express) {
       req.session.save((err) => {
         if (err) {
           console.error("[Login] Session save error:", err);
-          return res.status(500).json({ message: "Login failed" });
+          return res.status(500).json({ message: "Inloggning misslyckades" });
         }
         console.log("[Login] Session saved successfully");
 
@@ -180,7 +232,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: err.errors[0].message });
       }
       console.error("[Login] Error:", err.message || err);
-      res.status(500).json({ message: "Login failed" });
+      res.status(500).json({ message: "Inloggning misslyckades" });
     }
   });
 
@@ -191,7 +243,7 @@ export function setupAuth(app: Express) {
         console.error("Logout error:", err);
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.clearCookie("connect.sid");
+      res.clearCookie("maklartexter.sid");
       res.json({ message: "Logged out successfully" });
     });
   });
@@ -267,26 +319,53 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Get user's active sessions/devices
-  app.get("/auth/sessions", async (req: Request, res: Response) => {
+  // Change password (for logged-in users)
+  app.post("/auth/change-password", async (req: Request, res: Response) => {
     if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "Du måste vara inloggad" });
     }
 
     try {
-      // This would require extending the session store to track multiple sessions
-      // For now, return current session info
-      res.json({
-        currentSession: {
-          deviceInfo: req.session.deviceInfo,
-          sessionId: req.sessionID,
-          loginTime: req.session.deviceInfo?.loginTime
-        },
-        message: "Multi-device session tracking coming soon"
-      });
-    } catch (error) {
-      console.error("[Sessions] Error:", error);
-      res.status(500).json({ message: "Kunde inte hämta sessioner" });
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || typeof currentPassword !== 'string') {
+        return res.status(400).json({ message: "Nuvarande lösenord krävs" });
+      }
+      if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ message: "Nytt lösenord måste vara minst 8 tecken" });
+      }
+
+      const user = await storage.getUserById(req.session.userId);
+      if (!user) {
+        return res.status(401).json({ message: "Användare hittades inte" });
+      }
+
+      // Verify current password
+      const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ message: "Nuvarande lösenord är felaktigt" });
+      }
+
+      // Hash and save new password
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      const updatedUser = await storage.updatePassword(user.id, passwordHash);
+
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Kunde inte uppdatera lösenordet" });
+      }
+
+      // Verify the new hash works
+      const verifyHash = await bcrypt.compare(newPassword, updatedUser.passwordHash);
+      if (!verifyHash) {
+        console.error("[ChangePassword] CRITICAL: Hash verification failed for user:", user.id);
+        return res.status(500).json({ message: "Lösenordet kunde inte sparas korrekt. Försök igen." });
+      }
+
+      console.log("[ChangePassword] Password changed for user:", user.id);
+      res.json({ message: "Lösenordet har ändrats!" });
+    } catch (err: any) {
+      console.error("[ChangePassword] Error:", err);
+      res.status(500).json({ message: "Kunde inte ändra lösenordet" });
     }
   });
 

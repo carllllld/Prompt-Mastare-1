@@ -29,6 +29,7 @@ export interface IStorage {
   upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
   setUserPlan(userId: string, plan: "free" | "pro" | "premium"): Promise<void>; // Admin function
+  getUserByStripeSubscriptionId(subscriptionId: string): Promise<User | null>;
   // Optimization history methods
   createOptimization(optimization: InsertOptimization): Promise<void>;
   getOptimizationHistory(userId: string, limit?: number): Promise<Optimization[]>;
@@ -179,6 +180,11 @@ export class DatabaseStorage implements IStorage {
         stripeSubscriptionId: null,
       })
       .where(eq(users.stripeSubscriptionId, stripeSubscriptionId));
+  }
+
+  async getUserByStripeSubscriptionId(subscriptionId: string): Promise<User | null> {
+    const result = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+    return result[0] || null;
   }
 
   async createOptimization(optimization: InsertOptimization): Promise<void> {

@@ -6,6 +6,7 @@ import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { AuthModal } from "@/components/AuthModal";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
@@ -13,7 +14,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
@@ -110,15 +111,25 @@ export default function Home() {
     }
   }, [authLoading, isAuthenticated, setLocation]);
 
-  // Show toast after Stripe redirect
+  // Show toast after Stripe redirect + aggressively poll for plan update
   useEffect(() => {
     const params = new URLSearchParams(search);
     if (params.get("success") === "true") {
       toast({
         title: "Prenumeration aktiverad!",
-        description: "Välkommen! Ditt konto är nu uppgraderat. Ladda om sidan om status inte uppdateras.",
+        description: "Välkommen! Ditt konto håller på att uppgraderas...",
       });
       window.history.replaceState({}, "", "/app");
+
+      // Poll every 2s for 30s to pick up webhook-driven plan change
+      let polls = 0;
+      const pollInterval = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+        queryClient.invalidateQueries({ queryKey: ["/auth/me"] });
+        polls++;
+        if (polls >= 15) clearInterval(pollInterval);
+      }, 2000);
+      return () => clearInterval(pollInterval);
     } else if (params.get("canceled") === "true") {
       toast({
         title: "Betalning avbruten",
@@ -130,6 +141,7 @@ export default function Home() {
   }, [search, toast]);
   const [result, setResult] = useState<OptimizeResponse | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [lastSubmitData, setLastSubmitData] = useState<any>(null);
   const [loadingStep, setLoadingStep] = useState(0);
   const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -260,10 +272,21 @@ export default function Home() {
                   </Button>
                 )}
 
-                {/* User email + logout */}
-                <div className="hidden md:flex items-center gap-2 pl-3 border-l" style={{ borderColor: "#E8E5DE" }}>
-                  <span className="text-xs text-gray-500 max-w-[140px] truncate">{user?.email}</span>
-                  <button onClick={() => logout()} className="text-gray-400 hover:text-red-500 transition-colors">
+                {/* Change password */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setChangePasswordOpen(true)}
+                  className="text-gray-500 hover:text-gray-700 gap-1.5"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline text-xs">Lösenord</span>
+                </Button>
+
+                {/* User email (hidden on mobile) + logout (always visible) */}
+                <div className="flex items-center gap-2 pl-3 border-l" style={{ borderColor: "#E8E5DE" }}>
+                  <span className="hidden md:inline text-xs text-gray-500 max-w-[140px] truncate">{user?.email}</span>
+                  <button onClick={() => logout()} className="text-gray-400 hover:text-red-500 transition-colors" title="Logga ut">
                     <LogOut className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -304,7 +327,7 @@ export default function Home() {
               <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar denna månad</p>
               <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
                 {plan === "free"
-                  ? "Uppgradera till Pro för 15 beskrivningar per månad."
+                  ? "Uppgradera till Pro för 10 genereringar per månad."
                   : `Nästa reset: ${userStatus?.resetTime || "nästa månad"}`}
               </p>
             </div>
@@ -388,19 +411,19 @@ export default function Home() {
                       {plan === "free" ? "Behöver du fler beskrivningar?" : "Uppgradera till Premium"}
                     </h3>
                     <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
-                      {plan === "free" 
-                        ? "Välj mellan Pro (15 texter/månad) eller Premium (50 texter/månad)."
-                        : "Premium ger dig 50 texter/mån, team-funktioner och priority support."
+                      {plan === "free"
+                        ? "Välj mellan Pro (10 genereringar/månad) eller Premium (25 genereringar/månad)."
+                        : "Premium ger dig 25 genereringar/mån, 100 AI-redigeringar, längre texter och priority support."
                       }
                     </p>
-                    
+
                     {/* Show both options for free users */}
                     {plan === "free" && (
                       <div className="space-y-3 mb-5">
                         <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
                           <h4 className="font-medium text-sm mb-2" style={{ color: "#2D6A4F" }}>Pro - 299kr/månad</h4>
                           <ul className="space-y-1">
-                            {["15 texter / månad", "Personlig skrivstil", "Sök område & analyser", "Text-redigering"].map((f) => (
+                            {["10 genereringar / månad", "30 AI-textredigeringar", "Personlig skrivstil", "Adressuppslag & områdesinfo"].map((f) => (
                               <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
                                 <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#2D6A4F" }} />
                                 {f}
@@ -421,11 +444,11 @@ export default function Home() {
                             Välj Pro
                           </Button>
                         </div>
-                        
+
                         <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
                           <h4 className="font-medium text-sm mb-2" style={{ color: "#8B5CF6" }}>Premium - 599kr/månad</h4>
                           <ul className="space-y-1">
-                            {["Obegränsat antal texter", "Team-funktioner", "API-access", "Priority support"].map((f) => (
+                            {["25 genereringar / månad", "100 AI-textredigeringar", "Längre texter (800 ord)", "Priority support"].map((f) => (
                               <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
                                 <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#8B5CF6" }} />
                                 {f}
@@ -448,15 +471,15 @@ export default function Home() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Show premium upgrade for pro users */}
                     {plan === "pro" && (
                       <ul className="space-y-2 mb-5">
                         {[
-                          "50 texter / månad",
-                          "Team-funktioner (dela stil med kollegor)",
-                          "Priority support & avancerade features",
-                          "30 områdessökningar per månad"
+                          "25 genereringar / månad",
+                          "100 AI-textredigeringar / månad",
+                          "Längre texter (upp till 800 ord)",
+                          "Priority support"
                         ].map((f) => (
                           <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
                             <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#8B5CF6" }} />
@@ -465,7 +488,7 @@ export default function Home() {
                         ))}
                       </ul>
                     )}
-                    
+
                     {/* Single premium button for pro users */}
                     {plan === "pro" && (
                       <Button
@@ -535,6 +558,7 @@ export default function Home() {
 
       {/* Auth Modal */}
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
+      <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
     </div>
   );
 }

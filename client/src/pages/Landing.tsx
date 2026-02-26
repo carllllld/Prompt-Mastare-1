@@ -33,7 +33,7 @@ const FEATURES = [
   },
   {
     icon: Pen,
-    title: "283 klyschor filtreras bort",
+    title: "397+ klyschor filtreras bort",
     desc: "Ingen 'generös planlösning', 'bjuder på utsikt' eller 'välkommen till'. Ren faktabaserad svenska.",
   },
   {
@@ -58,10 +58,10 @@ const PLANS = [
   {
     name: "Gratis",
     price: "0",
-    desc: "Perfekt för att testa",
+    desc: "Testa med ett objekt",
     color: "#9CA3AF",
     features: [
-      "5 genereringar / månad",
+      "2 genereringar / månad",
       "Hemnet + Booli-texter",
       "Rubrik, Instagram & kortannons",
       "Grundläggande AI-pipeline",
@@ -73,13 +73,13 @@ const PLANS = [
   {
     name: "Pro",
     price: "299",
-    desc: "För aktiva mäklare",
+    desc: "Perfekt för aktiva mäklare",
     color: "#2D6A4F",
     features: [
-      "15 genereringar / månad",
+      "10 genereringar / månad",
+      "30 AI-textredigeringar / månad",
       "Personlig skrivstil",
-      "Områdesanalys & marknadsdata",
-      "Text-redigering med AI",
+      "Adressuppslag & områdesinfo",
       "Faktagranskning",
       "Förbättringsförslag",
     ],
@@ -90,23 +90,42 @@ const PLANS = [
   {
     name: "Premium",
     price: "599",
-    desc: "För team & storproducenter",
+    desc: "För dig med många objekt",
     color: "#8B5CF6",
     features: [
-      "50 genereringar / månad",
+      "25 genereringar / månad",
+      "100 AI-textredigeringar / månad",
       "Allt i Pro, plus:",
-      "Team-funktioner (dela stil)",
+      "Längre texter (upp till 800 ord)",
+      "Fler ordgränsinställningar",
       "Priority support",
-      "Avancerad marknadsanalys",
     ],
     cta: "Välj Premium",
     tier: "premium" as "premium",
+    highlight: false,
+  },
+  {
+    name: "Byrå",
+    price: null,
+    desc: "Hela kontoret på en plattform",
+    color: "#1D2939",
+    features: [
+      "Obegränsade genereringar",
+      "Obegränsade AI-redigeringar",
+      "Delade skrivstilsprofiler",
+      "Flera användare & roller",
+      "Volymprissättning",
+      "Dedikerad support",
+    ],
+    cta: "Kontakta oss",
+    tier: null as null | "pro" | "premium",
     highlight: false,
   },
 ];
 
 export default function Landing() {
   const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -118,9 +137,11 @@ export default function Landing() {
   }, [isLoading, isAuthenticated, setLocation]);
 
   function openRegister() {
+    setAuthMode("register");
     setAuthOpen(true);
   }
   function openLogin() {
+    setAuthMode("login");
     setAuthOpen(true);
   }
 
@@ -176,7 +197,7 @@ export default function Landing() {
               className="text-base px-8 py-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
               style={{ background: "#2D6A4F", color: "#fff" }}
             >
-              Testa gratis — 5 texter/månad
+              Testa gratis — 2 genereringar/månad
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <span className="text-xs" style={{ color: "#9CA3AF" }}>Inget kort krävs</span>
@@ -187,7 +208,7 @@ export default function Landing() {
             {[
               { value: "15 sek", label: "per generering" },
               { value: "5 texter", label: "på en gång" },
-              { value: "283", label: "klyschor filtreras" },
+              { value: "397+", label: "klyschor filtreras" },
               { value: "6 steg", label: "AI-pipeline" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
@@ -308,17 +329,17 @@ export default function Landing() {
 
       {/* ════════ PRICING ════════ */}
       <section id="priser" className="py-16 sm:py-20">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
               Enkel prissättning. Avsluta när du vill.
             </h2>
             <p className="text-sm" style={{ color: "#6B7280" }}>
-              Alla planer inkluderar 5 texter per generering. Uppgradera eller avsluta med ett klick.
+              Varje generering ger 5 texter: objektbeskrivning, rubrik, Instagram, visningsinbjudan & kortannons.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
@@ -333,10 +354,16 @@ export default function Landing() {
                 <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: plan.color }}>
                   {plan.name}
                 </div>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>{plan.price} kr</span>
-                  <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
-                </div>
+                {plan.price !== null ? (
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>{plan.price} kr</span>
+                    <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
+                  </div>
+                ) : (
+                  <div className="mb-1">
+                    <span className="text-2xl font-bold" style={{ color: "#1D2939" }}>Anpassat</span>
+                  </div>
+                )}
                 <p className="text-xs mb-6" style={{ color: "#6B7280" }}>{plan.desc}</p>
                 <ul className="space-y-2.5 mb-6">
                   {plan.features.map((f) => (
@@ -346,15 +373,25 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  onClick={openRegister}
-                  variant={plan.highlight ? "default" : "outline"}
-                  className="w-full font-medium"
-                  style={plan.highlight ? { background: plan.color, color: "#fff" } : {}}
-                >
-                  {plan.tier && <Crown className="w-4 h-4 mr-2" />}
-                  {plan.cta}
-                </Button>
+                {plan.name === "Byrå" ? (
+                  <a
+                    href="mailto:info@optiprompt.se?subject=Byrå-plan%20förfrågan"
+                    className="inline-flex items-center justify-center w-full font-medium rounded-md border px-4 py-2 text-sm transition-colors hover:opacity-90"
+                    style={{ borderColor: plan.color, color: plan.color }}
+                  >
+                    {plan.cta}
+                  </a>
+                ) : (
+                  <Button
+                    onClick={openRegister}
+                    variant={plan.highlight ? "default" : "outline"}
+                    className="w-full font-medium"
+                    style={plan.highlight ? { background: plan.color, color: "#fff" } : {}}
+                  >
+                    {plan.tier && <Crown className="w-4 h-4 mr-2" />}
+                    {plan.cta}
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -368,7 +405,7 @@ export default function Landing() {
             Redo att testa?
           </h2>
           <p className="text-sm mb-8" style={{ color: "#A7F3D0" }}>
-            Skapa ditt konto på 30 sekunder. Ingen bindningstid. Inga dolda avgifter. 5 gratis genereringar direkt.
+            Skapa ditt konto på 30 sekunder. Ingen bindningstid. Inga dolda avgifter. 2 gratis genereringar direkt.
           </p>
           <Button
             onClick={openRegister}
@@ -410,6 +447,7 @@ export default function Landing() {
       <AuthModal
         open={authOpen}
         onOpenChange={setAuthOpen}
+        initialMode={authMode}
       />
     </div>
   );

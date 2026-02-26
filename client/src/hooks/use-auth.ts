@@ -5,6 +5,7 @@ interface AuthUser {
   id: string;
   email: string;
   subscriptionStatus: string;
+  emailVerified?: boolean;
 }
 
 interface LoginCredentials {
@@ -51,16 +52,16 @@ export function useAuth() {
         credentials: "include",
         body: JSON.stringify(credentials),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         const error: any = new Error(data.message || "Login failed");
         error.emailNotVerified = data.emailNotVerified || false;
         error.email = data.email;
         throw error;
       }
-      
+
       return data;
     },
     onSuccess: (data) => {
@@ -77,13 +78,13 @@ export function useAuth() {
         credentials: "include",
         body: JSON.stringify(credentials),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || "Registration failed");
       }
-      
+
       return data;
     },
     onSuccess: (data) => {
