@@ -36,7 +36,9 @@ export function setupAuth(app: Express) {
   app.post("/auth/register", async (req: Request, res: Response) => {
     console.log("[Register] Starting registration for:", req.body?.email);
     try {
-      const { email, password } = registerSchema.parse(req.body);
+      const parsed = registerSchema.parse(req.body);
+      const email = parsed.email.toLowerCase();
+      const password = parsed.password;
       console.log("[Register] Validation passed");
 
       // Check if user already exists
@@ -114,7 +116,9 @@ export function setupAuth(app: Express) {
   app.post("/auth/login", async (req: Request, res: Response) => {
     console.log("[Login] Starting login for:", req.body?.email);
     try {
-      const { email, password } = loginSchema.parse(req.body);
+      const parsed = loginSchema.parse(req.body);
+      const email = parsed.email.toLowerCase();
+      const password = parsed.password;
       console.log("[Login] Validation passed");
 
       const user = await storage.getUserByEmail(email);
@@ -359,15 +363,7 @@ export function setupAuth(app: Express) {
       const resetToken = crypto.randomBytes(32).toString('hex');
       const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
 
-      console.log("[ForgotPassword] Setting token for user:", user.id);
-      console.log("[ForgotPassword] Token:", resetToken);
-      console.log("[ForgotPassword] Expires:", tokenExpires);
-
       await storage.setPasswordResetToken(user.id, resetToken, tokenExpires);
-
-      // Verify token was saved
-      const verifyUser = await storage.getUserByPasswordResetToken(resetToken);
-      console.log("[ForgotPassword] Token verification:", verifyUser ? "SUCCESS" : "FAILED");
 
       // Record and send email immediately for password reset
       await storage.recordEmailSent(email, 'password_reset');
@@ -380,15 +376,12 @@ export function setupAuth(app: Express) {
           resetUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/reset-password?token=${resetToken}`,
           userName: user.email
         }, clientIP);
-        console.log("[ForgotPassword] Reset email sent immediately to:", email);
+        console.log("[ForgotPassword] Reset email sent to:", email);
       } catch (emailError) {
         console.error("[ForgotPassword] Email send failed:", emailError);
         // Fallback to queue if immediate send fails
         await sendPasswordResetEmail(email, resetToken, user.email, clientIP);
-        console.log("[ForgotPassword] Fallback to queue for:", email);
       }
-
-      console.log("[ForgotPassword] Reset email sent immediately to:", email);
       res.json({ message: "Återställningslänk skickad! Kontrollera din inkorg inom 1 minut." });
     } catch (err: any) {
       console.error("[ForgotPassword] Error:", err);
@@ -401,8 +394,6 @@ export function setupAuth(app: Express) {
     try {
       const { token, password } = req.body;
 
-      console.log("[ResetPassword] Request received with token:", token?.substring(0, 10) + "...");
-
       if (!token || typeof token !== 'string') {
         return res.status(400).json({ message: "Återställningslänk saknas" });
       }
@@ -411,28 +402,34 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Lösenordet måste vara minst 8 tecken" });
       }
 
-      console.log("[ResetPassword] Looking up token in database...");
       const user = await storage.getUserByPasswordResetToken(token);
-      console.log("[ResetPassword] User found:", user ? user.id : "NULL");
 
       if (!user) {
-        console.log("[ResetPassword] Token not found in database");
         return res.status(400).json({ message: "Ogiltig eller utgången återställningslänk" });
       }
 
       // Check if token has expired
       if (user.passwordResetExpires && new Date() > new Date(user.passwordResetExpires)) {
-        console.log("[ResetPassword] Token expired:", user.passwordResetExpires);
         return res.status(400).json({ message: "Återställningslänken har gått ut. Vänligen begär en ny." });
       }
 
-      console.log("[ResetPassword] Token valid, updating password for user:", user.id);
-
       // Hash new password and update
       const passwordHash = await bcrypt.hash(password, 12);
-      await storage.updatePassword(user.id, passwordHash);
+      const updatedUser = await storage.updatePassword(user.id, passwordHash);
 
-      console.log("[ResetPassword] Password updated successfully");
+      if (!updatedUser) {
+        console.error("[ResetPassword] UPDATE returned no rows for user:", user.id);
+        return res.status(500).json({ message: "Kunde inte uppdatera lösenordet. Försök igen." });
+      }
+
+      // Verify the new hash actually works before telling the user it's done
+      const verifyHash = await bcrypt.compare(password, updatedUser.passwordHash);
+      if (!verifyHash) {
+        console.error("[ResetPassword] CRITICAL: Hash verification failed after save for user:", user.id);
+        return res.status(500).json({ message: "Lösenordet kunde inte sparas korrekt. Försök igen." });
+      }
+
+      console.log("[ResetPassword] Password updated and verified for user:", user.id);
       res.json({ message: "Lösenordet har uppdaterats! Du kan nu logga in." });
     } catch (err: any) {
       console.error("[ResetPassword] Error:", err);

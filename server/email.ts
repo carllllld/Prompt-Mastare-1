@@ -21,7 +21,7 @@ export async function sendTeamInviteEmail(
   inviterEmail: string,
   ip?: string
 ): Promise<EmailResult> {
-  const verificationUrl = `${APP_URL}/accept-invite?token=${token}`;
+  const verificationUrl = `${APP_URL}/teams/join/${token}`;
 
   return queueEmail('team_invite', email, {
     teamName,
@@ -66,7 +66,7 @@ export async function sendWelcomeEmail(
   userName?: string,
   ip?: string
 ): Promise<EmailResult> {
-  const loginUrl = `${APP_URL}/login`;
+  const loginUrl = `${APP_URL}`;
 
   return queueEmail('welcome', email, {
     userName: userName || 'där',

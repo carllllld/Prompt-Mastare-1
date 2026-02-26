@@ -2963,9 +2963,16 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
     }
   });
 
-  // Temporary admin password reset (remove after use)
+  // Admin password reset (requires ADMIN_KEY)
   app.post("/api/admin/reset-password", async (req, res) => {
     try {
+      const adminKey = req.headers['x-admin-key'] as string || req.query.adminKey as string;
+      const expectedKey = process.env.ADMIN_KEY;
+
+      if (!expectedKey || adminKey !== expectedKey) {
+        return res.status(403).json({ message: "Invalid admin key" });
+      }
+
       const { email, newPassword } = req.body;
 
       if (!email || !newPassword) {
@@ -2978,8 +2985,9 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       }
 
       // Hash new password
-      const bcrypt = await import('bcrypt');
-      const passwordHash = await bcrypt.hash(newPassword, 12);
+      const bcryptMod = await import('bcrypt');
+      const bcryptLib = bcryptMod.default || bcryptMod;
+      const passwordHash = await bcryptLib.hash(newPassword, 12);
 
       // Update password
       await storage.updatePassword(user.id, passwordHash);

@@ -1,5 +1,5 @@
-import { 
-  optimizations, type InsertOptimization, type Optimization, PLAN_LIMITS, 
+import {
+  optimizations, type InsertOptimization, type Optimization, PLAN_LIMITS,
   users, type User, sessionUsage, type SessionUsage,
   teams, type Team, type InsertTeam,
   teamMembers, type TeamMember, type InsertTeamMember,
@@ -12,7 +12,7 @@ import {
   usageTracking, type UsageTracking, type InsertUsageTracking
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, desc, and, gt, gte } from "drizzle-orm";
+import { eq, sql, desc, and, gt, gte, lt } from "drizzle-orm";
 import crypto from "crypto";
 
 export interface IStorage {
@@ -79,11 +79,11 @@ export interface IStorage {
   setVerificationToken(userId: string, token: string, expires: Date): Promise<void>;
   getUserByVerificationToken(token: string): Promise<User | null>;
   markEmailVerified(userId: string): Promise<void>;
-  
+
   // Password reset methods
   setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void>;
   getUserByPasswordResetToken(token: string): Promise<User | null>;
-  updatePassword(userId: string, passwordHash: string): Promise<void>;
+  updatePassword(userId: string, passwordHash: string): Promise<User | null>;
 
   // Email rate limiting methods
   canSendEmail(email: string, emailType: string, maxPerHour: number): Promise<boolean>;
@@ -134,8 +134,8 @@ export class DatabaseStorage implements IStorage {
 
     if (lastReset !== currentMonth) {
       const [updated] = await db.update(users)
-        .set({ 
-          promptsUsedToday: 0, 
+        .set({
+          promptsUsedToday: 0,
           lastResetDate: currentMonth
         })
         .where(eq(users.id, user.id))
@@ -148,7 +148,7 @@ export class DatabaseStorage implements IStorage {
 
   async upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
-      .set({ 
+      .set({
         plan,
         stripeCustomerId,
         stripeSubscriptionId,
@@ -171,10 +171,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
     console.log("[Storage] Stripe customer ID updated successfully");
   }
-  
+
   async downgradeUserToFree(stripeSubscriptionId: string): Promise<void> {
     await db.update(users)
-      .set({ 
+      .set({
         plan: "free",
         stripeSubscriptionId: null,
       })
@@ -439,7 +439,7 @@ export class DatabaseStorage implements IStorage {
   async cleanupStalePresence(): Promise<void> {
     const threshold = new Date(Date.now() - 10 * 60 * 1000);
     await db.delete(presenceSessions)
-      .where(gt(presenceSessions.lastSeen, threshold));
+      .where(lt(presenceSessions.lastSeen, threshold));
   }
 
   async createTeamInvite(teamId: number, email: string, invitedBy: string): Promise<TeamInvite> {
@@ -468,8 +468,8 @@ export class DatabaseStorage implements IStorage {
 
   async setVerificationToken(userId: string, token: string, expires: Date): Promise<void> {
     await db.update(users)
-      .set({ 
-        verificationToken: token, 
+      .set({
+        verificationToken: token,
         verificationTokenExpires: expires,
         updatedAt: new Date()
       })
@@ -485,9 +485,9 @@ export class DatabaseStorage implements IStorage {
 
   async markEmailVerified(userId: string): Promise<void> {
     await db.update(users)
-      .set({ 
-        emailVerified: true, 
-        verificationToken: null, 
+      .set({
+        emailVerified: true,
+        verificationToken: null,
         verificationTokenExpires: null,
         updatedAt: new Date()
       })
@@ -496,8 +496,8 @@ export class DatabaseStorage implements IStorage {
 
   async setPasswordResetToken(userId: string, token: string, expires: Date): Promise<void> {
     await db.update(users)
-      .set({ 
-        passwordResetToken: token, 
+      .set({
+        passwordResetToken: token,
         passwordResetExpires: expires,
         updatedAt: new Date()
       })
@@ -511,15 +511,17 @@ export class DatabaseStorage implements IStorage {
     return result[0] || null;
   }
 
-  async updatePassword(userId: string, passwordHash: string): Promise<void> {
-    await db.update(users)
-      .set({ 
+  async updatePassword(userId: string, passwordHash: string): Promise<User | null> {
+    const result = await db.update(users)
+      .set({
         passwordHash,
-        passwordResetToken: null, 
+        passwordResetToken: null,
         passwordResetExpires: null,
         updatedAt: new Date()
       })
-      .where(eq(users.id, userId));
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0] || null;
   }
 
   async canSendEmail(email: string, emailType: string, maxPerHour: number): Promise<boolean> {
@@ -574,7 +576,7 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
-    
+
     const result = await db.select()
       .from(usageTracking)
       .where(and(
@@ -583,7 +585,7 @@ export class DatabaseStorage implements IStorage {
         eq(usageTracking.year, year)
       ))
       .limit(1);
-    
+
     return result[0] || null;
   }
 
@@ -591,14 +593,14 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
-    
+
     // Get user's current plan
     const user = await this.getUserById(userId);
     if (!user) throw new Error('User not found');
-    
+
     // Try to get existing usage record
     let usage = await this.getMonthlyUsage(userId);
-    
+
     if (!usage) {
       // Create new usage record
       const [newUsage] = await db.insert(usageTracking)
@@ -615,13 +617,13 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return newUsage;
     }
-    
+
     // Update existing record
     const updateField = type === 'texts' ? 'textsGenerated' :
-                       type === 'areaSearches' ? 'areaSearchesUsed' :
-                       type === 'textEdits' ? 'textEditsUsed' :
-                       'personalStyleAnalyses';
-    
+      type === 'areaSearches' ? 'areaSearchesUsed' :
+        type === 'textEdits' ? 'textEditsUsed' :
+          'personalStyleAnalyses';
+
     const [updatedUsage] = await db.update(usageTracking)
       .set({
         [updateField]: sql`${usageTracking[updateField]} + 1`,
@@ -633,7 +635,7 @@ export class DatabaseStorage implements IStorage {
         eq(usageTracking.year, year)
       ))
       .returning();
-    
+
     return updatedUsage;
   }
 
