@@ -358,7 +358,16 @@ export function setupAuth(app: Express) {
       // Generate reset token (1 hour expiry)
       const resetToken = crypto.randomBytes(32).toString('hex');
       const tokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+      
+      console.log("[ForgotPassword] Setting token for user:", user.id);
+      console.log("[ForgotPassword] Token:", resetToken);
+      console.log("[ForgotPassword] Expires:", tokenExpires);
+      
       await storage.setPasswordResetToken(user.id, resetToken, tokenExpires);
+      
+      // Verify token was saved
+      const verifyUser = await storage.getUserByPasswordResetToken(resetToken);
+      console.log("[ForgotPassword] Token verification:", verifyUser ? "SUCCESS" : "FAILED");
       
       // Record and send email immediately for password reset
       await storage.recordEmailSent(email, 'password_reset');
@@ -392,6 +401,8 @@ export function setupAuth(app: Express) {
     try {
       const { token, password } = req.body;
       
+      console.log("[ResetPassword] Request received with token:", token?.substring(0, 10) + "...");
+      
       if (!token || typeof token !== 'string') {
         return res.status(400).json({ message: "Återställningslänk saknas" });
       }
@@ -400,21 +411,28 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Lösenordet måste vara minst 8 tecken" });
       }
 
+      console.log("[ResetPassword] Looking up token in database...");
       const user = await storage.getUserByPasswordResetToken(token);
+      console.log("[ResetPassword] User found:", user ? user.id : "NULL");
+      
       if (!user) {
+        console.log("[ResetPassword] Token not found in database");
         return res.status(400).json({ message: "Ogiltig eller utgången återställningslänk" });
       }
 
       // Check if token has expired
       if (user.passwordResetExpires && new Date() > new Date(user.passwordResetExpires)) {
+        console.log("[ResetPassword] Token expired:", user.passwordResetExpires);
         return res.status(400).json({ message: "Återställningslänken har gått ut. Vänligen begär en ny." });
       }
+
+      console.log("[ResetPassword] Token valid, updating password for user:", user.id);
 
       // Hash new password and update
       const passwordHash = await bcrypt.hash(password, 12);
       await storage.updatePassword(user.id, passwordHash);
       
-      console.log("[ResetPassword] Password updated for user:", user.id);
+      console.log("[ResetPassword] Password updated successfully");
       res.json({ message: "Lösenordet har uppdaterats! Du kan nu logga in." });
     } catch (err: any) {
       console.error("[ResetPassword] Error:", err);

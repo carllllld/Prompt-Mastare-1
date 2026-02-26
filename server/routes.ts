@@ -2963,6 +2963,35 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
     }
   });
 
+  // Temporary admin password reset (remove after use)
+  app.post("/api/admin/reset-password", async (req, res) => {
+    try {
+      const { email, newPassword } = req.body;
+      
+      if (!email || !newPassword) {
+        return res.status(400).json({ message: "Email och lösenord krävs" });
+      }
+
+      const user = await storage.getUserByEmail(email.toLowerCase());
+      if (!user) {
+        return res.status(404).json({ message: "Användare hittades inte" });
+      }
+
+      // Hash new password
+      const bcrypt = await import('bcrypt');
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      
+      // Update password
+      await storage.updatePassword(user.id, passwordHash);
+      
+      console.log("[Admin Reset] Password updated for user:", user.id);
+      res.json({ message: "Lösenord uppdaterat! Du kan nu logga in." });
+    } catch (err: any) {
+      console.error("[Admin Reset] Error:", err);
+      res.status(500).json({ message: "Kunde inte återställa lösenordet" });
+    }
+  });
+
   // Stripe checkout
   app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
     try {
