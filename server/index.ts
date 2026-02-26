@@ -277,14 +277,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const distPath = path.resolve(__dirname, "..", "dist", "public");
 
     if (fs.existsSync(distPath)) {
-      // API routes BEFORE static serving
-      app.use((req: Request, res: Response, next: NextFunction) => {
-        if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
-          return next();
-        }
-        next();
-      });
-
       app.use(express.static(distPath));
       app.use("*", (_req: Request, res: Response) => {
         res.sendFile(path.resolve(distPath, "index.html"));

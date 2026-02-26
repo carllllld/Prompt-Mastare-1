@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useLocation, useSearch } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle, XCircle, Loader2, KeyRound } from "lucide-react";
 
 export default function ResetPassword() {
-  const searchString = useSearch();
-  const params = new URLSearchParams(searchString);
+  const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"form" | "loading" | "success" | "error">(token ? "form" : "error");
@@ -20,10 +19,10 @@ export default function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    
+
     const password = passwordRef.current?.value || "";
     const confirm = confirmRef.current?.value || "";
-    
+
     if (password.length < 8) {
       setError("Lösenordet måste vara minst 8 tecken");
       return;
