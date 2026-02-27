@@ -189,6 +189,7 @@ export function setupAuth(app: Express) {
         });
       }
 
+      console.log("[Login] Looking up user by email:", email);
       const user = await storage.getUserByEmail(email);
       if (!user) {
         console.log("[Login] User not found:", email);
@@ -196,6 +197,7 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Felaktig e-postadress eller lösenord" });
       }
 
+      console.log("[Login] User found:", user.id, "email verified:", user.emailVerified);
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
         console.log("[Login] Invalid password for:", email);
@@ -220,6 +222,7 @@ export function setupAuth(app: Express) {
       // Set session with device info (clientIP already declared above for rate limiting)
       const userAgent = req.get('User-Agent') || 'unknown';
 
+      console.log("[Login] Setting up session for user:", user.id);
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
@@ -236,7 +239,7 @@ export function setupAuth(app: Express) {
           console.error("[Login] Session save error:", err);
           return res.status(500).json({ message: "Inloggning misslyckades" });
         }
-        console.log("[Login] Session saved successfully");
+        console.log("[Login] Session saved successfully for user:", user.id);
 
         res.json({
           id: user.id,
@@ -290,40 +293,52 @@ export function setupAuth(app: Express) {
   // Verify email
   app.get("/auth/verify-email", async (req: Request, res: Response) => {
     try {
+      console.log("[Verify] Email verification request received");
       const { token } = req.query;
 
       if (!token || typeof token !== 'string') {
+        console.log("[Verify] Invalid or missing token");
         return res.status(400).json({ message: "Verifieringslänk saknas" });
       }
 
+      console.log("[Verify] Looking up user by verification token");
       const user = await storage.getUserByVerificationToken(token);
       if (!user) {
+        console.log("[Verify] User not found for token");
         return res.status(400).json({ message: "Ogiltig eller utgången verifieringslänk" });
       }
 
+      console.log("[Verify] User found:", user.id, "email verified:", user.emailVerified);
+
       // Check if token has expired
       if (user.verificationTokenExpires && new Date() > new Date(user.verificationTokenExpires)) {
+        console.log("[Verify] Token expired for user:", user.id);
         return res.status(400).json({ message: "Verifieringslänken har gått ut. Vänligen begär en ny." });
       }
 
       // Mark email as verified
       await storage.markEmailVerified(user.id);
-      console.log("[Verify] Email verified for user:", user.id);
+      console.log("[Verify] Email marked as verified for user:", user.id);
 
       // Log the user in automatically with device info
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent') || 'unknown';
 
+      console.log("[Verify] Setting up session for user:", user.id);
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
         ip: clientIP,
         loginTime: new Date()
       };
+
+      console.log("[Verify] Saving session...");
       req.session.save((err) => {
         if (err) {
           console.error("[Verify] Session save error:", err);
+          return res.status(500).json({ message: "Verifiering misslyckades" });
         }
+        console.log("[Verify] Session saved successfully for user:", user.id);
         res.json({
           message: "E-postadressen har verifierats!",
           id: user.id,
