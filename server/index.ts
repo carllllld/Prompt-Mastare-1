@@ -178,6 +178,9 @@ app.use(session({
     pool,
     tableName: "session",
     createTableIfMissing: true,
+    // Create table manually to avoid file dependency issues
+    schemaName: 'public',
+    ttl: 30 * 24 * 60 * 60 * 1000, // 30 days
   }),
   secret: process.env.SESSION_SECRET!,
   resave: false,
@@ -199,6 +202,26 @@ if (sessionStore) {
 } else {
   console.log('[Session] Session store NOT initialized');
 }
+
+// Create session table manually to avoid file dependency issues
+async function createSessionTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+    `);
+    console.log('[Session] Session table created/verified successfully');
+  } catch (error) {
+    console.error('[Session] Failed to create session table:', error);
+  }
+}
+
+// Create session table on startup
+createSessionTable();
 
 // Request logging
 app.use((req: Request, res: Response, next: NextFunction) => {
