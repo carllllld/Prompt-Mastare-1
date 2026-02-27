@@ -2430,9 +2430,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Hämta personlig stil om den finns
       let personalStylePrompt = "";
+      let personalStyle: any = null;
       if (plan !== "free") {
         try {
-          const personalStyle = await storage.getPersonalStyle(user.id);
+          personalStyle = await storage.getPersonalStyle(user.id);
           if (personalStyle && personalStyle.isActive) {
             personalStylePrompt = generatePersonalizedPrompt(personalStyle.referenceTexts, personalStyle.styleProfile);
             console.log("[Personal Style] Applied user's personal writing style");
