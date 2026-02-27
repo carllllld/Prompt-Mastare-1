@@ -109,11 +109,19 @@ export function setupAuth(app: Express) {
 
         // Send immediately for security emails (no queue delay)
         try {
+          console.log("[Register] Attempting to send verification email immediately to:", email);
           const { sendEmailWithRetry } = await import('./lib/email-service');
-          await sendEmailWithRetry('verification', email, {
+          const result = await sendEmailWithRetry('verification', email, {
             verificationUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/verify-email?token=${verificationToken}`
           }, clientIP);
-          console.log("[Register] Verification email sent immediately to:", email);
+
+          if (result.success) {
+            console.log("[Register] Verification email sent immediately to:", email);
+          } else {
+            console.error("[Register] Verification email send failed:", result.error);
+            // Fallback to queue if immediate send fails
+            await sendVerificationEmail(email, verificationToken, clientIP);
+          }
         } catch (emailError) {
           console.error("[Register] Immediate verification email send failed:", emailError);
           // Fallback to queue if immediate send fails

@@ -28,6 +28,10 @@ const RETRY_STRATEGIES = {
 let resend: Resend | null = null;
 if (process.env.RESEND_API_KEY) {
   resend = new Resend(process.env.RESEND_API_KEY);
+  console.log('[Email] Resend initialized with API key');
+} else {
+  console.log('[Email] RESEND_API_KEY not found in environment variables');
+  console.log('[Email] Available env vars:', Object.keys(process.env).filter(k => k.includes('RESEND') || k.includes('EMAIL')));
 }
 
 // Smart email sending with retry logic
@@ -61,7 +65,7 @@ export async function sendEmailWithRetry(
 
     // Send email
     const result = await sendEmail(to, template.subject, template.html, template.text);
-    
+
     if (result.success) {
       // Track metrics
       await trackEmailMetrics(type, 'sent', to);
@@ -71,7 +75,7 @@ export async function sendEmailWithRetry(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[Email Service] Failed to send ${type} email:`, errorMessage);
-    
+
     return {
       success: false,
       error: errorMessage
@@ -112,7 +116,7 @@ export async function queueEmail(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[Email Queue] Failed to queue ${type} email:`, errorMessage);
-    
+
     return {
       success: false,
       error: errorMessage
@@ -214,7 +218,7 @@ async function trackEmailMetrics(
 export async function handleEmailWebhook(data: any): Promise<void> {
   try {
     const { type, email, status, timestamp } = data;
-    
+
     // Update job status in queue
     if (type === 'delivery' && status === 'delivered') {
       await trackEmailMetrics('unknown', 'delivered', email);
@@ -225,7 +229,7 @@ export async function handleEmailWebhook(data: any): Promise<void> {
     } else if (type === 'click') {
       await trackEmailMetrics('unknown', 'clicked', email);
     }
-    
+
     console.log(`[Email Webhook] ${type} ${status} for ${email}`);
   } catch (error) {
     console.error('[Email Webhook] Failed to handle webhook:', error);
