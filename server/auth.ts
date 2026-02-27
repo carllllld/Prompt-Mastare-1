@@ -106,8 +106,19 @@ export function setupAuth(app: Express) {
       if (canSend) {
         await storage.recordEmailSent(email, 'verification');
         const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-        await sendVerificationEmail(email, verificationToken, clientIP);
-        console.log("[Register] Verification email sent");
+
+        // Send immediately for security emails (no queue delay)
+        try {
+          const { sendEmailWithRetry } = await import('./lib/email-service');
+          await sendEmailWithRetry('verification', email, {
+            verificationUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/verify-email?token=${verificationToken}`
+          }, clientIP);
+          console.log("[Register] Verification email sent immediately to:", email);
+        } catch (emailError) {
+          console.error("[Register] Immediate verification email send failed:", emailError);
+          // Fallback to queue if immediate send fails
+          await sendVerificationEmail(email, verificationToken, clientIP);
+        }
       } else {
         console.log("[Register] Rate limited, skipping verification email");
       }
@@ -404,9 +415,19 @@ export function setupAuth(app: Express) {
       // Record and send email
       await storage.recordEmailSent(email, 'verification');
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
-      await sendVerificationEmail(email, verificationToken, clientIP);
 
-      console.log("[Resend] Verification email sent to:", email);
+      // Send immediately for security emails (no queue delay)
+      try {
+        const { sendEmailWithRetry } = await import('./lib/email-service');
+        await sendEmailWithRetry('verification', email, {
+          verificationUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/verify-email?token=${verificationToken}`
+        }, clientIP);
+        console.log("[Resend] Verification email sent immediately to:", email);
+      } catch (emailError) {
+        console.error("[Resend] Immediate verification email send failed:", emailError);
+        // Fallback to queue if immediate send fails
+        await sendVerificationEmail(email, verificationToken, clientIP);
+      }
       res.json({ message: "Nytt verifieringsmail skickat. Kontrollera din inkorg." });
     } catch (err: any) {
       console.error("[Resend] Error:", err);
@@ -500,6 +521,10 @@ export function setupAuth(app: Express) {
         console.error("[ResetPassword] UPDATE returned no rows for user:", user.id);
         return res.status(500).json({ message: "Kunde inte uppdatera lösenordet. Försök igen." });
       }
+
+      // Mark email as verified since user has proven ownership by using reset link
+      await storage.markEmailVerified(user.id);
+      console.log("[ResetPassword] Email marked as verified for user:", user.id);
 
       // Verify the new hash actually works before telling the user it's done
       const verifyHash = await bcrypt.compare(password, updatedUser.passwordHash);
