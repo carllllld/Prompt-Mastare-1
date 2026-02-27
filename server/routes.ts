@@ -2152,17 +2152,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         personalStyleAnalyses: 0,
       };
 
+      console.log(`[Optimize] User: ${user.id}, Plan: ${plan}, Usage:`, usage);
+      console.log(`[Optimize] PLAN_LIMITS for ${plan}:`, PLAN_LIMITS[plan]);
+
       const limits = PLAN_LIMITS[plan];
       if (usage.textsGenerated >= limits.texts) {
+        console.log(`[Optimize] Usage limit reached. Used: ${usage.textsGenerated}, Limit: ${limits.texts}`);
         const upgradeMsg = plan === "free"
           ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 10 per månad!`
-          : plan === "pro"
-            ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 per månad!`
-            : `Du har nått din månadsgräns av ${limits.texts} genereringar. Behöver du mer? Kontakta oss för en Byrå-plan.`;
+          : `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 per månad!`;
+
         return res.status(429).json({
           message: upgradeMsg,
-          limitReached: true,
-          upgradeTo: plan === "free" ? "pro" : plan === "pro" ? "premium" : null,
+          upgradeRequired: true,
+          currentPlan: plan,
+          usage: {
+            textsUsed: usage.textsGenerated,
+            textsLimit: limits.texts,
+          },
+          upgradeOptions: {
+            pro: { texts: 10, price: "99 kr/mån" },
+            premium: { texts: 25, price: "199 kr/mån" }
+          }
         });
       }
 

@@ -577,11 +577,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(personalStyles.userId, userId));
   }
 
-  // Usage tracking methods
   async getMonthlyUsage(userId: string): Promise<UsageTracking | null> {
     const now = new Date();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
+
+    console.log(`[Usage] Getting monthly usage for user: ${userId}, month: ${month}-${year}`);
 
     const result = await db.select()
       .from(usageTracking)
@@ -592,7 +593,23 @@ export class DatabaseStorage implements IStorage {
       ))
       .limit(1);
 
-    return result[0] || null;
+    console.log(`[Usage] Monthly usage query result:`, result);
+    console.log(`[Usage] Result length:`, result.length);
+
+    const usage = result[0] || null;
+    if (usage) {
+      console.log(`[Usage] Found usage record:`, {
+        userId: usage.userId,
+        month: usage.month,
+        year: usage.year,
+        textsGenerated: usage.textsGenerated,
+        planType: usage.planType
+      });
+    } else {
+      console.log(`[Usage] No usage record found for user: ${userId}`);
+    }
+
+    return usage;
   }
 
   async incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking> {
@@ -600,14 +617,19 @@ export class DatabaseStorage implements IStorage {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
 
+    console.log(`[Usage] Incrementing usage for user: ${userId}, type: ${type}, month: ${month}-${year}`);
+
     // Get user's current plan
     const user = await this.getUserById(userId);
     if (!user) throw new Error('User not found');
+
+    console.log(`[Usage] User plan: ${user.plan}`);
 
     // Try to get existing usage record
     let usage = await this.getMonthlyUsage(userId);
 
     if (!usage) {
+      console.log(`[Usage] No existing usage record found, creating new one for user: ${userId}`);
       // Create new usage record
       const [newUsage] = await db.insert(usageTracking)
         .values({
@@ -621,14 +643,20 @@ export class DatabaseStorage implements IStorage {
           personalStyleAnalyses: type === 'personalStyleAnalyses' ? 1 : 0,
         })
         .returning();
+
+      console.log(`[Usage] Created new usage record:`, newUsage);
       return newUsage;
     }
+
+    console.log(`[Usage] Found existing usage record:`, usage);
 
     // Update existing record
     const updateField = type === 'texts' ? 'textsGenerated' :
       type === 'areaSearches' ? 'areaSearchesUsed' :
         type === 'textEdits' ? 'textEditsUsed' :
           'personalStyleAnalyses';
+
+    console.log(`[Usage] Updating field: ${updateField}, current value: ${usage[updateField]}`);
 
     const [updatedUsage] = await db.update(usageTracking)
       .set({
@@ -642,12 +670,15 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
 
+    console.log(`[Usage] Updated usage record:`, updatedUsage);
     return updatedUsage;
   }
 
   async resetMonthlyUsage(userId: string): Promise<void> {
+    console.log(`[Usage] Resetting monthly usage for user: ${userId}`);
     await db.delete(usageTracking)
       .where(eq(usageTracking.userId, userId));
+    console.log(`[Usage] Monthly usage reset for user: ${userId}`);
   }
 }
 
