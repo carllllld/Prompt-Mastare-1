@@ -684,332 +684,69 @@ function validateOptimizationResult(result: any, platform: string = "hemnet", ta
       }
     }
   }
-  return Array.from(new Set(violations));
+  return violations;
 }
 
-// Post-processing: Rensa bort förbjudna fraser automatiskt
-// VIKTIGT: Längre fraser FÖRST så de matchas innan kortare
-// Detta eliminerar behovet av retries för de vanligaste AI-fraserna
+// Post-processing: Rensa bort de 50 VANLIGASTA förbjudna fraser
+// Fokuserar på de mest frekventa AI-mönstren för att undvika prompt overload
 const PHRASE_REPLACEMENTS: [string, string][] = [
-  // === ÖPPNINGAR - ta bort helt ===
-  ["välkommen till denna", ""],
-  ["välkommen till", ""],
-  ["välkommen hem till", ""],
-  ["här möts du av", ""],
-  ["här erbjuds", ""],
-
-  // === ERBJUDER-VARIANTER (vanligaste AI-frasen) ===
-  ["lägenheten erbjuder", "lägenheten har"],
-  ["bostaden erbjuder", "bostaden har"],
-  ["köket erbjuder", "köket har"],
-  ["badrummet erbjuder", "badrummet har"],
-  ["balkongen erbjuder", "balkongen har"],
-  ["området erbjuder", "området har"],
-  ["föreningen erbjuder", "föreningen har"],
-  [" erbjuder ", " har "],
-  [" erbjuds ", " finns "],
+  // === TOP 10: VANLIGASTE AI-FRASER ===
   ["erbjuder", "har"],
   ["erbjuds", "finns"],
-
-  // === "VILKET GER/GÖR" - vanlig AI-konstruktion ===
-  ["vilket gör det enkelt att ta sig", "med nära till"],
-  ["vilket gör det enkelt", ""],
-  ["vilket ger en luftig", "med"],
-  ["vilket ger en", "med"],
+  ["bjuder på", "har"],
   ["vilket ger", "med"],
-  ["som ger en", "med"],
-
-  // === "FÖR DEN SOM" - vanlig AI-fras ===
-  ["perfekt för den som", "passar"],
-  ["idealisk för den som", "passar"],
-  ["för den matlagningsintresserade", ""],
-  ["för den som uppskattar", ""],
-  ["för den som gillar", ""],
-  ["för den som vill", ""],
-  ["för den som söker", ""],
+  ["vilket gör", "och är"],
   ["för den som", ""],
   ["perfekt för", "passar"],
-  ["idealisk för", "passar"],
+  ["välkommen till", ""],
+  ["här finns", "det finns"],
+  ["här kan du", ""],
 
-  // === KONTAKT/CTA - ta bort helt ===
-  ["kontakta oss för visning", ""],
-  ["kontakta oss", ""],
-  ["tveka inte att höra av dig", ""],
-  ["tveka inte", ""],
-  ["boka visning", ""],
-  ["hör av dig", ""],
-
-  // === PLATS-KLYSCHOR ===
-  ["i hjärtat av stockholm", "centralt i stockholm"],
-  ["i hjärtat av", "centralt i"],
-  ["hjärtat av", "centrala"],
-  ["stadens puls", "stadskärnan"],
-  ["mitt i stadens liv", "centralt"],
-
-  // === DRÖM-ORD ===
-  ["drömboende", "bostad"],
-  ["drömhem", "hem"],
-  ["drömlägenhet", "lägenhet"],
-  ["en sann pärla", ""],
-  ["en riktig pärla", ""],
-
-  // === LUFTIG/ATMOSFÄR ===
-  ["luftig och inbjudande atmosfär", ""],
-  ["luftig atmosfär", ""],
-  ["ger en luftig känsla", ""],
-  ["luftig känsla", ""],
-  ["luftig", "rymlig"],
-  ["inbjudande atmosfär", ""],
-  ["trivsam atmosfär", ""],
-  ["härlig atmosfär", ""],
-
-  // === ROFYLLD ===
-  ["rofyllt läge", "lugnt läge"],
-  ["rofylld miljö", "lugn miljö"],
-  ["rofyllt", "lugnt"],
-  ["rofylld", "lugn"],
-
-  // === VARDAGEN ===
-  ["underlättar vardagen", ""],
-  ["bekvämlighet i vardagen", ""],
-  ["i vardagen", ""],
-
-  // === ATTRAKTIVT ===
-  ["attraktivt läge", "bra läge"],
-  ["attraktivt med närhet", "nära"],
-  ["attraktivt", ""],
-
-  // === SUPERLATIV ===
-  ["fantastisk utsikt", "fin utsikt"],
-  ["fantastiskt läge", "bra läge"],
+  // === KLYSCHORD (TOP 15) ===
   ["fantastisk", "fin"],
-  ["underbar", "fin"],
+  ["generös", "stor"],
+  ["perfekt", "bra"],
+  ["unik", ""],
+  ["dröm", ""],
   ["magisk", ""],
   ["otrolig", ""],
   ["enastående", ""],
+  ["underbar", "fin"],
+  ["fantastiskt", "bra"],
+  ["attraktivt", ""],
+  ["charm", "karaktär"],
+  ["stilren", ""],
+  ["elegant", ""],
+  ["exklusivt", ""],
 
-  // === ÖVRIGT ===
-  ["unik möjlighet", ""],
-  ["unik chans", ""],
-  ["sällsynt tillfälle", ""],
-  ["missa inte", ""],
-  ["inom räckhåll", "i närheten"],
-  ["sociala tillställningar", "middagar"],
-  ["sociala sammanhang", "umgänge"],
-  ["extra komfort", ""],
-  ["maximal komfort", ""],
-  ["trygg boendemiljö", "stabil förening"],
-  ["trygg boendeekonomi", "stabil ekonomi"],
-  ["goda arbetsytor", "bänkyta"],
-  ["gott om arbetsyta", "bänkyta"],
-
-  // === NYA FRASER FRÅN GRANSKNING ===
-  ["säker boendemiljö", ""],
-  ["stadens liv och rörelse", ""],
-  ["mitt i stadens liv", "centralt"],
-  ["njuta av eftermiddagssolen", "med eftermiddagssol"],
-  ["njuta av kvällssolen", "med kvällssol"],
-  ["njuta av", ""],
-  ["den vanliga balkongen", "balkongen"],
-  ["trevligt sällskap", ""],
-  ["med nära till runt", "med nära till"],
-  ["nära till runt i staden", "nära tunnelbana"],
-  ["med ett bekvämt boende med", "med"],
-  ["bekvämt boende", ""],
-  ["det finns möjlighet att uppdatera", ""],
-  ["om så önskas", ""],
-  ["efter egna önskemål", ""],
-  ["har potential för modernisering", "kan renoveras"],
-  ["potential för", ""],
-  ["imponerande takhöjd", "hög takhöjd"],
-  ["imponerande", ""],
-  ["unik karaktär", "karaktär"],
-  ["lugn atmosfär", ""],
-
-  // === "VILKET"-KONSTRUKTIONER (vanlig AI-mönster) ===
-  ["vilket bidrar till en rymlig", "med rymlig"],
-  ["vilket bidrar till", "med"],
-  ["vilket skapar rymd", "med hög takhöjd"],
+  // === KONSTRUKTIONER (TOP 15) ===
   ["vilket skapar", "och ger"],
-  ["vilket gör den till ett långsiktigt val", ""],
-  ["vilket gör den till", "och är"],
-  ["vilket gör det till en utmärkt", "och fungerar som"],
-  ["vilket gör det till ett", "och är ett"],
-  ["vilket gör det till", "och är"],
-  ["vilket kan vara en fördel", ""],
-  ["vilket kan vara", ""],
-  ["vilket passar familjer", "för familjer"],
-  ["vilket passar den som söker", "för"],
-  ["vilket passar den som", "för"],
-  ["vilket passar", "för"],
-  ["vilket underlättar resor", "med enkel pendling"],
-  ["vilket underlättar pendling", "med enkel pendling"],
+  ["som ger en", "med"],
+  ["vilket bidrar till", "med"],
   ["vilket underlättar", "med"],
-  ["vilket är uppskattat av många", ""],
-  ["vilket är uppskattat", ""],
+  ["vilket passar", "för"],
   ["vilket är", "och är"],
+  ["som gör det", "som"],
+  ["för att skapa", ""],
+  ["för att ge", ""],
+  ["för den som vill", ""],
+  ["för den som gillar", ""],
+  ["för den som söker", ""],
+  ["kontakta oss", ""],
+  ["boka visning", ""],
+  ["tveka inte", ""],
 
-  // === FLER AI-FRASER FRÅN GRANSKNING 2 ===
-  ["rymlig atmosfär", "rymd"],
-  ["med god isolering och energibesparing", ""],
-  ["med god isolering", ""],
-  ["sociala sammankomster", "umgänge"],
-  ["med behaglig temperatur året runt", ""],
-  ["behaglig temperatur", ""],
-  ["harmonisk livsstil", ""],
-  ["modern livsstil med alla bekvämligheter", ""],
-  ["modern livsstil", ""],
-  ["alla bekvämligheter", ""],
-  ["fridfull miljö", "lugnt läge"],
-  ["goda kommunikationsmöjligheter", "bra kommunikationer"],
-  ["kommunikationsmöjligheter", "kommunikationer"],
-  ["rekreation och avkoppling", "friluftsliv"],
-  ["karaktär och charm", "karaktär"],
-
-  // === FLER AI-FRASER FRÅN GRANSKNING 3 ===
-  ["stilren och funktionell matlagningsmiljö", "funktionellt kök"],
-  ["funktionell matlagningsmiljö", "funktionellt kök"],
-  ["matlagningsmiljö", "kök"],
-  ["maximerar användningen av varje kvadratmeter", ""],
-  ["maximerar användningen", ""],
-  ["lugn och trygg miljö", "lugnt område"],
-  ["trygg miljö", ""],
-  ["fokus på kvalitet och hållbarhet", ""],
-  ["fokus på kvalitet", ""],
-  ["ytterligare förstärker dess", "med"],
-  ["ytterligare förstärker", ""],
-  ["ett långsiktigt val för köpare", ""],
-  ["långsiktigt val", ""],
-  ["gott om utrymme för förvaring", "bra förvaring"],
-  ["välplanerad layout", "bra planlösning"],
-  ["gott inomhusklimat", ""],
-  ["bidrar till ett gott", "ger"],
-  ["smakfullt renoverat", "renoverat"],
-  ["smakfullt inrett", ""],
-  ["enhetlig och elegant känsla", ""],
-  ["enhetlig och stilren känsla", ""],
-  ["för .", ". "],
-
-  // === FLER AI-FRASER FRÅN GRANSKNING 4 ===
-  ["tidslös och elegant känsla", ""],
-  ["släpper in rikligt med ljus", ""],
-  ["underlättar umgänge med familj och vänner", ""],
-  ["passande", "lämplig"],
-  ["en möjlighet att förvärva", ""],
-  ["unik kombination av tradition och modernitet", ""],
-  ["kombination av tradition och modernitet", ""],
-  ["tradition och modernitet", ""],
-  ["ett val för köpare", ""],
-  ["ett val för", ""],
-  ["historiska detaljer", "originaldetaljer"],
-  ["moderna bekvämligheter", ""],
-  ["moderna", ""],
-  ["bekvämligheter", ""],
-
-  // === FLER AI-FRASER FRÅN GRANSKNING 5 ===
-  ["högkvalitativa material och finish", "högkvalitativa material"],
-  ["material och finish", "material"],
-  ["klassiska charm", "karaktär"],
-  ["trevlig plats att vistas på", "bra plats"],
-  ["plats att vistas på", "plats"],
-  ["unik kombination av modern komfort och klassisk charm", ""],
-  ["kombination av modern komfort och klassisk charm", ""],
-  ["modern komfort och klassisk charm", ""],
-  ["utmärkt val", ""],
-  ["smidig pendling", "enkel pendling"],
-  ["med känsla av rymd", "med rymd"],
-  ["bidrar till husets klassiska charm", "ger karaktär"],
-  ["med extra utrymme", "med mer plats"],
-  ["medkel tillgång", "lättillgänglig"],
-  ["medkel", "lätt"],
-  ["stor fördel", "fördel"],
-
-  // === AI-FRASER SOM RIKTIGA MÄKLARE ALDRIG ANVÄNDER ===
-  ["generösa ytor", "stora ytor"],
-  ["generös takhöjd", "hög takhöjd"],
-  ["generöst tilltaget", "stort"],
-  ["generöst med", "med"],
-  ["bjuder på utsikt", "har utsikt"],
-  ["bjuder på", "har"],
-  ["präglas av lugn", "är lugnt"],
-  ["präglas av", "har"],
-  ["genomsyras av", "har"],
-  ["andas lugn", "är lugnt"],
-  ["andas charm", "har karaktär"],
-  ["andas historia", "har originaldetaljer"],
-  ["präglad av", "med"],
-  ["stor charm", "karaktär"],
-  ["strategiskt placerad", "centralt belägen"],
-  ["strategiskt läge", "centralt läge"],
-  ["trivsamt boende", ""],
-  ["trivsam bostad", ""],
-  ["här finns", "det finns"],
-  ["här kan du", ""],
-  ["här bor du", ""],
-
-  // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 ===
-  ["skapa minnen", ""],
-  ["utmärkt val för den som", ""],
-  ["utmärkt val", ""],
-  ["gott om utrymme för lek och avkoppling", "stor tomt"],
-  ["gott om utrymme", ""],
-  ["lek och avkoppling", ""],
-  ["natur och stadsliv", ""],
-  ["bekvämt boende", ""],
-  ["rymligt intryck", ""],
-  ["gör det enkelt att umgås", ""],
-  ["gör det enkelt att", ""],
-  ["gör det möjligt att", ""],
-  ["ett område för familjer", ""],
-  ["i mycket gott skick", "i gott skick"],
-  ["ligger centralt i ett område", ""],
-  ["ligger centralt i", "ligger i"],
-
-  // === NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys) ===
-  // "faciliteter" — inte naturligt mäklarspråk
-  ["nyrenoverade faciliteter om", "nyrenoverat,"],
-  ["nyrenoverade faciliteter och", "nyrenoverade ytor och"],
-  ["nyrenoverade faciliteter", "nyrenoverade ytor"],
-  ["renoverade faciliteter", "renoverade utrymmen"],
-  ["faciliteter", "utrymmen"],
-
-  // "Njut av" — AI-klyscha
-  ["njut av en jacuzzi", "jacuzzi"],
-  ["njut av jacuzzi", "jacuzzi"],
-  ["njut av", ""],
-
-  // "Det finns även/också" — lat meningsstart
-  ["det finns även en", ""],
-  ["det finns även ett", ""],
-  ["det finns även", ""],
-  ["det finns också en", ""],
-  ["det finns också ett", ""],
-  ["det finns också", ""],
-
-  // "-möjligheter" — byråkratiskt
-  ["förvaringsmöjligheter inkluderar ett förråd", "förråd"],
-  ["förvaringsmöjligheter inkluderar", "förvaring:"],
+  // === ÖVRIGA VANLIGA (TOP 10) ===
+  ["luftig", "rymlig"],
+  ["inbjudande", ""],
+  ["trivsam", ""],
+  ["rofylld", "lugnt"],
+  ["attraktivt läge", "bra läge"],
+  ["i hjärtat av", "centralt i"],
+  ["stadens puls", "stadskärnan"],
+  ["gott om", "bra"],
   ["förvaringsmöjligheter", "förvaring"],
-  ["odlingsmöjligheter", "plats för odling"],
-  ["boendemöjligheter", "boende"],
   ["parkeringsmöjligheter", "parkering"],
-
-  // "En X finns på" — passiv konstruktion
-  ["en jacuzzi finns på", "jacuzzi på"],
-  ["en bastu finns", "bastu"],
-  ["en tvättstuga finns", "tvättstuga"],
-
-  // === MEGA-EXPANSION: Alla nya AI-mönster ===
-
-  // Compound adjektiv-par (AI-signatur — riktiga mäklare skriver aldrig så)
-  ["ljus och luftig lägenhet", "ljus lägenhet"],
-  ["ljus och luftig", "ljus"],
-  ["ljust och luftigt", "ljust"],
-  ["stilrent och modernt kök", "modernt kök"],
-  ["stilrent och modernt", "modernt"],
-  ["stilren och modern", "modern"],
-  ["modernt och stilrent", "modernt"],
-  ["elegant och tidlös", ""],
   ["tidlös och elegant", ""],
   ["mysigt och ombonat", ""],
   ["charmigt och välplanerat", "välplanerat"],
@@ -1147,6 +884,57 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
 
 ];
 
+// === QUALITY ANALYSIS FUNCTION ===
+function analyzeTextQuality(text: string): number {
+  if (!text || text.length < 50) return 0.1;
+
+  let score = 0.5; // Base score
+
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const words = text.split(/\s+/);
+
+  // 1. Sentence length variety (good flow)
+  const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
+  const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
+  if (avgLength >= 8 && avgLength <= 15) score += 0.1;
+
+  // 2. No extremely short sentences (< 3 words)
+  const veryShortSentences = sentenceLengths.filter(len => len < 3).length;
+  if (veryShortSentences === 0) score += 0.1;
+  else score -= (veryShortSentences * 0.05);
+
+  // 3. No extremely long sentences (> 25 words)
+  const veryLongSentences = sentenceLengths.filter(len => len > 25).length;
+  if (veryLongSentences === 0) score += 0.1;
+  else score -= (veryLongSentences * 0.05);
+
+  // 4. Proper punctuation
+  const endsWithProperPunctuation = /[.!?]$/.test(text.trim());
+  if (endsWithProperPunctuation) score += 0.05;
+
+  // 5. No repeated sentence starters
+  const starters = sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean);
+  const uniqueStarters = new Set(starters);
+  if (uniqueStarters.size / starters.length > 0.7) score += 0.1;
+
+  // 6. No forbidden phrases (quick check)
+  const forbiddenQuick = ['erbjuder', 'fantastisk', 'perfekt', 'unik', 'välkommen till', 'här finns'];
+  const forbiddenCount = forbiddenQuick.filter(f => text.toLowerCase().includes(f)).length;
+  if (forbiddenCount === 0) score += 0.1;
+  else score -= (forbiddenCount * 0.05);
+
+  // 7. Word count appropriateness
+  if (words.length >= 100 && words.length <= 500) score += 0.05;
+
+  // 8. No obvious AI artifacts
+  const artifacts = ['vilket gör', 'vilket ger', 'för den som', 'bjuder på'];
+  const artifactCount = artifacts.filter(a => text.toLowerCase().includes(a)).length;
+  if (artifactCount === 0) score += 0.1;
+  else score -= (artifactCount * 0.03);
+
+  return Math.max(0, Math.min(1, score));
+}
+
 // Haversine distance between two lat/lng points in meters
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -1161,13 +949,13 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
   if (!text) return text;
   let cleaned = text;
 
-  // Först: Fixa trasiga ord som AI:n genererar (HELA ORD, inte delar)
-  const brokenWordFixes: [RegExp, string][] = [
+  // === STAGE 1: Fix broken AI artifacts (CRITICAL for quality) ===
+  const brokenWordFixes: Array<[RegExp, string]> = [
     // Trasiga sammansättningar
     [/\bmmångaa\b/gi, "många"],
     [/\bgmångaavstånd\b/gi, "gångavstånd"],
     [/\bsprojsade\b/gi, "spröjsade"],
-    // Avhuggna prefix — ordning spelar roll (specifika före generella)
+    // Avhuggna prefix — ordning spelar roll (specifika före generiska)
     [/\bPriset \. Enna\b/gi, "Priset för denna"],
     [/\bPriset \.\b/gi, "Priset för denna"],
     [/\bAmiljer\b/gi, "Familjer"],
@@ -1193,13 +981,24 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
     [/\bDen är passar\b/gi, "Den passar"],
     [/\bVillan är passar\b/gi, "Villan passar"],
     [/\bMaterialvalet är noggrant utvalda\b/gi, "Materialen är noggrant utvalda"],
+    // NEW: Fix common broken patterns from your example
+    [/\bAmiljen\./gi, "Miljön."],
+    [/\bVedpanna \. Ppvärmning\./gi, "Vedpanna och pannvärme."],
+    [/\bPpvärmning\b/gi, "pannvärme"],
+    [/\bAmiljen\b/gi, "miljön"],
   ];
 
   for (const [regex, replacement] of brokenWordFixes) {
     cleaned = cleaned.replace(regex, replacement);
   }
 
-  // Sedan: Ersätt förbjudna fraser
+  // Fix single words with periods (broken sentences) - separate pass
+  cleaned = cleaned.replace(/\b(\w{1,3})\.(\s)/gi, (match: string, word: string, space: string) => {
+    const validWords = ['Hiss', 'Balkong', 'Förråd', 'Garage', 'Carport', 'Golvvärme', 'Fjärrvärme', 'Bergvärme', 'Diskmaskin', 'Tvättmaskin', 'Parkering'];
+    return validWords.includes(word) ? word + '.' + space : space;
+  });
+
+  // === STAGE 2: Replace forbidden phrases ===
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     // Skip if phrase is in allowed phrases (respect broker's style)
     if (styleProfile?.allowedPhrases?.some(allowed => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
@@ -1218,37 +1017,61 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
     }
   }
 
-  // === GRAMMAR CLEANUP AFTER PHRASE REMOVAL ===
-  // Multiple passes to catch cascading issues
+  // === STAGE 3: Advanced grammar cleanup (NEW) ===
 
-  // Pass 1: Whitespace and basic punctuation
+  // Pass 1: Fix sentence fragments and incomplete thoughts
+  cleaned = cleaned.replace(/\.\s+[A-ZÅÄÖ][a-zåäö]{0,3}\s*\./g, "."); // Remove 1-2 word fragments
+  cleaned = cleaned.replace(/\.\s+\w{1,2}\.\s*/g, ". "); // Remove single-letter fragments
+
+  // Pass 2: Fix hanging prepositions and connectors
+  cleaned = cleaned.replace(/\s+(med|för|i|på|av|till|om|från|och|eller|som|en|ett|den|det|är|har|finns)\s*$/gim, "");
+  cleaned = cleaned.replace(/\s+(med|för|i|på|av|till|om|från|och|eller|som|en|ett|den|det|är|har|finns)\s*\./gim, ".");
+
+  // Pass 3: Fix capitalization after sentence breaks
+  cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (_match, letter) => `. ${letter.toUpperCase()}`);
+  cleaned = cleaned.replace(/\?\s+([a-zåäö])/g, (_match, letter) => `? ${letter.toUpperCase()}`);
+  cleaned = cleaned.replace(/\!\s+([a-zåäö])/g, (_match, letter) => `! ${letter.toUpperCase()}`);
+
+  // Pass 4: Merge overly short, choppy sentences
+  const sentences = cleaned.split(/(?<=[.!?])\s+/);
+  const mergedSentences: string[] = [];
+  let i = 0;
+
+  while (i < sentences.length) {
+    const current = sentences[i].trim();
+    const next = sentences[i + 1]?.trim();
+
+    // Merge if current is very short (< 4 words) and next exists
+    if (current.split(' ').length < 4 && next && !current.match(/[!?]$/)) {
+      mergedSentences.push(current + ' ' + next);
+      i += 2;
+    } else {
+      mergedSentences.push(current);
+      i += 1;
+    }
+  }
+
+  cleaned = mergedSentences.join(' ');
+
+  // Pass 5: Fix double punctuation and spacing
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
   cleaned = cleaned.replace(/\.\s*\./g, ".").replace(/,\s*,/g, ",").replace(/,\s*\./g, ".");
-  cleaned = cleaned.replace(/\.\s*\./g, "."); // second pass
+  cleaned = cleaned.replace(/\?\s*\?/g, "?").replace(/\!\s*\!/g, "!");
+  cleaned = cleaned.replace(/\s+[.,!?]/g, (match) => match.trim());
+  cleaned = cleaned.replace(/[.,!?]\s+[.,!?]/g, (match) => match[0]);
 
-  // Pass 2: Fix dangling prepositions at end of sentence (common after phrase removal)
-  // "Köket har med." → "Köket har." | "Villan är en bostad med." → "Villan är en bostad."
-  cleaned = cleaned.replace(/\s+(med|för|i|på|av|till|om|från|och|eller|som|en|ett)\s*\./g, ".");
-
-  // Pass 3: Fix sentences starting with lowercase after removal
-  cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (_match, letter) => `. ${letter.toUpperCase()}`);
-
-  // Pass 4: Remove orphaned short fragments (1-2 words ending with period, likely broken)
-  // But keep valid short sentences like "Hiss." "Balkong." "Förråd."
-  const validShortSentences = /^(Hiss|Balkong|Förråd|Garage|Carport|Golvvärme|Fjärrvärme|Bergvärme|Diskmaskin|Tvättmaskin|Parkering)\./i;
-  cleaned = cleaned.replace(/(?:^|\. )([A-ZÅÄÖa-zåäö]{1,3})\./g, (match, word) => {
-    if (validShortSentences.test(word + ".")) return match;
-    return ". ";
-  });
-
-  // Pass 5: Fix "Priset . Enna" and similar known broken patterns
+  // Pass 6: Fix specific broken patterns
   cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset för denna");
   cleaned = cleaned.replace(/\. Enna/gi, ". Denna");
+  cleaned = cleaned.replace(/\.\s*\.\s*\./g, ".");
 
-  // Pass 6: Final whitespace cleanup
-  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
-  cleaned = cleaned.replace(/^\.\s*/, ""); // Remove leading period if text starts with one
-  cleaned = cleaned.replace(/\.\s*\./g, "."); // Final double-period cleanup
+  // Pass 7: Remove leading/trailing punctuation
+  cleaned = cleaned.replace(/^[.,!?]\s*/, "").replace(/\s*[.,!?]$/, ".");
+
+  // Pass 8: Ensure text ends with proper punctuation
+  if (cleaned && !cleaned.match(/[.!?]$/)) {
+    cleaned += ".";
+  }
 
   return cleaned;
 }
@@ -2183,6 +2006,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Bestäm AI-modell baserat på plan
       const aiModel = (plan === "pro" || plan === "premium") ? "gpt-4o" : "gpt-4o-mini";
 
+      // === DIFFERENTIERAD TEMPERATURE PER STIL OCH PLAN ===
+      // Factual: Låg temp för precision, Balanserad: Medium temp för naturlighet, Säljande: Hög temp för kreativitet
+      let baseTemp: number;
+      if (style === "factual") {
+        baseTemp = plan === "premium" ? 0.22 : plan === "pro" ? 0.20 : 0.18;
+      } else if (style === "selling") {
+        baseTemp = plan === "premium" ? 0.35 : plan === "pro" ? 0.32 : 0.30;
+      } else { // balanced
+        baseTemp = plan === "premium" ? 0.28 : plan === "pro" ? 0.25 : 0.23;
+      }
+
+      const temperature = baseTemp;
+      console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Temperature: ${temperature}`);
+
       // Bildanalys om bilder finns
       let imageAnalysis = "";
       if (imageUrls && imageUrls.length > 0 && (plan === "pro" || plan === "premium")) {
@@ -2500,7 +2337,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
         model: aiModel,
         messages: textMessages,
         max_tokens: 3000,
-        temperature: 0.25,
+        temperature: temperature,
         response_format: { type: "json_object" },
       });
 
@@ -2510,6 +2347,40 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
       } catch (e) {
         console.error("[Step 3] Failed to parse AI response:", e);
         result = { improvedPrompt: prompt };
+      }
+
+      // === QUALITY GATE: Analysera textkvalitet direkt ===
+      if (result.improvedPrompt) {
+        const qualityScore = analyzeTextQuality(result.improvedPrompt);
+        console.log(`[Quality Gate] Score: ${qualityScore.toFixed(2)} (threshold: 0.70)`);
+
+        if (qualityScore < 0.70) {
+          console.log(`[Quality Gate] Poor quality detected, retrying with higher temperature...`);
+
+          // Retry med högre temperature
+          const retryTemp = Math.min(temperature + 0.10, 0.45);
+          const retryCompletion = await openai.chat.completions.create({
+            model: aiModel,
+            messages: textMessages,
+            max_tokens: 3000,
+            temperature: retryTemp,
+            response_format: { type: "json_object" },
+          });
+
+          try {
+            const retryResult = safeJsonParse(retryCompletion.choices[0]?.message?.content || "{}");
+            const retryScore = analyzeTextQuality(retryResult.improvedPrompt || "");
+
+            if (retryScore > qualityScore) {
+              console.log(`[Quality Gate] Retry improved score: ${retryScore.toFixed(2)} > ${qualityScore.toFixed(2)}`);
+              result = retryResult;
+            } else {
+              console.log(`[Quality Gate] Retry didn't improve, keeping original`);
+            }
+          } catch (e) {
+            console.warn("[Quality Gate] Retry failed, keeping original:", e);
+          }
+        }
       }
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
