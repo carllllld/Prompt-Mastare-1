@@ -206,15 +206,19 @@ if (sessionStore) {
 // Create session table manually to avoid file dependency issues
 async function createSessionTable() {
   try {
+    // Drop existing table if it exists without proper constraints
+    await pool.query('DROP TABLE IF EXISTS "session" CASCADE');
+
+    // Create table with proper PRIMARY KEY constraint
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS "session" (
-        "sid" varchar NOT NULL COLLATE "default",
+      CREATE TABLE "session" (
+        "sid" varchar NOT NULL PRIMARY KEY,
         "sess" json NOT NULL,
         "expire" timestamp(6) NOT NULL
       );
-      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+      CREATE INDEX "IDX_session_expire" ON "session" ("expire");
     `);
-    console.log('[Session] Session table created/verified successfully');
+    console.log('[Session] Session table created/verified successfully with PRIMARY KEY');
   } catch (error) {
     console.error('[Session] Failed to create session table:', error);
   }
