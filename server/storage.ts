@@ -131,13 +131,13 @@ export class DatabaseStorage implements IStorage {
     // Kalenderbaserad månadsreset: nollställ den 1:a varje månad
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastReset = user.lastResetDate ? String(user.lastResetDate) : '';
+    const lastReset = user.lastResetDate ? new Date(user.lastResetDate).toISOString().split('T')[0].substring(0, 7) : '';
 
     if (lastReset !== currentMonth) {
       const [updated] = await db.update(users)
         .set({
           promptsUsedToday: 0,
-          lastResetDate: currentMonth
+          lastResetDate: new Date()
         })
         .where(eq(users.id, user.id))
         .returning();
