@@ -132,7 +132,7 @@ function safeJsonParse(rawText: string): any {
   return JSON.parse(sanitized);
 }
 
-// AI-analys av användarens skrivstil
+// AI-driven stilinternalisering från referenstexter
 async function analyzeWritingStyle(referenceTexts: string[]): Promise<{
   formality: number;
   detailLevel: number;
@@ -140,43 +140,91 @@ async function analyzeWritingStyle(referenceTexts: string[]): Promise<{
   sentenceLength: number;
   adjectiveUsage: number;
   factFocus: number;
+  // New: Deep style internalization
+  allowedPhrases: string[];
+  forbiddenPhrases: string[];
+  tonePriorities: {
+    useWelcoming: boolean;
+    avoidAdjectives: boolean;
+    focusFacts: boolean;
+    personalTouch: boolean;
+  };
+  writingStyleDescription: string;
 }> {
-  const analysisPrompt = `Analysera dessa 3 objektbeskrivningar från en svensk mäklare och ge en stilprofil.
+  const styleInternalizationPrompt = `Du är en expert på att analysera svenska mäklarexter. Läs dessa referenstexter från en mäklare och skapa en detaljerad stilprofil.
 
-TEXTER:
+REFERENSTEXTER:
 ${referenceTexts.join('\n\n---\n\n')}
 
-Svara ENDAST med JSON i detta format:
+ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
 {
-  "formality": 1-10, // 1=mycket informell, 10=mycket formell
-  "detailLevel": 1-10, // 1=kortfattad, 10=mycket detaljerad
-  "emotionalTone": 1-10, // 1=rena fakta, 10=känslomässigt
-  "sentenceLength": 1-10, // 1=korta meningar, 10=långa meningar
-  "adjectiveUsage": 1-10, // 1=få adjektiv, 10=många adjektiv
-  "factFocus": 1-10 // 1=fokus på känsla, 10=fokus på fakta
+  "formality": 1-10,
+  "detailLevel": 1-10,
+  "emotionalTone": 1-10,
+  "sentenceLength": 1-10,
+  "adjectiveUsage": 1-10,
+  "factFocus": 1-10,
+  "allowedPhrases": ["välkommen till", "bra läge", "fin utsikt"],
+  "forbiddenPhrases": ["fantastisk", "perfekt", "utmärkt"],
+  "tonePriorities": {
+    "useWelcoming": true,
+    "avoidAdjectives": false,
+    "focusFacts": true,
+    "personalTouch": true
+  },
+  "writingStyleDescription": "Mäklaren skriver kortfattade, faktabaserade texter med fokus på praktiska detaljer. Använder 'välkommen till' ofta men undviker överdrivna adjektiv som 'fantastisk'."
 }`;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: analysisPrompt }],
-      max_tokens: 200,
+      model: "gpt-4o",
+      messages: [{ role: "user", content: styleInternalizationPrompt }],
+      max_tokens: 1000,
       temperature: 0.1,
     });
 
-    const analysis = safeJsonParse(response.choices[0]?.message?.content || "{}");
+    const styleData = safeJsonParse(response.choices[0]?.message?.content || "{}");
 
-    // Validera och normalisera värden
+    // Validera och normalisera grundläggande fält
+    const formality = Math.max(1, Math.min(10, Number(styleData.formality) || 5));
+    const detailLevel = Math.max(1, Math.min(10, Number(styleData.detailLevel) || 5));
+    const emotionalTone = Math.max(1, Math.min(10, Number(styleData.emotionalTone) || 5));
+    const sentenceLength = Math.max(1, Math.min(10, Number(styleData.sentenceLength) || 5));
+    const adjectiveUsage = Math.max(1, Math.min(10, Number(styleData.adjectiveUsage) || 5));
+    const factFocus = Math.max(1, Math.min(10, Number(styleData.factFocus) || 5));
+
+    // Validera nya fält med fallbacks
+    const allowedPhrases = Array.isArray(styleData.allowedPhrases) ? styleData.allowedPhrases.slice(0, 10) : [];
+    const forbiddenPhrases = Array.isArray(styleData.forbiddenPhrases) ? styleData.forbiddenPhrases.slice(0, 10) : [];
+    const tonePriorities = styleData.tonePriorities && typeof styleData.tonePriorities === 'object' ? {
+      useWelcoming: Boolean(styleData.tonePriorities.useWelcoming),
+      avoidAdjectives: Boolean(styleData.tonePriorities.avoidAdjectives),
+      focusFacts: Boolean(styleData.tonePriorities.focusFacts),
+      personalTouch: Boolean(styleData.tonePriorities.personalTouch),
+    } : {
+      useWelcoming: false,
+      avoidAdjectives: true,
+      focusFacts: true,
+      personalTouch: false,
+    };
+    const writingStyleDescription = typeof styleData.writingStyleDescription === 'string' && styleData.writingStyleDescription.length > 10
+      ? styleData.writingStyleDescription
+      : "Professionell svensk mäklare med balanserad stil: faktabaserad med naturlig ton.";
+
     return {
-      formality: Math.max(1, Math.min(10, Number(analysis.formality) || 5)),
-      detailLevel: Math.max(1, Math.min(10, Number(analysis.detailLevel) || 5)),
-      emotionalTone: Math.max(1, Math.min(10, Number(analysis.emotionalTone) || 5)),
-      sentenceLength: Math.max(1, Math.min(10, Number(analysis.sentenceLength) || 5)),
-      adjectiveUsage: Math.max(1, Math.min(10, Number(analysis.adjectiveUsage) || 5)),
-      factFocus: Math.max(1, Math.min(10, Number(analysis.factFocus) || 5)),
+      formality,
+      detailLevel,
+      emotionalTone,
+      sentenceLength,
+      adjectiveUsage,
+      factFocus,
+      allowedPhrases,
+      forbiddenPhrases,
+      tonePriorities,
+      writingStyleDescription,
     };
   } catch (error) {
-    console.error("Style analysis failed:", error);
+    console.error("Style internalization failed:", error);
     // Fallback till neutral profil
     return {
       formality: 5,
@@ -185,16 +233,39 @@ Svara ENDAST med JSON i detta format:
       sentenceLength: 5,
       adjectiveUsage: 5,
       factFocus: 5,
+      allowedPhrases: [],
+      forbiddenPhrases: [],
+      tonePriorities: {
+        useWelcoming: false,
+        avoidAdjectives: true,
+        focusFacts: true,
+        personalTouch: false,
+      },
+      writingStyleDescription: "Professionell svensk mäklare med balanserad stil.",
     };
   }
 }
 
-// Generera personaliserad prompt baserat på användarens stil
+// Generera personaliserad prompt baserat på djup stilanalys
 function generatePersonalizedPrompt(referenceTexts: string[], styleProfile: any): string {
-  return `Skriv i exakt samma stil och ton som dessa exempel från mäklaren:
+  const allowedInstructions = styleProfile.allowedPhrases?.length > 0
+    ? `\nTILLÅTNA FRASER (använd gärna dessa eftersom mäklaren gör det): ${styleProfile.allowedPhrases.join(', ')}`
+    : '';
 
-EXEMPELTEXTER:
-${referenceTexts.join('\n\n---\n\n')}
+  const customForbidden = styleProfile.forbiddenPhrases?.length > 0
+    ? `\nUNDVIK DESSA SPECIFIKA FRASER (mäklaren använder dem inte): ${styleProfile.forbiddenPhrases.join(', ')}`
+    : '';
+
+  const toneInstructions = [];
+  if (styleProfile.tonePriorities?.useWelcoming) toneInstructions.push('Använd välkomnande öppningar som "välkommen till"');
+  if (styleProfile.tonePriorities?.avoidAdjectives) toneInstructions.push('Undvik överdrivna adjektiv som "fantastisk", "perfekt"');
+  if (styleProfile.tonePriorities?.focusFacts) toneInstructions.push('Fokusera på konkreta fakta och mått');
+  if (styleProfile.tonePriorities?.personalTouch) toneInstructions.push('Lägg till personliga, mänskliga detaljer');
+  const toneString = toneInstructions.length > 0 ? `\nTON-PRIORITERINGAR: ${toneInstructions.join('. ')}.` : '';
+
+  return `Du är en erfaren svensk mäklare med denna unika skrivstil:
+
+STILBESKRIVNING: ${styleProfile.writingStyleDescription}
 
 STILPROFIL:
 - Formalitet: ${styleProfile.formality}/10
@@ -202,12 +273,12 @@ STILPROFIL:
 - Känsloton: ${styleProfile.emotionalTone}/10
 - Meninglängd: ${styleProfile.sentenceLength}/10
 - Adjektivanvändning: ${styleProfile.adjectiveUsage}/10
-- Faktafokus: ${styleProfile.factFocus}/10
+- Faktafokus: ${styleProfile.factFocus}/10${toneString}${allowedInstructions}${customForbidden}
 
-VIKTIGT: Använd samma ton, men UNDVIK dessa klyschor:
-${FORBIDDEN_PHRASES.slice(0, 50).join(', ')}
+REFERENSTEXTER (imitera EXAKT denna stil och ton):
+${referenceTexts.join('\n\n---\n\n')}
 
-Skriv som en erfaren svensk mäklare med exakt samma stil som exemplen ovan.`;
+VIKTIGT: Skriv som denna specifika mäklare. Använd samma rytm, ordval och perspektiv. Undvik alla allmänna AI-klyschor som "erbjuder generösa ytor", "andas lugn", "perfekt för den som".`;
 }
 
 // Förbjudna fraser - AI-fraser som avslöjar genererad text
@@ -1086,7 +1157,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function cleanForbiddenPhrases(text: string): string {
+function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
   if (!text) return text;
   let cleaned = text;
 
@@ -1130,8 +1201,21 @@ function cleanForbiddenPhrases(text: string): string {
 
   // Sedan: Ersätt förbjudna fraser
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
+    // Skip if phrase is in allowed phrases (respect broker's style)
+    if (styleProfile?.allowedPhrases?.some(allowed => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
+      continue;
+    }
     const regex = new RegExp(phrase, "gi");
     cleaned = cleaned.replace(regex, replacement);
+  }
+
+  // Add custom forbidden phrases from styleProfile
+  if (styleProfile?.forbiddenPhrases?.length > 0) {
+    for (const customPhrase of styleProfile.forbiddenPhrases) {
+      // Replace custom forbidden phrases with empty string or simple alternative
+      const customRegex = new RegExp(customPhrase, "gi");
+      cleaned = cleaned.replace(customRegex, "");
+    }
   }
 
   // === GRAMMAR CLEANUP AFTER PHRASE REMOVAL ===
@@ -2418,13 +2502,13 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
-        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile);
         result.improvedPrompt = addParagraphs(result.improvedPrompt);
       }
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
-          result[field] = cleanForbiddenPhrases(result[field]);
+          result[field] = cleanForbiddenPhrases(result[field], personalStyle?.styleProfile);
         }
       }
 
@@ -2489,13 +2573,13 @@ ERSÄTTNINGSTABELL:
               const wordDiff = Math.abs(originalWords - correctedWords);
 
               if (wordDiff / originalWords < 0.3) {
-                result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text);
+                result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text, personalStyle?.styleProfile);
                 result.improvedPrompt = addParagraphs(result.improvedPrompt);
                 console.log(`[Step 5] Surgical correction applied (${textViolations.length} violations fixed, ${wordDiff} words changed)`);
               } else {
                 console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
                 // Kör ändå cleanForbiddenPhrases som fallback
-                result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt);
+                result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile);
               }
             }
           }
@@ -2527,7 +2611,7 @@ ERSÄTTNINGSTABELL:
           factCheckResult = safeJsonParse(factCheckCompletion.choices[0]?.message?.content || "{}");
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
-            result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text);
+            result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text, personalStyle?.styleProfile);
             result.improvedPrompt = addParagraphs(result.improvedPrompt);
             console.log("[Step 6] Fact-check corrections applied");
           }
@@ -2683,6 +2767,14 @@ Svara med JSON i formatet:
         return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
       }
 
+      // Load personal style for filtering
+      let personalStyle: any = null;
+      try {
+        personalStyle = await storage.getPersonalStyle(rewriteUser.id);
+      } catch (e) {
+        console.warn("[Rewrite] Failed to load personal style:", e);
+      }
+
       const rewriteCompletion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
@@ -2733,7 +2825,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
       let parsed: any;
       try { parsed = JSON.parse(raw); } catch { parsed = { rewritten: selectedText }; }
 
-      const rewritten = cleanForbiddenPhrases(parsed.rewritten || selectedText);
+      const rewritten = cleanForbiddenPhrases(parsed.rewritten || selectedText, personalStyle?.styleProfile);
 
       // More robust text replacement - handle edge cases
       let newFullText = fullText;
@@ -3582,6 +3674,14 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return res.status(403).json({ message: "Denna funktion är endast för Pro/Premium-användare" });
       }
 
+      // Load personal style for filtering
+      let personalStyle: any = null;
+      try {
+        personalStyle = await storage.getPersonalStyle(user.id);
+      } catch (e) {
+        console.warn("[Improve Text] Failed to load personal style:", e);
+      }
+
       // Check textEdits usage limit
       const improveUsage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
@@ -3645,7 +3745,7 @@ Svara ENDAST med den förbättrade texten, inga förklaringar.`
       rawImprovedText = rawImprovedText.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, ""); // code blocks
       rawImprovedText = rawImprovedText.replace(/^[""]|[""]$/g, ""); // smart quotes
       rawImprovedText = rawImprovedText.replace(/^"|"$/g, ""); // regular quotes
-      const improvedText = cleanForbiddenPhrases(rawImprovedText.trim());
+      const improvedText = cleanForbiddenPhrases(rawImprovedText.trim(), personalStyle?.styleProfile);
 
       // Track text edit usage
       await storage.incrementUsage(user.id, 'textEdits');

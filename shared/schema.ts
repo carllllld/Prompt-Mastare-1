@@ -47,6 +47,16 @@ export const personalStyles = pgTable("personal_styles", {
     sentenceLength: number; // avg words per sentence
     adjectiveUsage: number; // 1-10
     factFocus: number; // 1-10
+    // New: Deep style internalization
+    allowedPhrases: string[]; // Phrases broker uses successfully (e.g., "välkommen till")
+    forbiddenPhrases: string[]; // Custom phrases to avoid (beyond global list)
+    tonePriorities: {
+      useWelcoming: boolean; // Allow "välkommen till"
+      avoidAdjectives: boolean; // Minimize "fantastisk", "perfekt"
+      focusFacts: boolean; // Prioritize measurements over descriptions
+      personalTouch: boolean; // Add broker's unique voice elements
+    };
+    writingStyleDescription: string; // AI-generated description of broker's style
   }>().notNull(),
   isActive: boolean("is_active", { mode: "boolean" }).default(true).notNull(),
   teamShared: boolean("team_shared", { mode: "boolean" }).default(false).notNull(),
