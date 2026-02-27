@@ -192,6 +192,14 @@ app.use(session({
   }
 }));
 
+// Debug session store initialization
+const sessionStore = app.sessionStore;
+if (sessionStore) {
+  console.log('[Session] Session store initialized:', sessionStore.constructor.name);
+} else {
+  console.log('[Session] Session store NOT initialized');
+}
+
 // Request logging
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();

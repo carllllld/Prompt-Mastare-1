@@ -515,28 +515,37 @@ export function setupAuth(app: Express) {
   // Reset password with token
   app.post("/auth/reset-password", async (req: Request, res: Response) => {
     try {
+      console.log("[ResetPassword] Password reset request received");
       const { token, password } = req.body;
 
       if (!token || typeof token !== 'string') {
+        console.log("[ResetPassword] Invalid or missing token");
         return res.status(400).json({ message: "Återställningslänk saknas" });
       }
 
       if (!password || password.length < 8) {
+        console.log("[ResetPassword] Invalid password length");
         return res.status(400).json({ message: "Lösenordet måste vara minst 8 tecken" });
       }
 
+      console.log("[ResetPassword] Looking up user by reset token");
       const user = await storage.getUserByPasswordResetToken(token);
 
       if (!user) {
+        console.log("[ResetPassword] User not found for token");
         return res.status(400).json({ message: "Ogiltig eller utgången återställningslänk" });
       }
 
+      console.log("[ResetPassword] User found:", user.id, "email verified:", user.emailVerified);
+
       // Check if token has expired
       if (user.passwordResetExpires && new Date() > new Date(user.passwordResetExpires)) {
+        console.log("[ResetPassword] Token expired for user:", user.id);
         return res.status(400).json({ message: "Återställningslänken har gått ut. Vänligen begär en ny." });
       }
 
       // Hash new password and update
+      console.log("[ResetPassword] Hashing new password for user:", user.id);
       const passwordHash = await bcrypt.hash(password, 12);
       const updatedUser = await storage.updatePassword(user.id, passwordHash);
 
@@ -546,6 +555,7 @@ export function setupAuth(app: Express) {
       }
 
       // Mark email as verified since user has proven ownership by using reset link
+      console.log("[ResetPassword] Marking email as verified for user:", user.id);
       await storage.markEmailVerified(user.id);
       console.log("[ResetPassword] Email marked as verified for user:", user.id);
 
@@ -563,6 +573,27 @@ export function setupAuth(app: Express) {
       res.status(500).json({ message: "Kunde inte återställa lösenordet" });
     }
   });
+
+  // Debug endpoint to test session functionality
+  app.get("/auth/debug-session", (req: Request, res: Response) => {
+    console.log("[Debug] Session debug request");
+    console.log("[Debug] Session ID:", req.sessionID);
+    console.log("[Debug] Session data:", req.session);
+    console.log("[Debug] Session cookie:", req.session.cookie);
+
+    res.json({
+      sessionId: req.sessionID,
+      session: req.session,
+      cookie: req.session?.cookie,
+      hasUserId: !!req.session?.userId,
+      userId: req.session?.userId,
+      headers: {
+        cookie: req.get('cookie'),
+        'user-agent': req.get('user-agent')
+      }
+    });
+  });
+
 }
 
 // Middleware: Require authentication
