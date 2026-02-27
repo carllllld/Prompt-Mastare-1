@@ -2873,8 +2873,39 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         });
       }
 
+      // Check area search usage limits
+      const usage = await storage.getMonthlyUsage(user.id) || {
+        textsGenerated: 0,
+        areaSearchesUsed: 0,
+        textEditsUsed: 0,
+        personalStyleAnalyses: 0,
+      };
+
+      console.log(`[Address Lookup] User: ${user.id}, Plan: ${plan}, Usage:`, usage);
+      console.log(`[Address Lookup] PLAN_LIMITS for ${plan}:`, PLAN_LIMITS[plan]);
+
+      const limits = PLAN_LIMITS[plan];
+      if (usage.areaSearchesUsed >= limits.areaSearches) {
+        console.log(`[Address Lookup] Area search limit reached. Used: ${usage.areaSearchesUsed}, Limit: ${limits.areaSearches}`);
+        return res.status(429).json({
+          message: plan === "free"
+            ? "Adress-sökning är endast för Pro- och Premium-användare. Uppgradera för att använda denna funktion!"
+            : `Du har nått din månadsgräns för adress-sökningar. Gräns: ${limits.areaSearches}`,
+          upgradeRequired: true,
+          currentPlan: plan,
+          usage: {
+            areaSearchesUsed: usage.areaSearchesUsed,
+            areaSearchesLimit: limits.areaSearches,
+          }
+        });
+      }
+
       const { address } = req.body;
       if (!address) return res.status(400).json({ message: "Adress krävs" });
+
+      // Increment area search usage
+      await storage.incrementUsage(user.id, 'areaSearches');
+      console.log(`[Address Lookup] Area search usage incremented for user: ${user.id}`);
 
       // OpenStreetMap: Nominatim + Overpass API (FREE)
       console.log("[Address Lookup] Using OpenStreetMap APIs");

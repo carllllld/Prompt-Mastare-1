@@ -201,6 +201,9 @@ export default function Home() {
   const remaining = userStatus?.textsRemaining ?? 0;
   const limit = userStatus?.monthlyTextLimit ?? 2;
   const used = userStatus?.textsUsedThisMonth ?? 0;
+  const areaSearchesRemaining = userStatus?.areaSearchesRemaining ?? 0;
+  const areaSearchesLimit = userStatus?.areaSearchesLimit ?? 0;
+  const areaSearchesUsed = userStatus?.areaSearchesUsed ?? 0;
 
   return (
     <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
@@ -330,6 +333,11 @@ export default function Home() {
                   ? "Uppgradera till Pro för 10 genereringar per månad."
                   : `Nästa reset: ${userStatus?.resetTime || "nästa månad"}`}
               </p>
+              {plan === "free" && (
+                <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
+                  Vill du använda "Sök läge"? Uppgradera till Pro för obegränsad adress-sökning!
+                </p>
+              )}
             </div>
             {plan === "free" && (
               <Button

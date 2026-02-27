@@ -285,6 +285,47 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     style={{ borderColor: "#D1D5DB", color: addressLookupLoading ? "#9CA3AF" : "#2D6A4F" }}
                     onClick={async () => {
                       if (!field.value) return;
+
+                      // Check if user is on free plan
+                      const userStatus = await fetch('/api/user/status', {
+                        credentials: 'include'
+                      }).then(res => res.json()).catch(() => null);
+
+                      if (userStatus?.plan === 'free') {
+                        // Show upgrade message for free users
+                        const upgradeMessage = document.createElement('div');
+                        upgradeMessage.className = 'fixed top-4 right-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg z-50 max-w-sm';
+                        upgradeMessage.innerHTML = `
+                          <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0">
+                              <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                              </svg>
+                            </div>
+                            <div class="flex-1">
+                              <h3 class="text-sm font-medium text-yellow-800">Uppgradera krävs för "Sök läge"</h3>
+                              <p class="text-xs text-yellow-700 mt-1">Adress-sökning är endast för Pro- och Premium-användare. Uppgradera för att automatiskt fylla i kollektivtrafik och närområde!</p>
+                              <button class="mt-2 text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700" onclick="window.location.href='/app'">Uppgradera till Pro</button>
+                            </div>
+                            <button class="flex-shrink-0 text-yellow-500 hover:text-yellow-600" onclick="this.parentElement.parentElement.remove()">
+                              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                              </svg>
+                            </button>
+                          </div>
+                        `;
+                        document.body.appendChild(upgradeMessage);
+
+                        // Auto-remove after 8 seconds
+                        setTimeout(() => {
+                          if (upgradeMessage.parentElement) {
+                            upgradeMessage.remove();
+                          }
+                        }, 8000);
+
+                        return;
+                      }
+
                       setAddressLookupLoading(true);
                       setAddressLookupResult(null);
                       try {
@@ -294,15 +335,54 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           credentials: "include",
                           body: JSON.stringify({ address: field.value }),
                         });
-                        if (res.ok) {
-                          const data = await res.json();
-                          if (data.transport) form.setValue("transport", data.transport);
-                          if (data.neighborhood) form.setValue("neighborhood", data.neighborhood);
-                          const count = [data.transport, data.neighborhood].filter(Boolean).length;
-                          setAddressLookupResult(count > 0 ? `${data.places?.length || 0} platser hittade` : "Inga platser hittade");
+
+                        if (!res.ok) {
+                          const error = await res.json();
+                          if (error.upgradeRequired) {
+                            // Show upgrade message
+                            const upgradeMessage = document.createElement('div');
+                            upgradeMessage.className = 'fixed top-4 right-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 shadow-lg z-50 max-w-sm';
+                            upgradeMessage.innerHTML = `
+                              <div class="flex items-start gap-3">
+                                <div class="flex-shrink-0">
+                                  <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                  </svg>
+                                </div>
+                                <div class="flex-1">
+                                  <h3 class="text-sm font-medium text-yellow-800">${error.message}</h3>
+                                  <div class="mt-2">
+                                    <button class="text-xs bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700" onclick="window.location.href='/app'">Uppgradera till Pro</button>
+                                  </div>
+                                </div>
+                                <button class="flex-shrink-0 text-yellow-500 hover:text-yellow-600" onclick="this.parentElement.parentElement.remove()">
+                                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            `;
+                            document.body.appendChild(upgradeMessage);
+
+                            // Auto-remove after 8 seconds
+                            setTimeout(() => {
+                              if (upgradeMessage.parentElement) {
+                                upgradeMessage.remove();
+                              }
+                            }, 8000);
+                            return;
+                          }
+                          throw new Error(error.message || 'Failed to lookup address');
                         }
+
+                        const data = await res.json();
+                        if (data.transport) form.setValue("transport", data.transport);
+                        if (data.neighborhood) form.setValue("neighborhood", data.neighborhood);
+                        const count = [data.transport, data.neighborhood].filter(Boolean).length;
+                        setAddressLookupResult(count > 0 ? `${data.places?.length || 0} platser hittade` : "Inga platser hittade");
                       } catch (err) {
                         console.error("Address lookup failed:", err);
+                        setAddressLookupResult("Kunde inte slå upp adressen");
                       } finally {
                         setAddressLookupLoading(false);
                       }
