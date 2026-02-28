@@ -28,10 +28,9 @@ const RETRY_STRATEGIES = {
 let resend: Resend | null = null;
 if (process.env.RESEND_API_KEY) {
   resend = new Resend(process.env.RESEND_API_KEY);
-  console.log('[Email] Resend initialized with API key');
+  console.log('[Email] Resend initialized');
 } else {
-  console.log('[Email] RESEND_API_KEY not found in environment variables');
-  console.log('[Email] Available env vars:', Object.keys(process.env).filter(k => k.includes('RESEND') || k.includes('EMAIL')));
+  console.log('[Email] RESEND_API_KEY not configured — emails will be skipped');
 }
 
 // Smart email sending with retry logic

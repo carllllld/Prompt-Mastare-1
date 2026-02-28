@@ -992,16 +992,19 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
     cleaned = cleaned.replace(regex, replacement);
   }
 
-  // Fix single words with periods (broken sentences) - separate pass
-  cleaned = cleaned.replace(/\b(\w{1,3})\.(\s)/gi, (match: string, word: string, space: string) => {
-    const validWords = ['Hiss', 'Balkong', 'Förråd', 'Garage', 'Carport', 'Golvvärme', 'Fjärrvärme', 'Bergvärme', 'Diskmaskin', 'Tvättmaskin', 'Parkering'];
-    return validWords.includes(word) ? word + '.' + space : space;
+  // Fix orphan 1-3 char fragments with periods (broken sentences)
+  // Keep valid Swedish abbreviations: kvm, m², rum, wc, etc.
+  const validShortWords = new Set(['kvm', 'rum', 'mån', 'avg', 'brå', 'brf', 'osv', 'dvs', 'mfl', 'tex', 'pga', 'mha', 'tom']);
+  cleaned = cleaned.replace(/\b([A-ZÅÄÖa-zåäö]{1,3})\.(\s)/g, (match: string, word: string, space: string) => {
+    if (validShortWords.has(word.toLowerCase())) return match; // keep valid abbreviations
+    if (/^[A-ZÅÄÖ]/.test(word) && word.length >= 2) return match; // keep capitalized words (names, etc.)
+    return space; // remove orphan fragment
   });
 
   // === STAGE 2: Replace forbidden phrases ===
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     // Skip if phrase is in allowed phrases (respect broker's style)
-    if (styleProfile?.allowedPhrases?.some(allowed => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
+    if (styleProfile?.allowedPhrases?.some((allowed: string) => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
       continue;
     }
     const regex = new RegExp(phrase, "gi");
@@ -1023,9 +1026,11 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
   cleaned = cleaned.replace(/\.\s+[A-ZÅÄÖ][a-zåäö]{0,3}\s*\./g, "."); // Remove 1-2 word fragments
   cleaned = cleaned.replace(/\.\s+\w{1,2}\.\s*/g, ". "); // Remove single-letter fragments
 
-  // Pass 2: Fix hanging prepositions and connectors
-  cleaned = cleaned.replace(/\s+(med|för|i|på|av|till|om|från|och|eller|som|en|ett|den|det|är|har|finns)\s*$/gim, "");
-  cleaned = cleaned.replace(/\s+(med|för|i|på|av|till|om|från|och|eller|som|en|ett|den|det|är|har|finns)\s*\./gim, ".");
+  // Pass 2: Fix hanging prepositions and connectors at end of lines
+  // NOTE: Only actual prepositions/connectors that CANNOT end a Swedish sentence.
+  // 'är', 'har', 'finns', 'den', 'det', 'en', 'ett' ARE valid sentence endings.
+  cleaned = cleaned.replace(/\s+(med|för|på|av|till|om|från|och|eller|som)\s*$/gim, "");
+  cleaned = cleaned.replace(/\s+(med|för|på|av|till|om|från|och|eller|som)\s*\./gim, ".");
 
   // Pass 3: Fix capitalization after sentence breaks
   cleaned = cleaned.replace(/\.\s+([a-zåäö])/g, (_match, letter) => `. ${letter.toUpperCase()}`);
@@ -1982,8 +1987,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (usage.textsGenerated >= limits.texts) {
         console.log(`[Optimize] Usage limit reached. Used: ${usage.textsGenerated}, Limit: ${limits.texts}`);
         const upgradeMsg = plan === "free"
-          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 10 per månad!`
-          : `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 per månad!`;
+          ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 10 genereringar per månad!`
+          : `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 genereringar per månad!`;
 
         return res.status(429).json({
           message: upgradeMsg,
@@ -3148,11 +3153,12 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         }
 
         case "invoice.payment_failed": {
+          // NOTE: Do NOT downgrade here. Stripe retries failed payments 3-4 times
+          // over several days. The actual downgrade happens on customer.subscription.deleted.
           const invoice = event.data.object as Stripe.Invoice;
           const subscriptionId = (invoice as any).subscription;
           if (subscriptionId) {
-            await storage.downgradeUserToFree(subscriptionId as string);
-            console.log(`Payment failed for subscription ${subscriptionId}`);
+            console.log(`[Stripe Webhook] Payment failed for subscription ${subscriptionId} — Stripe will retry`);
           }
           break;
         }

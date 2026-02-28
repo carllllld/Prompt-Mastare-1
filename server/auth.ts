@@ -574,25 +574,17 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Debug endpoint to test session functionality
-  app.get("/auth/debug-session", (req: Request, res: Response) => {
-    console.log("[Debug] Session debug request");
-    console.log("[Debug] Session ID:", req.sessionID);
-    console.log("[Debug] Session data:", req.session);
-    console.log("[Debug] Session cookie:", req.session.cookie);
-
-    res.json({
-      sessionId: req.sessionID,
-      session: req.session,
-      cookie: req.session?.cookie,
-      hasUserId: !!req.session?.userId,
-      userId: req.session?.userId,
-      headers: {
-        cookie: req.get('cookie'),
-        'user-agent': req.get('user-agent')
-      }
+  // Debug endpoint to test session functionality (development only)
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/auth/debug-session", (req: Request, res: Response) => {
+      res.json({
+        sessionId: req.sessionID,
+        hasUserId: !!req.session?.userId,
+        userId: req.session?.userId,
+        cookie: req.session?.cookie,
+      });
     });
-  });
+  }
 
 }
 

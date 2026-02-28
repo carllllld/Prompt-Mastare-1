@@ -58,7 +58,7 @@ const PLANS = [
   {
     name: "Gratis",
     price: "0",
-    desc: "Testa med ett objekt",
+    desc: "Testa med 2 objekt per månad",
     color: "#9CA3AF",
     features: [
       "2 genereringar / månad",

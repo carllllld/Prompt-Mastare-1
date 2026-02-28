@@ -23,7 +23,6 @@ export interface IStorage {
   updateUserProfile(userId: string, data: { displayName?: string; avatarColor?: string }): Promise<User | null>;
   updateUserStripeCustomer(userId: string, stripeCustomerId: string): Promise<void>;
   // Usage methods
-  incrementUserPrompts(userId: string): Promise<void>;
   resetUserPromptsIfNewDay(user: User): Promise<User>;
   // Subscription methods
   upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
@@ -119,12 +118,6 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(users).where(eq(users.id, userId));
     if (!result[0]) return null;
     return this.resetUserPromptsIfNewDay(result[0]);
-  }
-
-  async incrementUserPrompts(userId: string): Promise<void> {
-    await db.update(users)
-      .set({ promptsUsedToday: sql`${users.promptsUsedToday} + 1` })
-      .where(eq(users.id, userId));
   }
 
   async resetUserPromptsIfNewDay(user: User): Promise<User> {
@@ -582,8 +575,6 @@ export class DatabaseStorage implements IStorage {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
 
-    console.log(`[Usage] Getting monthly usage for user: ${userId}, month: ${month}-${year}`);
-
     const result = await db.select()
       .from(usageTracking)
       .where(and(
@@ -593,23 +584,7 @@ export class DatabaseStorage implements IStorage {
       ))
       .limit(1);
 
-    console.log(`[Usage] Monthly usage query result:`, result);
-    console.log(`[Usage] Result length:`, result.length);
-
-    const usage = result[0] || null;
-    if (usage) {
-      console.log(`[Usage] Found usage record:`, {
-        userId: usage.userId,
-        month: usage.month,
-        year: usage.year,
-        textsGenerated: usage.textsGenerated,
-        planType: usage.planType
-      });
-    } else {
-      console.log(`[Usage] No usage record found for user: ${userId}`);
-    }
-
-    return usage;
+    return result[0] || null;
   }
 
   async incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking> {
@@ -617,19 +592,14 @@ export class DatabaseStorage implements IStorage {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
 
-    console.log(`[Usage] Incrementing usage for user: ${userId}, type: ${type}, month: ${month}-${year}`);
-
     // Get user's current plan
     const user = await this.getUserById(userId);
     if (!user) throw new Error('User not found');
-
-    console.log(`[Usage] User plan: ${user.plan}`);
 
     // Try to get existing usage record
     let usage = await this.getMonthlyUsage(userId);
 
     if (!usage) {
-      console.log(`[Usage] No existing usage record found, creating new one for user: ${userId}`);
       // Create new usage record
       const [newUsage] = await db.insert(usageTracking)
         .values({
@@ -644,19 +614,14 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
 
-      console.log(`[Usage] Created new usage record:`, newUsage);
       return newUsage;
     }
-
-    console.log(`[Usage] Found existing usage record:`, usage);
 
     // Update existing record
     const updateField = type === 'texts' ? 'textsGenerated' :
       type === 'areaSearches' ? 'areaSearchesUsed' :
         type === 'textEdits' ? 'textEditsUsed' :
           'personalStyleAnalyses';
-
-    console.log(`[Usage] Updating field: ${updateField}, current value: ${usage[updateField]}`);
 
     const [updatedUsage] = await db.update(usageTracking)
       .set({
@@ -670,15 +635,12 @@ export class DatabaseStorage implements IStorage {
       ))
       .returning();
 
-    console.log(`[Usage] Updated usage record:`, updatedUsage);
     return updatedUsage;
   }
 
   async resetMonthlyUsage(userId: string): Promise<void> {
-    console.log(`[Usage] Resetting monthly usage for user: ${userId}`);
     await db.delete(usageTracking)
       .where(eq(usageTracking.userId, userId));
-    console.log(`[Usage] Monthly usage reset for user: ${userId}`);
   }
 }
 

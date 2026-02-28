@@ -25,7 +25,7 @@ export const optimizations = pgTable("optimizations", {
 export const usageTracking = pgTable("usage_tracking", {
   id: serial("id").primaryKey(),
   userId: text("user_id").references(() => users.id).notNull(),
-  month: text("month").notNull(), // Format: '2024-02'
+  month: text("month").notNull(), // Format: '01'-'12' (month only, year is separate column)
   year: integer("year").notNull(),
   textsGenerated: integer("texts_generated").default(0).notNull(),
   areaSearchesUsed: integer("area_searches_used").default(0).notNull(),

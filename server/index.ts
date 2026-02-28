@@ -180,7 +180,7 @@ app.use(session({
     createTableIfMissing: true,
     // Create table manually to avoid file dependency issues
     schemaName: 'public',
-    ttl: 30 * 24 * 60 * 60 * 1000, // 30 days
+    ttl: 30 * 24 * 60 * 60, // 30 days in seconds (connect-pg-simple expects seconds)
   }),
   secret: process.env.SESSION_SECRET!,
   resave: false,
@@ -203,22 +203,20 @@ if (sessionStore) {
   console.log('[Session] Session store NOT initialized');
 }
 
-// Create session table manually to avoid file dependency issues
+// Ensure session table exists (idempotent — never drops existing data)
 async function createSessionTable() {
   try {
-    // Drop existing table if it exists without proper constraints
-    await pool.query('DROP TABLE IF EXISTS "session" CASCADE');
-
-    // Create table with proper PRIMARY KEY constraint
     await pool.query(`
-      CREATE TABLE "session" (
+      CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar NOT NULL PRIMARY KEY,
         "sess" json NOT NULL,
         "expire" timestamp(6) NOT NULL
-      );
-      CREATE INDEX "IDX_session_expire" ON "session" ("expire");
+      )
     `);
-    console.log('[Session] Session table created/verified successfully with PRIMARY KEY');
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
+    `);
+    console.log('[Session] Session table verified');
   } catch (error) {
     console.error('[Session] Failed to create session table:', error);
   }
