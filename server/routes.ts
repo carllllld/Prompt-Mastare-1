@@ -1499,7 +1499,8 @@ Ex: "Upplandsgatan 12 i Vasastan — trea om 78 kvm med originalparkett från 19
 5. VARIERA meningsstarter. Max 1x "Det finns" i hela texten.
 6. Sista stycket = LÄGE. Aldrig känsla, aldrig uppmaning.
 7. De extra texterna (Instagram, visning, kortannons) ska kännas mänskliga och specifika — inte som copy-paste från AI.
-8. Generera ALLA fält i JSON.`;
+8. Generera ALLA fält i JSON.
+9. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.`;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
 const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver objektbeskrivningar för Booli/egen mäklarsida — klyschfritt, specifikt, mänskligt. Studera MATCHADE EXEMPEL och imitera stilen. Booli tillåter mer detalj och pris.
@@ -1604,6 +1605,7 @@ Ex: "Tallvägen 8 i Djursholm — villa om 180 kvm med HTH-kök och dubbelgarage
 6. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
 7. De extra texterna ska kännas mänskliga och specifika — inte som copy-paste från AI.
 8. Generera ALLA fält i JSON.
+9. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.
 
 Skriv som en riktig mäklare — kort, rakt, specifikt, mänskligt.`;
 
@@ -2492,7 +2494,7 @@ ERSÄTTNINGSTABELL:
             const correctionCompletion = await openai.chat.completions.create({
               model: "gpt-4o-mini",
               messages: correctionMessages,
-              max_tokens: 3000,
+              max_tokens: 4500,
               temperature: 0.05,
               response_format: { type: "json_object" },
             });
@@ -2520,6 +2522,61 @@ ERSÄTTNINGSTABELL:
         }
       }
 
+      // STEG 5b: Ordräknings-enforcement — om texten är för kort, expandera
+      if (result.improvedPrompt) {
+        const currentWordCount = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
+        const shortfall = targetWordMin - currentWordCount;
+
+        if (shortfall > 30) {
+          console.log(`[Step 5b] Text too short: ${currentWordCount} words, target min ${targetWordMin}. Expanding...`);
+
+          try {
+            const expandMessages = [
+              {
+                role: "system" as const,
+                content: `Du är en erfaren svensk mäklare. Du ska UTÖKA en befintlig objektbeskrivning så den når rätt längd.
+
+REGLER:
+1. Behåll ALL befintlig text exakt som den är — ändra INTE befintliga meningar
+2. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
+3. Varje ny mening = nytt faktum (material, mått, utrustning, avstånd)
+4. Infoga nya meningar på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
+5. Hitta ALDRIG på fakta — använd BARA dispositionen
+6. Inga förbjudna ord: erbjuder, bjuder på, generös, fantastisk, perfekt, vilket, välkommen
+7. Texten MÅSTE bli minst ${targetWordMin} ord
+8. Svara med JSON: {"expanded_text": "hela den utökade texten med \\n\\n mellan stycken"}`,
+              },
+              {
+                role: "user" as const,
+                content: `NUVARANDE TEXT (${currentWordCount} ord — behöver bli minst ${targetWordMin} ord):\n\n${result.improvedPrompt}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(disposition, null, 2)}`,
+              },
+            ];
+
+            const expandCompletion = await openai.chat.completions.create({
+              model: aiModel,
+              messages: expandMessages,
+              max_tokens: 3000,
+              temperature: 0.2,
+              response_format: { type: "json_object" },
+            });
+
+            const expanded = safeJsonParse(expandCompletion.choices[0]?.message?.content || "{}");
+            if (expanded.expanded_text) {
+              const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
+              if (expandedWordCount >= currentWordCount) {
+                result.improvedPrompt = cleanForbiddenPhrases(expanded.expanded_text, personalStyle?.styleProfile);
+                result.improvedPrompt = addParagraphs(result.improvedPrompt);
+                console.log(`[Step 5b] Expanded from ${currentWordCount} to ${expandedWordCount} words`);
+              }
+            }
+          } catch (e) {
+            console.warn("[Step 5b] Expansion failed, keeping original:", e);
+          }
+        } else if (shortfall > 0) {
+          console.log(`[Step 5b] Text slightly short: ${currentWordCount}/${targetWordMin} words (within tolerance)`);
+        }
+      }
+
       // STEG 6: Faktagranskning (Pro/Premium)
       let factCheckResult: any = null;
       if (plan !== "free" && result.improvedPrompt) {
@@ -2533,9 +2590,9 @@ ERSÄTTNINGSTABELL:
           ];
 
           const factCheckCompletion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: plan === "premium" ? "gpt-4o" : "gpt-4o-mini",
             messages: factCheckMessages,
-            max_tokens: 1500,
+            max_tokens: 2500,
             temperature: 0.1,
             response_format: { type: "json_object" },
           });
@@ -2614,7 +2671,7 @@ Svara med JSON i formatet:
 
         try {
           const improvementCompletion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: plan === "premium" ? "gpt-4o" : "gpt-4o-mini",
             messages: improvementMessages,
             max_tokens: 800,
             temperature: 0.3,
@@ -2657,8 +2714,8 @@ Svara med JSON i formatet:
           quality_score: factCheckResult.quality_score ?? null,
           broker_tips: factCheckResult.broker_tips || [],
         } : {
-          fact_check_passed: violations.length === 0,
-          issues: violations.map(v => ({ quote: v, reason: "" })),
+          fact_check_passed: violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord")).length === 0,
+          issues: violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord")).map(v => ({ quote: v, reason: "" })),
           quality_score: null,
           broker_tips: [],
         },
