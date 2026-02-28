@@ -1707,12 +1707,26 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
     ].filter(Boolean).slice(0, 3),
   };
 
+  // Build a structured paragraph outline so even free-tier gets well-organized text
+  const paragraphs: string[] = [];
+  paragraphs.push(`Öppning: ${pd.address}, ${propertyType} om ${size} kvm${pd.totalRooms ? `, ${pd.totalRooms} rum` : ""}.`);
+  if (pd.layoutDescription) paragraphs.push("Planlösning: hall, vardagsrum, sovrum — rumsordning.");
+  if (pd.kitchenDescription) paragraphs.push("Kök: märke, material, vitvaror, matplats.");
+  if (pd.bathroomDescription) paragraphs.push("Badrum: material, utrustning, renoveringsår.");
+  if (pd.balconyArea) paragraphs.push(`Balkong/uteplats: ${pd.balconyArea} kvm${pd.balconyDirection ? `, ${pd.balconyDirection}` : ""}.`);
+  if (pd.gardenDescription) paragraphs.push("Trädgård: storlek, uteplats, växter.");
+  const extras = [pd.storage && "förråd", pd.heating && "uppvärmning", pd.energyClass && "energiklass", pd.specialFeatures && "särskilda egenskaper"].filter(Boolean);
+  if (extras.length > 0) paragraphs.push(`Övrigt: ${extras.join(", ")}.`);
+  if (pd.area || pd.transport || pd.neighborhood) paragraphs.push("Läge: avstånd till kollektivtrafik, butiker, skolor — avsluta med läge.");
+
   const writing_plan = {
     opening: `${pd.address} — ${propertyType} om ${size} kvm`,
+    paragraph_outline: paragraphs,
     must_include: [
       pd.address && "adress", pd.livingArea && "storlek", pd.totalRooms && "rum",
       pd.kitchenDescription && "kök", pd.bathroomDescription && "badrum",
       pd.balconyArea && "balkong", pd.area && "läge",
+      pd.uniqueSellingPoints && "säljpunkter",
     ].filter(Boolean),
     forbidden_phrases: ["erbjuder", "perfekt för", "i hjärtat av", "vilket", "för den som", "fantastisk", "välkommen"],
   };
@@ -2234,9 +2248,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      // Positioneringsguide (Pro + Premium) — byggd från enrichment-data, INGEN extra AI-call
+      // Positioneringsguide — byggd från enrichment-data, INGEN extra AI-call
+      // Available to ALL tiers (free gets basic, pro/premium gets full)
       let competitorAnalysis = "";
-      if (plan === "pro" || plan === "premium") {
+      {
         const parts: string[] = [];
         const mp = toneAnalysis.market_position;
         if (mp?.segment === "luxury") {
@@ -2259,6 +2274,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           if (brf.status) brfNote += `, ${brf.status}`;
           if (brf.fee) brfNote += `. Avgift ${brf.fee} kr/mån`;
           parts.push(brfNote + " — nämn föreningen positivt om data finns.");
+        }
+        // USP emphasis for ALL tiers
+        const usps = disposition?.property?.unique_selling_points;
+        if (usps) {
+          parts.push(`FÖRSÄLJNINGSARGUMENT (lyft tidigt i texten): ${usps}`);
         }
         if (parts.length > 0) {
           competitorAnalysis = parts.join("\n");
@@ -2341,17 +2361,41 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
       const textCompletion = await openai.chat.completions.create({
         model: aiModel,
         messages: textMessages,
-        max_tokens: 3000,
+        max_tokens: 4500,
         temperature: temperature,
         response_format: { type: "json_object" },
       });
+
+      // Detect truncation — if finish_reason is "length", the JSON was cut off
+      const finishReason = textCompletion.choices[0]?.finish_reason;
+      if (finishReason === "length") {
+        console.warn("[Step 3] WARNING: Output truncated (finish_reason=length). Token limit hit.");
+      }
 
       let result: any;
       try {
         result = safeJsonParse(textCompletion.choices[0]?.message?.content || "{}");
       } catch (e) {
-        console.error("[Step 3] Failed to parse AI response:", e);
-        result = { improvedPrompt: prompt };
+        console.error("[Step 3] Failed to parse AI response, attempting raw extraction:", e);
+        // Try to extract improvedPrompt from truncated JSON
+        const raw = textCompletion.choices[0]?.message?.content || "";
+        const match = raw.match(/"improvedPrompt"\s*:\s*"([\s\S]*?)(?:"|$)/);
+        if (match) {
+          result = { improvedPrompt: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') };
+          console.log("[Step 3] Recovered improvedPrompt from truncated JSON");
+        } else {
+          result = { improvedPrompt: prompt };
+        }
+      }
+
+      // Truncation recovery: if text ends mid-word or mid-sentence, trim to last complete sentence
+      if (result.improvedPrompt && finishReason === "length") {
+        const text = result.improvedPrompt;
+        const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
+        if (lastPeriod > text.length * 0.5) {
+          result.improvedPrompt = text.substring(0, lastPeriod + 1);
+          console.log(`[Step 3] Trimmed truncated text from ${text.length} to ${result.improvedPrompt.length} chars (last complete sentence)`);
+        }
       }
 
       // === QUALITY GATE: Analysera textkvalitet direkt ===
@@ -2367,7 +2411,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
           const retryCompletion = await openai.chat.completions.create({
             model: aiModel,
             messages: textMessages,
-            max_tokens: 3000,
+            max_tokens: 4500,
             temperature: retryTemp,
             response_format: { type: "json_object" },
           });
