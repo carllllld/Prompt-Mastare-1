@@ -10,6 +10,7 @@ const allowlist = [
   "connect-pg-simple",
   "cors",
   "date-fns",
+  "dotenv",
   "drizzle-orm",
   "drizzle-zod",
   "express",
@@ -35,7 +36,7 @@ const allowlist = [
 // Always exclude Replit-specific dev plugins from production builds
 const alwaysExternal = [
   "@replit/vite-plugin-runtime-error-modal",
-  "@replit/vite-plugin-cartographer", 
+  "@replit/vite-plugin-cartographer",
   "@replit/vite-plugin-dev-banner",
   "vite",
 ];

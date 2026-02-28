@@ -12,6 +12,7 @@ import { setupAuth } from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite } from "./vite";
 import emailWebhooks from './routes/email-webhooks';
+// dotenv loaded via environment variables
 
 // Polyfill __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
