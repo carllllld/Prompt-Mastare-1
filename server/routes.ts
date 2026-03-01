@@ -1658,10 +1658,14 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
       condition: pd.condition || null,
       energy_class: pd.energyClass || null,
       elevator: pd.elevator || false,
+      fastighetsbeteckning: pd.fastighetsbeteckning || null,
+      renovation_year: pd.renoveringsar || null,
       materials: {
         floors: pd.flooring || null,
         kitchen: pd.kitchenDescription || null,
         bathroom: pd.bathroomDescription || null,
+        construction: pd.konstruktionMaterial || null,
+        roof: pd.taktyp || null,
       },
       balcony: pd.balconyArea ? {
         exists: true, direction: pd.balconyDirection || null, size: `${pd.balconyArea} kvm`,
@@ -1679,6 +1683,8 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
     economics: {
       price: Number(pd.price) || null,
       fee: Number(pd.monthlyFee) || null,
+      taxeringsvarde: Number(pd.taxeringsvarde) || null,
+      tomtrattsavgald: Number(pd.tomtrattsavgald) || null,
       association: pd.brfName ? { name: pd.brfName } : null,
     },
     location: {

@@ -42,6 +42,12 @@ interface PropertyFormData {
   gardenDescription: string;
   specialFeatures: string;
   otherInfo: string;
+  fastighetsbeteckning: string;
+  taxeringsvarde: string;
+  tomtrattsavgald: string;
+  konstruktionMaterial: string;
+  taktyp: string;
+  renoveringsar: string;
   platform: "hemnet" | "booli" | "general";
   writingStyle: "factual" | "balanced" | "selling";
 }
@@ -79,6 +85,16 @@ const USP_CHIPS = [
   "Öppen planlösning", "Nytt kök", "Nytt badrum", "Hög takhöjd",
   "Originaldetaljer", "Nära centrum", "Nära kollektivtrafik",
   "Gavellägenhet", "Stort förråd", "Ingen insyn",
+];
+const PARKING_CHIPS = [
+  "Garage", "Dubbelgarage", "Carport", "P-plats på gård", "Gatumarkering",
+  "Parkeringshus", "Laddplats elbil",
+];
+const ROOF_CHIPS = [
+  "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak", "Sedum/grönt tak",
+];
+const MATERIAL_CHIPS = [
+  "Trä", "Tegel", "Betong", "Puts", "Leca",
 ];
 const PROPERTY_CONDITIONS = [
   "Nyskick", "Mycket gott skick", "Gott skick", "Bra skick", "Behöver renoveras",
@@ -179,6 +195,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [specialChips, setSpecialChips] = useState<string[]>([]);
   const [gardenChips, setGardenChips] = useState<string[]>([]);
   const [uspChips, setUspChips] = useState<string[]>([]);
+  const [parkingChips, setParkingChips] = useState<string[]>([]);
+  const [roofChips, setRoofChips] = useState<string[]>([]);
+  const [materialChips, setMaterialChips] = useState<string[]>([]);
 
   // UI state
   const [showDetails, setShowDetails] = useState(false);
@@ -240,6 +259,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       gardenDescription: "",
       specialFeatures: "",
       otherInfo: "",
+      fastighetsbeteckning: "",
+      taxeringsvarde: "",
+      tomtrattsavgald: "",
+      konstruktionMaterial: "",
+      taktyp: "",
+      renoveringsar: "",
       platform: "hemnet",
       writingStyle: "balanced",
     },
@@ -270,6 +295,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       specialFeatures: mergeChipsAndText(specialChips, values.specialFeatures),
       gardenDescription: mergeChipsAndText(gardenChips, values.gardenDescription),
       uniqueSellingPoints: mergeChipsAndText(uspChips, values.uniqueSellingPoints),
+      parking: mergeChipsAndText(parkingChips, values.parking),
+      konstruktionMaterial: mergeChipsAndText(materialChips, values.konstruktionMaterial),
+      taktyp: roofChips.length > 0 ? roofChips.join(", ") : values.taktyp,
       balconyArea: hasBalcony ? values.balconyArea : "",
       balconyDirection: hasBalcony ? values.balconyDirection : "",
     };
@@ -289,6 +317,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       const feeLabel = isApartmentType ? "Avgift" : "Driftskostnad";
       d += `${feeLabel}: ${merged.monthlyFee} kr/mån\n`;
     }
+
+    if (merged.fastighetsbeteckning) d += `Fastighetsbeteckning: ${merged.fastighetsbeteckning}\n`;
+    if (merged.taxeringsvarde) d += `Taxeringsvärde: ${merged.taxeringsvarde} kr\n`;
+    if (merged.tomtrattsavgald) d += `Tomträttsavgäld: ${merged.tomtrattsavgald} kr/år\n`;
+    if (merged.renoveringsar) d += `Renoverat: ${merged.renoveringsar}\n`;
 
     d += "\n=== YTOR ===\n";
     if (merged.livingArea) d += `Boarea: ${merged.livingArea} kvm\n`;
@@ -322,10 +355,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       d += "\n=== BADRUM ===\n";
       d += `${merged.bathroomDescription}\n`;
     }
-    if (merged.flooring || merged.heating) {
+    if (merged.flooring || merged.heating || merged.konstruktionMaterial || merged.taktyp) {
       d += "\n=== MATERIAL & TEKNIK ===\n";
       if (merged.flooring) d += `Golvmaterial: ${merged.flooring}\n`;
       if (merged.heating) d += `Uppvärmning: ${merged.heating}\n`;
+      if (merged.konstruktionMaterial) d += `Byggnadsmaterial: ${merged.konstruktionMaterial}\n`;
+      if (merged.taktyp) d += `Taktyp: ${merged.taktyp}\n`;
     }
     if (merged.view || merged.neighborhood || merged.transport || merged.parking) {
       d += "\n=== LÄGE & OMGIVNING ===\n";
@@ -529,68 +564,106 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
           {/* Apartment-specific: Floor, BRF, BuildYear, Elevator */}
           {isApartmentType && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-              <FormField control={form.control} name="floor" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
-                  <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="brfName" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
-                  <FormControl><Input placeholder="BRF Solhemmet" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="buildYear" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                  <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="elevator" render={({ field }) => (
-                <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
-                  <FormControl>
-                    <button
-                      type="button"
-                      onClick={() => field.onChange(!field.value)}
-                      className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium"
-                      style={{
-                        background: field.value ? "#2D6A4F" : "#fff",
-                        color: field.value ? "#fff" : "#6B7280",
-                        borderColor: field.value ? "#2D6A4F" : "#E8E5DE",
-                      }}
-                    >
-                      {field.value ? "✓ Hiss" : "Hiss"}
-                    </button>
-                  </FormControl>
-                </FormItem>
-              )} />
-            </div>
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                <FormField control={form.control} name="floor" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
+                    <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="brfName" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
+                    <FormControl><Input placeholder="BRF Solhemmet" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="buildYear" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                    <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="elevator" render={({ field }) => (
+                  <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
+                    <FormControl>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange(!field.value)}
+                        className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium"
+                        style={{
+                          background: field.value ? "#2D6A4F" : "#fff",
+                          color: field.value ? "#fff" : "#6B7280",
+                          borderColor: field.value ? "#2D6A4F" : "#E8E5DE",
+                        }}
+                      >
+                        {field.value ? "✓ Hiss" : "Hiss"}
+                      </button>
+                    </FormControl>
+                  </FormItem>
+                )} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
+                    <FormControl><Input type="number" placeholder="1 200 000" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="renoveringsar" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
+                    <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            </>
           )}
 
-          {/* House/Villa-specific: BuildYear, LotArea, Parking */}
+          {/* House/Villa-specific */}
           {isHouseType && (
-            <div className="grid grid-cols-3 gap-3 mt-3">
-              <FormField control={form.control} name="buildYear" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                  <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="lotArea" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
-                  <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="parking" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Parkering</FormLabel>
-                  <FormControl><Input placeholder="Garage, carport" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <FormField control={form.control} name="buildYear" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                    <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="lotArea" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
+                    <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                <FormField control={form.control} name="fastighetsbeteckning" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Fastighetsbeteckning</FormLabel>
+                    <FormControl><Input placeholder="Solna Hagalund 1:23" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
+                    <FormControl><Input type="number" placeholder="2 500 000" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="tomtrattsavgald" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Tomträttsavgäld (kr/år)</FormLabel>
+                    <FormControl><Input type="number" placeholder="8 000" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="renoveringsar" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
+                    <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            </>
           )}
 
           {/* Balcony toggle + details */}
@@ -781,8 +854,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 </FormItem>
               )} />
 
-              {/* Energy, Storage, Parking (apartment) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* Energy & Storage */}
+              <div className="grid grid-cols-2 gap-3">
                 <FormField control={form.control} name="energyClass" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
@@ -800,15 +873,32 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <FormControl><Input placeholder="8 kvm i källare" {...field} className="h-10" /></FormControl>
                   </FormItem>
                 )} />
-                {isApartmentType && (
-                  <FormField control={form.control} name="parking" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Parkering</FormLabel>
-                      <FormControl><Input placeholder="Garage, P-plats" {...field} className="h-10" /></FormControl>
-                    </FormItem>
-                  )} />
-                )}
               </div>
+
+              {/* Parking chips */}
+              <div>
+                <span className="text-xs text-gray-500 font-medium block mb-2">Parkering</span>
+                <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} />
+                <FormField control={form.control} name="parking" render={({ field }) => (
+                  <FormItem className="mt-2">
+                    <FormControl><Input placeholder="Övrigt: t.ex. garage med el, 2 p-platser" {...field} className="h-9 text-xs" /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+
+              {/* House/Villa: Building material + roof type */}
+              {isHouseType && (
+                <>
+                  <div>
+                    <span className="text-xs text-gray-500 font-medium block mb-2">Byggnadsmaterial</span>
+                    <ChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} />
+                  </div>
+                  <div>
+                    <span className="text-xs text-gray-500 font-medium block mb-2">Taktyp</span>
+                    <ChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} />
+                  </div>
+                </>
+              )}
 
               {/* Other info */}
               <FormField control={form.control} name="otherInfo" render={({ field }) => (
@@ -1013,6 +1103,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </Button>
         </div>
       </form>
-    </Form>
+    </Form >
   );
 }
