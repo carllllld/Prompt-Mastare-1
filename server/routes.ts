@@ -2021,11 +2021,25 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         });
       }
 
-      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls } = req.body;
+      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls, model } = req.body;
       const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
-      // Bestäm AI-modell baserat på plan
-      const aiModel = (plan === "pro" || plan === "premium") ? "gpt-4o" : "gpt-4o-mini";
+      // Model routing: Free gets GPT-5-mini, Pro/Premium can choose
+      let aiModel: string;
+      if (plan === "free") {
+        aiModel = "gpt-5-mini";
+      } else if (plan === "pro" || plan === "premium") {
+        // User's choice or default to GPT-5.2
+        aiModel = model || "gpt-5.2";
+        // Validate model choice
+        if (!["gpt-5.2", "claude-sonnet-4.6"].includes(aiModel)) {
+          aiModel = "gpt-5.2"; // fallback
+        }
+      } else {
+        aiModel = "gpt-5-mini"; // fallback
+      }
+
+      console.log(`[Model] Plan: ${plan}, Selected: ${aiModel}`);
 
       // === DIFFERENTIERAD TEMPERATURE PER STIL OCH PLAN ===
       // Factual: Låg temp för precision, Balanserad: Medium temp för naturlighet, Säljande: Hög temp för kreativitet
@@ -2233,7 +2247,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ];
 
           const planCompletion = await openai.chat.completions.create({
-            model: plan === "premium" ? "gpt-4o" : "gpt-4o-mini",
+            model: plan === "premium" ? (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2") : (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2"),
             messages: planMessages,
             max_tokens: 1500,
             temperature: 0.1,
@@ -2492,7 +2506,7 @@ ERSÄTTNINGSTABELL:
             ];
 
             const correctionCompletion = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
+              model: "gpt-5-mini",
               messages: correctionMessages,
               max_tokens: 4500,
               temperature: 0.05,
@@ -2590,7 +2604,7 @@ REGLER:
           ];
 
           const factCheckCompletion = await openai.chat.completions.create({
-            model: plan === "premium" ? "gpt-4o" : "gpt-4o-mini",
+            model: plan === "premium" ? (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2") : (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2"),
             messages: factCheckMessages,
             max_tokens: 2500,
             temperature: 0.1,
@@ -2671,7 +2685,7 @@ Svara med JSON i formatet:
 
         try {
           const improvementCompletion = await openai.chat.completions.create({
-            model: plan === "premium" ? "gpt-4o" : "gpt-4o-mini",
+            model: plan === "premium" ? (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2") : (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2"),
             messages: improvementMessages,
             max_tokens: 800,
             temperature: 0.3,

@@ -184,6 +184,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [showDetails, setShowDetails] = useState(false);
   const [wordCountMin, setWordCountMin] = useState(350);
   const [wordCountMax, setWordCountMax] = useState(450);
+  const [selectedModel, setSelectedModel] = useState<"gpt-5.2" | "claude-sonnet-4.6">("gpt-5.2");
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   const [addressLookupResult, setAddressLookupResult] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -358,6 +359,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       writingStyle: merged.writingStyle,
       propertyData: merged,
       ...(isPro && { wordCountMin, wordCountMax }),
+      ...(isPro && { model: selectedModel }),
       ...(uploadedImages.length > 0 && { imageUrls: uploadedImages }),
     });
   };
@@ -902,6 +904,30 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          )}
+
+          {/* Pro: AI model selection */}
+          {isPro && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
+              <Select value={selectedModel} onValueChange={(v: "gpt-5.2" | "claude-sonnet-4.6") => setSelectedModel(v)}>
+                <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gpt-5.2">
+                    <div className="flex flex-col">
+                      <span>GPT-5.2</span>
+                      <span className="text-xs text-gray-400">Bäst värde</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="claude-sonnet-4.6">
+                    <div className="flex flex-col">
+                      <span>Claude Sonnet 4.6</span>
+                      <span className="text-xs text-gray-400">Bästa svenska</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
 

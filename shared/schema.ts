@@ -85,6 +85,7 @@ export const optimizeRequestSchema = z.object({
   wordCountMax: z.number().optional(),
   imageUrls: z.array(z.string()).optional(),
   propertyData: z.record(z.any()).optional(),
+  model: z.enum(["gpt-5.2", "claude-sonnet-4.6"]).optional(), // For Pro/Premium users
 });
 
 export const optimizeResponseSchema = z.object({
