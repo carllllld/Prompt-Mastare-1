@@ -2506,7 +2506,7 @@ ERSÄTTNINGSTABELL:
             ];
 
             const correctionCompletion = await openai.chat.completions.create({
-              model: "gpt-5-mini",
+              model: aiModel,
               messages: correctionMessages,
               max_tokens: 4500,
               temperature: 0.05,

@@ -78,8 +78,8 @@ export type InsertPersonalStyle = z.infer<typeof insertPersonalStyleSchema>;
 
 export const optimizeRequestSchema = z.object({
   prompt: z.string().min(1, "Please enter a prompt to optimize"),
-  type: z.string().default("General"),
-  platform: z.string().default("general"),
+  type: z.string(),
+  platform: z.string(),
   writingStyle: z.enum(["factual", "balanced", "selling"]).default("balanced"),
   wordCountMin: z.number().optional(),
   wordCountMax: z.number().optional(),
