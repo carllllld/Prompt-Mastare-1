@@ -5,6 +5,7 @@ import { Wand2, Minus, Plus, RotateCcw, Loader2, PenLine, Sparkles } from "lucid
 interface TextEditorProps {
   text: string;
   onTextChange: (newText: string) => void;
+  model?: "gpt-5.2" | "claude-sonnet-4.6";
 }
 
 const QUICK_ACTIONS = [
@@ -14,7 +15,7 @@ const QUICK_ACTIONS = [
   { label: "Byt fokus", instruction: "Byt fokus till en annan egenskap. Om kök → fokusera på vitvaror/material. Om läge → fokusera på avstånd.", icon: PenLine },
 ];
 
-export function TextEditor({ text, onTextChange }: TextEditorProps) {
+export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [selectedText, setSelectedText] = useState("");
@@ -97,7 +98,7 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ selectedText, fullText: text, instruction }),
+        body: JSON.stringify({ selectedText, fullText: text, instruction, model }),
       });
 
       if (!response.ok) throw new Error("Rewrite failed");

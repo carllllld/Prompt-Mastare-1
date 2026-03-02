@@ -152,6 +152,18 @@ export const PLAN_LIMITS = {
   premium: { texts: 25, areaSearches: 999999, textEdits: 100, personalStyleAnalyses: 999999 },
 } as const;
 
+// Model-based text edit limits (cost optimization)
+export const MODEL_TEXT_EDIT_LIMITS = {
+  "gpt-5.2": {
+    pro: 40,    // 10 extra edits for cheaper model
+    premium: 120, // 20 extra edits for cheaper model
+  },
+  "claude-sonnet-4.6": {
+    pro: 20,    // 10 fewer edits for expensive model
+    premium: 80, // 20 fewer edits for expensive model
+  },
+} as const;
+
 // Feature access per plan
 export const FEATURE_ACCESS = {
   free: { personalStyle: false, areaSearch: false, textEditing: false, teamFeatures: false, apiAccess: false },

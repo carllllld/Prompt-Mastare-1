@@ -1108,13 +1108,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <SelectItem value="gpt-5.2">
                       <div className="flex flex-col">
                         <span className="font-medium">GPT-5.2</span>
-                        <span className="text-xs text-gray-400">Bäst värde • 200-500 ord</span>
+                        <span className="text-xs text-gray-400">Bäst värde • 200-500 ord • 40/120 redigeringar</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="claude-sonnet-4.6">
                       <div className="flex flex-col">
                         <span className="font-medium">Claude Sonnet 4.6</span>
-                        <span className="text-xs text-gray-400">Premium • 400-600 ord</span>
+                        <span className="text-xs text-gray-400">Premium • 400-600 ord • 20/80 redigeringar</span>
                       </div>
                     </SelectItem>
                   </SelectContent>

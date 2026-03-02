@@ -5,7 +5,7 @@ import { createClient, type RedisClientType } from "redis";
 import { storage } from "./storage";
 import { analyzeMarketPosition, getMarketTrends2025 } from "./market-intelligence";
 import { analyzeArchitecturalValue } from "./architectural-intelligence";
-import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
+import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, MODEL_TEXT_EDIT_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
 import OpenAI from "openai";
@@ -2740,6 +2740,7 @@ Svara med JSON i formatet:
           broker_tips: [],
         },
         wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+        model: aiModel,
       });
     } catch (err: any) {
       console.error("Optimize error:", err);
@@ -2756,24 +2757,40 @@ Svara med JSON i formatet:
       return res.status(403).json({ message: "Text-omskrivning är endast för Pro/Premium-användare" });
     }
     try {
-      // Check textEdits usage limit
+      const { selectedText, fullText, instruction, model } = req.body;
+      if (!selectedText || !fullText || !instruction) {
+        return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
+      }
+
+      // Check textEdits usage limit with model-based limits
       const rewriteUsage = await storage.getMonthlyUsage(rewriteUser.id) || {
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
       };
-      const rewriteLimits = PLAN_LIMITS[rewritePlan];
-      if (rewriteUsage.textEditsUsed >= rewriteLimits.textEdits) {
+
+      // Get model-based limit or fallback to plan limit
+      const getModelBasedLimit = (plan: PlanType, aiModel: string) => {
+        if (aiModel === "gpt-5.2" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]]) {
+          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]];
+        }
+        if (aiModel === "claude-sonnet-4.6" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]]) {
+          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]];
+        }
+        return PLAN_LIMITS[plan].textEdits;
+      };
+
+      const rewriteLimit = getModelBasedLimit(rewritePlan, model);
+      if (rewriteUsage.textEditsUsed >= rewriteLimit) {
+        const modelText = model === "gpt-5.2" ? "GPT-5.2" : "Claude 4.6";
         return res.status(429).json({
-          message: rewritePlan === "pro"
-            ? `Du har nått din gräns för AI-textredigeringar (${rewriteLimits.textEdits}/månad). Uppgradera till Premium för 100 per månad!`
-            : `Du har nått din gräns för AI-textredigeringar (${rewriteLimits.textEdits}/månad). Behöver du mer? Kontakta oss för en Byrå-plan.`,
+          message: `Du har nått din gräns för AI-textredigeringar (${rewriteLimit}/månad) med ${modelText}. ${rewritePlan === "pro" && model === "claude-sonnet-4.6"
+            ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].pro} redigeringar/månad.`
+            : rewritePlan === "premium" && model === "claude-sonnet-4.6"
+              ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].premium} redigeringar/månad.`
+              : `Uppgradera till Premium för fler redigeringar.`
+            }`,
           limitReached: true,
           upgradeTo: rewritePlan === "pro" ? "premium" : null,
         });
-      }
-
-      const { selectedText, fullText, instruction } = req.body;
-      if (!selectedText || !fullText || !instruction) {
-        return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
       }
 
       // Load personal style for filtering
@@ -3704,7 +3721,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return res.status(404).json({ message: "Användare hittades inte" });
       }
 
-      const { originalText, selectedText, improvementType, context } = req.body;
+      const { originalText, selectedText, improvementType, context, model } = req.body;
 
       if (!selectedText || !improvementType) {
         return res.status(400).json({ message: "Markerad text och förbättringstyp krävs" });
@@ -3723,16 +3740,32 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         console.warn("[Improve Text] Failed to load personal style:", e);
       }
 
-      // Check textEdits usage limit
+      // Check textEdits usage limit with model-based limits
       const improveUsage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
       };
-      const improveLimits = PLAN_LIMITS[plan];
-      if (improveUsage.textEditsUsed >= improveLimits.textEdits) {
+
+      // Get model-based limit or fallback to plan limit
+      const getModelBasedLimit = (plan: PlanType, aiModel: string) => {
+        if (aiModel === "gpt-5.2" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]]) {
+          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]];
+        }
+        if (aiModel === "claude-sonnet-4.6" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]]) {
+          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]];
+        }
+        return PLAN_LIMITS[plan].textEdits;
+      };
+
+      const improveLimit = getModelBasedLimit(plan, model);
+      if (improveUsage.textEditsUsed >= improveLimit) {
+        const modelText = model === "gpt-5.2" ? "GPT-5.2" : "Claude 4.6";
         return res.status(429).json({
-          message: plan === "pro"
-            ? `Du har nått din gräns för AI-textredigeringar (${improveLimits.textEdits}/månad). Uppgradera till Premium för 100 per månad!`
-            : `Du har nått din gräns för AI-textredigeringar (${improveLimits.textEdits}/månad). Behöver du mer? Kontakta oss för en Byrå-plan.`,
+          message: `Du har nått din gräns för AI-textredigeringar (${improveLimit}/månad) med ${modelText}. ${plan === "pro" && model === "claude-sonnet-4.6"
+              ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].pro} redigeringar/månad.`
+              : plan === "premium" && model === "claude-sonnet-4.6"
+                ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].premium} redigeringar/månad.`
+                : `Uppgradera till Premium för fler redigeringar.`
+            }`,
           limitReached: true,
           upgradeTo: plan === "pro" ? "premium" : null,
         });
