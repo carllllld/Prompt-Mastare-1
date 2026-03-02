@@ -219,9 +219,19 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // UI state
   const [showDetails, setShowDetails] = useState(false);
-  const [wordCountMin, setWordCountMin] = useState(350);
-  const [wordCountMax, setWordCountMax] = useState(450);
   const [selectedModel, setSelectedModel] = useState<"gpt-5.2" | "claude-sonnet-4.6">("gpt-5.2");
+
+  // Model-based word limits
+  const getModelWordLimits = (model: "gpt-5.2" | "claude-sonnet-4.6") => {
+    if (model === "claude-sonnet-4.6") {
+      return { min: 400, max: 600, defaultMin: 450, defaultMax: 550 };
+    }
+    return { min: 200, max: 500, defaultMin: 350, defaultMax: 450 };
+  };
+
+  const modelLimits = getModelWordLimits(selectedModel);
+  const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
+  const [wordCountMax, setWordCountMax] = useState(modelLimits.defaultMax);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   const [addressLookupResult, setAddressLookupResult] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -238,6 +248,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     setWordCountMax(val);
     if (val < wordCountMin) setWordCountMin(val);
   };
+
+  // Update word limits when model changes
+  useEffect(() => {
+    const newLimits = getModelWordLimits(selectedModel);
+    setWordCountMin(newLimits.defaultMin);
+    setWordCountMax(newLimits.defaultMax);
+  }, [selectedModel]);
 
   const toggleChip = useCallback((list: string[], setList: (v: string[]) => void, chip: string) => {
     setList(list.includes(chip) ? list.filter(c => c !== chip) : [...list, chip]);
@@ -1062,8 +1079,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <Select value={String(wordCountMin)} onValueChange={(v) => handleWordCountMin(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {[200, 250, 300, 350, 400, 450, 500].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                      {Array.from({ length: modelLimits.max - modelLimits.min + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1071,11 +1088,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <Select value={String(wordCountMax)} onValueChange={(v) => handleWordCountMax(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {[300, 350, 400, 450, 500, 550, 600].map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                      {Array.from({ length: modelLimits.max - modelLimits.min + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <span className="text-xs text-gray-400 ml-2">({selectedModel === "claude-sonnet-4.6" ? "Premium-modell" : "Standard-modell"})</span>
                 </div>
               </div>
             )}
@@ -1085,18 +1103,18 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
                 <Select value={selectedModel} onValueChange={(v: "gpt-5.2" | "claude-sonnet-4.6") => setSelectedModel(v)}>
-                  <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-48 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gpt-5.2">
                       <div className="flex flex-col">
-                        <span>GPT-5.2</span>
-                        <span className="text-xs text-gray-400">Bäst värde</span>
+                        <span className="font-medium">GPT-5.2</span>
+                        <span className="text-xs text-gray-400">Bäst värde • 200-500 ord</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="claude-sonnet-4.6">
                       <div className="flex flex-col">
-                        <span>Claude Sonnet 4.6</span>
-                        <span className="text-xs text-gray-400">Bästa svenska</span>
+                        <span className="font-medium">Claude Sonnet 4.6</span>
+                        <span className="text-xs text-gray-400">Premium • 400-600 ord</span>
                       </div>
                     </SelectItem>
                   </SelectContent>

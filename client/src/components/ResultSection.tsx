@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2 } from "lucide-react";
+import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2, Sparkles, Edit3, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { TextEditor } from "./TextEditor";
@@ -94,6 +94,15 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <BarChart3 className="w-3 h-3" />
           {wordCount} ord
         </div>
+        {result.model && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{
+            background: result.model === "claude-sonnet-4.6" ? "#FEF3C7" : "#E8F5E9",
+            color: result.model === "claude-sonnet-4.6" ? "#92400E" : "#2D6A4F"
+          }}>
+            <Sparkles className="w-3 h-3" />
+            {result.model === "claude-sonnet-4.6" ? "Claude 4.6" : "GPT-5.2"}
+          </div>
+        )}
         {qualityScore != null && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
             style={{
@@ -126,6 +135,10 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
             <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
               Objektbeskrivning
             </span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+              <Edit3 className="w-3 h-3" />
+              Redigerbar
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <PdfExport result={liveResult} />
@@ -138,6 +151,10 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           </div>
         </div>
         <div className="p-6 sm:p-8">
+          <div className="mb-3 flex items-center gap-2 text-xs text-gray-500">
+            <Info className="w-3 h-3" />
+            <span>Du kan redigera texten direkt. Ändringarna syns i PDF-export och kopiering.</span>
+          </div>
           <TextEditor text={editedText} onTextChange={setEditedText} />
         </div>
       </div>
