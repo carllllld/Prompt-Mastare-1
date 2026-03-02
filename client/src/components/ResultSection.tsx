@@ -32,10 +32,17 @@ function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
           <Icon className="w-3.5 h-3.5" style={{ color: iconColor }} />
           <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>{title}</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={copy} className="h-7 text-xs" style={{ color: "#6B7280" }}>
-          {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
-          {copied ? "Kopierad!" : "Kopiera"}
-        </Button>
+        <button
+          onClick={copy}
+          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          title="Kopiera text"
+        >
+          {copied ? (
+            <Check className="w-3.5 h-3.5" style={{ color: "#2D6A4F" }} />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+          )}
+        </button>
       </div>
       <div className="p-5 text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#4B5563" }}>
         {text}

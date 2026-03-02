@@ -4,9 +4,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus } from "lucide-react";
-import { useState, useCallback } from "react";
+import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info, CheckCircle2 } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -105,26 +106,43 @@ const BALCONY_DIRECTIONS = [
 ];
 
 // ── HELPER: Chip Selector ──
-function ChipSelector({ chips, selected, onToggle }: {
+function ChipSelector({ chips, selected, onToggle, variant = "default" }: {
   chips: string[];
   selected: string[];
   onToggle: (chip: string) => void;
+  variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
 }) {
+  const getColors = (isOn: boolean) => {
+    if (!isOn) return { background: "#FAFAF7", color: "#6B7280", borderColor: "#E8E5DE" };
+
+    const colors = {
+      default: { background: "#2D6A4F", color: "#fff", borderColor: "#2D6A4F" },
+      kitchen: { background: "#FEF3C7", color: "#92400E", borderColor: "#FCD34D" },
+      bathroom: { background: "#DBEAFE", color: "#1E40AF", borderColor: "#93C5FD" },
+      flooring: { background: "#F3E8FF", color: "#6B21A8", borderColor: "#D8B4FE" },
+      heating: { background: "#FEE2E2", color: "#991B1B", borderColor: "#FCA5A5" },
+      special: { background: "#E0E7FF", color: "#3730A3", borderColor: "#C7D2FE" },
+      garden: { background: "#D1FAE5", color: "#065F46", borderColor: "#6EE7B7" },
+      usp: { background: "#FEF3C7", color: "#92400E", borderColor: "#FCD34D" },
+      parking: { background: "#E0F2FE", color: "#075985", borderColor: "#7DD3FC" },
+      roof: { background: "#FED7AA", color: "#9A3412", borderColor: "#FDBA74" },
+      material: { background: "#E5E7EB", color: "#1F2937", borderColor: "#D1D5DB" },
+    };
+    return colors[variant];
+  };
+
   return (
     <div className="flex flex-wrap gap-1.5">
       {chips.map((chip) => {
         const isOn = selected.includes(chip);
+        const colors = getColors(isOn);
         return (
           <button
             key={chip}
             type="button"
             onClick={() => onToggle(chip)}
             className="px-2.5 py-1 text-[11px] rounded-full border transition-all font-medium select-none"
-            style={{
-              background: isOn ? "#2D6A4F" : "#FAFAF7",
-              color: isOn ? "#fff" : "#6B7280",
-              borderColor: isOn ? "#2D6A4F" : "#E8E5DE",
-            }}
+            style={colors}
           >
             {chip}
           </button>
@@ -437,672 +455,741 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     }
   };
 
+  // Keyboard shortcut: Cmd/Ctrl+Enter to submit
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        form.handleSubmit(onLocalSubmit)();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [form]);
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-0">
+    <TooltipProvider>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-0">
 
-        {/* ── SECTION 1: OBJEKTTYP ── */}
-        <div className="pb-5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider block mb-2.5" style={{ color: "#9CA3AF" }}>
-            Objekttyp
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {([
-              { value: "apartment" as const, label: "Lägenhet" },
-              { value: "house" as const, label: "Hus" },
-              { value: "townhouse" as const, label: "Radhus" },
-              { value: "villa" as const, label: "Villa" },
-            ]).map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => form.setValue("propertyType", t.value)}
-                className="px-4 py-2 text-sm rounded-lg border transition-all font-medium"
-                style={{
-                  background: selectedType === t.value ? "#2D6A4F" : "#fff",
-                  color: selectedType === t.value ? "#fff" : "#4B5563",
-                  borderColor: selectedType === t.value ? "#2D6A4F" : "#E8E5DE",
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── SECTION 2: GRUNDFAKTA ── */}
-        <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
-          <label className="text-[11px] font-semibold uppercase tracking-wider block mb-3" style={{ color: "#9CA3AF" }}>
-            Grundfakta
-          </label>
-
-          {/* Address + Area */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
-                <div className="flex gap-2">
-                  <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10 flex-1" /></FormControl>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={addressLookupLoading || !field.value}
-                    className="h-10 text-[11px] px-3 whitespace-nowrap"
-                    style={{ borderColor: "#D1D5DB", color: addressLookupLoading ? "#9CA3AF" : "#2D6A4F" }}
-                    onClick={() => handleAddressLookup(field.value)}
-                  >
-                    {addressLookupLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <><MapPin className="w-3.5 h-3.5 mr-1" />Sök läge</>
-                    )}
-                  </Button>
-                </div>
-                {addressLookupResult && (
-                  <p className="text-[10px] mt-1" style={{ color: "#2D6A4F" }}>
-                    ✓ {addressLookupResult} — kollektivtrafik & närområde ifyllt
-                  </p>
-                )}
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-gray-500">Stadsdel *</FormLabel>
-                <FormControl><Input placeholder="Vasastan" {...field} className="h-10" /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-          </div>
-
-          {/* Size + Price + Fee */}
-          <div className="grid grid-cols-3 gap-3 mt-3">
-            <FormField control={form.control} name="livingArea" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-gray-500">Boarea (kvm)</FormLabel>
-                <FormControl><Input type="number" placeholder="85" {...field} className="h-10" /></FormControl>
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="price" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-gray-500">Pris (kr)</FormLabel>
-                <FormControl><Input type="number" placeholder="4 500 000" {...field} className="h-10" /></FormControl>
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="monthlyFee" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-gray-500">
-                  {isApartmentType ? "Avgift (kr/mån)" : "Driftskostnad"}
-                </FormLabel>
-                <FormControl><Input type="number" placeholder={isApartmentType ? "3 500" : "2 000"} {...field} className="h-10" /></FormControl>
-              </FormItem>
-            )} />
-          </div>
-
-          {/* Rooms — number steppers + Condition */}
-          <div className="flex items-end gap-6 mt-4">
-            <NumberStepper label="Rum" value={rooms} onChange={setRooms} min={1} max={15} />
-            <NumberStepper label="Sovrum" value={bedrooms} onChange={setBedrooms} min={0} max={10} />
-            <NumberStepper label="Badrum" value={bathrooms} onChange={setBathrooms} min={1} max={6} />
-            <div className="flex-1">
-              <FormField control={form.control} name="condition" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Skick</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger className="h-10"><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {PROPERTY_CONDITIONS.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )} />
+          {/* ── SECTION 1: OBJEKTTYP ── */}
+          <div className="pb-5">
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                Objekttyp
+              </label>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+                <CheckCircle2 className="w-3 h-3" />
+                Steg 1/3
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { value: "apartment" as const, label: "Lägenhet" },
+                { value: "house" as const, label: "Hus" },
+                { value: "townhouse" as const, label: "Radhus" },
+                { value: "villa" as const, label: "Villa" },
+              ]).map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => form.setValue("propertyType", t.value)}
+                  className="px-4 py-2 text-sm rounded-lg border transition-all font-medium"
+                  style={{
+                    background: selectedType === t.value ? "#2D6A4F" : "#fff",
+                    color: selectedType === t.value ? "#fff" : "#4B5563",
+                    borderColor: selectedType === t.value ? "#2D6A4F" : "#E8E5DE",
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Apartment-specific: Floor, BRF, BuildYear, Elevator */}
-          {isApartmentType && (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                <FormField control={form.control} name="floor" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
-                    <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="brfName" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
-                    <FormControl><Input placeholder="BRF Solhemmet" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="buildYear" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                    <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="elevator" render={({ field }) => (
-                  <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
-                    <FormControl>
-                      <button
-                        type="button"
-                        onClick={() => field.onChange(!field.value)}
-                        className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium"
-                        style={{
-                          background: field.value ? "#2D6A4F" : "#fff",
-                          color: field.value ? "#fff" : "#6B7280",
-                          borderColor: field.value ? "#2D6A4F" : "#E8E5DE",
-                        }}
-                      >
-                        {field.value ? "✓ Hiss" : "Hiss"}
-                      </button>
-                    </FormControl>
-                  </FormItem>
-                )} />
+          {/* ── SECTION 2: GRUNDFAKTA ── */}
+          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                Grundfakta
+              </label>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#92400E" }} />
+                Steg 2/3
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
-                    <FormControl><Input type="number" placeholder="1 200 000" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="renoveringsar" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
-                    <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-            </>
-          )}
+            </div>
 
-          {/* House/Villa-specific */}
-          {isHouseType && (
-            <>
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                <FormField control={form.control} name="buildYear" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                    <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="lotArea" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
-                    <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                <FormField control={form.control} name="fastighetsbeteckning" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Fastighetsbeteckning</FormLabel>
-                    <FormControl><Input placeholder="Solna Hagalund 1:23" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
-                    <FormControl><Input type="number" placeholder="2 500 000" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="tomtrattsavgald" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Tomträttsavgäld (kr/år)</FormLabel>
-                    <FormControl><Input type="number" placeholder="8 000" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="renoveringsar" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
-                    <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-            </>
-          )}
+            {/* Address + Area */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
+                  <div className="flex gap-2">
+                    <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10 flex-1" /></FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={addressLookupLoading || !field.value}
+                      className="h-10 text-[11px] px-3 whitespace-nowrap"
+                      style={{ borderColor: "#D1D5DB", color: addressLookupLoading ? "#9CA3AF" : "#2D6A4F" }}
+                      onClick={() => handleAddressLookup(field.value)}
+                    >
+                      {addressLookupLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <><MapPin className="w-3.5 h-3.5 mr-1" />Sök läge</>
+                      )}
+                    </Button>
+                  </div>
+                  {addressLookupResult && (
+                    <p className="text-[10px] mt-1" style={{ color: "#2D6A4F" }}>
+                      ✓ {addressLookupResult} — kollektivtrafik & närområde ifyllt
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Stadsdel *</FormLabel>
+                  <FormControl><Input placeholder="Vasastan" {...field} className="h-10" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
 
-          {/* Balcony toggle + details */}
-          <div className="mt-3 flex items-start gap-4">
-            <button
-              type="button"
-              onClick={() => setHasBalcony(!hasBalcony)}
-              className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium shrink-0 mt-5"
-              style={{
-                background: hasBalcony ? "#2D6A4F" : "#fff",
-                color: hasBalcony ? "#fff" : "#6B7280",
-                borderColor: hasBalcony ? "#2D6A4F" : "#E8E5DE",
-              }}
-            >
-              {hasBalcony ? "✓ Balkong/Uteplats" : "Balkong/Uteplats"}
-            </button>
-            {hasBalcony && (
-              <div className="flex gap-3 flex-1">
-                <FormField control={form.control} name="balconyArea" render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel className="text-xs text-gray-500">Storlek (kvm)</FormLabel>
-                    <FormControl><Input type="number" placeholder="8" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="balconyDirection" render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel className="text-xs text-gray-500">Väderstreck</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+            {/* Size + Price + Fee */}
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              <FormField control={form.control} name="livingArea" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Boarea (kvm)</FormLabel>
+                  <FormControl><Input type="number" placeholder="85" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="price" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Pris (kr)</FormLabel>
+                  <FormControl><Input type="number" placeholder="4 500 000" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="monthlyFee" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">
+                    {isApartmentType ? "Avgift (kr/mån)" : "Driftskostnad"}
+                  </FormLabel>
+                  <FormControl><Input type="number" placeholder={isApartmentType ? "3 500" : "2 000"} {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+
+            {/* Rooms — number steppers + Condition */}
+            <div className="flex items-end gap-6 mt-4">
+              <NumberStepper label="Rum" value={rooms} onChange={setRooms} min={1} max={15} />
+              <NumberStepper label="Sovrum" value={bedrooms} onChange={setBedrooms} min={0} max={10} />
+              <NumberStepper label="Badrum" value={bathrooms} onChange={setBathrooms} min={1} max={6} />
+              <div className="flex-1">
+                <FormField control={form.control} name="condition" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Skick</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl><SelectTrigger className="h-10"><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {BALCONY_DIRECTIONS.map((dir) => <SelectItem key={dir} value={dir}>{dir}</SelectItem>)}
+                        {PROPERTY_CONDITIONS.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormItem>
                 )} />
               </div>
+            </div>
+
+            {/* Apartment-specific: Floor, BRF, BuildYear, Elevator */}
+            {isApartmentType && (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                  <FormField control={form.control} name="floor" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
+                      <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="brfName" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
+                      <FormControl><Input placeholder="BRF Solhemmet" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="buildYear" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                      <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="elevator" render={({ field }) => (
+                    <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
+                      <FormControl>
+                        <button
+                          type="button"
+                          onClick={() => field.onChange(!field.value)}
+                          className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium"
+                          style={{
+                            background: field.value ? "#2D6A4F" : "#fff",
+                            color: field.value ? "#fff" : "#6B7280",
+                            borderColor: field.value ? "#2D6A4F" : "#E8E5DE",
+                          }}
+                        >
+                          {field.value ? "✓ Hiss" : "Hiss"}
+                        </button>
+                      </FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-1.5">
+                        <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">Skatteverkets värdering. Finns på taxeringsbeslut.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormControl><Input type="number" placeholder="1 200 000" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="renoveringsar" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
+                      <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+              </>
             )}
-          </div>
-        </div>
 
-        {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
-        <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
-          <label className="text-[11px] font-semibold uppercase tracking-wider block mb-3" style={{ color: "#9CA3AF" }}>
-            Kök & Badrum
-          </label>
-          <div className="space-y-4">
-            {/* Kitchen chips */}
-            <div>
-              <span className="text-xs text-gray-500 font-medium block mb-2">Kök — välj det som stämmer</span>
-              <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} />
-              <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
-                <FormItem className="mt-2">
-                  <FormControl>
-                    <Input placeholder="Övrigt: märke, renoveringsår, speciella detaljer..." {...field} className="h-9 text-xs" />
-                  </FormControl>
-                </FormItem>
-              )} />
-            </div>
-            {/* Bathroom chips */}
-            <div>
-              <span className="text-xs text-gray-500 font-medium block mb-2">Badrum — välj det som stämmer</span>
-              <ChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} />
-              <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
-                <FormItem className="mt-2">
-                  <FormControl>
-                    <Input placeholder="Övrigt: renoveringsår, speciella detaljer..." {...field} className="h-9 text-xs" />
-                  </FormControl>
-                </FormItem>
-              )} />
-            </div>
-          </div>
-        </div>
+            {/* House/Villa-specific */}
+            {isHouseType && (
+              <>
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <FormField control={form.control} name="buildYear" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
+                      <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="lotArea" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
+                      <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                  <FormField control={form.control} name="fastighetsbeteckning" render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-1.5">
+                        <FormLabel className="text-xs text-gray-500">Fastighetsbeteckning</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">Finns på köpebrev/lagfart. Format: KOMMUN STADSDEL 1:23</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormControl><Input placeholder="Solna Hagalund 1:23" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-1.5">
+                        <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">Skatteverkets värdering. Finns på taxeringsbeslut.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormControl><Input type="number" placeholder="2 500 000" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="tomtrattsavgald" render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center gap-1.5">
+                        <FormLabel className="text-xs text-gray-500">Tomträttsavgäld (kr/år)</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">Årlig avgift till markägare (oftast kommun). Endast för tomträtt.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <FormControl><Input type="number" placeholder="8 000" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="renoveringsar" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
+                      <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+              </>
+            )}
 
-        {/* ── SECTION 4: SÄLJPUNKTER (prominent!) ── */}
-        <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
-          <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "#2D6A4F" }}>
-            ★ Vad gör objektet speciellt?
-          </label>
-          <p className="text-[10px] text-gray-400 mb-3">
-            Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
-          </p>
-          <ChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} />
-          <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
-            <FormItem className="mt-2">
-              <FormControl>
-                <Textarea
-                  placeholder="T.ex: Balkong 7 kvm i söderläge med kvällssol. Originalparkett från 1920. Tyst innergård."
-                  {...field}
-                  className="min-h-[56px] resize-none text-sm"
-                />
-              </FormControl>
-            </FormItem>
-          )} />
-        </div>
-
-        {/* ── SECTION 5: PLANLÖSNING (optional freetext) ── */}
-        <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
-          <FormField control={form.control} name="layoutDescription" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Planlösning & rum (valfritt)</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="T.ex: Hall med garderob. Öppen planlösning kök/vardagsrum. 2 sovrum, det större ca 12 kvm. Gäst-wc vid hall."
-                  {...field}
-                  className="min-h-[56px] resize-none text-sm"
-                />
-              </FormControl>
-            </FormItem>
-          )} />
-        </div>
-
-        {/* ── SECTION 6: MER DETALJER (expandable) ── */}
-        <div className="border-t" style={{ borderColor: "#E8E5DE" }}>
-          <button
-            type="button"
-            onClick={() => setShowDetails(!showDetails)}
-            className="w-full flex items-center justify-between py-4 text-sm font-medium transition-colors hover:text-gray-700"
-            style={{ color: "#9CA3AF" }}
-          >
-            <span>Material, läge & fler detaljer</span>
-            {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-
-          {showDetails && (
-            <div className="pb-5 space-y-4">
-              {/* Flooring chips */}
-              <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2">Golv</span>
-                <ChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} />
-                <FormField control={form.control} name="flooring" render={({ field }) => (
-                  <FormItem className="mt-2">
-                    <FormControl><Input placeholder="Detaljer: t.ex. ekparkett vardagsrum, klinker badrum" {...field} className="h-9 text-xs" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-
-              {/* Heating chips */}
-              <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2">Uppvärmning</span>
-                <ChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} />
-              </div>
-
-              {/* Special features chips */}
-              <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2">Särskilda egenskaper</span>
-                <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} />
-                <FormField control={form.control} name="specialFeatures" render={({ field }) => (
-                  <FormItem className="mt-2">
-                    <FormControl><Input placeholder="Övrigt: t.ex. fönster bytta 2018, originalstuckatur" {...field} className="h-9 text-xs" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-
-              {/* House/Villa: Garden chips */}
-              {isHouseType && (
-                <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2">Trädgård & uteplats</span>
-                  <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} />
-                  <FormField control={form.control} name="gardenDescription" render={({ field }) => (
-                    <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Övrigt om trädgården..." {...field} className="h-9 text-xs" /></FormControl>
+            {/* Balcony toggle + details */}
+            <div className="mt-3 flex items-start gap-4">
+              <button
+                type="button"
+                onClick={() => setHasBalcony(!hasBalcony)}
+                className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium shrink-0 mt-5"
+                style={{
+                  background: hasBalcony ? "#2D6A4F" : "#fff",
+                  color: hasBalcony ? "#fff" : "#6B7280",
+                  borderColor: hasBalcony ? "#2D6A4F" : "#E8E5DE",
+                }}
+              >
+                {hasBalcony ? "✓ Balkong/Uteplats" : "Balkong/Uteplats"}
+              </button>
+              {hasBalcony && (
+                <div className="flex gap-3 flex-1">
+                  <FormField control={form.control} name="balconyArea" render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel className="text-xs text-gray-500">Storlek (kvm)</FormLabel>
+                      <FormControl><Input type="number" placeholder="8" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="balconyDirection" render={({ field }) => (
+                    <FormItem className="flex-1">
+                      <FormLabel className="text-xs text-gray-500">Väderstreck</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {BALCONY_DIRECTIONS.map((dir) => <SelectItem key={dir} value={dir}>{dir}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </FormItem>
                   )} />
                 </div>
               )}
-
-              {/* View + Transport */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField control={form.control} name="view" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Utsikt</FormLabel>
-                    <FormControl><Input placeholder="Sjöutsikt, parkutsikt, innergård" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="transport" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
-                    <FormControl><Input placeholder="5 min till t-bana, buss utanför" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-
-              {/* Neighborhood */}
-              <FormField control={form.control} name="neighborhood" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
-                  <FormControl><Input placeholder="T.ex: ICA 300 m, grundskola 500 m, nära park" {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-
-              {/* Energy & Storage */}
-              <div className="grid grid-cols-2 gap-3">
-                <FormField control={form.control} name="energyClass" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="storage" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Förråd</FormLabel>
-                    <FormControl><Input placeholder="8 kvm i källare" {...field} className="h-10" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-
-              {/* Parking chips */}
-              <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2">Parkering</span>
-                <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} />
-                <FormField control={form.control} name="parking" render={({ field }) => (
-                  <FormItem className="mt-2">
-                    <FormControl><Input placeholder="Övrigt: t.ex. garage med el, 2 p-platser" {...field} className="h-9 text-xs" /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-
-              {/* House/Villa: Building material + roof type */}
-              {isHouseType && (
-                <>
-                  <div>
-                    <span className="text-xs text-gray-500 font-medium block mb-2">Byggnadsmaterial</span>
-                    <ChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500 font-medium block mb-2">Taktyp</span>
-                    <ChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} />
-                  </div>
-                </>
-              )}
-
-              {/* Other info */}
-              <FormField control={form.control} name="otherInfo" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
-                  <FormControl><Input placeholder="T.ex: Nytt tak 2022. Stambyte 2015." {...field} className="h-10" /></FormControl>
-                </FormItem>
-              )} />
-            </div>
-          )}
-        </div>
-
-        {/* ── SECTION 7: PLATTFORM, STIL & SUBMIT ── */}
-        <div className="border-t pt-5 space-y-4" style={{ borderColor: "#E8E5DE" }}>
-
-          {/* Platform + Writing style — compact */}
-          <div className="flex flex-wrap gap-6">
-            <div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Plattform</span>
-              <div className="flex gap-1.5">
-                {([
-                  { value: "hemnet" as const, label: "Hemnet" },
-                  { value: "booli" as const, label: "Booli" },
-                  { value: "general" as const, label: "Egen sida" },
-                ]).map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => form.setValue("platform", p.value)}
-                    className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium"
-                    style={{
-                      background: selectedPlatform === p.value ? "#2D6A4F" : "#fff",
-                      color: selectedPlatform === p.value ? "#fff" : "#6B7280",
-                      borderColor: selectedPlatform === p.value ? "#2D6A4F" : "#E8E5DE",
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Textstil</span>
-              <div className="flex gap-1.5">
-                {([
-                  { value: "factual" as const, label: "PM-stil" },
-                  { value: "balanced" as const, label: "Balanserad" },
-                  { value: "selling" as const, label: "Säljande" },
-                ]).map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => form.setValue("writingStyle", s.value)}
-                    className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium"
-                    style={{
-                      background: selectedStyle === s.value ? "#1B4332" : "#fff",
-                      color: selectedStyle === s.value ? "#fff" : "#6B7280",
-                      borderColor: selectedStyle === s.value ? "#1B4332" : "#E8E5DE",
-                    }}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-[10px] mt-1.5" style={{ color: "#9CA3AF" }}>
-                {selectedStyle === "factual" && "Ren fakta, kronologisk, noll säljspråk."}
-                {selectedStyle === "balanced" && "Fakta i fokus men med rytm. Lyfter säljpunkter utan klyschor."}
-                {selectedStyle === "selling" && "Klyschfritt men övertygande. Starkare betoning och avslut."}
-              </p>
             </div>
           </div>
 
-          {/* Pro: word count */}
-          {isPro && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
-              <div className="flex items-center gap-2">
-                <Select value={String(wordCountMin)} onValueChange={(v) => handleWordCountMin(Number(v))}>
-                  <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[200, 250, 300, 350, 400, 450, 500].map((n) => (
-                      <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <span className="text-xs text-gray-300">—</span>
-                <Select value={String(wordCountMax)} onValueChange={(v) => handleWordCountMax(Number(v))}>
-                  <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {[300, 350, 400, 450, 500, 550, 600].map((n) => (
-                      <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
+          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+            <label className="text-[11px] font-semibold uppercase tracking-wider block mb-3" style={{ color: "#9CA3AF" }}>
+              Kök & Badrum
+            </label>
+            <div className="space-y-4">
+              {/* Kitchen chips */}
+              <div>
+                <span className="text-xs text-gray-500 font-medium block mb-2">Kök — välj det som stämmer</span>
+                <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" />
+                <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
+                  <FormItem className="mt-2">
+                    <FormControl>
+                      <Input placeholder="Övrigt: märke, renoveringsår, speciella detaljer..." {...field} className="h-9 text-xs" />
+                    </FormControl>
+                  </FormItem>
+                )} />
+              </div>
+              {/* Bathroom chips */}
+              <div>
+                <span className="text-xs text-gray-500 font-medium block mb-2">Badrum — välj det som stämmer</span>
+                <ChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} variant="bathroom" />
+                <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
+                  <FormItem className="mt-2">
+                    <FormControl>
+                      <Input placeholder="Övrigt: renoveringsår, speciella detaljer..." {...field} className="h-9 text-xs" />
+                    </FormControl>
+                  </FormItem>
+                )} />
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Pro: AI model selection */}
-          {isPro && (
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
-              <Select value={selectedModel} onValueChange={(v: "gpt-5.2" | "claude-sonnet-4.6") => setSelectedModel(v)}>
-                <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-5.2">
-                    <div className="flex flex-col">
-                      <span>GPT-5.2</span>
-                      <span className="text-xs text-gray-400">Bäst värde</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="claude-sonnet-4.6">
-                    <div className="flex flex-col">
-                      <span>Claude Sonnet 4.6</span>
-                      <span className="text-xs text-gray-400">Bästa svenska</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Images — Pro feature */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs text-gray-400 font-medium">Bilder (valfritt)</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: "#D4AF37", color: "#fff" }}>Pro</span>
-              {isPro && uploadedImages.length > 0 && (
-                <span className="text-xs text-gray-400 ml-auto">{uploadedImages.length} bild(er)</span>
-              )}
-            </div>
-            {isPro ? (
-              <>
-                <div className="border border-dashed rounded-lg p-3 text-center transition-colors hover:border-gray-400" style={{ borderColor: "#D1D5CB" }}>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    id="image-upload"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setUploadedImages((prev) => [...prev, reader.result as string]);
-                        };
-                        reader.readAsDataURL(file);
-                      });
-                    }}
+          {/* ── SECTION 4: SÄLJPUNKTER (prominent!) ── */}
+          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+            <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "#2D6A4F" }}>
+              ★ Vad gör objektet speciellt?
+            </label>
+            <p className="text-[10px] text-gray-400 mb-3">
+              Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
+            </p>
+            <ChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} variant="usp" />
+            <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
+              <FormItem className="mt-2">
+                <FormControl>
+                  <Textarea
+                    placeholder="T.ex: Balkong 7 kvm i söderläge med kvällssol. Originalparkett från 1920. Tyst innergård."
+                    {...field}
+                    className="min-h-[56px] resize-none text-sm"
                   />
-                  <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-gray-500">
-                    <Plus className="w-3.5 h-3.5" />
-                    Ladda upp bilder
-                  </label>
+                </FormControl>
+              </FormItem>
+            )} />
+          </div>
+
+          {/* ── SECTION 5: PLANLÖSNING (optional freetext) ── */}
+          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+            <FormField control={form.control} name="layoutDescription" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Planlösning & rum (valfritt)</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="T.ex: Hall med garderob. Öppen planlösning kök/vardagsrum. 2 sovrum, det större ca 12 kvm. Gäst-wc vid hall."
+                    {...field}
+                    className="min-h-[56px] resize-none text-sm"
+                  />
+                </FormControl>
+              </FormItem>
+            )} />
+          </div>
+
+          {/* ── SECTION 6: MER DETALJER (expandable) ── */}
+          <div className="border-t" style={{ borderColor: "#E8E5DE" }}>
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="w-full flex items-center justify-between py-4 text-sm font-medium transition-colors hover:text-gray-700"
+              style={{ color: "#9CA3AF" }}
+            >
+              <span>Material, läge & fler detaljer</span>
+              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showDetails && (
+              <div className="pb-5 space-y-4">
+                {/* Flooring chips */}
+                <div>
+                  <span className="text-xs text-gray-500 font-medium block mb-2">Golv</span>
+                  <ChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} />
+                  <FormField control={form.control} name="flooring" render={({ field }) => (
+                    <FormItem className="mt-2">
+                      <FormControl><Input placeholder="Detaljer: t.ex. ekparkett vardagsrum, klinker badrum" {...field} className="h-9 text-xs" /></FormControl>
+                    </FormItem>
+                  )} />
                 </div>
-                {uploadedImages.length > 0 && (
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    {uploadedImages.map((img, idx) => (
-                      <div key={idx} className="relative group">
-                        <img src={img} alt={`Bild ${idx + 1}`} className="w-14 h-14 object-cover rounded-lg border" style={{ borderColor: "#E8E5DE" }} />
-                        <button
-                          type="button"
-                          onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                          className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      </div>
-                    ))}
+
+                {/* Heating chips */}
+                <div>
+                  <span className="text-xs text-gray-500 font-medium block mb-2">Uppvärmning</span>
+                  <ChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} />
+                </div>
+
+                {/* Special features chips */}
+                <div>
+                  <span className="text-xs text-gray-500 font-medium block mb-2">Särskilda egenskaper</span>
+                  <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} />
+                  <FormField control={form.control} name="specialFeatures" render={({ field }) => (
+                    <FormItem className="mt-2">
+                      <FormControl><Input placeholder="Övrigt: t.ex. fönster bytta 2018, originalstuckatur" {...field} className="h-9 text-xs" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+
+                {/* House/Villa: Garden chips */}
+                {isHouseType && (
+                  <div>
+                    <span className="text-xs text-gray-500 font-medium block mb-2">Trädgård & uteplats</span>
+                    <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} />
+                    <FormField control={form.control} name="gardenDescription" render={({ field }) => (
+                      <FormItem className="mt-2">
+                        <FormControl><Input placeholder="Övrigt om trädgården..." {...field} className="h-9 text-xs" /></FormControl>
+                      </FormItem>
+                    )} />
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="border border-dashed rounded-lg p-3 text-center" style={{ borderColor: "#E8E5DE", background: "#FAFAF7" }}>
-                <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-                  <Lock className="w-3.5 h-3.5" />
-                  Uppgradera till Pro för bildanalys
+
+                {/* View + Transport */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField control={form.control} name="view" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Utsikt</FormLabel>
+                      <FormControl><Input placeholder="Sjöutsikt, parkutsikt, innergård" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="transport" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
+                      <FormControl><Input placeholder="5 min till t-bana, buss utanför" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
                 </div>
+
+                {/* Neighborhood */}
+                <FormField control={form.control} name="neighborhood" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
+                    <FormControl><Input placeholder="T.ex: ICA 300 m, grundskola 500 m, nära park" {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
+
+                {/* Energy & Storage */}
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="energyClass" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="storage" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Förråd</FormLabel>
+                      <FormControl><Input placeholder="8 kvm i källare" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+
+                {/* Parking chips */}
+                <div>
+                  <span className="text-xs text-gray-500 font-medium block mb-2">Parkering</span>
+                  <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} />
+                  <FormField control={form.control} name="parking" render={({ field }) => (
+                    <FormItem className="mt-2">
+                      <FormControl><Input placeholder="Övrigt: t.ex. garage med el, 2 p-platser" {...field} className="h-9 text-xs" /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
+
+                {/* House/Villa: Building material + roof type */}
+                {isHouseType && (
+                  <>
+                    <div>
+                      <span className="text-xs text-gray-500 font-medium block mb-2">Byggnadsmaterial</span>
+                      <ChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} />
+                    </div>
+                    <div>
+                      <span className="text-xs text-gray-500 font-medium block mb-2">Taktyp</span>
+                      <ChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} />
+                    </div>
+                  </>
+                )}
+
+                {/* Other info */}
+                <FormField control={form.control} name="otherInfo" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
+                    <FormControl><Input placeholder="T.ex: Nytt tak 2022. Stambyte 2015." {...field} className="h-10" /></FormControl>
+                  </FormItem>
+                )} />
               </div>
             )}
           </div>
 
-          {/* Submit */}
-          <Button
-            type="submit"
-            className="w-full h-12 text-sm font-semibold transition-colors"
-            disabled={isPending || disabled}
-            style={{ background: "#2D6A4F", color: "#fff" }}
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Genererar beskrivning...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generera objektbeskrivning
-              </>
+          {/* ── SECTION 7: PLATTFORM, STIL & SUBMIT ── */}
+          <div className="border-t pt-5 space-y-4" style={{ borderColor: "#E8E5DE" }}>
+
+            {/* Platform + Writing style — compact */}
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Plattform</span>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "hemnet" as const, label: "Hemnet" },
+                    { value: "booli" as const, label: "Booli" },
+                    { value: "general" as const, label: "Egen sida" },
+                  ]).map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => form.setValue("platform", p.value)}
+                      className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium"
+                      style={{
+                        background: selectedPlatform === p.value ? "#2D6A4F" : "#fff",
+                        color: selectedPlatform === p.value ? "#fff" : "#6B7280",
+                        borderColor: selectedPlatform === p.value ? "#2D6A4F" : "#E8E5DE",
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Textstil</span>
+                <div className="flex gap-1.5">
+                  {([
+                    { value: "factual" as const, label: "PM-stil" },
+                    { value: "balanced" as const, label: "Balanserad" },
+                    { value: "selling" as const, label: "Säljande" },
+                  ]).map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => form.setValue("writingStyle", s.value)}
+                      className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium"
+                      style={{
+                        background: selectedStyle === s.value ? "#1B4332" : "#fff",
+                        color: selectedStyle === s.value ? "#fff" : "#6B7280",
+                        borderColor: selectedStyle === s.value ? "#1B4332" : "#E8E5DE",
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] mt-1.5" style={{ color: "#9CA3AF" }}>
+                  {selectedStyle === "factual" && "Ren fakta, kronologisk, noll säljspråk."}
+                  {selectedStyle === "balanced" && "Fakta i fokus men med rytm. Lyfter säljpunkter utan klyschor."}
+                  {selectedStyle === "selling" && "Klyschfritt men övertygande. Starkare betoning och avslut."}
+                </p>
+              </div>
+            </div>
+
+            {/* Pro: word count */}
+            {isPro && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
+                <div className="flex items-center gap-2">
+                  <Select value={String(wordCountMin)} onValueChange={(v) => handleWordCountMin(Number(v))}>
+                    <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[200, 250, 300, 350, 400, 450, 500].map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-gray-300">—</span>
+                  <Select value={String(wordCountMax)} onValueChange={(v) => handleWordCountMax(Number(v))}>
+                    <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[300, 350, 400, 450, 500, 550, 600].map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             )}
-          </Button>
-        </div>
-      </form>
-    </Form >
+
+            {/* Pro: AI model selection */}
+            {isPro && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
+                <Select value={selectedModel} onValueChange={(v: "gpt-5.2" | "claude-sonnet-4.6") => setSelectedModel(v)}>
+                  <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gpt-5.2">
+                      <div className="flex flex-col">
+                        <span>GPT-5.2</span>
+                        <span className="text-xs text-gray-400">Bäst värde</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="claude-sonnet-4.6">
+                      <div className="flex flex-col">
+                        <span>Claude Sonnet 4.6</span>
+                        <span className="text-xs text-gray-400">Bästa svenska</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Images — Pro feature */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-gray-400 font-medium">Bilder (valfritt)</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: "#D4AF37", color: "#fff" }}>Pro</span>
+                {isPro && uploadedImages.length > 0 && (
+                  <span className="text-xs text-gray-400 ml-auto">{uploadedImages.length} bild(er)</span>
+                )}
+              </div>
+              {isPro ? (
+                <>
+                  <div className="border border-dashed rounded-lg p-3 text-center transition-colors hover:border-gray-400" style={{ borderColor: "#D1D5CB" }}>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      id="image-upload"
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        files.forEach((file) => {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setUploadedImages((prev) => [...prev, reader.result as string]);
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                      }}
+                    />
+                    <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-gray-500">
+                      <Plus className="w-3.5 h-3.5" />
+                      Ladda upp bilder
+                    </label>
+                  </div>
+                  {uploadedImages.length > 0 && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {uploadedImages.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={img} alt={`Bild ${idx + 1}`} className="w-14 h-14 object-cover rounded-lg border" style={{ borderColor: "#E8E5DE" }} />
+                          <button
+                            type="button"
+                            onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
+                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="border border-dashed rounded-lg p-3 text-center" style={{ borderColor: "#E8E5DE", background: "#FAFAF7" }}>
+                  <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                    <Lock className="w-3.5 h-3.5" />
+                    Uppgradera till Pro för bildanalys
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit - sticky on mobile */}
+            <div className="sticky bottom-0 left-0 right-0 pt-4 pb-2 -mx-6 px-6 sm:relative sm:mx-0 sm:px-0 sm:pb-0" style={{ background: "linear-gradient(to top, #FAFAF7 85%, transparent)" }}>
+              <Button
+                type="submit"
+                className="w-full h-12 text-sm font-semibold transition-colors shadow-lg sm:shadow-none"
+                disabled={isPending || disabled}
+                style={{ background: "#2D6A4F", color: "#fff" }}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Genererar beskrivning...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generera objektbeskrivning
+                    <span className="hidden sm:inline text-[10px] ml-2 opacity-60">(⌘↵)</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Form>
+    </TooltipProvider>
   );
 }
