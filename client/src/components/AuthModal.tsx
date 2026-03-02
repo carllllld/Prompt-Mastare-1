@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { PasswordStrength } from "@/components/PasswordStrength";
-import { Loader2, Mail, CheckCircle } from "lucide-react";
+import { Loader2, Mail, CheckCircle, FileText } from "lucide-react";
 
 interface AuthModalProps {
   open: boolean;
@@ -157,7 +157,13 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle data-testid="text-auth-title">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-semibold text-base" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>OptiPrompt</span>
+          </div>
+          <DialogTitle data-testid="text-auth-title" className="text-lg">
             {mode === "login" && "Logga in"}
             {mode === "register" && "Skapa konto"}
             {mode === "verify-pending" && "Verifiera e-post"}
@@ -245,9 +251,10 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full font-medium"
               disabled={isResending}
               data-testid="button-resend-submit"
+              style={{ background: "#2D6A4F", color: "#fff" }}
             >
               {isResending ? (
                 <>
@@ -313,7 +320,7 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
                 autoComplete="email"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isResettingPassword}>
+            <Button type="submit" className="w-full font-medium" disabled={isResettingPassword} style={{ background: "#2D6A4F", color: "#fff" }}>
               {isResettingPassword ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -355,9 +362,10 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
             </div>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full font-medium"
               disabled={isLoggingIn}
               data-testid="button-login-submit"
+              style={{ background: "#2D6A4F", color: "#fff" }}
             >
               {isLoggingIn ? (
                 <>
@@ -416,9 +424,10 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
             </p>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full font-medium"
               disabled={isRegistering}
               data-testid="button-register-submit"
+              style={{ background: "#2D6A4F", color: "#fff" }}
             >
               {isRegistering ? (
                 <>

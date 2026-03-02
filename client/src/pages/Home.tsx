@@ -14,8 +14,11 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -201,10 +204,6 @@ export default function Home() {
   const remaining = userStatus?.textsRemaining ?? 0;
   const limit = userStatus?.monthlyTextLimit ?? 2;
   const used = userStatus?.textsUsedThisMonth ?? 0;
-  const areaSearchesRemaining = userStatus?.areaSearchesRemaining ?? 0;
-  const areaSearchesLimit = userStatus?.areaSearchesLimit ?? 0;
-  const areaSearchesUsed = userStatus?.areaSearchesUsed ?? 0;
-
   return (
     <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
 
@@ -228,23 +227,15 @@ export default function Home() {
             ) : isAuthenticated ? (
               <>
                 {/* Usage pill */}
-                <div className="hidden sm:flex items-center gap-2 text-sm px-3 py-1.5 rounded-full" style={{ background: "#F0EDE6", color: "#4B5563" }}>
-                  <span className="font-medium" style={{ color: "#2D6A4F" }}>{remaining}</span>
-                  <span className="text-xs">/</span>
-                  <span className="text-xs">{limit} denna månad</span>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full" style={{ background: "#F0EDE6", color: "#4B5563" }}>
+                  <span className="font-semibold" style={{ color: "#2D6A4F" }}>{remaining}</span>
+                  <span>/</span>
+                  <span>{limit}</span>
                 </div>
 
-                {/* History link */}
-                <Link href="/history">
-                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-sm">Historik</span>
-                  </Button>
-                </Link>
-
-                {/* Pro/Premium badge or upgrade */}
+                {/* Plan badge or upgrade */}
                 {(plan === "pro" || plan === "premium") ? (
-                  <div className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: plan === "premium" ? "#8B5CF6" : "#D4AF37", color: "#fff" }}>
+                  <div className="hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: plan === "premium" ? "#8B5CF6" : "#D4AF37", color: "#fff" }}>
                     <Crown className="w-3 h-3" />
                     {plan === "premium" ? "Premium" : "Pro"}
                   </div>
@@ -257,42 +248,47 @@ export default function Home() {
                     style={{ background: "#2D6A4F", color: "#fff" }}
                   >
                     {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />}
-                    Uppgradera
+                    <span className="hidden sm:inline">Uppgradera</span>
                   </Button>
                 )}
 
-                {/* Manage subscription (Pro/Premium only) */}
-                {(plan === "pro" || plan === "premium") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openPortal()}
-                    disabled={isPortalPending}
-                    className="text-gray-500 hover:text-gray-700 gap-1.5"
-                  >
-                    <Settings className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-xs">Konto</span>
-                  </Button>
-                )}
-
-                {/* Change password */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setChangePasswordOpen(true)}
-                  className="text-gray-500 hover:text-gray-700 gap-1.5"
-                >
-                  <KeyRound className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline text-xs">Lösenord</span>
-                </Button>
-
-                {/* User email (hidden on mobile) + logout (always visible) */}
-                <div className="flex items-center gap-2 pl-3 border-l" style={{ borderColor: "#E8E5DE" }}>
-                  <span className="hidden md:inline text-xs text-gray-500 max-w-[140px] truncate">{user?.email}</span>
-                  <button onClick={() => logout()} className="text-gray-400 hover:text-red-500 transition-colors" title="Logga ut">
-                    <LogOut className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                {/* User dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors border" style={{ borderColor: "#E8E5DE" }}>
+                      <User className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline max-w-[120px] truncate">{user?.email?.split("@")[0]}</span>
+                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <div className="px-3 py-2 border-b" style={{ borderColor: "#F3F4F6" }}>
+                      <p className="text-xs font-medium text-gray-700 truncate">{user?.email}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{plan === "premium" ? "Premium" : plan === "pro" ? "Pro" : "Gratis"}</p>
+                    </div>
+                    <DropdownMenuItem asChild>
+                      <Link href="/history" className="flex items-center gap-2 cursor-pointer">
+                        <Clock className="w-3.5 h-3.5" />
+                        Historik
+                      </Link>
+                    </DropdownMenuItem>
+                    {(plan === "pro" || plan === "premium") && (
+                      <DropdownMenuItem onClick={() => openPortal()} disabled={isPortalPending} className="cursor-pointer">
+                        <Settings className="w-3.5 h-3.5 mr-2" />
+                        Hantera prenumeration
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => setChangePasswordOpen(true)} className="cursor-pointer">
+                      <KeyRound className="w-3.5 h-3.5 mr-2" />
+                      Ändra lösenord
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-600 focus:text-red-600">
+                      <LogOut className="w-3.5 h-3.5 mr-2" />
+                      Logga ut
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <Button
@@ -427,54 +423,37 @@ export default function Home() {
 
                     {/* Show both options for free users */}
                     {plan === "free" && (
-                      <div className="space-y-3 mb-5">
-                        <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
-                          <h4 className="font-medium text-sm mb-2" style={{ color: "#2D6A4F" }}>Pro - 299kr/månad</h4>
-                          <ul className="space-y-1">
-                            {["10 genereringar / månad", "30 AI-textredigeringar", "Personlig skrivstil", "Adressuppslag & områdesinfo"].map((f) => (
-                              <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
-                                <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#2D6A4F" }} />
-                                {f}
-                              </li>
-                            ))}
-                          </ul>
+                      <div className="space-y-2.5 mb-4">
+                        <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "#D1FAE5", background: "#F0FDF4" }}>
+                          <div>
+                            <span className="text-sm font-semibold" style={{ color: "#2D6A4F" }}>Pro</span>
+                            <span className="text-xs text-gray-500 ml-2">299 kr/mån</span>
+                            <p className="text-xs text-gray-500 mt-0.5">10 genereringar · skrivstil · adressuppslag</p>
+                          </div>
                           <Button
                             onClick={() => startCheckout("pro")}
                             disabled={isCheckoutPending}
-                            className="w-full mt-2 font-medium text-sm"
+                            size="sm"
+                            className="shrink-0 text-xs font-medium"
                             style={{ background: "#2D6A4F", color: "#fff" }}
                           >
-                            {isCheckoutPending ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                            ) : (
-                              <Crown className="w-3 h-3 mr-2" />
-                            )}
-                            Välj Pro
+                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj"}
                           </Button>
                         </div>
-
-                        <div className="border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
-                          <h4 className="font-medium text-sm mb-2" style={{ color: "#8B5CF6" }}>Premium - 599kr/månad</h4>
-                          <ul className="space-y-1">
-                            {["25 genereringar / månad", "100 AI-textredigeringar", "Längre texter (800 ord)", "Priority support"].map((f) => (
-                              <li key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
-                                <Check className="w-3 h-3 flex-shrink-0" style={{ color: "#8B5CF6" }} />
-                                {f}
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "#DDD6FE", background: "#F5F3FF" }}>
+                          <div>
+                            <span className="text-sm font-semibold" style={{ color: "#7C3AED" }}>Premium</span>
+                            <span className="text-xs text-gray-500 ml-2">599 kr/mån</span>
+                            <p className="text-xs text-gray-500 mt-0.5">25 genereringar · längre texter · prioritet</p>
+                          </div>
                           <Button
                             onClick={() => startCheckout("premium")}
                             disabled={isCheckoutPending}
-                            className="w-full mt-2 font-medium text-sm"
-                            style={{ background: "#8B5CF6", color: "#fff" }}
+                            size="sm"
+                            className="shrink-0 text-xs font-medium"
+                            style={{ background: "#7C3AED", color: "#fff" }}
                           >
-                            {isCheckoutPending ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                            ) : (
-                              <Crown className="w-3 h-3 mr-2" />
-                            )}
-                            Välj Premium
+                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj"}
                           </Button>
                         </div>
                       </div>

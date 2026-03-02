@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Crown, Check, ArrowRight, Zap, Shield, FileText,
-  Sparkles, BarChart3, Users, Pen,
+  Sparkles, BarChart3, Users, Pen, Menu, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
@@ -126,6 +126,7 @@ const PLANS = [
 export default function Landing() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -159,15 +160,35 @@ export default function Landing() {
             <a href="#funktioner" className="hover:text-gray-900 transition-colors">Funktioner</a>
             <a href="#priser" className="hover:text-gray-900 transition-colors">Priser</a>
           </nav>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={openLogin} className="text-sm font-medium">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={openLogin} className="hidden sm:inline-flex text-sm font-medium">
               Logga in
             </Button>
             <Button size="sm" onClick={openRegister} className="text-sm font-medium" style={{ background: "#2D6A4F", color: "#fff" }}>
               Testa gratis
             </Button>
+            {/* Mobile hamburger */}
+            <button
+              className="sm:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" style={{ color: "#1D2939" }} /> : <Menu className="w-5 h-5" style={{ color: "#1D2939" }} />}
+            </button>
           </div>
         </div>
+        {/* Mobile nav dropdown */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t px-6 py-4 space-y-3" style={{ background: "rgba(250,250,248,0.98)", borderColor: "#E8E5DE" }}>
+            <a href="#hur-det-funkar" onClick={() => setMobileMenuOpen(false)} className="block text-sm py-2" style={{ color: "#4B5563" }}>Hur det funkar</a>
+            <a href="#funktioner" onClick={() => setMobileMenuOpen(false)} className="block text-sm py-2" style={{ color: "#4B5563" }}>Funktioner</a>
+            <a href="#priser" onClick={() => setMobileMenuOpen(false)} className="block text-sm py-2" style={{ color: "#4B5563" }}>Priser</a>
+            <div className="pt-2 border-t" style={{ borderColor: "#E8E5DE" }}>
+              <Button variant="ghost" size="sm" onClick={() => { openLogin(); setMobileMenuOpen(false); }} className="w-full justify-start text-sm font-medium">
+                Logga in
+              </Button>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ════════ HERO ════════ */}
@@ -194,7 +215,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
             <Button
               onClick={openRegister}
-              className="text-base px-8 py-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
+              className="text-base px-8 py-3.5 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
               style={{ background: "#2D6A4F", color: "#fff" }}
             >
               Testa gratis — 2 genereringar/månad

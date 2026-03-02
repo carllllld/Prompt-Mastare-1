@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Optimization } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, History, ArrowLeft, Trash2, Copy, Clock } from "lucide-react";
+import { Loader2, History, ArrowLeft, Trash2, Copy, Clock, Home } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,7 @@ export default function HistoryPage() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { data: history, isLoading } = useQuery<Optimization[]>({
     queryKey: ["/api/history"],
     enabled: isAuthenticated,
@@ -71,7 +71,7 @@ export default function HistoryPage() {
       <nav className="border-b sticky top-0 z-50" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/">
+            <Link href="/app">
               <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-800" data-testid="button-back-home">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Tillbaka
@@ -110,26 +110,24 @@ export default function HistoryPage() {
               const daysLeft = getDaysRemaining(item.createdAt!);
               return (
                 <Card key={item.id} className="overflow-hidden" data-testid={`card-history-${item.id}`}>
-                  <CardHeader className="bg-slate-50/50 pb-3">
+                  <CardHeader className="pb-3" style={{ background: "#FAFAF7" }}>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className={`text-xs px-2 py-1 rounded-md font-semibold ${
-                          item.category === "apartment" 
-                            ? "bg-primary text-primary-foreground" 
-                            : "bg-secondary text-secondary-foreground"
-                        }`}>
-                          {item.category === "apartment" ? "Lägenhet" : "Villa"}
+                        <div className="text-xs px-2.5 py-1 rounded-full font-medium" style={{
+                          background: item.category === "apartment" ? "#E8F5E9" : item.category === "house" || item.category === "villa" ? "#FEF3C7" : "#F0F4FF",
+                          color: item.category === "apartment" ? "#2D6A4F" : item.category === "house" || item.category === "villa" ? "#92400E" : "#3730A3",
+                        }}>
+                          {item.category === "apartment" ? "Lägenhet" : item.category === "townhouse" ? "Radhus" : item.category === "villa" ? "Villa" : "Hus"}
                         </div>
                         <span className="text-sm text-muted-foreground">
                           {new Date(item.createdAt!).toLocaleDateString('sv-SE')}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className={`text-xs px-2 py-1 rounded-md font-semibold border ${
-                          daysLeft <= 7 ? "text-orange-600 border-orange-200" : "border-gray-300"
-                        }`}>
-                          <Clock className="h-3 w-3 mr-1" />
-                          {daysLeft} dagar kvar
+                        <div className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1 ${daysLeft <= 7 ? "text-orange-600" : "text-gray-500"
+                          }`} style={{ background: daysLeft <= 7 ? "#FFF7ED" : "#F0EDE6", border: "none" }}>
+                          <Clock className="h-3 w-3" />
+                          {daysLeft}d kvar
                         </div>
                         <Button
                           variant="ghost"

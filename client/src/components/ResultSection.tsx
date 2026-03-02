@@ -78,7 +78,6 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#2D6A4F" }}>
             Komplett textkit — 5 texter genererade
           </span>
-          <PdfExport result={liveResult} />
         </div>
       )}
 
@@ -271,31 +270,30 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       </div>
 
       {/* ── DISCLAIMER ── */}
-      <div className="rounded-xl border p-4" style={{ background: "#FFF8E1", borderColor: "#FFE082" }}>
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle className="w-3.5 h-3.5" style={{ color: "#F57C00" }} />
-          <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#E65100" }}>Viktig information</span>
-        </div>
-        <p className="text-xs" style={{ color: "#BF360C" }}>
-          AI-analyser och tips avser endast textkvalitet och kommunikation. Inga juridiska, mäklarmässiga eller prisrelaterade råd. Kontrollera alltid information och följ gällande lagar och regler.
-        </p>
-      </div>
+      <p className="text-[10px] text-center" style={{ color: "#9CA3AF" }}>
+        AI-analyser avser textkvalitet. Kontrollera alltid fakta före publicering.
+      </p>
 
       {/* ── ACTION BUTTONS ── */}
-      <div className="flex justify-center gap-3 pt-2">
+      <div className="flex gap-3 pt-2 border-t" style={{ borderColor: "#F0EDE6" }}>
         {onRegenerate && (
           <Button
             variant="outline"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="text-sm transition-colors font-medium"
+            className="flex-1 text-sm font-medium transition-colors"
             style={{ borderColor: "#2D6A4F", color: isRegenerating ? "#9CA3AF" : "#2D6A4F" }}
           >
             {isRegenerating ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-2" />}
             {isRegenerating ? "Genererar..." : "Generera igen"}
           </Button>
         )}
-        <Button variant="ghost" onClick={onNewPrompt} className="text-sm transition-colors" style={{ color: "#9CA3AF" }}>
+        <Button
+          onClick={onNewPrompt}
+          variant="outline"
+          className="flex-1 text-sm font-medium transition-colors"
+          style={{ borderColor: "#E8E5DE", color: "#6B7280" }}
+        >
           <RefreshCw className="w-3.5 h-3.5 mr-2" /> Ny beskrivning
         </Button>
       </div>
