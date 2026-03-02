@@ -219,17 +219,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // UI state
   const [showDetails, setShowDetails] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<"gpt-5.2" | "claude-sonnet-4.6">("gpt-5.2");
 
-  // Model-based word limits
-  const getModelWordLimits = (model: "gpt-5.2" | "claude-sonnet-4.6") => {
-    if (model === "claude-sonnet-4.6") {
-      return { min: 400, max: 600, defaultMin: 450, defaultMax: 550 };
-    }
-    return { min: 200, max: 500, defaultMin: 350, defaultMax: 450 };
-  };
-
-  const modelLimits = getModelWordLimits(selectedModel);
+  // Fixed GPT-5.2 word limits
+  const modelLimits = { min: 200, max: 500, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
   const [wordCountMax, setWordCountMax] = useState(modelLimits.defaultMax);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
@@ -249,12 +241,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     if (val < wordCountMin) setWordCountMin(val);
   };
 
-  // Update word limits when model changes
-  useEffect(() => {
-    const newLimits = getModelWordLimits(selectedModel);
-    setWordCountMin(newLimits.defaultMin);
-    setWordCountMax(newLimits.defaultMax);
-  }, [selectedModel]);
 
   const toggleChip = useCallback((list: string[], setList: (v: string[]) => void, chip: string) => {
     setList(list.includes(chip) ? list.filter(c => c !== chip) : [...list, chip]);
@@ -429,7 +415,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       writingStyle: merged.writingStyle,
       propertyData: merged,
       ...(isPro && { wordCountMin, wordCountMax }),
-      ...(isPro && { model: selectedModel }),
       ...(uploadedImages.length > 0 && { imageUrls: uploadedImages }),
     });
   };
@@ -1093,34 +1078,20 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-xs text-gray-400 ml-2">({selectedModel === "claude-sonnet-4.6" ? "Premium-modell" : "Standard-modell"})</span>
+                  <span className="text-xs text-gray-400 ml-2">(GPT-5.2 med thinking mode)</span>
                 </div>
               </div>
             )}
 
-            {/* Pro: AI model selection */}
-            {isPro && (
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
-                <Select value={selectedModel} onValueChange={(v: "gpt-5.2" | "claude-sonnet-4.6") => setSelectedModel(v)}>
-                  <SelectTrigger className="h-8 w-48 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gpt-5.2">
-                      <div className="flex flex-col">
-                        <span className="font-medium">GPT-5.2</span>
-                        <span className="text-xs text-gray-400">Bäst värde • 200-500 ord • 40/120 redigeringar</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="claude-sonnet-4.6">
-                      <div className="flex flex-col">
-                        <span className="font-medium">Claude Sonnet 4.6</span>
-                        <span className="text-xs text-gray-400">Premium • 400-600 ord • 20/80 redigeringar</span>
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* AI Model Info - Fixed GPT-5.2 */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
+              <div className="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-md">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs font-medium text-white">GPT-5.2</span>
+                <span className="text-xs text-gray-400">med thinking mode</span>
               </div>
-            )}
+            </div>
 
             {/* Images — Pro feature */}
             <div>

@@ -1,21 +1,22 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Wand2, Minus, Plus, RotateCcw, Loader2, PenLine, Sparkles } from "lucide-react";
+import { Wand2, Minus, Plus, RotateCcw, Loader2, PenLine, Sparkles, AlertTriangle } from "lucide-react";
 
 interface TextEditorProps {
   text: string;
   onTextChange: (newText: string) => void;
-  model?: "gpt-5.2" | "claude-sonnet-4.6";
 }
 
 const QUICK_ACTIONS = [
-  { label: "Skriv om", instruction: "Skriv om texten med andra ord men behåll ALLA fakta. Använd korta meningar.", icon: Wand2 },
-  { label: "Mer fakta", instruction: "Lägg till KONKRETA detaljer om rummet/objektet. Använd mått, material, årtal. Hitta inte på.", icon: Plus },
-  { label: "Kondensera", instruction: "Gör texten kortare. Behåll bara viktigaste fakta. Inga utfyllnadsmeningar.", icon: Minus },
-  { label: "Byt fokus", instruction: "Byt fokus till en annan egenskap. Om kök → fokusera på vitvaror/material. Om läge → fokusera på avstånd.", icon: PenLine },
+  { label: "Skriv om", instruction: "Skriv om texten med andra ord men behåll ALLA fakta. Använd korta meningar.", icon: Wand2, color: "bg-blue-500" },
+  { label: "Mer fakta", instruction: "Lägg till KONKRETA detaljer om rummet/objektet. Använd mått, material, årtal. Hitta inte på.", icon: Plus, color: "bg-green-500" },
+  { label: "Kondensera", instruction: "Gör texten kortare. Behåll bara viktigaste fakta. Inga utfyllnadsmeningar.", icon: Minus, color: "bg-orange-500" },
+  { label: "Mer säljande", instruction: "Gör texten mer säljande genom att lyfta de starkaste fakta tydligare. Inga klyschor.", icon: Sparkles, color: "bg-purple-500" },
+  { label: "Mer formell", instruction: "Gör texten mer formell och professionell. Använd korrekta fastighetstermer.", icon: PenLine, color: "bg-gray-500" },
+  { label: "Fixa klyschor", instruction: "Ersätt alla klyschor och vaga påståenden med konkreta fakta. Inga 'erbjuder', 'bjuder på', 'fantastisk'.", icon: AlertTriangle, color: "bg-red-500" },
 ];
 
-export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
+export function TextEditor({ text, onTextChange }: TextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [selectedText, setSelectedText] = useState("");
@@ -25,20 +26,39 @@ export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
   const [customInstruction, setCustomInstruction] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [futureHistory, setFutureHistory] = useState<string[]>([]);
 
   // Save undo history
   const pushHistory = useCallback(() => {
-    setHistory((prev) => [...prev.slice(-10), text]);
+    setHistory((prev: string[]) => [...prev.slice(-10), text]);
   }, [text]);
 
   const undo = useCallback(() => {
     if (history.length > 0) {
       const prev = history[history.length - 1];
-      setHistory((h) => h.slice(0, -1));
+      const currentText = text;
+
+      setHistory((h: string[]) => h.slice(0, -1));
+      setFutureHistory((f: string[]) => [...f, currentText]);
+      setHistoryIndex(history.length - 2);
       onTextChange(prev);
       if (editorRef.current) editorRef.current.innerText = prev;
     }
-  }, [history, onTextChange]);
+  }, [history, text, onTextChange]);
+
+  const redo = useCallback(() => {
+    if (futureHistory.length > 0) {
+      const next = futureHistory[futureHistory.length - 1];
+      const currentText = text;
+
+      setFutureHistory((f: string[]) => f.slice(0, -1));
+      setHistory((h: string[]) => [...h, currentText]);
+      setHistoryIndex(history.length);
+      onTextChange(next);
+      if (editorRef.current) editorRef.current.innerText = next;
+    }
+  }, [futureHistory, text, history.length, onTextChange]);
 
   // Handle text selection
   const handleMouseUp = useCallback(() => {
@@ -98,7 +118,7 @@ export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ selectedText, fullText: text, instruction, model }),
+        body: JSON.stringify({ selectedText, fullText: text, instruction }),
       });
 
       if (!response.ok) throw new Error("Rewrite failed");
@@ -126,17 +146,51 @@ export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
     }
   }, [text]);
 
-  // Keyboard shortcut: Ctrl+Z for undo
+  // Keyboard shortcuts
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && editorRef.current?.contains(document.activeElement as Node)) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo/Redo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === "z" && e.shiftKey || e.key === "y")) {
+        e.preventDefault();
+        redo();
+      }
+
+      // Quick actions with keyboard shortcuts
+      if ((e.metaKey || e.ctrlKey) && selectedText) {
+        switch (e.key) {
+          case "k":
+            e.preventDefault();
+            setShowCustomInput(true);
+            break;
+          case "1":
+            e.preventDefault();
+            doRewrite("Skriv om texten med andra ord men behåll ALLA fakta. Använd korta meningar.");
+            break;
+          case "2":
+            e.preventDefault();
+            doRewrite("Lägg till KONKRETA detaljer om rummet/objektet. Använd mått, material, årtal. Hitta inte på.");
+            break;
+          case "3":
+            e.preventDefault();
+            doRewrite("Gör texten kortare. Behåll bara viktigaste fakta. Inga utfyllnadsmeningar.");
+            break;
+        }
+      }
+
+      // Escape to close toolbar
+      if (e.key === "Escape" && showToolbar) {
+        setShowToolbar(false);
+        setShowCustomInput(false);
+        setCustomInstruction("");
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [undo]);
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [history, historyIndex, undo, redo, selectedText, showToolbar]);
 
   return (
     <div className="relative">
@@ -192,15 +246,19 @@ export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
             ) : (
               <>
                 {/* Quick action buttons */}
-                <div className="flex gap-1">
+                <div className="grid grid-cols-2 gap-1.5">
                   {QUICK_ACTIONS.map((action) => (
                     <button
                       key={action.label}
                       onClick={() => doRewrite(action.instruction)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors hover:bg-gray-100"
-                      style={{ color: "#374151" }}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[11px] font-medium transition-all hover:scale-105 hover:shadow-md border border-transparent"
+                      style={{
+                        color: "#FFFFFF",
+                        background: `linear-gradient(135deg, ${action.color.replace('bg-', '#').replace('500', '600')}, ${action.color.replace('bg-', '#').replace('500', '500')})`,
+                        borderColor: `${action.color.replace('bg-', '#').replace('500', '400')}20`
+                      }}
                     >
-                      <action.icon className="w-3 h-3" style={{ color: "#2D6A4F" }} />
+                      <action.icon className="w-3.5 h-3.5" />
                       {action.label}
                     </button>
                   ))}
@@ -210,32 +268,45 @@ export function TextEditor({ text, onTextChange, model }: TextEditorProps) {
                 {!showCustomInput ? (
                   <button
                     onClick={() => setShowCustomInput(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] transition-colors hover:bg-gray-50 border-t"
-                    style={{ color: "#9CA3AF", borderColor: "#F3F4F6" }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all hover:scale-105 border-t"
+                    style={{
+                      color: "#6B7280",
+                      borderColor: "#F3F4F6",
+                      background: "linear-gradient(135deg, #F9FAFB, #FFFFFF)"
+                    }}
                   >
-                    <Wand2 className="w-3 h-3" />
-                    Egen instruktion...
+                    <Wand2 className="w-3.5 h-3.5" />
+                    <span>Egen instruktion...</span>
+                    <span className="text-[10px] opacity-60">⌘K</span>
                   </button>
                 ) : (
-                  <div className="flex gap-1 border-t pt-1" style={{ borderColor: "#F3F4F6" }}>
+                  <div className="flex gap-2 border-t pt-2" style={{ borderColor: "#F3F4F6" }}>
                     <input
                       autoFocus
                       value={customInstruction}
                       onChange={(e) => setCustomInstruction(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" && customInstruction.trim()) {
+                        if (e.key === "Enter" && !e.shiftKey && customInstruction.trim()) {
+                          e.preventDefault();
                           doRewrite(customInstruction.trim());
+                        } else if (e.key === "Escape") {
+                          setShowCustomInput(false);
+                          setCustomInstruction("");
                         }
                       }}
-                      placeholder="T.ex. 'Gör det mer säljande'"
-                      className="flex-1 text-[11px] px-2 py-1 rounded-md border outline-none focus:ring-1"
-                      style={{ borderColor: "#E5E7EB", background: "#F9FAFB" }}
+                      placeholder="T.ex. 'Gör det mer säljande för unga köpare'"
+                      className="flex-1 text-[11px] px-3 py-2 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      style={{
+                        borderColor: "#E5E7EB",
+                        background: "#FFFFFF",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                      }}
                     />
                     <Button
                       size="sm"
                       onClick={() => customInstruction.trim() && doRewrite(customInstruction.trim())}
-                      className="h-7 text-[10px] px-2"
-                      style={{ background: "#2D6A4F" }}
+                      className="h-8 text-[10px] px-3 font-medium transition-all hover:scale-105"
+                      style={{ background: "linear-gradient(135deg, #2D6A4F, #40916C)" }}
                     >
                       Kör
                     </Button>

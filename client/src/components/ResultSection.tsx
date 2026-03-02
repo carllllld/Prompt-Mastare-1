@@ -155,7 +155,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
             <Info className="w-3 h-3" />
             <span>Du kan redigera texten direkt. Ändringarna syns i PDF-export och kopiering.</span>
           </div>
-          <TextEditor text={editedText} onTextChange={setEditedText} model={result.model} />
+          <TextEditor text={editedText} onTextChange={setEditedText} />
         </div>
       </div>
 

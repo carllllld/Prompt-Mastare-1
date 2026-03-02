@@ -2030,22 +2030,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls, model } = req.body;
       const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
-      // Model routing: Free gets GPT-5-mini, Pro/Premium can choose
-      let aiModel: string;
-      if (plan === "free") {
-        aiModel = "gpt-5-mini";
-      } else if (plan === "pro" || plan === "premium") {
-        // User's choice or default to GPT-5.2
-        aiModel = model || "gpt-5.2";
-        // Validate model choice
-        if (!["gpt-5.2", "claude-sonnet-4.6"].includes(aiModel)) {
-          aiModel = "gpt-5.2"; // fallback
-        }
-      } else {
-        aiModel = "gpt-5-mini"; // fallback
-      }
-
-      console.log(`[Model] Plan: ${plan}, Selected: ${aiModel}`);
+      // Fixed model: All users get GPT-5.2 with thinking mode where appropriate
+      const aiModel = "gpt-5.2";
+      console.log(`[Model] Plan: ${plan}, Using: ${aiModel} (fixed)`);
 
       // === DIFFERENTIERAD TEMPERATURE PER STIL OCH PLAN ===
       // Factual: Låg temp för precision, Balanserad: Medium temp för naturlighet, Säljande: Hög temp för kreativitet
@@ -2146,14 +2133,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         let extractionResult: any = null;
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const extractionCompletion = await openai.chat.completions.create({
-              model: aiModel,
-              messages: extractionMessages,
-              max_tokens: 2000,
-              temperature: 0.1,
-              response_format: { type: "json_object" },
+            const extractionCompletion = await openai.responses.create({
+              model: "gpt-5.2",
+              input: [
+                {
+                  role: "developer",
+                  content: COMBINED_EXTRACTION_PROMPT
+                },
+                {
+                  role: "user",
+                  content: `RÅDATA:\n${prompt}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}`
+                }
+              ],
+              text: { format: { type: "json_object" } }
             });
-            extractionResult = safeJsonParse(extractionCompletion.choices[0]?.message?.content || "{}");
+            extractionResult = safeJsonParse(extractionCompletion.output_text || "{}");
             break;
           } catch (e) {
             console.warn(`[Step 1] Extraction attempt ${attempt + 1} failed:`, e);
@@ -2253,7 +2247,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ];
 
           const planCompletion = await openai.chat.completions.create({
-            model: plan === "premium" ? (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2") : (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2"),
+            model: "gpt-5.2",
             messages: planMessages,
             max_tokens: 1500,
             temperature: 0.1,
@@ -2380,27 +2374,34 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
 
       console.log("[Step 3] Generating text with full prompt engineering...");
 
-      const textCompletion = await openai.chat.completions.create({
-        model: aiModel,
-        messages: textMessages,
-        max_tokens: 4500,
-        temperature: temperature,
-        response_format: { type: "json_object" },
+      const textCompletion = await openai.responses.create({
+        model: "gpt-5.2",
+        reasoning: { effort: "high" }, // High thinking for complex text generation
+        input: [
+          {
+            role: "developer",
+            content: `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`
+          },
+          {
+            role: "user",
+            content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`
+          }
+        ],
+        text: { format: { type: "json_object" } }
       });
 
-      // Detect truncation — if finish_reason is "length", the JSON was cut off
-      const finishReason = textCompletion.choices[0]?.finish_reason;
-      if (finishReason === "length") {
-        console.warn("[Step 3] WARNING: Output truncated (finish_reason=length). Token limit hit.");
+      // Detect truncation — if output was truncated
+      if (textCompletion.status === "incomplete") {
+        console.warn("[Step 3] WARNING: Output truncated. Token limit hit.");
       }
 
       let result: any;
       try {
-        result = safeJsonParse(textCompletion.choices[0]?.message?.content || "{}");
+        result = safeJsonParse(textCompletion.output_text || "{}");
       } catch (e) {
         console.error("[Step 3] Failed to parse AI response, attempting raw extraction:", e);
         // Try to extract improvedPrompt from truncated JSON
-        const raw = textCompletion.choices[0]?.message?.content || "";
+        const raw = textCompletion.output_text || "";
         const match = raw.match(/"improvedPrompt"\s*:\s*"([\s\S]*?)(?:"|$)/);
         if (match) {
           result = { improvedPrompt: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') };
@@ -2411,7 +2412,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
       }
 
       // Truncation recovery: if text ends mid-word or mid-sentence, trim to last complete sentence
-      if (result.improvedPrompt && finishReason === "length") {
+      if (result.improvedPrompt && textCompletion.status === "incomplete") {
         const text = result.improvedPrompt;
         const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
         if (lastPeriod > text.length * 0.5) {
@@ -2431,7 +2432,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
           // Retry med högre temperature
           const retryTemp = Math.min(temperature + 0.10, 0.45);
           const retryCompletion = await openai.chat.completions.create({
-            model: aiModel,
+            model: "gpt-5.2",
             messages: textMessages,
             max_tokens: 4500,
             temperature: retryTemp,
@@ -2512,7 +2513,7 @@ ERSÄTTNINGSTABELL:
             ];
 
             const correctionCompletion = await openai.chat.completions.create({
-              model: aiModel,
+              model: "gpt-5.2",
               messages: correctionMessages,
               max_tokens: 4500,
               temperature: 0.05,
@@ -2573,7 +2574,7 @@ REGLER:
             ];
 
             const expandCompletion = await openai.chat.completions.create({
-              model: aiModel,
+              model: "gpt-5.2",
               messages: expandMessages,
               max_tokens: 3000,
               temperature: 0.2,
@@ -2609,15 +2610,23 @@ REGLER:
             },
           ];
 
-          const factCheckCompletion = await openai.chat.completions.create({
-            model: plan === "premium" ? (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2") : (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2"),
-            messages: factCheckMessages,
-            max_tokens: 2500,
-            temperature: 0.1,
-            response_format: { type: "json_object" },
+          const factCheckCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "medium" }, // Medium thinking for fact-checking
+            input: [
+              {
+                role: "developer",
+                content: FACT_CHECK_PROMPT
+              },
+              {
+                role: "user",
+                content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`
+              }
+            ],
+            text: { format: { type: "json_object" } }
           });
 
-          factCheckResult = safeJsonParse(factCheckCompletion.choices[0]?.message?.content || "{}");
+          factCheckResult = safeJsonParse(factCheckCompletion.output_text || "{}");
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
             result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text, personalStyle?.styleProfile);
@@ -2691,7 +2700,7 @@ Svara med JSON i formatet:
 
         try {
           const improvementCompletion = await openai.chat.completions.create({
-            model: plan === "premium" ? (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2") : (aiModel === "claude-sonnet-4.6" ? "claude-sonnet-4.6" : "gpt-5.2"),
+            model: "gpt-5.2",
             messages: improvementMessages,
             max_tokens: 800,
             temperature: 0.3,
@@ -2778,15 +2787,12 @@ Svara med JSON i formatet:
         return PLAN_LIMITS[plan].textEdits;
       };
 
-      const rewriteLimit = getModelBasedLimit(rewritePlan, model);
+      const rewriteLimit = getModelBasedLimit(rewritePlan, "gpt-5.2");
       if (rewriteUsage.textEditsUsed >= rewriteLimit) {
-        const modelText = model === "gpt-5.2" ? "GPT-5.2" : "Claude 4.6";
         return res.status(429).json({
-          message: `Du har nått din gräns för AI-textredigeringar (${rewriteLimit}/månad) med ${modelText}. ${rewritePlan === "pro" && model === "claude-sonnet-4.6"
-            ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].pro} redigeringar/månad.`
-            : rewritePlan === "premium" && model === "claude-sonnet-4.6"
-              ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].premium} redigeringar/månad.`
-              : `Uppgradera till Premium för fler redigeringar.`
+          message: `Du har nått din gräns för AI-textredigeringar (${rewriteLimit}/månad) med GPT-5.2. ${rewritePlan === "pro"
+            ? `Uppgradera till Premium för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].premium} redigeringar/månad.`
+            : `Uppgradera till Premium för fler redigeringar.`
             }`,
           limitReached: true,
           upgradeTo: rewritePlan === "pro" ? "premium" : null,
@@ -2801,11 +2807,11 @@ Svara med JSON i formatet:
         console.warn("[Rewrite] Failed to load personal style:", e);
       }
 
-      const rewriteCompletion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [
+      const rewriteCompletion = await openai.responses.create({
+        model: "gpt-5.2",
+        input: [
           {
-            role: "system" as const,
+            role: "developer",
             content: `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver om delar av objektbeskrivningar på begäran — klyschfritt, specifikt, mänskligt.
 
 # DIN UPPGIFT
@@ -2835,19 +2841,17 @@ Det finns även, Det finns också, -möjligheter
 6. "Mer fakta" = be om fler detaljer OM det finns i kontexten — annars kondensera och stärk det som finns
 7. Matcha stilen i hela texten exakt
 
-Svara med JSON: {"rewritten": "den omskrivna texten"}`,
+Svara med JSON: {"rewritten": "den omskrivna texten"}`
           },
           {
-            role: "user" as const,
-            content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`,
-          },
+            role: "user",
+            content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`
+          }
         ],
-        max_tokens: 600,
-        temperature: 0.15,
-        response_format: { type: "json_object" },
+        text: { format: { type: "json_object" } }
       });
 
-      const raw = rewriteCompletion.choices[0]?.message?.content || "{}";
+      const raw = rewriteCompletion.output_text || "{}";
       let parsed: any;
       try { parsed = JSON.parse(raw); } catch { parsed = { rewritten: selectedText }; }
 
@@ -3756,15 +3760,13 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`,
         return PLAN_LIMITS[plan].textEdits;
       };
 
-      const improveLimit = getModelBasedLimit(plan, model);
+      const improvePlan = plan;
+      const improveLimit = getModelBasedLimit(improvePlan, "gpt-5.2");
       if (improveUsage.textEditsUsed >= improveLimit) {
-        const modelText = model === "gpt-5.2" ? "GPT-5.2" : "Claude 4.6";
         return res.status(429).json({
-          message: `Du har nått din gräns för AI-textredigeringar (${improveLimit}/månad) med ${modelText}. ${plan === "pro" && model === "claude-sonnet-4.6"
-              ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].pro} redigeringar/månad.`
-              : plan === "premium" && model === "claude-sonnet-4.6"
-                ? `Välj GPT-5.2 för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].premium} redigeringar/månad.`
-                : `Uppgradera till Premium för fler redigeringar.`
+          message: `Du har nått din gräns för AI-textredigeringar (${improveLimit}/månad) med GPT-5.2. ${plan === "pro"
+            ? `Uppgradera till Premium för ${MODEL_TEXT_EDIT_LIMITS["gpt-5.2"].premium} redigeringar/månad.`
+            : `Uppgradera till Premium för fler redigeringar.`
             }`,
           limitReached: true,
           upgradeTo: plan === "pro" ? "premium" : null,
@@ -3806,14 +3808,14 @@ Svara ENDAST med den förbättrade texten, inga förklaringar.`
         }
       ];
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: messages,
-        max_tokens: 500,
+      const completion = await openai.responses.create({
+        model: "gpt-5.2",
+        input: messages,
+        max_output_tokens: 500,
         temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
       });
 
-      let rawImprovedText = completion.choices[0]?.message?.content || selectedText;
+      let rawImprovedText = completion.output_text || selectedText;
       // Strip quotes, markdown code blocks, and leading/trailing whitespace
       rawImprovedText = rawImprovedText.trim();
       rawImprovedText = rawImprovedText.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, ""); // code blocks
