@@ -159,11 +159,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserStripeCustomer(userId: string, stripeCustomerId: string): Promise<void> {
-    console.log("[Storage] Updating Stripe customer ID for user:", userId);
     await db.update(users)
       .set({ stripeCustomerId })
       .where(eq(users.id, userId));
-    console.log("[Storage] Stripe customer ID updated successfully");
   }
 
   async downgradeUserToFree(stripeSubscriptionId: string): Promise<void> {

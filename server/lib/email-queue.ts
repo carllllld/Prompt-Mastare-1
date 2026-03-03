@@ -1,6 +1,3 @@
-import { db } from "./db";
-import { emailRateLimits } from "./schema";
-
 export interface EmailJob {
   id: string;
   type: 'verification' | 'team_invite' | 'password_reset' | 'welcome' | 'subscription_confirmed';
@@ -63,12 +60,12 @@ class EmailQueue {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    
+
     this.jobs.set(id, fullJob);
-    
+
     // Process job asynchronously
     this.processJob(id).catch(console.error);
-    
+
     return id;
   }
 
@@ -85,9 +82,9 @@ class EmailQueue {
 
       // Import dynamically to avoid circular dependencies
       const { sendEmailWithRetry } = await import('./email-service');
-      
+
       const result = await sendEmailWithRetry(job.type, job.to, job.data);
-      
+
       if (result.success) {
         job.status = 'sent';
         this.metrics.sent++;
@@ -98,7 +95,7 @@ class EmailQueue {
     } catch (error) {
       job.error = error instanceof Error ? error.message : 'Unknown error';
       job.attempts++;
-      
+
       if (job.attempts >= job.maxAttempts) {
         job.status = 'failed';
         this.metrics.failed++;
@@ -108,7 +105,7 @@ class EmailQueue {
         job.nextRetry = new Date(Date.now() + delay);
         job.status = 'pending';
         job.updatedAt = new Date();
-        
+
         // Retry later
         setTimeout(() => this.processJob(jobId), delay);
       }
@@ -132,7 +129,7 @@ class EmailQueue {
   // Cleanup old jobs (older than 24 hours)
   cleanup(): void {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    for (const [id, job] of this.jobs.entries()) {
+    for (const [id, job] of Array.from(this.jobs.entries())) {
       if (job.createdAt < cutoff && (job.status === 'sent' || job.status === 'failed')) {
         this.jobs.delete(id);
       }

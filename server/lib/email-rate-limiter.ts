@@ -45,7 +45,7 @@ class RateLimiter {
     const now = Date.now();
     const maxAge = 24 * 60 * 60 * 1000; // 24 hours
 
-    for (const [key, entry] of this.limits.entries()) {
+    for (const [key, entry] of Array.from(this.limits.entries())) {
       if (now - entry.windowStart > maxAge) {
         this.limits.delete(key);
       }
@@ -66,12 +66,12 @@ export const EMAIL_LIMITS = {
 };
 
 export async function checkEmailRateLimit(
-  email: string, 
-  type: keyof typeof EMAIL_LIMITS, 
+  email: string,
+  type: keyof typeof EMAIL_LIMITS,
   ip?: string
 ): Promise<{ allowed: boolean; remaining: number; resetTime?: number }> {
   const limit = EMAIL_LIMITS[type];
-  
+
   // Check per-email limit
   const emailKey = `email_${type}_${email}`;
   const emailAllowed = await rateLimiter.checkLimit(emailKey, limit.max, limit.windowMs);
@@ -81,7 +81,7 @@ export async function checkEmailRateLimit(
   if (ip) {
     const ipKey = `ip_${type}_${ip}`;
     const ipAllowed = await rateLimiter.checkLimit(ipKey, limit.max, limit.windowMs);
-    
+
     if (!ipAllowed) {
       return { allowed: false, remaining: 0 };
     }

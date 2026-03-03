@@ -98,7 +98,7 @@ function BeforeAfterDemo() {
 }
 
 export default function Home() {
-  const { mutate, isPending } = useOptimize();
+  const { mutate, isPending, setProgressCallback } = useOptimize();
   const { data: userStatus } = useUserStatus();
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
   const { mutate: openPortal, isPending: isPortalPending } = useStripePortal();
@@ -147,29 +147,26 @@ export default function Home() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [lastSubmitData, setLastSubmitData] = useState<any>(null);
   const [loadingStep, setLoadingStep] = useState(0);
-  const loadingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const LOADING_STEPS = [
-    "Analyserar fastighetsdata...",
-    "Matchar exempeltexter...",
-    "Skriver objektbeskrivning...",
-    "Genererar rubrik & Instagram-text...",
-    "Skapar visningsinbjudan & kortannons...",
-    "Faktagranskar alla texter...",
-    "Putsar och finsliper...",
-  ];
+  const [loadingMessage, setLoadingMessage] = useState("Förbereder generering...");
+  const LOADING_STEPS_COUNT = 7;
 
+  // Wire up real-time streaming progress from the server pipeline
+  useEffect(() => {
+    setProgressCallback((event) => {
+      setLoadingStep(event.step - 1); // 0-indexed for the UI
+      setLoadingMessage(event.message);
+    });
+    return () => setProgressCallback(undefined);
+  }, [setProgressCallback]);
+
+  // Reset loading state when mutation starts/stops
   useEffect(() => {
     if (isPending) {
       setLoadingStep(0);
-      loadingInterval.current = setInterval(() => {
-        setLoadingStep((prev) => Math.min(prev + 1, LOADING_STEPS.length - 1));
-      }, 3000);
-    } else {
-      if (loadingInterval.current) clearInterval(loadingInterval.current);
+      setLoadingMessage("Förbereder generering...");
     }
-    return () => { if (loadingInterval.current) clearInterval(loadingInterval.current); };
   }, [isPending]);
 
   const handleSubmit = (data: any) => {
@@ -366,7 +363,7 @@ export default function Home() {
             {/* Loading progress with skeleton */}
             {isPending && (
               <div className="mt-4 bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
-                <PromptGenerationSkeleton />
+                <PromptGenerationSkeleton step={loadingStep} total={LOADING_STEPS_COUNT} message={loadingMessage} />
               </div>
             )}
           </div>

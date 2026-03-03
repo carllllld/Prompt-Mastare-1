@@ -86,6 +86,18 @@ if (isProduction) {
   app.set("trust proxy", 1);
 }
 
+// ─── SECURITY HEADERS ───
+if (isProduction) {
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    next();
+  });
+}
+
 function validateEnvForProduction() {
   if (!isProduction) return;
 
@@ -195,14 +207,6 @@ app.use(session({
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   }
 }));
-
-// Debug session store initialization
-const sessionStore = app.sessionStore;
-if (sessionStore) {
-  console.log('[Session] Session store initialized:', sessionStore.constructor.name);
-} else {
-  console.log('[Session] Session store NOT initialized');
-}
 
 // Ensure session table exists (idempotent — never drops existing data)
 async function createSessionTable() {
@@ -326,4 +330,22 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   server.listen(PORT, "0.0.0.0", () => {
     log("info", "server_listen", { port: PORT });
   });
+
+  // ─── GRACEFUL SHUTDOWN ───
+  const shutdown = (signal: string) => {
+    log("info", "shutdown_start", { signal });
+    server.close(() => {
+      pool.end().then(() => {
+        log("info", "shutdown_complete");
+        process.exit(0);
+      }).catch(() => process.exit(1));
+    });
+    // Force exit after 10s if graceful shutdown hangs
+    setTimeout(() => {
+      log("error", "shutdown_forced", { signal });
+      process.exit(1);
+    }, 10_000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 })();

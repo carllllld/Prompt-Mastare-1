@@ -51,6 +51,37 @@ function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
   );
 }
 
+function CopyAllButton({ result }: { result: OptimizeResponse }) {
+  const [copied, setCopied] = useState(false);
+  const copyAll = () => {
+    const parts: string[] = [];
+    if (result.headline) parts.push(`RUBRIK:\n${result.headline}`);
+    parts.push(`OBJEKTBESKRIVNING:\n${result.improvedPrompt}`);
+    if (result.instagramCaption) parts.push(`INSTAGRAM:\n${result.instagramCaption}`);
+    if (result.showingInvitation) parts.push(`VISNINGSINBJUDAN:\n${result.showingInvitation}`);
+    if (result.shortAd) parts.push(`KORTANNONS:\n${result.shortAd}`);
+    if (result.socialCopy) parts.push(`SOCIAL MEDIA:\n${result.socialCopy}`);
+    navigator.clipboard.writeText(parts.join("\n\n─────────────────────\n\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+  return (
+    <Button
+      variant="outline"
+      onClick={copyAll}
+      className="w-full h-10 text-sm font-medium transition-all animate-slide-up"
+      style={{
+        borderColor: copied ? "#2D6A4F" : "#E8E5DE",
+        background: copied ? "#ECFDF5" : "#FAFAF7",
+        color: copied ? "#2D6A4F" : "#374151",
+      }}
+    >
+      {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+      {copied ? "Alla texter kopierade!" : "Kopiera alla 5 texter"}
+    </Button>
+  );
+}
+
 export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
@@ -94,15 +125,10 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <BarChart3 className="w-3 h-3" />
           {wordCount} ord
         </div>
-        {result.model && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{
-            background: result.model === "claude-sonnet-4.6" ? "#FEF3C7" : "#E8F5E9",
-            color: result.model === "claude-sonnet-4.6" ? "#92400E" : "#2D6A4F"
-          }}>
-            <Sparkles className="w-3 h-3" />
-            {result.model === "claude-sonnet-4.6" ? "Claude 4.6" : "GPT-5.2"}
-          </div>
-        )}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+          <Sparkles className="w-3 h-3" />
+          GPT-5.2
+        </div>
         {qualityScore != null && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
             style={{
@@ -121,6 +147,11 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           </div>
         )}
       </div>
+
+      {/* ── KOPIERA ALLT ── */}
+      {hasExtraTexts && (
+        <CopyAllButton result={liveResult} />
+      )}
 
       {/* ── 1. RUBRIK ── */}
       {result.headline && (

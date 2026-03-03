@@ -41,7 +41,7 @@ function clearLoginAttempts(key: string): void {
 // Cleanup stale entries every 10 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of loginAttempts) {
+  for (const [key, entry] of Array.from(loginAttempts)) {
     if (now > entry.resetAt) loginAttempts.delete(key);
   }
 }, 10 * 60 * 1000);
@@ -73,33 +73,25 @@ const loginSchema = z.object({
 export function setupAuth(app: Express) {
   // Register new user
   app.post("/auth/register", async (req: Request, res: Response) => {
-    console.log("[Register] Starting registration for:", req.body?.email);
     try {
       const parsed = registerSchema.parse(req.body);
       const email = parsed.email.toLowerCase();
       const password = parsed.password;
-      console.log("[Register] Validation passed");
 
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        console.log("[Register] Email already exists:", email);
         return res.status(400).json({ message: "E-postadressen är redan registrerad" });
       }
-      console.log("[Register] Email available");
 
       // Hash password and create user
       const passwordHash = await bcrypt.hash(password, 12);
-      console.log("[Register] Password hashed");
-
       const user = await storage.createUser(email, passwordHash);
-      console.log("[Register] User created:", user.id);
 
       // Generate verification token
       const verificationToken = crypto.randomBytes(32).toString('hex');
       const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
       await storage.setVerificationToken(user.id, verificationToken, tokenExpires);
-      console.log("[Register] Verification token created");
 
       // Send verification email (rate limited)
       const canSend = await storage.canSendEmail(email, 'verification', MAX_VERIFICATION_EMAILS_PER_HOUR);
@@ -109,14 +101,13 @@ export function setupAuth(app: Express) {
 
         // Send immediately for security emails (no queue delay)
         try {
-          console.log("[Register] Attempting to send verification email immediately to:", email);
           const { sendEmailWithRetry } = await import('./lib/email-service');
           const result = await sendEmailWithRetry('verification', email, {
             verificationUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/verify-email?token=${verificationToken}`
           }, clientIP);
 
           if (result.success) {
-            console.log("[Register] Verification email sent immediately to:", email);
+            // sent
           } else {
             console.error("[Register] Verification email send failed:", result.error);
             // Fallback to queue if immediate send fails
@@ -127,8 +118,6 @@ export function setupAuth(app: Express) {
           // Fallback to queue if immediate send fails
           await sendVerificationEmail(email, verificationToken, clientIP);
         }
-      } else {
-        console.log("[Register] Rate limited, skipping verification email");
       }
 
       // Set session (user can use the app but with limited features until verified)
@@ -142,15 +131,12 @@ export function setupAuth(app: Express) {
         loginTime: new Date()
       };
 
-      console.log("[Register] Session userId set with device info, saving session...");
-
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
         if (err) {
           console.error("[Register] Session save error:", err);
           return res.status(500).json({ message: "Registrering misslyckades" });
         }
-        console.log("[Register] Session saved successfully");
 
         res.status(201).json({
           id: user.id,
@@ -162,7 +148,6 @@ export function setupAuth(app: Express) {
       });
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        console.log("[Register] Validation error:", err.errors[0].message);
         return res.status(400).json({ message: err.errors[0].message });
       }
       console.error("[Register] Error:", err.message || err);
@@ -172,7 +157,6 @@ export function setupAuth(app: Express) {
 
   // Login
   app.post("/auth/login", async (req: Request, res: Response) => {
-    console.log("[Login] Starting login for:", req.body?.email);
     try {
       const parsed = loginSchema.parse(req.body);
       const email = parsed.email.toLowerCase();
@@ -183,35 +167,28 @@ export function setupAuth(app: Express) {
       const rateLimitKey = `${clientIP}:${email}`;
 
       if (!checkLoginRateLimit(rateLimitKey)) {
-        console.log("[Login] Rate limited:", email, "from IP:", clientIP);
         return res.status(429).json({
           message: "För många inloggningsförsök. Vänligen vänta 15 minuter och försök igen."
         });
       }
 
-      console.log("[Login] Looking up user by email:", email);
       const user = await storage.getUserByEmail(email);
       if (!user) {
-        console.log("[Login] User not found:", email);
         recordFailedLogin(rateLimitKey);
         return res.status(401).json({ message: "Felaktig e-postadress eller lösenord" });
       }
 
-      console.log("[Login] User found:", user.id, "email verified:", user.emailVerified);
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
-        console.log("[Login] Invalid password for:", email);
         recordFailedLogin(rateLimitKey);
         return res.status(401).json({ message: "Felaktig e-postadress eller lösenord" });
       }
 
       // Clear rate limit on successful login
       clearLoginAttempts(rateLimitKey);
-      console.log("[Login] Password valid");
 
       // Check if email is verified
       if (!user.emailVerified) {
-        console.log("[Login] Email not verified for:", email);
         return res.status(403).json({
           message: "Vänligen verifiera din e-postadress innan du loggar in. Kontrollera din inkorg.",
           emailNotVerified: true,
@@ -222,7 +199,6 @@ export function setupAuth(app: Express) {
       // Set session with device info (clientIP already declared above for rate limiting)
       const userAgent = req.get('User-Agent') || 'unknown';
 
-      console.log("[Login] Setting up session for user:", user.id);
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
@@ -230,16 +206,12 @@ export function setupAuth(app: Express) {
         loginTime: new Date()
       };
 
-      console.log("[Login] Session userId set with device info, saving session...");
-      console.log("[Login] Device:", { userAgent: userAgent.substring(0, 50), ip: clientIP });
-
       // Explicitly save session to ensure it persists
       req.session.save((err) => {
         if (err) {
           console.error("[Login] Session save error:", err);
           return res.status(500).json({ message: "Inloggning misslyckades" });
         }
-        console.log("[Login] Session saved successfully for user:", user.id);
 
         res.json({
           id: user.id,
@@ -250,7 +222,6 @@ export function setupAuth(app: Express) {
       });
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        console.log("[Login] Validation error:", err.errors[0].message);
         return res.status(400).json({ message: err.errors[0].message });
       }
       console.error("[Login] Error:", err.message || err);
@@ -263,23 +234,23 @@ export function setupAuth(app: Express) {
     req.session.destroy((err) => {
       if (err) {
         console.error("Logout error:", err);
-        return res.status(500).json({ message: "Logout failed" });
+        return res.status(500).json({ message: "Utloggning misslyckades" });
       }
       res.clearCookie("maklartexter.sid");
-      res.json({ message: "Logged out successfully" });
+      res.json({ message: "Utloggad" });
     });
   });
 
   // Get current user
   app.get("/auth/me", async (req: Request, res: Response) => {
     if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "Ej inloggad" });
     }
 
     const user = await storage.getUserById(req.session.userId);
     if (!user) {
       req.session.destroy(() => { });
-      return res.status(401).json({ message: "User not found" });
+      return res.status(401).json({ message: "Användare hittades inte" });
     }
 
     res.json({
@@ -293,38 +264,29 @@ export function setupAuth(app: Express) {
   // Verify email
   app.get("/auth/verify-email", async (req: Request, res: Response) => {
     try {
-      console.log("[Verify] Email verification request received");
       const { token } = req.query;
 
       if (!token || typeof token !== 'string') {
-        console.log("[Verify] Invalid or missing token");
         return res.status(400).json({ message: "Verifieringslänk saknas" });
       }
 
-      console.log("[Verify] Looking up user by verification token");
       const user = await storage.getUserByVerificationToken(token);
       if (!user) {
-        console.log("[Verify] User not found for token");
         return res.status(400).json({ message: "Ogiltig eller utgången verifieringslänk" });
       }
 
-      console.log("[Verify] User found:", user.id, "email verified:", user.emailVerified);
-
       // Check if token has expired
       if (user.verificationTokenExpires && new Date() > new Date(user.verificationTokenExpires)) {
-        console.log("[Verify] Token expired for user:", user.id);
         return res.status(400).json({ message: "Verifieringslänken har gått ut. Vänligen begär en ny." });
       }
 
       // Mark email as verified
       await storage.markEmailVerified(user.id);
-      console.log("[Verify] Email marked as verified for user:", user.id);
 
       // Log the user in automatically with device info
       const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
       const userAgent = req.get('User-Agent') || 'unknown';
 
-      console.log("[Verify] Setting up session for user:", user.id);
       req.session.userId = user.id;
       req.session.deviceInfo = {
         userAgent,
@@ -332,13 +294,11 @@ export function setupAuth(app: Express) {
         loginTime: new Date()
       };
 
-      console.log("[Verify] Saving session...");
       req.session.save((err) => {
         if (err) {
           console.error("[Verify] Session save error:", err);
           return res.status(500).json({ message: "Verifiering misslyckades" });
         }
-        console.log("[Verify] Session saved successfully for user:", user.id);
         res.json({
           message: "E-postadressen har verifierats!",
           id: user.id,
@@ -395,7 +355,6 @@ export function setupAuth(app: Express) {
         return res.status(500).json({ message: "Lösenordet kunde inte sparas korrekt. Försök igen." });
       }
 
-      console.log("[ChangePassword] Password changed for user:", user.id);
       res.json({ message: "Lösenordet har ändrats!" });
     } catch (err: any) {
       console.error("[ChangePassword] Error:", err);
@@ -445,7 +404,6 @@ export function setupAuth(app: Express) {
         await sendEmailWithRetry('verification', email, {
           verificationUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/verify-email?token=${verificationToken}`
         }, clientIP);
-        console.log("[Resend] Verification email sent immediately to:", email);
       } catch (emailError) {
         console.error("[Resend] Immediate verification email send failed:", emailError);
         // Fallback to queue if immediate send fails
@@ -499,7 +457,6 @@ export function setupAuth(app: Express) {
           resetUrl: `${(process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '')}/reset-password?token=${resetToken}`,
           userName: user.email
         }, clientIP);
-        console.log("[ForgotPassword] Reset email sent to:", email);
       } catch (emailError) {
         console.error("[ForgotPassword] Email send failed:", emailError);
         // Fallback to queue if immediate send fails
@@ -515,58 +472,45 @@ export function setupAuth(app: Express) {
   // Reset password with token
   app.post("/auth/reset-password", async (req: Request, res: Response) => {
     try {
-      console.log("[ResetPassword] Password reset request received");
       const { token, password } = req.body;
 
       if (!token || typeof token !== 'string') {
-        console.log("[ResetPassword] Invalid or missing token");
         return res.status(400).json({ message: "Återställningslänk saknas" });
       }
 
       if (!password || password.length < 8) {
-        console.log("[ResetPassword] Invalid password length");
         return res.status(400).json({ message: "Lösenordet måste vara minst 8 tecken" });
       }
 
-      console.log("[ResetPassword] Looking up user by reset token");
       const user = await storage.getUserByPasswordResetToken(token);
 
       if (!user) {
-        console.log("[ResetPassword] User not found for token");
         return res.status(400).json({ message: "Ogiltig eller utgången återställningslänk" });
       }
 
-      console.log("[ResetPassword] User found:", user.id, "email verified:", user.emailVerified);
-
       // Check if token has expired
       if (user.passwordResetExpires && new Date() > new Date(user.passwordResetExpires)) {
-        console.log("[ResetPassword] Token expired for user:", user.id);
         return res.status(400).json({ message: "Återställningslänken har gått ut. Vänligen begär en ny." });
       }
 
       // Hash new password and update
-      console.log("[ResetPassword] Hashing new password for user:", user.id);
       const passwordHash = await bcrypt.hash(password, 12);
       const updatedUser = await storage.updatePassword(user.id, passwordHash);
 
       if (!updatedUser) {
-        console.error("[ResetPassword] UPDATE returned no rows for user:", user.id);
         return res.status(500).json({ message: "Kunde inte uppdatera lösenordet. Försök igen." });
       }
 
       // Mark email as verified since user has proven ownership by using reset link
-      console.log("[ResetPassword] Marking email as verified for user:", user.id);
       await storage.markEmailVerified(user.id);
-      console.log("[ResetPassword] Email marked as verified for user:", user.id);
 
       // Verify the new hash actually works before telling the user it's done
       const verifyHash = await bcrypt.compare(password, updatedUser.passwordHash);
       if (!verifyHash) {
-        console.error("[ResetPassword] CRITICAL: Hash verification failed after save for user:", user.id);
+        console.error("[ResetPassword] CRITICAL: Hash verification failed after save");
         return res.status(500).json({ message: "Lösenordet kunde inte sparas korrekt. Försök igen." });
       }
 
-      console.log("[ResetPassword] Password updated and verified for user:", user.id);
       res.json({ message: "Lösenordet har uppdaterats! Du kan nu logga in." });
     } catch (err: any) {
       console.error("[ResetPassword] Error:", err);
@@ -591,12 +535,12 @@ export function setupAuth(app: Express) {
 // Middleware: Require authentication
 export const requireAuth: RequestHandler = async (req, res, next) => {
   if (!req.session.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Ej inloggad" });
   }
 
   const user = await storage.getUserById(req.session.userId);
   if (!user) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Ej inloggad" });
   }
 
   // Attach user to request for convenience
@@ -607,12 +551,12 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 // Middleware: Require Pro subscription
 export const requirePro: RequestHandler = async (req, res, next) => {
   if (!req.session.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Ej inloggad" });
   }
 
   const user = await storage.getUserById(req.session.userId);
   if (!user) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "Ej inloggad" });
   }
 
   if (user.plan !== "pro" && user.plan !== "premium") {

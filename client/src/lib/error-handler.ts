@@ -189,9 +189,17 @@ export class ErrorHandler {
       url: window.location.href
     };
 
-    // In production, send to error monitoring service
+    // In production, send to error monitoring service (Sentry)
     if (process.env.NODE_ENV === 'production') {
-      // TODO: Send to Sentry, LogRocket, etc.
+      try {
+        const Sentry = (window as any).__SENTRY__;
+        if (Sentry?.hub?.getClient()) {
+          Sentry.hub.captureException(new Error(error.message), {
+            tags: { errorCode: error.code, context },
+            extra: logData,
+          });
+        }
+      } catch { }
       console.error('[App Error]', logData);
     } else {
       console.error('[App Error]', logData);

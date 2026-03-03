@@ -7,7 +7,7 @@ const router = Router();
 router.post('/webhooks/email', async (req, res) => {
   try {
     const signature = req.headers['resend-signature'] as string;
-    
+
     // Verify webhook signature (optional but recommended)
     if (signature) {
       // TODO: Implement signature verification
@@ -19,7 +19,7 @@ router.post('/webhooks/email', async (req, res) => {
 
     // Handle webhook events
     await handleEmailWebhook(req.body);
-    
+
     res.json({ success: true });
   } catch (error) {
     console.error('[Email Webhook] Error:', error);
@@ -27,12 +27,21 @@ router.post('/webhooks/email', async (req, res) => {
   }
 });
 
-// Get email metrics
-router.get('/metrics', async (req, res) => {
+// Admin auth check for internal endpoints
+function requireAdminKey(req: any, res: any, next: any) {
+  const adminKey = process.env.ADMIN_KEY;
+  if (!adminKey || req.headers['x-admin-key'] !== adminKey) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}
+
+// Get email metrics (admin only)
+router.get('/metrics', requireAdminKey, async (req, res) => {
   try {
     const metrics = getEmailMetrics();
     const queueStatus = getEmailQueueStatus();
-    
+
     res.json({
       metrics,
       queueStatus,
@@ -44,8 +53,8 @@ router.get('/metrics', async (req, res) => {
   }
 });
 
-// Get email queue status
-router.get('/queue/status', async (req, res) => {
+// Get email queue status (admin only)
+router.get('/queue/status', requireAdminKey, async (req, res) => {
   try {
     const status = getEmailQueueStatus();
     res.json(status);

@@ -1,15 +1,32 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function PromptGenerationSkeleton() {
+interface ProgressProps {
+  step?: number;
+  total?: number;
+  message?: string;
+}
+
+export function PromptGenerationSkeleton({ step = 0, total = 7, message = "Förbereder generering..." }: ProgressProps) {
+  const progress = total > 0 ? Math.round(((step + 1) / total) * 100) : 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center space-x-4">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-[250px]" />
-          <Skeleton className="h-4 w-[200px]" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#2D6A4F" }} />
+          <span className="text-sm font-medium" style={{ color: "#2D6A4F" }}>{message}</span>
         </div>
+        <span className="text-xs font-medium tabular-nums" style={{ color: "#9CA3AF" }}>
+          {step + 1}/{total}
+        </span>
       </div>
-      <div className="space-y-3">
+      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "#E8E5DE" }}>
+        <div
+          className="h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${progress}%`, background: "#2D6A4F" }}
+        />
+      </div>
+      <div className="space-y-3 pt-1">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />

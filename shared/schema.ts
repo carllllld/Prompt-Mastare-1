@@ -85,7 +85,7 @@ export const optimizeRequestSchema = z.object({
   wordCountMax: z.number().optional(),
   imageUrls: z.array(z.string()).optional(),
   propertyData: z.record(z.any()).optional(),
-  model: z.enum(["gpt-5.2", "claude-sonnet-4.6"]).optional(), // For Pro/Premium users
+  model: z.string().optional(), // Legacy field — always GPT-5.2
 });
 
 export const optimizeResponseSchema = z.object({
@@ -123,7 +123,7 @@ export const optimizeResponseSchema = z.object({
   shortAd: z.string().optional(),
   socialCopy: z.string().optional(),
   wordCount: z.number().optional(),
-  model: z.enum(["gpt-5.2", "claude-sonnet-4.6"]).optional(),
+  model: z.string().optional(),
 });
 
 export const userStatusSchema = z.object({
@@ -152,15 +152,11 @@ export const PLAN_LIMITS = {
   premium: { texts: 25, areaSearches: 999999, textEdits: 100, personalStyleAnalyses: 999999 },
 } as const;
 
-// Model-based text edit limits (cost optimization)
+// Model-based text edit limits
 export const MODEL_TEXT_EDIT_LIMITS = {
   "gpt-5.2": {
-    pro: 40,    // 10 extra edits for cheaper model
-    premium: 120, // 20 extra edits for cheaper model
-  },
-  "claude-sonnet-4.6": {
-    pro: 20,    // 10 fewer edits for expensive model
-    premium: 80, // 20 fewer edits for expensive model
+    pro: 40,
+    premium: 120,
   },
 } as const;
 

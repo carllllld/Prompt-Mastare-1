@@ -105,7 +105,7 @@ async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
 // Cleanup stale rate limit entries every 5 minutes
 setInterval(() => {
   const now = Date.now();
-  for (const [key, entry] of optimizeRateMap) {
+  for (const [key, entry] of Array.from(optimizeRateMap)) {
     if (now > entry.resetAt) optimizeRateMap.delete(key);
   }
 }, 5 * 60 * 1000);
@@ -177,7 +177,7 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
       max_tokens: 1000,
       temperature: 0.1,
@@ -568,13 +568,92 @@ const FORBIDDEN_PHRASES = [
   "ett stenkast från",
 ];
 
-function findRuleViolations(text: string, platform: string = "hemnet"): string[] {
+// === STIL-BEROENDE FRASFILTRERING ===
+// Factual: alla fraser förbjudna (striktast — ren faktabeskrivning)
+// Balanced: milda adjektiv/beskrivningar tillåtna
+// Selling: expressiva adjektiv, atmosfär, livsstil tillåtna (mest kreativ frihet)
+
+const BALANCED_EXEMPT = new Set([
+  // Milda adjektiv som riktiga mäklare faktiskt använder
+  "genomtänkt", "smakfullt", "stilfullt", "elegant",
+  // Plats-beskrivningar (standard mäklarspråk)
+  "attraktivt läge", "naturskönt läge", "populärt område", "familjevänligt område",
+  // Standard/kvalitet
+  "hög standard",
+  // Vanliga mäklaruttryck
+  "ljus och luftig", "ljust och luftigt",
+  "trivsamt boende", "trivsam bostad",
+  "rofyllt", "rofylld",
+  // Compound (vanliga i mäklartexter)
+  "genomtänkt planlösning", "smakfullt renoverat", "stilfullt renoverat",
+]);
+
+const SELLING_EXEMPT = new Set([
+  // ── Allt från balanced ──
+  ...Array.from(BALANCED_EXEMPT),
+
+  // ── Expressiva adjektiv — legitimt i säljande text ──
+  "fantastisk", "fantastiskt", "underbar", "imponerande",
+  "exklusivt", "lyxigt", "magnifikt", "praktfullt",
+  "stilren", "noggrant utvalt", "noggrant utvalda", "omsorgsfullt",
+  "en sann pärla",
+
+  // ── Compound adjektiv-par ──
+  "stilrent och modernt", "stilren och modern",
+  "modernt och stilrent", "elegant och tidlös", "tidlös och elegant",
+  "mysigt och ombonat", "charmigt och välplanerat",
+  "praktiskt och snyggt", "fräscht och modernt",
+
+  // ── Atmosfär-fraser (säljtexter ska skapa känsla) ──
+  "trivsam atmosfär", "härlig atmosfär", "mysig atmosfär",
+  "inbjudande atmosfär", "luftig atmosfär", "luftig och",
+
+  // ── Charm/karaktär ──
+  "stor charm", "med sin charm", "med mycket charm", "charm",
+
+  // ── Drömboende (OK i säljande) ──
+  "drömboende", "drömlägenhet", "drömhem",
+
+  // ── Plats (utökad) ──
+  "eftertraktat område", "barnvänligt område",
+  "natursköna omgivningar", "en pärla",
+  "attraktivt med närhet",
+
+  // ── Livsstil/standard ──
+  "hög kvalitet", "livsstil", "livskvalitet",
+
+  // ── Komfort/trygghet ──
+  "extra komfort", "maximal komfort",
+  "trygg boendemiljö", "trygg boendeekonomi", "tryggt boende",
+
+  // ── Milda emotionella (OK i säljande) ──
+  "inbjuder till", "bjuder in till", "inspirerar till",
+  "sociala sammanhang", "sociala tillställningar",
+
+  // ── Compound PHRASE_REPLACEMENTS som ska bevaras i säljande ──
+  "omsorgsfullt renoverat", "smakfullt inrett",
+  "exklusivt utförande", "lyxigt badrum", "imponerande takhöjd",
+]);
+
+type WritingStyle = "factual" | "balanced" | "selling";
+
+function getExemptPhrases(style: WritingStyle): Set<string> {
+  switch (style) {
+    case "selling": return SELLING_EXEMPT;
+    case "balanced": return BALANCED_EXEMPT;
+    case "factual": return new Set(); // Inget undantag — striktast
+  }
+}
+
+function findRuleViolations(text: string, platform: string = "hemnet", style: WritingStyle = "balanced"): string[] {
   const violations: string[] = [];
   const lowerText = text.toLowerCase().trim();
   const sentences = text.split(/(?<=[.!?])\s+/);
 
-  // 1. Check all forbidden phrases
+  // 1. Check forbidden phrases (filtered by writing style)
+  const exempt = getExemptPhrases(style);
   for (const phrase of FORBIDDEN_PHRASES) {
+    if (exempt.has(phrase.toLowerCase())) continue;
     if (lowerText.includes(phrase.toLowerCase())) {
       violations.push(`Förbjuden fras: "${phrase}"`);
     }
@@ -668,17 +747,17 @@ function checkWordCount(text: string, platform: string, targetMin?: number, targ
   return violations;
 }
 
-function validateOptimizationResult(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number): string[] {
+function validateOptimizationResult(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number, style: WritingStyle = "balanced"): string[] {
   const violations: string[] = [];
   if (typeof result?.improvedPrompt === "string") {
-    violations.push(...findRuleViolations(result.improvedPrompt, platform));
+    violations.push(...findRuleViolations(result.improvedPrompt, platform, style));
     violations.push(...checkWordCount(result.improvedPrompt, platform, targetMin, targetMax));
   }
   // Validera ALLA textfält för förbjudna fraser (inte ordräkning)
   const extraFields = ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline'];
   for (const field of extraFields) {
     if (typeof result?.[field] === "string" && result[field].length > 0) {
-      const fieldViolations = findRuleViolations(result[field], platform);
+      const fieldViolations = findRuleViolations(result[field], platform, style);
       for (const v of fieldViolations) {
         violations.push(`[${field}] ${v}`);
       }
@@ -892,45 +971,81 @@ function analyzeTextQuality(text: string): number {
 
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
   const words = text.split(/\s+/);
+  const lowerText = text.toLowerCase();
 
-  // 1. Sentence length variety (good flow)
+  // 1. Sentence length variety (good flow — mix of short and long)
   const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
   const avgLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
-  if (avgLength >= 8 && avgLength <= 15) score += 0.1;
+  if (avgLength >= 7 && avgLength <= 14) score += 0.08;
 
-  // 2. No extremely short sentences (< 3 words)
-  const veryShortSentences = sentenceLengths.filter(len => len < 3).length;
-  if (veryShortSentences === 0) score += 0.1;
-  else score -= (veryShortSentences * 0.05);
+  // 2. Staccato detection — penalize 3+ ultra-short sentences in a row
+  let staccatoRuns = 0;
+  let currentRun = 0;
+  for (const len of sentenceLengths) {
+    if (len <= 4) { currentRun++; if (currentRun >= 3) staccatoRuns++; }
+    else { currentRun = 0; }
+  }
+  if (staccatoRuns === 0) score += 0.08;
+  else score -= (staccatoRuns * 0.04);
 
   // 3. No extremely long sentences (> 25 words)
   const veryLongSentences = sentenceLengths.filter(len => len > 25).length;
-  if (veryLongSentences === 0) score += 0.1;
-  else score -= (veryLongSentences * 0.05);
+  if (veryLongSentences === 0) score += 0.05;
+  else score -= (veryLongSentences * 0.03);
 
   // 4. Proper punctuation
-  const endsWithProperPunctuation = /[.!?]$/.test(text.trim());
-  if (endsWithProperPunctuation) score += 0.05;
+  if (/[.!?]$/.test(text.trim())) score += 0.03;
 
-  // 5. No repeated sentence starters
+  // 5. No repeated sentence starters (variety)
   const starters = sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase()).filter(Boolean);
   const uniqueStarters = new Set(starters);
-  if (uniqueStarters.size / starters.length > 0.7) score += 0.1;
+  const starterRatio = starters.length > 0 ? uniqueStarters.size / starters.length : 0;
+  if (starterRatio > 0.75) score += 0.08;
+  else if (starterRatio > 0.6) score += 0.04;
 
-  // 6. No forbidden phrases (quick check)
-  const forbiddenQuick = ['erbjuder', 'fantastisk', 'perfekt', 'unik', 'välkommen till', 'här finns'];
-  const forbiddenCount = forbiddenQuick.filter(f => text.toLowerCase().includes(f)).length;
-  if (forbiddenCount === 0) score += 0.1;
-  else score -= (forbiddenCount * 0.05);
+  // 6. No forbidden phrases (quick check — universal AI markers)
+  const forbiddenQuick = ['erbjuder', 'välkommen till', 'här finns', 'bjuder på', 'präglas av', 'genomsyras av'];
+  const forbiddenCount = forbiddenQuick.filter(f => lowerText.includes(f)).length;
+  if (forbiddenCount === 0) score += 0.08;
+  else score -= (forbiddenCount * 0.04);
 
-  // 7. Word count appropriateness
-  if (words.length >= 100 && words.length <= 500) score += 0.05;
-
-  // 8. No obvious AI artifacts
-  const artifacts = ['vilket gör', 'vilket ger', 'för den som', 'bjuder på'];
-  const artifactCount = artifacts.filter(a => text.toLowerCase().includes(a)).length;
-  if (artifactCount === 0) score += 0.1;
+  // 7. No obvious AI artifacts
+  const artifacts = ['vilket gör', 'vilket ger', 'för den som', 'skapar en känsla', 'bidrar till', 'inte bara'];
+  const artifactCount = artifacts.filter(a => lowerText.includes(a)).length;
+  if (artifactCount === 0) score += 0.08;
   else score -= (artifactCount * 0.03);
+
+  // 8. Specificity bonus — brand names, years, measurements indicate real content
+  const specificitySignals = [
+    /\b(ballingslöv|marbodal|ikea|hth|kvik|noblessa)\b/i, // kitchen brands
+    /\b(siemens|bosch|miele|electrolux|gaggenau)\b/i, // appliance brands
+    /\b(20\d{2})\b/, // years (2000-2099)
+    /\b\d+\s*kvm\b/i, // square meters
+    /\b\d+[,.]?\d*\s*meter\b/i, // height measurements
+    /\b(ekparkett|laminat|klinker|fiskbens)/i, // floor materials
+  ];
+  const specificityCount = specificitySignals.filter(r => r.test(text)).length;
+  score += Math.min(0.12, specificityCount * 0.02);
+
+  // 9. Connecting language bonus — signs of natural flow
+  const connectors = ['leder in till', 'med utgång mot', 'med utsikt mot', 'genomgående', 'som renoverades'];
+  const connectorCount = connectors.filter(c => lowerText.includes(c)).length;
+  if (connectorCount >= 2) score += 0.06;
+  else if (connectorCount >= 1) score += 0.03;
+
+  // 10. Natural article usage ("En trea", "Ett radhus") — human touch
+  if (/\b(en|ett)\s+(etta|tvåa|trea|fyra|femma|villa|radhus|lägenhet)\b/i.test(text)) {
+    score += 0.04;
+  }
+
+  // 11. Opening quality — should start with address (street name pattern)
+  const firstLine = text.split('\n')[0] || '';
+  if (/^[A-ZÅÄÖ][a-zåäö]+(?:gatan|vägen|stigen|gränd|plan|torget|backen)\s/i.test(firstLine)) {
+    score += 0.05;
+  }
+
+  // 12. Word count appropriateness
+  if (words.length >= 100 && words.length <= 500) score += 0.03;
 
   return Math.max(0, Math.min(1, score));
 }
@@ -945,7 +1060,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
+function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
   if (!text) return text;
   let cleaned = text;
 
@@ -1001,9 +1116,12 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any): string {
     return space; // remove orphan fragment
   });
 
-  // === STAGE 2: Replace forbidden phrases ===
+  // === STAGE 2: Replace forbidden phrases (filtered by writing style) ===
+  const exempt = getExemptPhrases(style);
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
-    // Skip if phrase is in allowed phrases (respect broker's style)
+    // Skip if phrase is exempt for this writing style
+    if (exempt.has(phrase.toLowerCase())) continue;
+    // Skip if phrase is in allowed phrases (respect broker's personal style)
     if (styleProfile?.allowedPhrases?.some((allowed: string) => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
       continue;
     }
@@ -1230,7 +1348,7 @@ Kategorisera objektet utifrån vad som FINNS i rådata:
     ],
     "must_include": ["obligatoriska fakta som MÅSTE med"],
     "missing_info": ["info som saknas i rådata"],
-    "forbidden_phrases": ["erbjuder", "perfekt för", "i hjärtat av", "vilket gör det", "för den som", "drömboende", "luftig känsla", "fantastisk", "välkommen till"]
+    "forbidden_phrases": ["erbjuder", "perfekt för", "i hjärtat av", "vilket gör det", "för den som", "bjuder på", "präglas av", "välkommen till"]
   }
 }
 `;
@@ -1254,7 +1372,7 @@ Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som st
 
 # BASLISTA FÖRBJUDNA FRASER (lägg in i forbidden_words)
 
-För BOTH: "i hjärtat av", "vilket gör det enkelt", "vilket", "som ger en", "rymlig känsla", "härlig plats för", "plats för avkoppling", "generösa ytor", "generös takhöjd", "bjuder på", "präglas av", "genomsyras av", "andas lugn", "andas charm", "erbjuder", "fantastisk", "perfekt", "drömboende", "en sann pärla", "Välkommen", "Här finns", "här kan du", "faciliteter", "njut av", "livsstil", "livskvalitet", "smakfullt", "stilfullt", "elegant", "exklusivt", "imponerande", "harmonisk", "inbjudande", "tidlös", "ljus och luftig", "stilrent och modernt", "mysigt och ombonat", "inte bara", "utan också", "bidrar till", "förstärker", "skapar en känsla", "-möjligheter", "Det finns även", "Det finns också"
+För BOTH (universella AI-markörer): "i hjärtat av", "vilket gör det enkelt", "vilket", "som ger en", "rymlig känsla", "härlig plats för", "plats för avkoppling", "generösa ytor", "generös takhöjd", "bjuder på", "präglas av", "genomsyras av", "andas lugn", "andas charm", "erbjuder", "perfekt", "en sann pärla", "Välkommen", "Här finns", "här kan du", "faciliteter", "njut av", "inte bara", "utan också", "bidrar till", "förstärker", "skapar en känsla", "-möjligheter", "Det finns även", "Det finns också"
 
 För BOOLI/EGEN SIDA: lägg även in "för den som", "vilket ger en", "en bostad som", "ett hem som", "ett hem att trivas i", "mer än bara"
 
@@ -1296,19 +1414,19 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
   // SMÅ LÄGENHETER (1-2 rum, under 55 kvm)
   small_apartment: [
     {
-      text: "Kyrkogatan 8, 3 tr, Västerås. Etta om 34 kvm med nymålade väggar 2023.\n\nÖppen planlösning med kök och vardagsrum i samma rum. Köket har spis, kyl och frys. Förvaring i väggskåp.\n\nLaminatgolv. Fönstren är nya med bra ljusinsläpp.\n\nBadrummet är helkaklat och renoverat 2022 med dusch, wc och handfat.\n\n5 minuter till tågstationen. ICA Nära i kvarteret.",
+      text: "Kyrkogatan 8, 3 tr, Västerås. En etta om 34 kvm med nymålade väggar och nya fönster.\n\nÖppen planlösning med kök och vardagsrum i samma rum. Köket har spis, kyl och frys. Förvaring i väggskåp och garderob i hallen.\n\nLaminatgolv genomgående. Fönstren är bytta och ger bra ljusinsläpp.\n\nBadrummet renoverades 2022 och är helkaklat med dusch, wc och handfat.\n\nTågstationen 5 minuter. ICA Nära i kvarteret.",
       metadata: { type: "lägenhet", rooms: 1, size: 34 }
     },
     {
-      text: "Andra Långgatan 15, 2 tr, Göteborg. Tvåa om 48 kvm med balkong mot gården.\n\nHallen har garderob. Vardagsrummet har två fönster och takhöjd 2,60 meter. Ekparkett genomgående.\n\nKöket har vita luckor och vitvaror från Electrolux 2020. Plats för två vid fönstret.\n\nSovrummet rymmer dubbelsäng. Badrummet är helkaklat med dusch och tvättmaskin.\n\nBalkongen på 3 kvm vetter mot väster. Avgift 3 200 kr/mån.\n\nSpårvagn Järntorget 2 minuter. Coop på Andra Långgatan.",
+      text: "Andra Långgatan 15, 2 tr, Göteborg. En tvåa om 48 kvm med balkong mot gården.\n\nHallen har garderob och leder in till vardagsrummet med två fönster och takhöjd på 2,60 meter. Ekparkett genomgående.\n\nKöket har vita luckor och vitvaror från Electrolux 2020. Matplats för två vid fönstret.\n\nSovrummet rymmer dubbelsäng. Badrummet är helkaklat med dusch och tvättmaskin.\n\nBalkong om 3 kvm mot väster. Avgift 3 200 kr/mån.\n\nSpårvagn Järntorget 2 minuter. Coop på Andra Långgatan.",
       metadata: { type: "lägenhet", rooms: 2, size: 48 }
     },
     {
-      text: "Nygatan 22, 4 tr, Norrköping. Tvåa om 42 kvm med balkong mot innergården.\n\nHall med hatthylla. Vardagsrummet har fönster åt söder och ekparkett.\n\nKöket har vita luckor och Electrolux-vitvaror. Diskmaskin. Matplats för två.\n\nSovrummet rymmer 120-säng och har garderob. Badrummet renoverat 2021 med dusch och tvättmaskin.\n\nBalkong 2 kvm mot söder. BRF Stadshagen, avgift 2 900 kr/mån.\n\nResecentrum 5 minuter. Willys Hemma 200 meter.",
+      text: "Nygatan 22, 4 tr, Norrköping. En tvåa om 42 kvm med balkong mot söder.\n\nHall med hatthylla och förvaring. Vardagsrummet har fönster åt söder och ekparkett.\n\nKöket har vita luckor, Electrolux-vitvaror och diskmaskin. Matplats för två vid fönstret.\n\nSovrummet rymmer 120-säng och har garderob. Badrummet renoverades 2021 med dusch och tvättmaskin.\n\nBalkong om 2 kvm i söderläge. BRF Stadshagen, avgift 2 900 kr/mån.\n\nResecentrum 5 minuter. Willys Hemma 200 meter.",
       metadata: { type: "lägenhet", rooms: 2, size: 42 }
     },
     {
-      text: "Storgatan 45, 1 tr, Jönköping. Etta om 28 kvm med sjöutsikt.\n\nÖppen planlösning. Köket har nya vitvaror och laminatbänk. Kyl, frys och spis.\n\nBadrummet helkaklat med dusch. Laminatgolv.\n\nFönster mot Vättern. BRF Sjögläntan, avgift 2 400 kr/mån.\n\nBuss till centrum 3 minuter. ICA 400 meter.",
+      text: "Storgatan 45, 1 tr, Jönköping. En etta om 28 kvm med utsikt mot Vättern.\n\nÖppen planlösning med kök och vardagsrum. Köket har nya vitvaror, laminatbänk och förvaring i överskåp. Laminatgolv genomgående.\n\nBadrummet är helkaklat med dusch. Fönster mot Vättern.\n\nBRF Sjögläntan, avgift 2 400 kr/mån.\n\nBuss till centrum 3 minuter. ICA 400 meter.",
       metadata: { type: "lägenhet", rooms: 1, size: 28 }
     }
   ],
@@ -1316,19 +1434,19 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
   // MELLANSTORA LÄGENHETER (2-3 rum, 55-85 kvm)
   medium_apartment: [
     {
-      text: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm med genomgående planlösning.\n\nHallen har garderob. Vardagsrummet mot gatan har tre fönster och takhöjd 2,85 meter. Ekparkett genomgående.\n\nKöket är renoverat 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Plats för matbord vid fönstret.\n\nSovrummet mot gården rymmer dubbelsäng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet är helkaklat, renoverat 2019, med dusch och tvättmaskin.\n\nBalkongen på 5 kvm vetter mot söder. BRF Solgården har stambyte 2018. Avgift 4 100 kr/mån.\n\nCentralstationen 8 minuters promenad. ICA Nära i kvarteret. Stadsparken 200 meter.",
+      text: "Drottninggatan 42, 4 tr, Uppsala. En trea om 74 kvm med genomgående planlösning och balkong i söderläge.\n\nHallen har garderob och leder in till vardagsrummet med tre fönster mot gatan. Ekparkett genomgående och takhöjd på 2,85 meter.\n\nKöket renoverades 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Matplats för fyra vid fönstret.\n\nSovrummet mot gården rymmer dubbelsäng och har garderob. Det mindre rummet fungerar som arbetsrum. Badrummet är helkaklat, renoverat 2019, med dusch och tvättmaskin.\n\nBalkong om 5 kvm i söderläge. BRF Solgården, stambyte 2018. Avgift 4 100 kr/mån.\n\nCentralstationen 8 minuters promenad. ICA Nära i kvarteret. Stadsparken 200 meter.",
       metadata: { type: "lägenhet", rooms: 3, size: 74 }
     },
     {
-      text: "Rönnvägen 12, 1 tr, Malmö. Tvåa om 62 kvm med balkong i söderläge.\n\nHallen har platsbyggd garderob. Vardagsrummet har stort fönsterparti och takhöjd 2,55 meter. Laminatgolv genomgående.\n\nKöket har bänkskiva i laminat och vitvaror från Bosch 2022. Matplats för fyra vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat med dusch, wc och tvättmaskin. Golvvärme.\n\nBalkongen på 4 kvm vetter mot söder. Avgift 3 650 kr/mån.\n\nBuss 5 minuter till Triangeln. Coop 300 meter. Pildammsparken 10 minuters promenad.",
+      text: "Rönnvägen 12, 1 tr, Malmö. En tvåa om 62 kvm med balkong i söderläge och golvvärme i badrummet.\n\nHallen har platsbyggd garderob. Vardagsrummet har stort fönsterparti och takhöjd på 2,55 meter. Laminatgolv genomgående.\n\nKöket har vitvaror från Bosch 2022 och bänkskiva i laminat. Matplats för fyra vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob med skjutdörrar. Badrummet är helkaklat med dusch, wc och tvättmaskin. Golvvärme.\n\nBalkong om 4 kvm i söderläge. Avgift 3 650 kr/mån.\n\nBuss 5 minuter till Triangeln. Coop 300 meter. Pildammsparken ca 10 minuters promenad.",
       metadata: { type: "lägenhet", rooms: 2, size: 62 }
     },
     {
-      text: "Vasagatan 18, 3 tr, Linköping. Trea om 78 kvm. Byggår 1945, stambyte 2020.\n\nHall med garderob och klinker. Vardagsrummet har två fönster mot gatan. Takhöjd 2,80 meter. Ekparkett.\n\nKöket renoverat 2020 med Kvik-luckor och Bosch-vitvaror. Bänkskiva i sten. Matplats för fyra.\n\nHuvudsovrummet rymmer dubbelsäng. Det andra sovrummet passar som barnrum eller kontor. Badrummet helkaklat med badkar och tvättmaskin.\n\nBalkong 4 kvm mot gården. BRF Eken, avgift 4 500 kr/mån.\n\nResecentrum 6 minuter. Hemköp i kvarteret.",
+      text: "Vasagatan 18, 3 tr, Linköping. En trea om 78 kvm i fastighet från 1945, stambyte genomfört 2020.\n\nHall med garderob och klinkergolv. Vardagsrummet har två fönster mot gatan och takhöjd på 2,80 meter. Ekparkett genomgående.\n\nKöket renoverades 2020 med Kvik-luckor, Bosch-vitvaror och bänkskiva i sten. Matplats för fyra.\n\nHuvudsovrummet rymmer dubbelsäng. Det andra sovrummet passar som barnrum eller kontor. Badrummet är helkaklat med badkar och tvättmaskin.\n\nBalkong om 4 kvm mot gården. BRF Eken, avgift 4 500 kr/mån.\n\nResecentrum 6 minuter. Hemköp i kvarteret.",
       metadata: { type: "lägenhet", rooms: 3, size: 78 }
     },
     {
-      text: "Bergsgatan 9, 2 tr, Örebro. Tvåa om 58 kvm med nytt kök.\n\nHall med förvaring. Vardagsrummet har fönster i två väderstreck och laminatgolv.\n\nKöket nytt 2023 med IKEA-stomme och Siemens-vitvaror. Matplats vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob. Badrummet med dusch och tvättmaskin.\n\nIngen balkong. BRF Svalan, avgift 3 100 kr/mån. Stambyte planerat 2026.\n\nCentrum 5 minuters promenad. Tågstation 8 minuter.",
+      text: "Bergsgatan 9, 2 tr, Örebro. En tvåa om 58 kvm med nytt kök från 2023.\n\nHall med förvaring. Vardagsrummet har fönster i två väderstreck och laminatgolv.\n\nKöket är nytt från 2023 med IKEA-stomme och Siemens-vitvaror. Matplats vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob. Badrummet har dusch och tvättmaskin.\n\nIngen balkong. BRF Svalan, avgift 3 100 kr/mån. Stambyte planerat 2026.\n\nCentrum 5 minuters promenad. Tågstationen 8 minuter.",
       metadata: { type: "lägenhet", rooms: 2, size: 58 }
     }
   ],
@@ -1336,7 +1454,7 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
   // STORA LÄGENHETER (4+ rum, 85+ kvm)
   large_apartment: [
     {
-      text: "Kungsgärdsgatan 7, 2 tr, Uppsala. Fyra om 105 kvm med balkong i västerläge.\n\nHallen har platsbyggd garderob och klinker. Vardagsrummet har tre fönster och takhöjd 2,70 meter. Ekparkett genomgående.\n\nKöket är från Marbodal 2020 med stenbänkskiva och vitvaror från Siemens. Plats för matbord för sex.\n\nHuvudsovrummet rymmer dubbelsäng och har garderob. Två mindre sovrum. Badrummet är helkaklat med badkar och dusch. Separat toalett.\n\nBalkongen på 8 kvm vetter mot väster. BRF Kungsparken har stambyte 2020. Avgift 5 800 kr/mån.\n\nCentralstationen 5 minuter. Coop Forum 400 meter.",
+      text: "Kungsgärdsgatan 7, 2 tr, Uppsala. En fyra om 105 kvm med balkong i västerläge och ekparkett genomgående.\n\nHallen har platsbyggd garderob och klinkergolv. Vardagsrummet har tre fönster och takhöjd på 2,70 meter.\n\nKöket är från Marbodal 2020 med stenbänkskiva och vitvaror från Siemens. Matplats för sex vid fönstret.\n\nHuvudsovrummet rymmer dubbelsäng och har garderob. Två mindre sovrum. Badrummet är helkaklat med badkar och dusch. Separat toalett.\n\nBalkong om 8 kvm i västerläge. BRF Kungsparken, stambyte 2020. Avgift 5 800 kr/mån.\n\nCentralstationen 5 minuter. Coop Forum 400 meter.",
       metadata: { type: "lägenhet", rooms: 4, size: 105 }
     },
     {
@@ -1352,11 +1470,11 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
   // VILLOR
   villa: [
     {
-      text: "Tallvägen 8, Djursholm. Villa om 180 kvm på tomt om 920 kvm. Byggår 1962, tillbyggd 2015.\n\nEntréplan har hall, vardagsrum med eldstad, kök och ett sovrum. Köket är från HTH 2015 med bänkskiva i granit och induktionshäll. Vardagsrummet har utgång till altanen.\n\nÖvervåningen har tre sovrum och badrum med badkar och golvvärme. Huvudsovrummet har garderob och fönster åt två håll.\n\nKällaren har tvättstuga, förråd och ett extra rum. Altanen i västerläge är 25 kvm med pergola. Dubbelgarage och uppfart för två bilar.\n\nDjursholms samskola 600 meter. Mörby centrum 10 minuters promenad.",
+      text: "Tallvägen 8, Djursholm. En villa om 180 kvm på tomt om 920 kvm, tillbyggd 2015.\n\nEntréplan med hall, vardagsrum och kök. Vardagsrummet har eldstad och utgång till altanen. Köket är från HTH 2015 med bänkskiva i granit och induktionshäll.\n\nÖvervåningen har tre sovrum och badrum med badkar och golvvärme. Huvudsovrummet har garderob och fönster åt två håll.\n\nKällare med tvättstuga, förråd och ett extra rum. Altan om 25 kvm i västerläge med pergola. Dubbelgarage och uppfart för två bilar.\n\nDjursholms samskola 600 meter. Mörby centrum ca 10 minuters promenad.",
       metadata: { type: "villa", rooms: 5, size: 180 }
     },
     {
-      text: "Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm. Byggår 1978, renoverad 2021.\n\nEntréplan har hall, vardagsrum, kök och badrum. Köket är från IKEA 2021 med vitvaror från Bosch. Öppen planlösning mot vardagsrummet.\n\nÖvervåningen har fyra sovrum. Badrummet är helkaklat med dusch och badkar.\n\nTomten har gräsmatta, stenlagd uteplats i söderläge och garage. Förråd på 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys 5 minuters promenad. Malmö 15 minuter med bil.",
+      text: "Björkvägen 14, Löddeköpinge. En villa om 145 kvm på tomt om 750 kvm, renoverad 2021.\n\nEntréplan med hall, vardagsrum, kök och badrum. Köket är nytt från 2021 med IKEA-stomme och Bosch-vitvaror. Öppen planlösning mot vardagsrummet.\n\nÖvervåningen har fyra sovrum. Badrummet är helkaklat med dusch och badkar.\n\nTomten har gräsmatta och stenlagd uteplats i söderläge. Garage och förråd om 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 minuter med bil.",
       metadata: { type: "villa", rooms: 5, size: 145 }
     },
     {
@@ -1376,7 +1494,7 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
   // RADHUS
   radhus: [
     {
-      text: "Solnavägen 23, Solna. Radhus om 120 kvm med 4 rum och kök.\n\nBottenvåningen har kök och vardagsrum i öppen planlösning. Köket är från IKEA 2021 med vitvaror från Bosch. Utgång till trädgården från vardagsrummet.\n\nÖvervåningen har tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet är helkaklat med dusch. Laminatgolv genomgående.\n\nTrädgården har gräsmatta och uteplats i söderläge. Förråd 10 kvm. Carport för två bilar.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter.",
+      text: "Solnavägen 23, Solna. Ett radhus om 120 kvm med fyra rum och kök.\n\nBottenvåningen har kök och vardagsrum i öppen planlösning. Köket från IKEA 2021 med Bosch-vitvaror. Vardagsrummet har utgång till trädgården.\n\nÖvervåningen har tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet är helkaklat med dusch. Laminatgolv genomgående.\n\nTrädgård med gräsmatta och uteplats i söderläge. Förråd om 10 kvm och carport för två bilar.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter.",
       metadata: { type: "radhus", rooms: 4, size: 120 }
     },
     {
@@ -1408,29 +1526,50 @@ Fakta i dispositionen kan berätta mer än de säger rakt ut. Dra korrekta sluts
 - Pris/kvm < 40 000 → budgetobjekt → betona läge, potential, kommunikationer
 MEN: Hitta ALDRIG på fakta som inte finns i dispositionen. Slutled bara från vad som faktiskt anges.
 
+# SÅ SKRIVER EN BRA MÄKLARE (imitera detta — det viktigaste avsnittet)
+
+ÖPPNING — fånga läsaren med fakta, inte klyschor:
+BRA: "Drottninggatan 42, 4 tr, Uppsala. En trea om 74 kvm med genomgående ekparkett och balkong i söderläge."
+BRA: "Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm, renoverad 2021."
+DÅLIGT: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm." (för torrt — missar chans att fånga)
+
+RUMSBESKRIVNINGAR — fakta MED flöde, bind ihop meningar naturligt:
+BRA: "Hallen har garderob och leder in till vardagsrummet med tre fönster mot gatan. Ekparkett genomgående och takhöjd på 2,85 meter."
+BRA: "Köket renoverades 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Matplats för fyra vid fönstret."
+DÅLIGT: "Hallen har garderob. Vardagsrummet har tre fönster. Ekparkett. Takhöjd 2,85 meter." (staccato — låter maskinellt)
+
+SELEKTIV BETONING — ge mer utrymme åt starka detaljer:
+- Nytt kök från känt märke → 2-3 meningar (material, vitvaror, matplats)
+- Enkel hall med garderob → 1 kort mening, gå vidare
+- Balkong i söderläge → egen mening med storlek + väderstreck
+- Standard-badrum → 1 mening med renoveringsår och utrustning
+
+KOPPLINGSORD SOM FUNKAR (använd sparsamt, 3-5 per text):
+"leder in till", "med utsikt/utgång mot", "genomgående", "som renoverades [år]", "på [X] kvm"
+
 # STILREGLER
-- Första meningen: gatuadress + typ + kvm. Punkt. Klar.
-- Varje mening = ETT nytt faktum. Noll utfyllnad.
-- Rumsnamnet startar meningen: "Köket har...", "Balkongen vetter...", "Hallen har..."
-- INGA adjektiv som "fantastisk", "generös", "underbar", "perfekt"
-- INGA bisatser med "vilket", "som ger en", "där man kan"
-- INGA "Det finns" eller "Den har" som meningsstart (max 1 gång i hela texten)
-- Avstånd varieras: "8 minuters promenad", "i kvarteret", "200 meter", "15 min med bil"
+- Första meningen: gatuadress + ort + typ + kvm + en fångande detalj. Max 2 meningar.
+- Varje mening ska tillföra ETT nytt faktum. Ingen upprepning, ingen utfyllnad.
+- Starta de flesta meningar med rumsnamn, material eller platsnamn — men VARIERA.
+- Använd artiklar naturligt: "En trea om 74 kvm", "ett kök från Ballingslöv" — inte "Trea om 74 kvm".
+- Max 1x "Det finns" i hela texten. Skriv om: "Förråd om 6 kvm i källaren" istället för "Det finns förråd".
+- Avstånd varieras: "8 minuters promenad", "i kvarteret", "200 meter", "ca 15 min med bil"
 - Slutar med LÄGE — aldrig med känsla eller uppmaning
 
-# FÖRBJUDET
-erbjuder, bjuder på, präglas av, genomsyras av, generös, fantastisk, perfekt, idealisk, underbar, magisk, unik, dröm-, en sann pärla, faciliteter, njut av, livsstil, livskvalitet, hög standard, smakfullt, stilfullt, elegant, exklusivt, omsorgsfullt, genomtänkt, imponerande, harmonisk, inbjudande, lockande, inspirerande, karaktärsfull, tidlös, betagande
-vilket, som ger en, för den som, i hjärtat av, skapar en, bidrar till, förstärker, adderar, inte bara...utan också
-kontakta oss, boka visning, missa inte, välkommen till, välkommen hem, här finns, här kan du
-ljus och luftig, stilrent och modernt, mysigt och ombonat (alla "X och Y"-adjektivpar)
+# FÖRBJUDET (universella AI-markörer — använd ALDRIG oavsett stil)
+erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd, rymlig känsla
+vilket, som ger en, för den som, i hjärtat av, skapar en känsla, bidrar till, förstärker, inte bara...utan också
+kontakta oss, boka visning, missa inte, välkommen till, välkommen hem, här finns, här kan du, här möts du
 Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
+faciliteter, njut av, härlig plats för, plats för avkoppling
 
 # MENINGSRYTM
-- Starta VARJE mening med ett NYTT subjekt: rumsnamn, material, platsnamn, årtal
-- BRA: "Köket har...", "Ekparkett genomgående.", "Balkong 5 kvm.", "Centralstationen 8 min."
-- DÅLIGT: "Det finns golvvärme.", "Den har garderob.", "Det finns även förråd."
-- VARIERA meningslängd: 4–12 ord. Blanda korta fakta med lite längre.
+- VARIERA längd: 4–14 ord. Blanda korta fakta ("Balkong 5 kvm i söderläge.") med längre beskrivande ("Köket renoverades 2022 med luckor från Ballingslöv och bänkskiva i komposit.").
+- Starta varje mening med NYTT subjekt: rumsnamn, material, platsnamn, årtal.
+- Max 2x samma meningsstart i hela texten.
 - Max 1 bisats per stycke. Föredra punkt + ny mening.
+- VARIERA aktiv/passiv: "Köket har induktionshäll" (aktiv) / "Köket renoverades 2022" (passiv) → naturligare flöde.
+- UNDVIK staccato: om 3+ meningar i rad är under 5 ord, bind ihop två med "och" eller "med".
 
 # STRUKTUR
 1. ÖPPNING: Gatuadress, ort, typ, kvm, rum. MAX 2 meningar.
@@ -1492,15 +1631,16 @@ Ex: "Upplandsgatan 12 i Vasastan — trea om 78 kvm med originalparkett från 19
 
 # LÄS DETTA SIST — DET VIKTIGASTE
 
-1. Börja med gatuadressen. ALDRIG "Välkommen", "Här", "Denna", "I".
+1. Börja med gatuadressen + "En trea om..." (med artikel). ALDRIG "Välkommen", "Här", "Denna", "I".
 2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen — men SLUTLED gärna från fakta.
-3. NOLL förbjudna ord. Noll "erbjuder", "bjuder på", "generös", "fantastisk", "vilket".
+3. NOLL universellt förbjudna ord: "erbjuder", "bjuder på", "generös", "vilket", "präglas av". Följ TEXTSTIL-sektionen för vilka beskrivande ord som är OK.
 4. Varje mening = ny fakta. Noll utfyllnad. Noll upprepning.
-5. VARIERA meningsstarter. Max 1x "Det finns" i hela texten.
-6. Sista stycket = LÄGE. Aldrig känsla, aldrig uppmaning.
-7. De extra texterna (Instagram, visning, kortannons) ska kännas mänskliga och specifika — inte som copy-paste från AI.
-8. Generera ALLA fält i JSON.
-9. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.`;
+5. VARIERA meningsstarter. Max 2x samma start i hela texten. Max 1x "Det finns".
+6. BIND IHOP meningar naturligt — undvik staccato (3+ korta meningar i rad). Använd "och", "med", "leder in till".
+7. Sista stycket = LÄGE. Aldrig känsla, aldrig uppmaning.
+8. De extra texterna (Instagram, visning, kortannons) ska kännas mänskliga och specifika — inte som copy-paste från AI.
+9. Generera ALLA fält i JSON.
+10. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.`;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
 const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver objektbeskrivningar för Booli/egen mäklarsida — klyschfritt, specifikt, mänskligt. Studera MATCHADE EXEMPEL och imitera stilen. Booli tillåter mer detalj och pris.
@@ -1516,27 +1656,50 @@ Fakta i dispositionen kan berätta mer än de säger rakt ut. Dra korrekta sluts
 - Pris/kvm < 40 000 → betona läge, potential, kommunikationer
 MEN: Hitta ALDRIG på fakta. Slutled bara från vad som faktiskt anges.
 
+# SÅ SKRIVER EN BRA MÄKLARE (imitera detta — det viktigaste avsnittet)
+
+ÖPPNING — fånga läsaren med fakta, inte klyschor:
+BRA: "Tallvägen 8, Djursholm. En villa om 180 kvm på tomt om 920 kvm, tillbyggd 2015 med nytt kök och altan i västerläge."
+BRA: "Rönnvägen 12, 1 tr, Malmö. Tvåa om 62 kvm med balkong i söderläge och golvvärme i badrummet."
+DÅLIGT: "Tallvägen 8, Djursholm. Villa om 180 kvm." (för torrt — missar chans att fånga)
+
+RUMSBESKRIVNINGAR — fakta MED flöde:
+BRA: "Entréplan med hall, vardagsrum och kök i öppen planlösning. Vardagsrummet har eldstad och utgång till altanen. Ekparkett genomgående."
+BRA: "Köket är från HTH 2015 med bänkskiva i granit och induktionshäll. Matplats för sex vid fönstret mot trädgården."
+DÅLIGT: "Entréplan. Hall. Vardagsrum med eldstad. Kök. Ekparkett." (staccato — låter maskinellt)
+
+SELEKTIV BETONING — ge mer utrymme åt starka detaljer:
+- Nytt kök från känt märke → 2-3 meningar
+- Enkel hall → 1 kort mening
+- Stor tomt med uteplats → lyft specifika ytor och väderstreck
+- Standard-badrum → 1 mening
+
+KOPPLINGSORD SOM FUNKAR (använd sparsamt, 3-5 per text):
+"leder in till", "med utgång mot", "genomgående", "som renoverades [år]", "på [X] kvm"
+
 # STILREGLER
-- Gatuadress + typ + kvm i första meningen. Punkt.
-- Varje mening = ETT nytt faktum. Noll utfyllnad.
-- Rumsnamnet startar meningen. ALDRIG "Det finns" eller "Den har" som meningsstart (max 1x).
-- INGA adjektiv: "fantastisk", "generös", "underbar", "perfekt" förekommer INTE.
-- INGA bisatser: "vilket", "som ger en", "där man kan" förekommer INTE.
+- Första meningen: gatuadress + ort + typ + kvm + en fångande detalj. Max 2 meningar.
+- Varje mening ska tillföra ETT nytt faktum. Ingen upprepning, ingen utfyllnad.
+- Starta de flesta meningar med rumsnamn, material eller platsnamn — men VARIERA.
+- Använd artiklar naturligt: "En villa om 180 kvm", "ett kök från HTH" — inte bara "Villa om 180 kvm".
+- Max 1x "Det finns" i hela texten. Skriv om: "Förråd om 12 kvm vid garaget" istället för "Det finns förråd".
 - Avstånd varieras: "5 minuter", "400 meter", "ca 10 minuters promenad"
 - Slutar med LÄGE + PRIS — aldrig känsla
 
-# FÖRBJUDET
-erbjuder, bjuder på, präglas av, genomsyras av, generös, fantastisk, perfekt, idealisk, underbar, magisk, unik, dröm-, en sann pärla, faciliteter, njut av, livsstil, livskvalitet, hög standard, smakfullt, stilfullt, elegant, exklusivt, omsorgsfullt, genomtänkt, imponerande, harmonisk, inbjudande, tidlös
-vilket, som ger en, för den som, i hjärtat av, skapar en, bidrar till, inte bara...utan också
-kontakta oss, boka visning, missa inte, välkommen till, här finns, här kan du
-ljus och luftig, stilrent och modernt, mysigt och ombonat (alla "X och Y"-adjektivpar)
+# FÖRBJUDET (universella AI-markörer — använd ALDRIG oavsett stil)
+erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd, rymlig känsla
+vilket, som ger en, för den som, i hjärtat av, skapar en känsla, bidrar till, förstärker, inte bara...utan också
+kontakta oss, boka visning, missa inte, välkommen till, välkommen hem, här finns, här kan du, här möts du
 Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
+faciliteter, njut av, härlig plats för, plats för avkoppling
 
 # MENINGSRYTM
-- Starta varje mening med NYTT subjekt: rumsnamn, material, platsnamn, årtal
-- BRA: "Köket har...", "Ekparkett.", "Balkong 8 kvm.", "Coop 400 meter."
-- DÅLIGT: "Det finns golvvärme.", "Den har garderob.", "Det finns även förråd."
-- Max 1 bisats per stycke. Punkt + ny mening.
+- VARIERA längd: 4–14 ord. Blanda korta fakta med längre beskrivande meningar.
+- Starta varje mening med NYTT subjekt: rumsnamn, material, platsnamn, årtal.
+- Max 2x samma meningsstart i hela texten.
+- Max 1 bisats per stycke. Föredra punkt + ny mening.
+- VARIERA aktiv/passiv: "Köket har..." / "Köket renoverades 2022" → naturligare flöde.
+- UNDVIK staccato: bind ihop korta fakta med "och" eller "med" när 3+ korta meningar hamnar i rad.
 
 # STRUKTUR (mer detalj än Hemnet — inkludera pris)
 1. ÖPPNING: Gatuadress, ort, typ, kvm, rum. MAX 2 meningar.
@@ -1597,15 +1760,16 @@ Ex: "Tallvägen 8 i Djursholm — villa om 180 kvm med HTH-kök och dubbelgarage
 
 # LÄS DETTA SIST — DET VIKTIGASTE
 
-1. Börja med gatuadressen. ALDRIG "Välkommen", "Här", "Denna", "I".
+1. Börja med gatuadressen + "En villa om..." (med artikel). ALDRIG "Välkommen", "Här", "Denna", "I".
 2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen — men SLUTLED gärna från fakta.
-3. NOLL förbjudna ord. Noll "erbjuder", "bjuder på", "generös", "fantastisk", "vilket".
+3. NOLL universellt förbjudna ord: "erbjuder", "bjuder på", "generös", "vilket", "präglas av". Följ TEXTSTIL-sektionen för vilka beskrivande ord som är OK.
 4. Varje mening = ny fakta. Noll utfyllnad. Noll upprepning.
-5. VARIERA meningsstarter. Max 1x "Det finns" i hela texten.
-6. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
-7. De extra texterna ska kännas mänskliga och specifika — inte som copy-paste från AI.
-8. Generera ALLA fält i JSON.
-9. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.
+5. VARIERA meningsstarter. Max 2x samma start i hela texten. Max 1x "Det finns".
+6. BIND IHOP meningar naturligt — undvik staccato (3+ korta meningar i rad). Använd "och", "med", "leder in till".
+7. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
+8. De extra texterna ska kännas mänskliga och specifika — inte som copy-paste från AI.
+9. Generera ALLA fält i JSON.
+10. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.
 
 Skriv som en riktig mäklare — kort, rakt, specifikt, mänskligt.`;
 
@@ -1635,16 +1799,39 @@ function matchExamples(disposition: any, _toneAnalysis: any): string[] {
     candidates.sort((a, b) => Math.abs(a.metadata.size - size) - Math.abs(b.metadata.size - size));
   }
 
-  return candidates.slice(0, 2).map((ex) => ex.text);
+  return candidates.slice(0, 3).map((ex) => ex.text);
+}
+
+// Strip null/empty values from objects to reduce noise in AI prompts
+function deepClean(obj: any): any {
+  if (Array.isArray(obj)) {
+    const cleaned = obj.map(deepClean).filter((v: any) => v != null && v !== "");
+    return cleaned.length > 0 ? cleaned : undefined;
+  }
+  if (obj && typeof obj === "object") {
+    const cleaned: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const cv = deepClean(v);
+      if (cv !== undefined && cv !== null && cv !== "" && cv !== 0 && cv !== false) {
+        cleaned[k] = cv;
+      }
+    }
+    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+  }
+  return obj;
 }
 
 // Bygg disposition direkt från strukturerad formulärdata — HOPPA ÖVER AI-extraktion
+function stripUnit(val: string | number | null | undefined): number {
+  if (val == null) return 0;
+  return Number(String(val).replace(/\s*(kvm|m²|kr|kr\/mån|kr\/år)\s*/gi, "").trim()) || 0;
+}
 function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_analysis: any, writing_plan: any } {
   const typeLabels: Record<string, string> = {
     apartment: "lägenhet", house: "villa", townhouse: "radhus", villa: "villa",
   };
   const propertyType = typeLabels[pd.propertyType] || pd.propertyType || "lägenhet";
-  const size = Number(pd.livingArea) || 0;
+  const size = stripUnit(pd.livingArea);
 
   const disposition = {
     property: {
@@ -1653,6 +1840,7 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
       size: size,
       rooms: Number(pd.totalRooms) || 0,
       bedrooms: Number(pd.bedrooms) || 0,
+      bathrooms: Number(pd.bathrooms) || 0,
       floor: pd.floor || null,
       year_built: pd.buildYear || null,
       condition: pd.condition || null,
@@ -1668,23 +1856,23 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
         roof: pd.taktyp || null,
       },
       balcony: pd.balconyArea ? {
-        exists: true, direction: pd.balconyDirection || null, size: `${pd.balconyArea} kvm`,
+        exists: true, direction: pd.balconyDirection || null, size: `${stripUnit(pd.balconyArea)} kvm`,
       } : { exists: false },
       layout: pd.layoutDescription || null,
       storage: pd.storage ? [pd.storage] : [],
       heating: pd.heating || null,
       parking: pd.parking || null,
-      lot_area: pd.lotArea ? `${pd.lotArea} kvm` : null,
+      lot_area: pd.lotArea ? `${stripUnit(pd.lotArea)} kvm` : null,
       garden: pd.gardenDescription || null,
       special_features: pd.specialFeatures ? pd.specialFeatures.split(/[,\n]+/).map((s: string) => s.trim()).filter(Boolean) : [],
       unique_selling_points: pd.uniqueSellingPoints || null,
       other_info: pd.otherInfo || null,
     },
     economics: {
-      price: Number(pd.price) || null,
-      fee: Number(pd.monthlyFee) || null,
-      taxeringsvarde: Number(pd.taxeringsvarde) || null,
-      tomtrattsavgald: Number(pd.tomtrattsavgald) || null,
+      price: stripUnit(pd.price) || null,
+      fee: stripUnit(pd.monthlyFee) || null,
+      taxeringsvarde: stripUnit(pd.taxeringsvarde) || null,
+      tomtrattsavgald: stripUnit(pd.tomtrattsavgald) || null,
       association: pd.brfName ? { name: pd.brfName } : null,
     },
     location: {
@@ -1704,15 +1892,23 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
     else if (pricePerKvm < 30000) priceCategory = "budget";
   }
 
+  // Detect premium views that should be highlighted
+  const premiumViews = /sjö|hav|vatten|park|skog|berg|utsikt/i;
+  const hasViewHighlight = pd.view && premiumViews.test(pd.view);
+
   const tone_analysis = {
     price_category: priceCategory,
     target_audience: size > 100 ? "families" : size > 60 ? "couples" : "singles_couples",
     writing_style: "professional",
+    condition_note: pd.condition || null,
     key_selling_points: [
       pd.uniqueSellingPoints,
+      hasViewHighlight ? `utsikt: ${pd.view}` : null,
       pd.kitchenDescription ? "kök" : null,
       pd.balconyArea ? "balkong/uteplats" : null,
-    ].filter(Boolean).slice(0, 3),
+      pd.condition === "Nyskick" ? "nyskick" : null,
+      pd.renoveringsar ? `renoverat ${pd.renoveringsar}` : null,
+    ].filter(Boolean).slice(0, 4),
   };
 
   // Build a structured paragraph outline so even free-tier gets well-organized text
@@ -1721,7 +1917,7 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
   if (pd.layoutDescription) paragraphs.push("Planlösning: hall, vardagsrum, sovrum — rumsordning.");
   if (pd.kitchenDescription) paragraphs.push("Kök: märke, material, vitvaror, matplats.");
   if (pd.bathroomDescription) paragraphs.push("Badrum: material, utrustning, renoveringsår.");
-  if (pd.balconyArea) paragraphs.push(`Balkong/uteplats: ${pd.balconyArea} kvm${pd.balconyDirection ? `, ${pd.balconyDirection}` : ""}.`);
+  if (pd.balconyArea) paragraphs.push(`Balkong/uteplats: ${stripUnit(pd.balconyArea)} kvm${pd.balconyDirection ? `, ${pd.balconyDirection}` : ""}.`);
   if (pd.gardenDescription) paragraphs.push("Trädgård: storlek, uteplats, växter.");
   const extras = [pd.storage && "förråd", pd.heating && "uppvärmning", pd.energyClass && "energiklass", pd.specialFeatures && "särskilda egenskaper"].filter(Boolean);
   if (extras.length > 0) paragraphs.push(`Övrigt: ${extras.join(", ")}.`);
@@ -1733,10 +1929,12 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
     must_include: [
       pd.address && "adress", pd.livingArea && "storlek", pd.totalRooms && "rum",
       pd.kitchenDescription && "kök", pd.bathroomDescription && "badrum",
+      Number(pd.bathrooms) > 1 && `${pd.bathrooms} badrum`,
       pd.balconyArea && "balkong", pd.area && "läge",
       pd.uniqueSellingPoints && "säljpunkter",
+      hasViewHighlight && "utsikt",
     ].filter(Boolean),
-    forbidden_phrases: ["erbjuder", "perfekt för", "i hjärtat av", "vilket", "för den som", "fantastisk", "välkommen"],
+    forbidden_phrases: ["erbjuder", "perfekt för", "i hjärtat av", "vilket", "för den som", "välkommen", "bjuder på", "präglas av"],
   };
 
   return { disposition, tone_analysis, writing_plan };
@@ -1983,18 +2181,34 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // Optimize endpoint
   app.post("/api/optimize", requireAuth, async (req, res) => {
+    // Streaming support: if client accepts text/event-stream, send NDJSON progress events
+    const wantsStream = req.headers.accept?.includes("text/event-stream");
+    const sendProgress = wantsStream
+      ? (step: number, total: number, message: string) => {
+        try { res.write(JSON.stringify({ type: "progress", step, total, message }) + "\n"); } catch { }
+      }
+      : (_s: number, _t: number, _m: string) => { };
+
     try {
+      // Validate input with Zod schema
+      const parseResult = optimizeRequestSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({
+          message: "Ogiltig förfrågan: " + parseResult.error.issues.map(i => i.message).join(", "),
+        });
+      }
+
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
 
-      // Rate limit check (per minute)
+      // Rate limit check (per minute) — BEFORE stream starts so we can return proper HTTP status
       if (!(await checkOptimizeRateLimit(user.id))) {
         return res.status(429).json({
           message: "För många förfrågningar. Vänta en minut och försök igen.",
         });
       }
 
-      // Check monthly usage limits
+      // Check monthly usage limits — BEFORE stream starts
       const usage = await storage.getMonthlyUsage(user.id) || {
         textsGenerated: 0,
         areaSearchesUsed: 0,
@@ -2002,12 +2216,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         personalStyleAnalyses: 0,
       };
 
-      console.log(`[Optimize] User: ${user.id}, Plan: ${plan}, Usage:`, usage);
-      console.log(`[Optimize] PLAN_LIMITS for ${plan}:`, PLAN_LIMITS[plan]);
 
       const limits = PLAN_LIMITS[plan];
       if (usage.textsGenerated >= limits.texts) {
-        console.log(`[Optimize] Usage limit reached. Used: ${usage.textsGenerated}, Limit: ${limits.texts}`);
         const upgradeMsg = plan === "free"
           ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 10 genereringar per månad!`
           : `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 genereringar per månad!`;
@@ -2021,28 +2232,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             textsLimit: limits.texts,
           },
           upgradeOptions: {
-            pro: { texts: 10, price: "99 kr/mån" },
-            premium: { texts: 25, price: "199 kr/mån" }
+            pro: { texts: 10, price: "299 kr/mån" },
+            premium: { texts: 25, price: "599 kr/mån" }
           }
         });
       }
 
-      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls, model } = req.body;
+      // All validation passed — NOW start streaming if requested
+      if (wantsStream) {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+          "X-Accel-Buffering": "no",
+        });
+      }
+
+      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls } = req.body;
       const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
       // Fixed model: All users get GPT-5.2 with thinking mode where appropriate
       const aiModel = "gpt-5.2";
+      const exemptCount = getExemptPhrases(style).size;
       console.log(`[Model] Plan: ${plan}, Using: ${aiModel} (fixed)`);
+      console.log(`[Style] ${style} — ${FORBIDDEN_PHRASES.length - exemptCount} aktiva förbjudna fraser (${exemptCount} undantagna)`);
 
       // === DIFFERENTIERAD TEMPERATURE PER STIL OCH PLAN ===
-      // Factual: Låg temp för precision, Balanserad: Medium temp för naturlighet, Säljande: Hög temp för kreativitet
+      // Factual: Låg temp → precision och konsistens
+      // Balanced: Medel → naturligt flöde, varierad meningsrytm
+      // Selling: Högre → kreativt ordval, men fortfarande kontrollerat
       let baseTemp: number;
       if (style === "factual") {
-        baseTemp = plan === "premium" ? 0.22 : plan === "pro" ? 0.20 : 0.18;
+        baseTemp = plan === "premium" ? 0.20 : plan === "pro" ? 0.18 : 0.15;
       } else if (style === "selling") {
-        baseTemp = plan === "premium" ? 0.35 : plan === "pro" ? 0.32 : 0.30;
+        baseTemp = plan === "premium" ? 0.45 : plan === "pro" ? 0.42 : 0.38;
       } else { // balanced
-        baseTemp = plan === "premium" ? 0.28 : plan === "pro" ? 0.25 : 0.23;
+        baseTemp = plan === "premium" ? 0.35 : plan === "pro" ? 0.32 : 0.28;
       }
 
       const temperature = baseTemp;
@@ -2072,7 +2297,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           ];
 
           const imageCompletion = await openai.chat.completions.create({
-            model: "gpt-4o",
+            model: "gpt-5.2",
             messages: imageMessages,
             max_tokens: 1000,
             temperature: 0.3,
@@ -2107,6 +2332,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
 
+      sendProgress(1, 7, "Förbereder generering...");
+
       // === LEGACY AI PIPELINE (FULL PROMPT ENGINEERING) ===
       const propertyData = req.body.propertyData;
 
@@ -2135,6 +2362,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           try {
             const extractionCompletion = await openai.responses.create({
               model: "gpt-5.2",
+              temperature: 0.1,
               input: [
                 {
                   role: "developer",
@@ -2164,6 +2392,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           writingPlan = { opening: "Okänd adress" };
         }
       }
+
+      sendProgress(2, 7, "Analyserar fastighetsdata...");
 
       // Enrichment: Intelligence modules (Pro/Premium)
       if (plan !== "free" && disposition?.property?.address) {
@@ -2234,6 +2464,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
+      sendProgress(3, 7, "Skapar skrivplan...");
+
       // STEG 2: Skapa evidence-gated skrivplan med PLAN_PROMPT (Pro/Premium)
       if (plan !== "free") {
         try {
@@ -2242,7 +2474,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             { role: "system" as const, content: PLAN_PROMPT },
             {
               role: "user" as const,
-              content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}`,
+              content: `DISPOSITION:\n${JSON.stringify(deepClean(disposition) || disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(deepClean(toneAnalysis) || toneAnalysis, null, 2)}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}`,
             },
           ];
 
@@ -2325,25 +2557,46 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const isHemnet = platform === "hemnet";
       const textPrompt = isHemnet ? HEMNET_TEXT_PROMPT : BOOLI_TEXT_PROMPT_WRITER;
 
-      // Stilinstruktion baserat på mäklarens val
+      // Stilinstruktion baserat på mäklarens val — koordinerad med stil-exemptions
       const styleInstruction = style === "factual"
         ? `\n# TEXTSTIL: PM-STIL (STRIKT FAKTABASERAD)
 Mäklaren vill ha ett faktadokument, inte en säljtext.
 - Kronologisk rumsordning: hall → vardagsrum → kök → sovrum → badrum → uteplats → övrigt → läge
 - Varje rum = max 2 meningar. Bara mått, material, utrustning.
-- INGA säljpunkter, INGA "lyfter", INGA betoning på fördelar.
+- INGA värdeladdade adjektiv överhuvudtaget: inga "smakfullt", "stilfullt", "elegant", "genomtänkt"
+- INGA säljpunkter, INGA "lyfter", INGA betoning på fördelar
 - Avsluta med fakta om läge (avstånd/namn). Punkt. Slut.
-- Tänk: besiktningsprotokoll skrivet av en människa, inte mäklare.\n`
+- Tänk: besiktningsprotokoll skrivet av en människa, inte mäklare.
+- EXTRA FÖRBJUDET i denna stil: fantastisk, underbar, imponerande, charm, drömboende, hög standard, ljus och luftig, atmosfär, livsstil, livskvalitet\n`
         : style === "selling"
           ? `\n# TEXTSTIL: SÄLJANDE (KLYSCHFRITT ÖVERTYGANDE)
-Mäklaren vill maximera intresset — men UTAN klyschor.
-- Öppna med de 1-2 starkaste konkreta säljpunkterna (inte känsla, utan fakta som säljer: "Balkong i söderläge 8 kvm" > "fantastisk balkong").
-- Betona det som gör objektet unikt TIDIGT — inte sist.
-- Välj aktivt VAD du lyfter: hoppa snabbt förbi svaga delar, ge mer utrymme åt starka.
-- Sista stycke: läge + en konkret köparnytta (pendlingstid, skola, affär).
-- Fortfarande noll klyschor. Sälj med fakta, inte adjektiv.\n`
-          : `\n# TEXTSTIL: BALANSERAD (STANDARD)
-Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n`;
+Mäklaren vill maximera intresset — men med SUBSTANS, inte tomma ord.
+- Öppna med de 1-2 starkaste konkreta säljpunkterna: "Balkong i söderläge på 8 kvm" > "fantastisk balkong"
+- Betona det som gör objektet unikt TIDIGT — inte sist
+- Välj aktivt VAD du lyfter: ge mer utrymme åt starka detaljer, kortare om svaga
+- Sista stycke: läge + en konkret köparnytta (pendlingstid, skola, affär)
+- Du FÅR använda dessa beskrivande ord när de stöds av fakta:
+  genomtänkt, smakfullt, stilfullt, elegant, hög standard, ljus och luftig, rofyllt, trivsamt
+  attraktivt läge, naturskönt läge, populärt område, familjevänligt område
+- Du FÅR även använda (sparsamt, max 2-3 per text):
+  imponerande (t.ex. "imponerande takhöjd på 3,10 meter"), charm, drömboende
+  atmosfär (t.ex. "trivsam atmosfär"), inbjuder till
+- VIKTIGT: Varje beskrivande ord MÅSTE stödjas av ett konkret faktum i samma mening eller nästa
+  BRA: "Smakfullt renoverat kök från Ballingslöv 2021 med granitbänk." (smakfullt + konkret bevis)
+  DÅLIGT: "Smakfullt boende i attraktivt område." (tomt — inga fakta)
+- Sälj med FAKTA som talar för sig själva, inte med adjektiv-staplar\n`
+          : `\n# TEXTSTIL: BALANSERAD (STANDARD MÄKLARTEXT)
+Fakta i fokus med naturlig rytm och professionell ton.
+- Lyfter rätt saker utan att sälja hårt
+- Du FÅR använda dessa milda beskrivningar när de stöds av fakta:
+  genomtänkt, smakfullt, stilfullt, elegant, hög standard
+  ljus och luftig (om det finns fönster/takhöjd som stöd), rofyllt
+  attraktivt läge, populärt område, familjevänligt område
+  trivsamt boende, genomtänkt planlösning
+- Varje beskrivande ord MÅSTE ha fakta-stöd i samma eller nästa mening
+  BRA: "Genomtänkt planlösning med sovrum mot gården och vardagsrum mot gatan."
+  DÅLIGT: "Genomtänkt och trivsamt boende." (tomt)
+- Tonen ska vara som en erfaren mäklare som berättar sakligt men engagerande\n`;
 
       // Typspecifika negativa/positiva exempel
       const propType = (disposition?.property?.type || "lägenhet").toLowerCase();
@@ -2352,41 +2605,42 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
 
       if (propType.includes("villa") || propType.includes("hus")) {
         negativeExample = `"Välkommen till denna fantastiska villa som erbjuder generösa ytor och en ljus och luftig atmosfär. Huset präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla av rymd. Trädgården erbjuder en grön oas perfekt för den som söker lugn och avkoppling. Den strategiskt placerade villan ger en unik möjlighet att njuta av natursköna omgivningar. Kontakta oss för visning!"`;
-        positiveExample = `"Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm. Byggår 1978, renoverad 2021.\n\nEntréplan med hall, vardagsrum, kök och badrum. Köket från IKEA 2021 med Bosch-vitvaror. Öppen planlösning mot vardagsrummet.\n\nÖvervåning med fyra sovrum. Helkaklat badrum med dusch och badkar.\n\nStenlagd uteplats i söderläge. Gräsmatta. Garage. Förråd 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 min med bil."`;
+        positiveExample = `"Björkvägen 14, Löddeköpinge. En villa om 145 kvm på tomt om 750 kvm, renoverad 2021.\n\nEntréplan med hall, vardagsrum och kök i öppen planlösning. Köket är nytt från 2021 med IKEA-stomme och Bosch-vitvaror. Vardagsrummet har utgång till trädgården.\n\nÖvervåning med fyra sovrum. Badrummet är helkaklat med dusch och badkar.\n\nTomten har stenlagd uteplats i söderläge och gräsmatta. Garage och förråd om 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 min med bil."`;
       } else if (propType.includes("radhus")) {
         negativeExample = `"Välkommen till detta charmiga och välplanerade radhus som erbjuder en perfekt kombination av modern komfort och klassisk charm. Den genomtänkta planlösningen bjuder på generösa ytor som skapar en harmonisk känsla. Trädgården erbjuder en härlig plats för avkoppling och sociala tillställningar. Kontakta oss för visning!"`;
-        positiveExample = `"Solnavägen 23, Solna. Radhus om 120 kvm med 4 rum och kök.\n\nBottenvåning med kök och vardagsrum i öppen planlösning. Köket från IKEA 2021 med Bosch-vitvaror. Utgång till trädgården.\n\nÖvervåning med tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet helkaklat med dusch. Laminatgolv.\n\nTrädgård med gräsmatta och uteplats i söderläge. Förråd 10 kvm. Carport.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter."`;
+        positiveExample = `"Solnavägen 23, Solna. Ett radhus om 120 kvm med fyra rum och kök.\n\nBottenvåningen har kök och vardagsrum i öppen planlösning. Köket från IKEA 2021 med Bosch-vitvaror. Vardagsrummet har utgång till trädgården.\n\nÖvervåningen har tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet är helkaklat med dusch. Laminatgolv genomgående.\n\nTrädgård med gräsmatta och uteplats i söderläge. Förråd om 10 kvm och carport för två bilar.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter."`;
       } else {
         negativeExample = `"Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket erbjuder gott om arbetsyta vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!"`;
-        positiveExample = `"Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet har tre fönster och ekparkett. Takhöjd 2,70 meter.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch och tvättmaskin.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter."`;
+        positiveExample = `"Storgatan 12, 3 tr, Linköping. En trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob och leder in till vardagsrummet med tre fönster mot gatan. Ekparkett genomgående och takhöjd på 2,70 meter.\n\nKöket renoverades 2022 med luckor från Ballingslöv och vitvaror från Siemens. Matplats för fyra vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob. Badrummet är helkaklat med dusch och tvättmaskin.\n\nBalkong om 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuters promenad. Coop 200 meter."`;
       }
 
+      // Clean null/empty values from data sent to AI — reduces noise significantly
+      const cleanDisposition = deepClean(disposition) || disposition;
+      const cleanToneAnalysis = deepClean(toneAnalysis) || toneAnalysis;
+      const cleanWritingPlan = deepClean(writingPlan) || writingPlan;
+
+      // Build content strings once — reused for Responses API (primary) and Chat Completions (retry)
+      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`;
+      const userContent = `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(cleanToneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+
+      // Chat Completions format — used for quality gate retry
       const textMessages = [
-        {
-          role: "system" as const,
-          content: `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`,
-        },
-        {
-          role: "user" as const,
-          content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`,
-        },
+        { role: "system" as const, content: systemContent },
+        { role: "user" as const, content: userContent },
       ];
 
+      sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text with full prompt engineering...");
 
       const textCompletion = await openai.responses.create({
         model: "gpt-5.2",
-        reasoning: { effort: "high" }, // High thinking for complex text generation
+        reasoning: { effort: "high" },
+        temperature: temperature,
         input: [
-          {
-            role: "developer",
-            content: `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`
-          },
-          {
-            role: "user",
-            content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(toneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(writingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`
-          }
+          { role: "developer", content: systemContent },
+          { role: "user", content: userContent }
         ],
+        max_output_tokens: 8000,
         text: { format: { type: "json_object" } }
       });
 
@@ -2421,6 +2675,8 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
         }
       }
 
+      sendProgress(5, 7, "Kontrollerar textkvalitet...");
+
       // === QUALITY GATE: Analysera textkvalitet direkt ===
       if (result.improvedPrompt) {
         const qualityScore = analyzeTextQuality(result.improvedPrompt);
@@ -2430,7 +2686,7 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
           console.log(`[Quality Gate] Poor quality detected, retrying with higher temperature...`);
 
           // Retry med högre temperature
-          const retryTemp = Math.min(temperature + 0.10, 0.45);
+          const retryTemp = Math.min(temperature + 0.10, 0.55);
           const retryCompletion = await openai.chat.completions.create({
             model: "gpt-5.2",
             messages: textMessages,
@@ -2457,18 +2713,18 @@ Fakta i fokus men med naturlig rytm. Lyfter rätt saker utan att sälja hårt.\n
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
-        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile);
+        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile, style);
         result.improvedPrompt = addParagraphs(result.improvedPrompt);
       }
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
-          result[field] = cleanForbiddenPhrases(result[field], personalStyle?.styleProfile);
+          result[field] = cleanForbiddenPhrases(result[field], personalStyle?.styleProfile, style);
         }
       }
 
       // STEG 5: Validering + kirurgisk korrigering
-      const violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax);
+      const violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style);
       if (violations.length > 0) {
         console.log(`[Step 5] Found ${violations.length} violations, attempting surgical correction...`);
 
@@ -2528,13 +2784,13 @@ ERSÄTTNINGSTABELL:
               const wordDiff = Math.abs(originalWords - correctedWords);
 
               if (wordDiff / originalWords < 0.3) {
-                result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text, personalStyle?.styleProfile);
+                result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text, personalStyle?.styleProfile, style);
                 result.improvedPrompt = addParagraphs(result.improvedPrompt);
                 console.log(`[Step 5] Surgical correction applied (${textViolations.length} violations fixed, ${wordDiff} words changed)`);
               } else {
                 console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
                 // Kör ändå cleanForbiddenPhrases som fallback
-                result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile);
+                result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile, style);
               }
             }
           }
@@ -2563,13 +2819,13 @@ REGLER:
 3. Varje ny mening = nytt faktum (material, mått, utrustning, avstånd)
 4. Infoga nya meningar på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
 5. Hitta ALDRIG på fakta — använd BARA dispositionen
-6. Inga förbjudna ord: erbjuder, bjuder på, generös, fantastisk, perfekt, vilket, välkommen
+6. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
 7. Texten MÅSTE bli minst ${targetWordMin} ord
 8. Svara med JSON: {"expanded_text": "hela den utökade texten med \\n\\n mellan stycken"}`,
               },
               {
                 role: "user" as const,
-                content: `NUVARANDE TEXT (${currentWordCount} ord — behöver bli minst ${targetWordMin} ord):\n\n${result.improvedPrompt}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(disposition, null, 2)}`,
+                content: `NUVARANDE TEXT (${currentWordCount} ord — behöver bli minst ${targetWordMin} ord):\n\n${result.improvedPrompt}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
               },
             ];
 
@@ -2585,7 +2841,7 @@ REGLER:
             if (expanded.expanded_text) {
               const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
               if (expandedWordCount >= currentWordCount) {
-                result.improvedPrompt = cleanForbiddenPhrases(expanded.expanded_text, personalStyle?.styleProfile);
+                result.improvedPrompt = cleanForbiddenPhrases(expanded.expanded_text, personalStyle?.styleProfile, style);
                 result.improvedPrompt = addParagraphs(result.improvedPrompt);
                 console.log(`[Step 5b] Expanded from ${currentWordCount} to ${expandedWordCount} words`);
               }
@@ -2598,6 +2854,8 @@ REGLER:
         }
       }
 
+      sendProgress(6, 7, "Faktagranskar texten...");
+
       // STEG 6: Faktagranskning (Pro/Premium)
       let factCheckResult: any = null;
       if (plan !== "free" && result.improvedPrompt) {
@@ -2606,12 +2864,13 @@ REGLER:
             { role: "system" as const, content: FACT_CHECK_PROMPT },
             {
               role: "user" as const,
-              content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`,
+              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`,
             },
           ];
 
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
+            temperature: 0.1,
             reasoning: { effort: "medium" }, // Medium thinking for fact-checking
             input: [
               {
@@ -2620,7 +2879,7 @@ REGLER:
               },
               {
                 role: "user",
-                content: `DISPOSITION:\n${JSON.stringify(disposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`
+                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`
               }
             ],
             text: { format: { type: "json_object" } }
@@ -2629,7 +2888,7 @@ REGLER:
           factCheckResult = safeJsonParse(factCheckCompletion.output_text || "{}");
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
-            result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text, personalStyle?.styleProfile);
+            result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text, personalStyle?.styleProfile, style);
             result.improvedPrompt = addParagraphs(result.improvedPrompt);
             console.log("[Step 6] Fact-check corrections applied");
           }
@@ -2715,12 +2974,13 @@ Svara med JSON i formatet:
         }
       }
 
+      sendProgress(7, 7, "Finsliper och sparar...");
+
       // Increment usage after successful generation
       await storage.incrementUsage(user.id, 'texts');
-      console.log(`[Usage] Incremented text generation for user ${user.id}`);
 
       const tips = result.text_tips || result.pro_tips || [];
-      res.json({
+      const responseData = {
         originalPrompt: prompt,
         improvedPrompt: result.improvedPrompt || prompt,
         highlights: result.highlights || [],
@@ -2750,10 +3010,24 @@ Svara med JSON i formatet:
         },
         wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
         model: aiModel,
-      });
+      };
+
+      if (wantsStream) {
+        res.write(JSON.stringify({ type: "complete", data: responseData }) + "\n");
+        res.end();
+      } else {
+        res.json(responseData);
+      }
     } catch (err: any) {
       console.error("Optimize error:", err);
-      res.status(500).json({ message: err.message || "Optimering misslyckades" });
+      if (wantsStream) {
+        try {
+          res.write(JSON.stringify({ type: "error", message: err.message || "Optimering misslyckades" }) + "\n");
+          res.end();
+        } catch { res.end(); }
+      } else {
+        res.status(500).json({ message: err.message || "Optimering misslyckades" });
+      }
     }
   });
 
@@ -2766,7 +3040,7 @@ Svara med JSON i formatet:
       return res.status(403).json({ message: "Text-omskrivning är endast för Pro/Premium-användare" });
     }
     try {
-      const { selectedText, fullText, instruction, model } = req.body;
+      const { selectedText, fullText, instruction } = req.body;
       if (!selectedText || !fullText || !instruction) {
         return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
       }
@@ -2776,18 +3050,8 @@ Svara med JSON i formatet:
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
       };
 
-      // Get model-based limit or fallback to plan limit
-      const getModelBasedLimit = (plan: PlanType, aiModel: string) => {
-        if (aiModel === "gpt-5.2" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]]) {
-          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]];
-        }
-        if (aiModel === "claude-sonnet-4.6" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]]) {
-          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]];
-        }
-        return PLAN_LIMITS[plan].textEdits;
-      };
-
-      const rewriteLimit = getModelBasedLimit(rewritePlan, "gpt-5.2");
+      // GPT-5.2 fixed — use model-specific limits or fall back to plan default
+      const rewriteLimit = MODEL_TEXT_EDIT_LIMITS["gpt-5.2"][rewritePlan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]] || PLAN_LIMITS[rewritePlan].textEdits;
       if (rewriteUsage.textEditsUsed >= rewriteLimit) {
         return res.status(429).json({
           message: `Du har nått din gräns för AI-textredigeringar (${rewriteLimit}/månad) med GPT-5.2. ${rewritePlan === "pro"
@@ -2824,13 +3088,11 @@ BRA: "Två sovrum. Huvudsovrummet rymmer dubbelsäng med nattduksbord."
 DÅLIGT: "En fantastisk balkong som erbjuder sol hela dagen och ger en harmonisk känsla."
 DÅLIGT: "Köket är genomtänkt och stilfullt renoverat vilket gör det perfekt för den matlagningsintresserade."
 
-# FÖRBJUDET — ALDRIG DESSA ORD
-erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, idealisk, underbar, magisk, unik
-vilket, som ger en, för den som, i hjärtat av, skapar en, bidrar till, förstärker
-inbjudande, harmonisk, tidlös, smakfullt, stilfullt, elegant, exklusivt, imponerande
-ljus och luftig, stilrent och modernt, mysigt och ombonat (alla "X och Y"-adjektivpar)
-njut av, faciliteter, livsstil, livskvalitet, hög standard, inte bara, utan också
-Det finns även, Det finns också, -möjligheter
+# FÖRBJUDET — UNIVERSELLA AI-MARKÖRER (använd ALDRIG)
+erbjuder, bjuder på, präglas av, genomsyras av, generös, andas lugn, andas charm
+vilket, som ger en, för den som, i hjärtat av, skapar en känsla, bidrar till, förstärker, inte bara...utan också
+kontakta oss, boka visning, välkommen till, här finns, här kan du
+njut av, faciliteter, Det finns även, Det finns också, -möjligheter
 
 # REGLER
 1. Skriv om BARA den markerade texten — inte resten
@@ -2900,12 +3162,9 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         personalStyleAnalyses: 0,
       };
 
-      console.log(`[Address Lookup] User: ${user.id}, Plan: ${plan}, Usage:`, usage);
-      console.log(`[Address Lookup] PLAN_LIMITS for ${plan}:`, PLAN_LIMITS[plan]);
 
       const limits = PLAN_LIMITS[plan];
       if (usage.areaSearchesUsed >= limits.areaSearches) {
-        console.log(`[Address Lookup] Area search limit reached. Used: ${usage.areaSearchesUsed}, Limit: ${limits.areaSearches}`);
         return res.status(429).json({
           message: plan === "free"
             ? "Adress-sökning är endast för Pro- och Premium-användare. Uppgradera för att använda denna funktion!"
@@ -2924,10 +3183,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
 
       // Increment area search usage
       await storage.incrementUsage(user.id, 'areaSearches');
-      console.log(`[Address Lookup] Area search usage incremented for user: ${user.id}`);
-
-      // OpenStreetMap: Nominatim + Overpass API (FREE)
-      console.log("[Address Lookup] Using OpenStreetMap APIs");
 
       try {
         // Step 1: Geocode with Nominatim
@@ -3130,7 +3385,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       // Update password
       await storage.updatePassword(user.id, passwordHash);
 
-      console.log("[Admin Reset] Password updated for user:", user.id);
       res.json({ message: "Lösenord uppdaterat! Du kan nu logga in." });
     } catch (err: any) {
       console.error("[Admin Reset] Error:", err);
@@ -3144,7 +3398,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       const user = (req as any).user as User;
       const { tier } = req.body;
 
-      console.log("[Stripe Checkout] User authenticated:", user.id, user.email);
 
       const priceId = tier === "pro" ? STRIPE_PRO_PRICE_ID : STRIPE_PREMIUM_PRICE_ID;
       if (!priceId) {
@@ -3247,7 +3500,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
               session.customer as string,
               session.subscription as string
             );
-            console.log(`User ${userId} upgraded to ${targetPlan}`);
 
             // Send subscription confirmation email
             try {
@@ -3257,7 +3509,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
                 const planLabel = targetPlan === 'premium' ? 'Premium' : 'Pro';
                 const planPrice = targetPlan === 'premium' ? '599' : '299';
                 await sendSubscriptionConfirmedEmail(user.email, planLabel, planPrice, user.email);
-                console.log(`[Stripe Webhook] Confirmation email sent to ${user.email}`);
               }
             } catch (emailErr) {
               console.error('[Stripe Webhook] Failed to send confirmation email:', emailErr);
@@ -3279,7 +3530,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
             const subUser = await storage.getUserByStripeSubscriptionId(updatedSub.id);
             if (subUser) {
               await storage.setUserPlan(subUser.id, newPlan);
-              console.log(`[Stripe Webhook] Subscription updated: user ${subUser.id} → ${newPlan}`);
             }
           } else if (updatedSub.status === "past_due" || updatedSub.status === "unpaid") {
             console.log(`[Stripe Webhook] Subscription ${updatedSub.id} status: ${updatedSub.status}`);
@@ -3465,7 +3715,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       if (team) {
         await storage.recordEmailSent(user.email, 'team_invite');
         await sendTeamInviteEmail(invite.email, invite.token, team.name, user.email);
-        console.log("[Invite] Team invite email sent to:", invite.email);
       }
 
       res.json({ token: invite.token, email: invite.email, emailSent: true });
@@ -3700,7 +3949,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
 
       await storage.setUserPlan(targetUser.id, plan);
 
-      console.log(`[Admin] User ${targetUser.email} (${targetUser.id}) plan set to ${plan}`);
 
       res.json({
         success: true,
@@ -3725,7 +3973,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         return res.status(404).json({ message: "Användare hittades inte" });
       }
 
-      const { originalText, selectedText, improvementType, context, model } = req.body;
+      const { originalText, selectedText, improvementType, context } = req.body;
 
       if (!selectedText || !improvementType) {
         return res.status(400).json({ message: "Markerad text och förbättringstyp krävs" });
@@ -3749,19 +3997,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
       };
 
-      // Get model-based limit or fallback to plan limit
-      const getModelBasedLimit = (plan: PlanType, aiModel: string) => {
-        if (aiModel === "gpt-5.2" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]]) {
-          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]];
-        }
-        if (aiModel === "claude-sonnet-4.6" && MODEL_TEXT_EDIT_LIMITS[aiModel] && MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]]) {
-          return MODEL_TEXT_EDIT_LIMITS[aiModel][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["claude-sonnet-4.6"]];
-        }
-        return PLAN_LIMITS[plan].textEdits;
-      };
-
-      const improvePlan = plan;
-      const improveLimit = getModelBasedLimit(improvePlan, "gpt-5.2");
+      // GPT-5.2 fixed — use model-specific limits or fall back to plan default
+      const improveLimit = MODEL_TEXT_EDIT_LIMITS["gpt-5.2"][plan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]] || PLAN_LIMITS[plan].textEdits;
       if (improveUsage.textEditsUsed >= improveLimit) {
         return res.status(429).json({
           message: `Du har nått din gräns för AI-textredigeringar (${improveLimit}/månad) med GPT-5.2. ${plan === "pro"
@@ -3780,7 +4017,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         more_selling: `Gör denna text mer säljande genom att lyfta fram KONKRETA fakta och mått. Ersätt vaga påståenden med specifika detaljer (märken, årtal, kvm). Inga klyschor.`,
         more_formal: `Gör denna text mer formell och professionell. Använd korrekta fastighetstermer. Inga AI-klyschor.`,
         more_warm: `Gör denna text mer personlig utan att förlora professionaliteten. Behåll alla faktapåståenden.`,
-        fix_claims: `Ersätt klyschor och vaga påståenden med konkreta fakta. Inga "erbjuder", "bjuder på", "generös", "fantastisk", "perfekt".`
+        fix_claims: `Ersätt klyschor och vaga påståenden med konkreta fakta. Inga "erbjuder", "bjuder på", "generös", "vilket", "präglas av".`
       };
 
       const improvementInstruction = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
@@ -3798,7 +4035,7 @@ VALD TEXT ATT FÖRBÄTTRA: ${selectedText}
 
 ${improvementInstruction}
 
-FÖRBJUDET: erbjuder, bjuder på, präglas av, generös, fantastisk, perfekt, vilket, för den som, drömboende, i hjärtat av, faciliteter, njut av, livsstil, smakfullt, elegant, exklusivt, imponerande, harmonisk, inbjudande, tidlös, inte bara, utan också.
+FÖRBJUDET (universella AI-markörer): erbjuder, bjuder på, präglas av, genomsyras av, generös, vilket, för den som, i hjärtat av, faciliteter, njut av, skapar en känsla, bidrar till, inte bara, utan också, här finns, välkommen till.
 
 Svara ENDAST med den förbättrade texten, inga förklaringar.`
         },
