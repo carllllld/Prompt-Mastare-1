@@ -1,4 +1,4 @@
-import {
+﻿import {
   optimizations, type InsertOptimization, type Optimization, PLAN_LIMITS,
   users, type User, sessionUsage, type SessionUsage,
   teams, type Team, type InsertTeam,
@@ -96,12 +96,34 @@ export interface IStorage {
   deletePersonalStyle(userId: string): Promise<void>;
 
   // Usage tracking methods
-  getMonthlyUsage(userId: string): Promise<UsageTracking | null>;
+  getMonthlyUsage(userId: string, user?: User): Promise<UsageTracking | null>;
   incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking>;
   resetMonthlyUsage(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
+  private getUsagePeriodKey(user: User, now: Date = new Date()): { month: string; year: number } {
+    const anchor = new Date(user.planStartAt || user.createdAt || now);
+    anchor.setHours(0, 0, 0, 0);
+
+    let periodStart = new Date(anchor);
+    while (true) {
+      const next = new Date(periodStart);
+      next.setMonth(next.getMonth() + 1);
+      next.setHours(0, 0, 0, 0);
+      if (next <= now) {
+        periodStart = next;
+        continue;
+      }
+      break;
+    }
+
+    return {
+      month: String(periodStart.getMonth() + 1).padStart(2, '0'),
+      year: periodStart.getFullYear(),
+    };
+  }
+
   async createUser(email: string, passwordHash: string): Promise<User> {
     const [user] = await db.insert(users)
       .values({ email, passwordHash })
@@ -117,11 +139,11 @@ export class DatabaseStorage implements IStorage {
   async getUserById(userId: string): Promise<User | null> {
     const result = await db.select().from(users).where(eq(users.id, userId));
     if (!result[0]) return null;
-    return this.resetUserPromptsIfNewDay(result[0]);
+    return result[0];
   }
 
   async resetUserPromptsIfNewDay(user: User): Promise<User> {
-    // Kalenderbaserad månadsreset: nollställ den 1:a varje månad
+    // Kalenderbaserad mÃ¥nadsreset: nollstÃ¤ll den 1:a varje mÃ¥nad
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const lastReset = user.lastResetDate ? new Date(user.lastResetDate).toISOString().split('T')[0].substring(0, 7) : '';
@@ -130,7 +152,7 @@ export class DatabaseStorage implements IStorage {
       const [updated] = await db.update(users)
         .set({
           promptsUsedToday: 0,
-          lastResetDate: new Date()
+          lastResetDate: new Date().toISOString().split('T')[0]
         })
         .where(eq(users.id, user.id))
         .returning();
@@ -141,12 +163,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {
+    const existing = await db.select({
+      plan: users.plan,
+      planStartAt: users.planStartAt,
+    })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const current = existing[0];
+    const shouldSetPlanStartAt = !current?.planStartAt || current?.plan === "free";
+
     await db.update(users)
       .set({
         plan,
         stripeCustomerId,
         stripeSubscriptionId,
-        planStartAt: new Date(),  // Sätt startdatum för månadsräkning
+        ...(shouldSetPlanStartAt ? { planStartAt: new Date() } : {}),
       })
       .where(eq(users.id, userId));
   }
@@ -568,10 +601,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(personalStyles.userId, userId));
   }
 
-  async getMonthlyUsage(userId: string): Promise<UsageTracking | null> {
+  async getMonthlyUsage(userId: string, user?: User): Promise<UsageTracking | null> {
     const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
+    const resolvedUser = user || await this.getUserById(userId);
+    if (!resolvedUser) return null;
+
+    const { month, year } = this.getUsagePeriodKey(resolvedUser, now);
 
     const result = await db.select()
       .from(usageTracking)
@@ -587,15 +622,15 @@ export class DatabaseStorage implements IStorage {
 
   async incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking> {
     const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
 
     // Get user's current plan
     const user = await this.getUserById(userId);
     if (!user) throw new Error('User not found');
 
+    const { month, year } = this.getUsagePeriodKey(user, now);
+
     // Try to get existing usage record
-    let usage = await this.getMonthlyUsage(userId);
+    let usage = await this.getMonthlyUsage(userId, user);
 
     if (!usage) {
       // Create new usage record

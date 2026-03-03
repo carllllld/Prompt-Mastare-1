@@ -220,8 +220,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   // UI state
   const [showDetails, setShowDetails] = useState(false);
 
-  // Fixed GPT-5.2 word limits
-  const modelLimits = { min: 200, max: 500, defaultMin: 350, defaultMax: 450 };
+  // Word limits matching WORD_LIMITS in shared/schema.ts (Pro: 200-600, Premium: 200-800)
+  const modelLimits = { min: 200, max: 800, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
   const [wordCountMax, setWordCountMax] = useState(modelLimits.defaultMax);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);

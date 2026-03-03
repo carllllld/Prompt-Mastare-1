@@ -28,7 +28,7 @@ export function TextImprovement({ fullText, isPro, onTextUpdate }: TextImproveme
 
   const improveText = async () => {
     if (!selectedText || !improvementType) return;
-    
+
     setIsImproving(true);
     try {
       const response = await fetch("/api/improve-text", {
@@ -36,6 +36,7 @@ export function TextImprovement({ fullText, isPro, onTextUpdate }: TextImproveme
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           originalText: fullText,
           selectedText: selectedText,

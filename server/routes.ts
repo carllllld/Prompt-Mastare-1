@@ -1990,14 +1990,15 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           nextReset.setMonth(nextReset.getMonth() + 1);  // +1 månad, inte +1 år
           nextReset.setHours(0, 0, 0, 0);
 
-          // Om nästa reset har passerat, lägg till en månad
-          if (nextReset <= userNow) {
+          // Om nästa reset har passerat, lägg till månader tills vi hamnar i framtiden
+          while (nextReset <= userNow) {
             nextReset.setMonth(nextReset.getMonth() + 1);
+            nextReset.setHours(0, 0, 0, 0);
           }
 
           const resetTime = new Date(nextReset.getTime() + tzOffset * 60000);
           const plan = (user.plan as PlanType) || "free";
-          const usage = await storage.getMonthlyUsage(userId) || {
+          const usage = await storage.getMonthlyUsage(userId, user) || {
             textsGenerated: 0,
             areaSearchesUsed: 0,
             textEditsUsed: 0,
@@ -2098,8 +2099,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const { referenceTexts, teamShared } = req.body;
 
-      if (!referenceTexts || !Array.isArray(referenceTexts) || referenceTexts.length !== 3) {
-        return res.status(400).json({ message: "Du måste ange exakt 3 exempeltexter" });
+      if (!referenceTexts || !Array.isArray(referenceTexts) || referenceTexts.length < 1 || referenceTexts.length > 3) {
+        return res.status(400).json({ message: "Du måste ange 1–3 exempeltexter" });
       }
 
       // Validera att varje text är minst 100 tecken
@@ -2109,12 +2110,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-      console.log("[Personal Style] Analyzing writing style from 3 reference texts...");
 
       // Analysera skrivstilen med AI
       const styleProfile = await analyzeWritingStyle(referenceTexts);
-
-      console.log("[Personal Style] Style analysis completed:", styleProfile);
 
       // Spara till databasen
       const personalStyleData: InsertPersonalStyle = {
@@ -2209,7 +2207,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Check monthly usage limits — BEFORE stream starts
-      const usage = await storage.getMonthlyUsage(user.id) || {
+      const usage = await storage.getMonthlyUsage(user.id, user) || {
         textsGenerated: 0,
         areaSearchesUsed: 0,
         textEditsUsed: 0,
@@ -3046,7 +3044,7 @@ Svara med JSON i formatet:
       }
 
       // Check textEdits usage limit with model-based limits
-      const rewriteUsage = await storage.getMonthlyUsage(rewriteUser.id) || {
+      const rewriteUsage = await storage.getMonthlyUsage(rewriteUser.id, rewriteUser) || {
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
       };
 
@@ -3155,7 +3153,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       }
 
       // Check area search usage limits
-      const usage = await storage.getMonthlyUsage(user.id) || {
+      const usage = await storage.getMonthlyUsage(user.id, user) || {
         textsGenerated: 0,
         areaSearchesUsed: 0,
         textEditsUsed: 0,
@@ -3398,6 +3396,19 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       const user = (req as any).user as User;
       const { tier } = req.body;
 
+      if (tier !== "pro" && tier !== "premium") {
+        return res.status(400).json({ message: "Ogiltig plan" });
+      }
+
+      // If user already has a subscription, use Billing Portal for plan changes
+      if (user.stripeCustomerId && user.stripeSubscriptionId) {
+        const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: user.stripeCustomerId,
+          return_url: `${baseUrl}/app`,
+        });
+        return res.json({ url: portalSession.url });
+      }
 
       const priceId = tier === "pro" ? STRIPE_PRO_PRICE_ID : STRIPE_PREMIUM_PRICE_ID;
       if (!priceId) {
@@ -3993,7 +4004,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       }
 
       // Check textEdits usage limit with model-based limits
-      const improveUsage = await storage.getMonthlyUsage(user.id) || {
+      const improveUsage = await storage.getMonthlyUsage(user.id, user) || {
         textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
       };
 

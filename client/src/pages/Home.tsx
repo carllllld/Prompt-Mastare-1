@@ -323,7 +323,7 @@ export default function Home() {
               <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar denna månad</p>
               <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
                 {plan === "free"
-                  ? "Uppgradera till Pro för 10 genereringar per månad."
+                  ? "Uppgradera till Pro för 10 genereringar + 40 AI-redigeringar per månad."
                   : `Nästa reset: ${userStatus?.resetTime || "nästa månad"}`}
               </p>
               {plan === "free" && (
@@ -413,8 +413,8 @@ export default function Home() {
                     </h3>
                     <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
                       {plan === "free"
-                        ? "Välj mellan Pro (10 genereringar/månad) eller Premium (25 genereringar/månad)."
-                        : "Premium ger dig 25 genereringar/mån, 100 AI-redigeringar, längre texter och priority support."
+                        ? "Välj mellan Pro (10 genereringar + 40 AI-redigeringar/mån) eller Premium (25 + 120)."
+                        : "Premium ger dig 25 genereringar/mån, 120 AI-redigeringar, längre texter (800 ord) och prioriterad support."
                       }
                     </p>
 
@@ -425,7 +425,7 @@ export default function Home() {
                           <div>
                             <span className="text-sm font-semibold" style={{ color: "#2D6A4F" }}>Pro</span>
                             <span className="text-xs text-gray-500 ml-2">299 kr/mån</span>
-                            <p className="text-xs text-gray-500 mt-0.5">10 genereringar · skrivstil · adressuppslag</p>
+                            <p className="text-xs text-gray-500 mt-0.5">10 genereringar · 40 AI-redigeringar · skrivstil</p>
                           </div>
                           <Button
                             onClick={() => startCheckout("pro")}
@@ -441,7 +441,7 @@ export default function Home() {
                           <div>
                             <span className="text-sm font-semibold" style={{ color: "#7C3AED" }}>Premium</span>
                             <span className="text-xs text-gray-500 ml-2">599 kr/mån</span>
-                            <p className="text-xs text-gray-500 mt-0.5">25 genereringar · längre texter · prioritet</p>
+                            <p className="text-xs text-gray-500 mt-0.5">25 genereringar · 120 AI-redigeringar · 800 ord</p>
                           </div>
                           <Button
                             onClick={() => startCheckout("premium")}
@@ -461,9 +461,9 @@ export default function Home() {
                       <ul className="space-y-2 mb-5">
                         {[
                           "25 genereringar / månad",
-                          "100 AI-textredigeringar / månad",
+                          "120 AI-textredigeringar / månad",
                           "Längre texter (upp till 800 ord)",
-                          "Priority support"
+                          "Prioriterad support"
                         ].map((f) => (
                           <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
                             <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#8B5CF6" }} />

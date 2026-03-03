@@ -58,8 +58,8 @@ export const personalStyles = pgTable("personal_styles", {
     };
     writingStyleDescription: string; // AI-generated description of broker's style
   }>().notNull(),
-  isActive: boolean("is_active", { mode: "boolean" }).default(true).notNull(),
-  teamShared: boolean("team_shared", { mode: "boolean" }).default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  teamShared: boolean("team_shared").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -148,8 +148,8 @@ export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
   free: { texts: 2, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
-  pro: { texts: 10, areaSearches: 999999, textEdits: 30, personalStyleAnalyses: 999999 },
-  premium: { texts: 25, areaSearches: 999999, textEdits: 100, personalStyleAnalyses: 999999 },
+  pro: { texts: 10, areaSearches: 999999, textEdits: 40, personalStyleAnalyses: 999999 },
+  premium: { texts: 25, areaSearches: 999999, textEdits: 120, personalStyleAnalyses: 999999 },
 } as const;
 
 // Model-based text edit limits
