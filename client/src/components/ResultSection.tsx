@@ -57,7 +57,7 @@ function CopyAllButton({ result }: { result: OptimizeResponse }) {
     const parts: string[] = [];
     if (result.headline) parts.push(`RUBRIK:\n${result.headline}`);
     parts.push(`OBJEKTBESKRIVNING:\n${result.improvedPrompt}`);
-    if (result.instagramCaption) parts.push(`INSTAGRAM:\n${result.instagramCaption}`);
+    if (result.instagramCaption) parts.push(`SOCIALT INLÄGG:\n${result.instagramCaption}`);
     if (result.showingInvitation) parts.push(`VISNINGSINBJUDAN:\n${result.showingInvitation}`);
     if (result.shortAd) parts.push(`KORTANNONS:\n${result.shortAd}`);
     if (result.socialCopy) parts.push(`SOCIAL MEDIA:\n${result.socialCopy}`);
@@ -201,9 +201,9 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
         </div>
       )}
 
-      {/* ── 3. INSTAGRAM ── */}
+      {/* ── 3. SOCIALT INLÄGG ── */}
       {result.instagramCaption && (
-        <CopyCard title="Instagram / Facebook" icon={Instagram} text={result.instagramCaption} iconColor="#E1306C" delay="0.12s" />
+        <CopyCard title="Socialt inlägg" icon={Instagram} text={result.instagramCaption} iconColor="#E1306C" delay="0.12s" />
       )}
 
       {/* ── 4. VISNINGSINBJUDAN ── */}

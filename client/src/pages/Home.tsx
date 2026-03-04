@@ -30,7 +30,7 @@ const BEFORE_AFTER = [
     after: `Storgatan 12, 3 tr, Uppsala. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet med tre fönster och ekparkett, takhöjd 2,70 m.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch, renoverat 2020.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter.`,
   },
   {
-    label: "Instagram",
+    label: "Socialt inlägg",
     before: `Fantastisk lägenhet i Uppsala! Ljus och luftig med generösa ytor och genomtänkt planlösning. Perfekt för den som söker ett modernt och stilrent boende i hjärtat av staden. Kontakta oss för mer info! ❤️ #Uppsala #Lägenhet #Drömboende`,
     after: `Storgatan 12, Uppsala. Trea om 76 kvm med Ballingslöv-kök från 2022 och balkong i söderläge. Ekparkett och takhöjd 2,70 m. Badrum renoverat 2020. BRF Storgården, avgift 3 900 kr/mån.\nUppsala resecentrum 5 minuter — pendlingsavstånd till Stockholm.\n\n#Uppsala #Hemnet #Lägenhet #Balkong #TillSalu`,
   },
@@ -327,7 +327,7 @@ export default function Home() {
               {[
                 { label: "Objektbeskrivning", sub: "Hemnet & Booli" },
                 { label: "Rubrik", sub: "max 70 tecken" },
-                { label: "Instagram", sub: "+ hashtags" },
+                { label: "Socialt inlägg", sub: "+ hashtags" },
                 { label: "Visningsinbjudan", sub: "mäklarinfo" },
                 { label: "Kortannons", sub: "max 40 ord" },
               ].map((pill) => (

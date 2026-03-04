@@ -24,7 +24,7 @@ const FEATURES = [
   {
     icon: Zap,
     title: "5 texter på 15 sekunder",
-    desc: "Objektbeskrivning, rubrik, Instagram, visningsinbjudan och kortannons — allt genereras samtidigt.",
+    desc: "Objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan och kortannons — allt genereras samtidigt.",
   },
   {
     icon: Shield,
@@ -63,7 +63,7 @@ const PLANS = [
     features: [
       "2 genereringar / månad",
       "Hemnet + Booli-texter",
-      "Rubrik, Instagram & kortannons",
+      "Rubrik, socialt inlägg & kortannons",
       "300–450 ord per text",
     ],
     cta: "Kom igång gratis",
@@ -208,7 +208,7 @@ export default function Landing() {
 
           <p className="text-base sm:text-lg max-w-2xl mx-auto mb-8 leading-relaxed" style={{ color: "#6B7280" }}>
             Fyll i fastighetens data. Få 5 publiceringsklara texter på 15 sekunder —
-            Hemnet, rubrik, Instagram, visningsinbjudan och kortannons.
+            Hemnet, rubrik, socialt inlägg, visningsinbjudan och kortannons.
             Utan klyschor. Utan "generösa ytor".
           </p>
 
@@ -356,7 +356,7 @@ export default function Landing() {
               Enkel prissättning. Avsluta när du vill.
             </h2>
             <p className="text-sm" style={{ color: "#6B7280" }}>
-              Varje generering ger 5 texter: objektbeskrivning, rubrik, Instagram, visningsinbjudan & kortannons.
+              Varje generering ger 5 texter: objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan & kortannons.
             </p>
           </div>
 

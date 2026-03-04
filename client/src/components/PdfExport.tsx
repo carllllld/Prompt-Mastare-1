@@ -21,14 +21,14 @@ export function PdfExport({ result }: PdfExportProps) {
     reader.onload = () => {
       const dataUrl = reader.result as string;
       setLogo(dataUrl);
-      try { localStorage.setItem("broker_logo", dataUrl); } catch {}
+      try { localStorage.setItem("broker_logo", dataUrl); } catch { }
     };
     reader.readAsDataURL(file);
   };
 
   const removeLogo = () => {
     setLogo(null);
-    try { localStorage.removeItem("broker_logo"); } catch {}
+    try { localStorage.removeItem("broker_logo"); } catch { }
   };
 
   const generatePdf = async () => {
@@ -43,7 +43,7 @@ export function PdfExport({ result }: PdfExportProps) {
       }
       sections.push({ title: "Objektbeskrivning", content: result.improvedPrompt });
       if (result.instagramCaption) {
-        sections.push({ title: "Instagram / Facebook", content: result.instagramCaption });
+        sections.push({ title: "Socialt inlägg", content: result.instagramCaption });
       }
       if (result.showingInvitation) {
         sections.push({ title: "Visningsinbjudan", content: result.showingInvitation });

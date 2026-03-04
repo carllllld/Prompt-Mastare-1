@@ -182,7 +182,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
                   const tabs = [
                     { key: "description", label: "Beskrivning", text: item.improvedPrompt },
                     ...(item.headline ? [{ key: "headline", label: "Rubrik", text: item.headline }] : []),
-                    ...(item.instagramCaption ? [{ key: "instagram", label: "Instagram", text: item.instagramCaption }] : []),
+                    ...(item.instagramCaption ? [{ key: "instagram", label: "Socialt", text: item.instagramCaption }] : []),
                     ...(item.showingInvitation ? [{ key: "showing", label: "Visning", text: item.showingInvitation }] : []),
                     ...(item.shortAd ? [{ key: "shortad", label: "Kortannons", text: item.shortAd }] : []),
                   ];
