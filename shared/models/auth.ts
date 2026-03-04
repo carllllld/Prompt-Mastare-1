@@ -24,6 +24,8 @@ export const users = pgTable("users", {
   verificationTokenExpires: timestamp("verification_token_expires"),
   passwordResetToken: varchar("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires"),
+  displayName: varchar("display_name"),
+  avatarColor: varchar("avatar_color"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

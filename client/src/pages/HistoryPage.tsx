@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Optimization } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,7 +99,7 @@ export default function HistoryPage() {
               <p className="text-muted-foreground mb-6">
                 Dina objektbeskrivningar sparas här i 30 dagar
               </p>
-              <Link href="/">
+              <Link href="/app">
                 <Button data-testid="button-create-first">Skapa din första beskrivning</Button>
               </Link>
             </CardContent>

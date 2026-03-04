@@ -61,6 +61,23 @@ export async function initializeDatabase() {
       ADD COLUMN IF NOT EXISTS verification_token_expires TIMESTAMP
     `);
 
+    // Add profile columns if they don't exist
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS display_name VARCHAR,
+      ADD COLUMN IF NOT EXISTS avatar_color VARCHAR
+    `);
+
+    // Add missing columns for fresh deployments
+    await pool.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS plan_start_at TIMESTAMP DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS password_reset_token TEXT,
+      ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW(),
+      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
+    `);
+
     // Create email rate limits table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS email_rate_limits (

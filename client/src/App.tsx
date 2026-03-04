@@ -30,6 +30,7 @@ const JoinTeam = lazy(() => import("@/pages/JoinTeam"));
 const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const Terms = lazy(() => import("@/pages/Terms"));
+const Settings = lazy(() => import("@/pages/Settings"));
 
 function Router() {
   return (
@@ -70,6 +71,11 @@ function Router() {
       <Route path="/terms">
         <Suspense fallback={<PageSpinner />}>
           <Terms />
+        </Suspense>
+      </Route>
+      <Route path="/settings">
+        <Suspense fallback={<PageSpinner />}>
+          <Settings />
         </Suspense>
       </Route>
       <Route component={NotFound} />

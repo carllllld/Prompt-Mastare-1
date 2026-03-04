@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /settings
+Disallow: /history
+Disallow: /teams
+Disallow: /prompts/
+
+Sitemap: https://optiprompt.se/sitemap.xml

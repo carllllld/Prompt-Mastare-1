@@ -118,7 +118,7 @@ export function PromptHistory() {
             <History className="w-5 h-5" />
           </div>
           <h3 className="text-lg font-bold" style={{ color: "#1D2939" }}>Objektbeskrivningar</h3>
-          <div className="text-xs px-2 py-1 rounded-md font-semibold" style={{ background: "#F3E8FF", color: "#7C3AED", border: "1px solid #DDD6FE" }}>Pro</div>
+          <div className="text-xs px-2 py-1 rounded-md font-semibold" style={{ background: "#F3E8FF", color: "#7C3AED", border: "1px solid #DDD6FE" }}>Pro/Premium</div>
         </div>
         <Button
           size="icon"

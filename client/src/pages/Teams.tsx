@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTeams, useTeam, useSharedPrompts, type SharedPrompt } from "@/hooks/use-teams";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, FileText, ArrowLeft, Copy, Lock, Trash2 } from "lucide-react";
 
 const AVATAR_COLORS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", 
+  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",
   "#3b82f6", "#8b5cf6", "#ec4899", "#f43f5e", "#6366f1"
 ];
 
@@ -56,15 +56,15 @@ export default function Teams() {
     );
   }
 
-  // Kontrollera om användaren har pro-plan
-  if (user?.plan !== "pro") {
+  // Kontrollera om användaren har pro- eller premium-plan
+  if (user?.plan !== "pro" && user?.plan !== "premium") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
-            <CardTitle>Pro-prenumeration krävs</CardTitle>
+            <CardTitle>Pro- eller Premium-prenumeration krävs</CardTitle>
             <CardDescription>
-              Teamfunktioner är endast tillgängliga för Pro-användare. Uppgradera för att samarbeta med ditt team.
+              Teamfunktioner är tillgängliga för Pro- och Premium-användare. Uppgradera för att samarbeta med ditt team.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -87,9 +87,9 @@ export default function Teams() {
       setSelectedTeamId(team.id);
       setNewTeamName("");
       setIsCreateDialogOpen(false);
-      toast({ title: "Team created!", description: `${team.name} is ready for collaboration.` });
+      toast({ title: "Team skapat!", description: `${team.name} är redo för samarbete.` });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not create team", variant: "destructive" });
+      toast({ title: "Fel", description: err.message || "Kunde inte skapa team", variant: "destructive" });
     }
   };
 
@@ -111,7 +111,7 @@ export default function Teams() {
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-                <Button data-testid="button-create-team">
+              <Button data-testid="button-create-team">
                 <Plus className="h-4 w-4 mr-2" />
                 Skapa Team
               </Button>
@@ -122,14 +122,14 @@ export default function Teams() {
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <Input
-                  placeholder="Team name"
+                  placeholder="Teamnamn"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleCreateTeam()}
                   data-testid="input-team-name"
                 />
-                  <Button 
-                  className="w-full" 
+                <Button
+                  className="w-full"
                   onClick={handleCreateTeam}
                   disabled={isCreatingTeam || !newTeamName.trim()}
                   data-testid="button-submit-team"
@@ -171,8 +171,8 @@ export default function Teams() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {teams.map(team => (
-              <Card 
-                key={team.id} 
+              <Card
+                key={team.id}
                 className="hover-elevate cursor-pointer transition-all"
                 onClick={() => setSelectedTeamId(team.id)}
                 data-testid={`card-team-${team.id}`}
@@ -183,7 +183,7 @@ export default function Teams() {
                     {team.name}
                   </CardTitle>
                   <CardDescription>
-                    Created {new Date(team.createdAt).toLocaleDateString()}
+                    Skapad {new Date(team.createdAt).toLocaleDateString("sv-SE")}
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -194,6 +194,13 @@ export default function Teams() {
     </div>
   );
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Utkast",
+  in_progress: "Pågår",
+  optimized: "Optimerad",
+  archived: "Arkiverad",
+};
 
 function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void }) {
   const { team, members, isLoading, inviteMember, isInviting } = useTeam(teamId);
@@ -214,11 +221,11 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
       const result = await inviteMember(inviteEmail.trim());
       const inviteUrl = `${window.location.origin}/teams/join/${result.token}`;
       await navigator.clipboard.writeText(inviteUrl);
-      toast({ title: "Invite sent!", description: "The invite link has been copied to your clipboard." });
+      toast({ title: "Inbjudan skickad!", description: "Inbjudningslänken har kopierats till urklipp." });
       setInviteEmail("");
       setIsInviteDialogOpen(false);
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not create invite", variant: "destructive" });
+      toast({ title: "Fel", description: err.message || "Kunde inte skapa inbjudan", variant: "destructive" });
     }
   };
 
@@ -229,27 +236,27 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
       setNewPromptTitle("");
       setNewPromptContent("");
       setIsNewPromptDialogOpen(false);
-      toast({ title: "Prompt created!", description: "Your prompt has been added to the team library." });
+      toast({ title: "Prompt skapad!", description: "Din prompt har lagts till i teambiblioteket." });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not create prompt", variant: "destructive" });
+      toast({ title: "Fel", description: err.message || "Kunde inte skapa prompt", variant: "destructive" });
     }
   };
 
   const handleDeletePrompt = async (promptId: number) => {
     try {
       await deletePrompt(promptId);
-      toast({ title: "Deleted", description: "Prompt has been removed." });
+      toast({ title: "Raderad", description: "Prompten har tagits bort." });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not delete prompt", variant: "destructive" });
+      toast({ title: "Fel", description: err.message || "Kunde inte ta bort prompt", variant: "destructive" });
     }
   };
 
   if (selectedPrompt) {
     return (
-      <CollaborativeEditor 
-        prompt={selectedPrompt} 
+      <CollaborativeEditor
+        prompt={selectedPrompt}
         teamId={teamId}
-        onBack={() => setSelectedPrompt(null)} 
+        onBack={() => setSelectedPrompt(null)}
       />
     );
   }
@@ -295,8 +302,8 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                     onChange={(e) => setInviteEmail(e.target.value)}
                     data-testid="input-invite-email"
                   />
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     onClick={handleInvite}
                     disabled={isInviting || !inviteEmail.trim()}
                     data-testid="button-send-invite"
@@ -331,8 +338,8 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                     onChange={(e) => setNewPromptContent(e.target.value)}
                     data-testid="input-prompt-content"
                   />
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     onClick={handleCreatePrompt}
                     disabled={isCreating || !newPromptTitle.trim() || !newPromptContent.trim()}
                     data-testid="button-submit-prompt"
@@ -380,8 +387,8 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {prompts.map(prompt => (
-                    <Card 
-                      key={prompt.id} 
+                    <Card
+                      key={prompt.id}
                       className="hover-elevate cursor-pointer"
                       onClick={() => setSelectedPrompt(prompt)}
                       data-testid={`card-prompt-${prompt.id}`}
@@ -393,12 +400,11 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                             {prompt.title}
                           </CardTitle>
                           <div className="flex items-center gap-1">
-                            <div className={`text-xs px-2 py-1 rounded-md font-semibold ${
-                              prompt.status === "optimized" 
-                                ? "bg-primary text-primary-foreground" 
-                                : "bg-secondary text-secondary-foreground"
-                            }`}>
-                              {prompt.status}
+                            <div className={`text-xs px-2 py-1 rounded-md font-semibold ${prompt.status === "optimized"
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-secondary-foreground"
+                              }`}>
+                              {STATUS_LABELS[prompt.status] ?? prompt.status}
                             </div>
                             <Button
                               variant="ghost"
@@ -420,7 +426,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                       </CardHeader>
                       <CardContent className="pt-0">
                         <p className="text-xs text-muted-foreground">
-                          Updated {new Date(prompt.updatedAt).toLocaleDateString()}
+                          Uppdaterad {new Date(prompt.updatedAt).toLocaleDateString("sv-SE")}
                         </p>
                       </CardContent>
                     </Card>
@@ -442,7 +448,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                     {members.map(member => (
                       <div key={member.id} className="flex items-center gap-3" data-testid={`member-${member.userId}`}>
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback 
+                          <AvatarFallback
                             style={{ backgroundColor: getAvatarColor(member.userId, member.user.avatarColor) }}
                             className="text-white text-xs"
                           >
@@ -470,7 +476,10 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
 
 function CollaborativeEditor({ prompt, teamId, onBack }: { prompt: SharedPrompt; teamId: number; onBack: () => void }) {
   const [, setLocation] = useLocation();
-  
-  setLocation(`/prompts/${prompt.id}`);
+
+  useEffect(() => {
+    setLocation(`/prompts/${prompt.id}`);
+  }, [prompt.id, setLocation]);
+
   return null;
 }

@@ -25,13 +25,13 @@ export default function JoinTeam() {
       const response = await apiRequest("POST", `/api/teams/join/${token}`, {});
       const team = await response.json();
       setJoined(true);
-      toast({ title: "Welcome!", description: `You've joined ${team.name}` });
+      toast({ title: "Välkommen!", description: `Du har gått med i ${team.name}` });
       setTimeout(() => {
         setLocation("/teams");
       }, 1500);
     } catch (err: any) {
-      setError(err.message || "Could not join team");
-      toast({ title: "Error", description: err.message || "Could not join team", variant: "destructive" });
+      setError(err.message || "Kunde inte gå med i teamet");
+      toast({ title: "Fel", description: err.message || "Kunde inte gå med i teamet", variant: "destructive" });
     } finally {
       setIsJoining(false);
     }
@@ -43,12 +43,12 @@ export default function JoinTeam() {
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
             <Users className="h-12 w-12 mx-auto text-primary mb-4" />
-            <CardTitle>Team Invitation</CardTitle>
-            <CardDescription>Please sign in to accept this team invitation</CardDescription>
+            <CardTitle>Teaminbjudan</CardTitle>
+            <CardDescription>Du måste logga in för att acceptera denna teaminbjudan</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/">
-              <Button data-testid="button-sign-in">Sign In to Join</Button>
+              <Button data-testid="button-sign-in">Logga in för att gå med</Button>
             </Link>
           </CardContent>
         </Card>
@@ -64,8 +64,8 @@ export default function JoinTeam() {
             <div className="h-12 w-12 mx-auto bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
               <Check className="h-6 w-6 text-green-600" />
             </div>
-            <CardTitle>You're In!</CardTitle>
-            <CardDescription>Redirecting to your teams...</CardDescription>
+            <CardTitle>Du är med!</CardTitle>
+            <CardDescription>Omdirigerar till dina team...</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -80,12 +80,12 @@ export default function JoinTeam() {
             <div className="h-12 w-12 mx-auto bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mb-4">
               <X className="h-6 w-6 text-red-600" />
             </div>
-            <CardTitle>Unable to Join</CardTitle>
+            <CardTitle>Kunde inte gå med</CardTitle>
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/teams">
-              <Button data-testid="button-go-teams">Go to My Teams</Button>
+              <Button data-testid="button-go-teams">Gå till Mina Team</Button>
             </Link>
           </CardContent>
         </Card>
@@ -98,23 +98,23 @@ export default function JoinTeam() {
       <Card className="max-w-md w-full mx-4">
         <CardHeader className="text-center">
           <Users className="h-12 w-12 mx-auto text-primary mb-4" />
-          <CardTitle>Team Invitation</CardTitle>
+          <CardTitle>Teaminbjudan</CardTitle>
           <CardDescription>
-            You've been invited to join a team. Click below to accept the invitation.
+            Du har bjudits in att gå med i ett team. Klicka nedan för att acceptera inbjudan.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Button 
-            onClick={handleJoin} 
+          <Button
+            onClick={handleJoin}
             disabled={isJoining}
             className="w-full"
             data-testid="button-accept-invite"
           >
-            {isJoining ? "Joining..." : "Accept Invitation"}
+            {isJoining ? "Går med..." : "Acceptera inbjudan"}
           </Button>
           <Link href="/teams">
             <Button variant="outline" className="w-full" data-testid="button-decline">
-              Decline
+              Avböj
             </Button>
           </Link>
         </CardContent>

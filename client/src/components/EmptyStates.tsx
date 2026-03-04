@@ -1,4 +1,4 @@
-import { FileText, Users, Search, Plus, ArrowRight, Sparkles } from "lucide-react";
+﻿import { FileText, Users, Search, Plus, ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
@@ -12,7 +12,7 @@ export function EmptyHistory() {
       <p className="text-gray-500 mb-6 max-w-sm mx-auto">
         Dina objektbeskrivningar kommer att synas här när du börjar skapa.
       </p>
-      <Link href="/">
+      <Link href="/app">
         <Button className="inline-flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Skapa din första beskrivning
@@ -97,7 +97,7 @@ export function EmptyOptimizations() {
       <p className="text-gray-500 mb-6 max-w-sm mx-auto">
         Börja optimera dina prompter för att se förbättringsförslag och analyser.
       </p>
-      <Link href="/">
+      <Link href="/app">
         <Button className="inline-flex items-center gap-2">
           <Sparkles className="w-4 h-4" />
           Börja optimera

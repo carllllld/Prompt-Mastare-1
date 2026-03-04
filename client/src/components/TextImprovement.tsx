@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +25,11 @@ export function TextImprovement({ fullText, isPro, onTextUpdate }: TextImproveme
       setShowImprovement(false);
     }
   };
+
+  useEffect(() => {
+    document.addEventListener("mouseup", handleTextSelection);
+    return () => document.removeEventListener("mouseup", handleTextSelection);
+  }, []);
 
   const improveText = async () => {
     if (!selectedText || !improvementType) return;

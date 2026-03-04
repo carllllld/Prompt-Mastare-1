@@ -2056,6 +2056,115 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ── ACCOUNT ENDPOINTS ──
+
+  // GET /api/account/details — subscription + profile info for Settings page
+  app.get("/api/account/details", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const now = new Date();
+      const planStartAt = new Date(user.planStartAt || user.createdAt || now);
+
+      // Calculate next billing/reset date
+      const nextReset = new Date(planStartAt);
+      nextReset.setMonth(nextReset.getMonth() + 1);
+      while (nextReset <= now) nextReset.setMonth(nextReset.getMonth() + 1);
+
+      const plan = (user.plan as PlanType) || "free";
+      const usage = await storage.getMonthlyUsage(user.id, user) || {
+        textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
+      };
+      const limits = PLAN_LIMITS[plan];
+
+      res.json({
+        email: user.email,
+        displayName: user.displayName || null,
+        avatarColor: user.avatarColor || null,
+        plan,
+        planStartAt: planStartAt.toISOString(),
+        nextResetAt: nextReset.toISOString(),
+        createdAt: user.createdAt,
+        emailVerified: user.emailVerified,
+        stripeCustomerId: user.stripeCustomerId || null,
+        stripeSubscriptionId: user.stripeSubscriptionId || null,
+        usage: {
+          textsGenerated: usage.textsGenerated,
+          textsLimit: limits.texts,
+          textEditsUsed: usage.textEditsUsed,
+          textEditsLimit: limits.textEdits,
+        },
+      });
+    } catch (err) {
+      console.error("Account details error:", err);
+      res.status(500).json({ message: "Kunde inte hämta kontoinformation" });
+    }
+  });
+
+  // PUT /api/account/profile — update display name and avatar color
+  app.put("/api/account/profile", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { displayName, avatarColor } = req.body;
+
+      if (displayName !== undefined && typeof displayName !== "string") {
+        return res.status(400).json({ message: "Ogiltigt visningsnamn" });
+      }
+      if (avatarColor !== undefined && typeof avatarColor !== "string") {
+        return res.status(400).json({ message: "Ogiltig avatarfärg" });
+      }
+
+      const updated = await storage.updateUserProfile(user.id, {
+        displayName: displayName?.trim().slice(0, 50) || undefined,
+        avatarColor: avatarColor || undefined,
+      });
+
+      res.json({ success: true, displayName: updated?.displayName, avatarColor: updated?.avatarColor });
+    } catch (err) {
+      console.error("Update profile error:", err);
+      res.status(500).json({ message: "Kunde inte uppdatera profilen" });
+    }
+  });
+
+  // DELETE /api/account — GDPR-compliant account deletion
+  app.delete("/api/account", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user as User;
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({ message: "Lösenord krävs för att radera kontot" });
+      }
+
+      // Verify password before deletion
+      const bcrypt = await import("bcrypt");
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) {
+        return res.status(401).json({ message: "Felaktigt lösenord" });
+      }
+
+      // Cancel Stripe subscription if active
+      if (user.stripeSubscriptionId) {
+        try {
+          await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+        } catch (stripeErr) {
+          console.error("Stripe cancel error during account deletion:", stripeErr);
+          // Continue deletion even if Stripe fails
+        }
+      }
+
+      // Destroy the session first
+      req.session.destroy(() => { });
+
+      // Delete all user data
+      await storage.deleteUser(user.id);
+
+      res.json({ success: true, message: "Kontot har raderats" });
+    } catch (err) {
+      console.error("Delete account error:", err);
+      res.status(500).json({ message: "Kunde inte radera kontot" });
+    }
+  });
+
   // PERSONAL STYLE ENDPOINTS - Pro-funktion
   app.get("/api/personal-style", requireAuth, async (req, res) => {
     try {
@@ -2978,6 +3087,16 @@ Svara med JSON i formatet:
       await storage.incrementUsage(user.id, 'texts');
 
       const tips = result.text_tips || result.pro_tips || [];
+
+      // Auto-fill [TID] and [KONTAKT] placeholders in showing invitation
+      let showingInvitation = result.showingInvitation || null;
+      if (showingInvitation && propertyData) {
+        const tid = (propertyData.visningstid || "").trim();
+        const kontakt = [propertyData.maklarnamn, propertyData.maklartelefon].filter(Boolean).join(", ");
+        if (tid) showingInvitation = showingInvitation.replace(/\[TID\]/g, tid);
+        if (kontakt) showingInvitation = showingInvitation.replace(/\[KONTAKT\]/g, kontakt);
+      }
+
       const responseData = {
         originalPrompt: prompt,
         improvedPrompt: result.improvedPrompt || prompt,
@@ -2990,7 +3109,7 @@ Svara med JSON i formatet:
         socialCopy: result.socialCopy || null,
         headline: result.headline || null,
         instagramCaption: result.instagramCaption || null,
-        showingInvitation: result.showingInvitation || null,
+        showingInvitation,
         shortAd: result.shortAd || null,
         improvement_suggestions: improvementSuggestions,
         factCheck: factCheckResult ? {

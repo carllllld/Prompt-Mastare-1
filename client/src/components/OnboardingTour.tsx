@@ -96,12 +96,12 @@ export function OnboardingTour({ isOpen, onClose, onComplete }: OnboardingTourPr
 
   const highlightTarget = () => {
     if (currentStepData.target === 'body') return;
-    
+
     const targetElement = document.querySelector(currentStepData.target);
     if (targetElement) {
       targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       targetElement.classList.add('tour-highlight');
-      
+
       setTimeout(() => {
         targetElement.classList.remove('tour-highlight');
       }, 500);
@@ -161,7 +161,7 @@ export function OnboardingTour({ isOpen, onClose, onComplete }: OnboardingTourPr
     <>
       {/* Overlay */}
       <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
-      
+
       {/* Tour Content */}
       <div className={getPositionClasses()}>
         <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm mx-4 relative">
@@ -214,11 +214,10 @@ export function OnboardingTour({ isOpen, onClose, onComplete }: OnboardingTourPr
             <button
               onClick={prevStep}
               disabled={currentStep === 0}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                currentStep === 0
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${currentStep === 0
                   ? 'text-gray-300 cursor-not-allowed'
                   : 'text-gray-600 hover:bg-gray-100'
-              }`}
+                }`}
             >
               <ArrowLeft className="w-4 h-4" />
               Föregående
@@ -244,7 +243,7 @@ export function OnboardingTour({ isOpen, onClose, onComplete }: OnboardingTourPr
       </div>
 
       {/* Highlight Styles */}
-      <style jsx>{`
+      <style>{`
         .tour-highlight {
           box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);
           border-radius: 8px;

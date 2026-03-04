@@ -51,6 +51,9 @@ interface PropertyFormData {
   renoveringsar: string;
   platform: "hemnet" | "booli" | "general";
   writingStyle: "factual" | "balanced" | "selling";
+  visningstid: string;
+  maklarnamn: string;
+  maklartelefon: string;
 }
 
 // ── CHIP OPTIONS ──
@@ -288,6 +291,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       renoveringsar: "",
       platform: "hemnet",
       writingStyle: "balanced",
+      visningstid: "",
+      maklarnamn: "",
+      maklartelefon: "",
     },
   });
 
@@ -394,6 +400,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       d += "\n=== FÖRSÄLJNINGSARGUMENT ===\n";
       d += "(Unika kvaliteter som gör bostaden attraktiv — lyft dessa i texten)\n";
       d += `${merged.uniqueSellingPoints}\n`;
+    }
+
+    if (merged.visningstid || merged.maklarnamn || merged.maklartelefon) {
+      d += "\n=== VISNINGSINFORMATION ===\n";
+      if (merged.visningstid) d += `Visningstid: ${merged.visningstid}\n`;
+      if (merged.maklarnamn) d += `Mäklare: ${merged.maklarnamn}\n`;
+      if (merged.maklartelefon) d += `Telefon: ${merged.maklartelefon}\n`;
+      d += "(Använd dessa uppgifter i visningsinbjudan — ersätt [TID] och [KONTAKT] med faktiska värden)\n";
     }
     if (merged.gardenDescription) {
       d += "\n=== TRÄDGÅRD & UTEPLATS ===\n";
@@ -994,6 +1008,36 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 )} />
               </div>
             )}
+          </div>
+
+          {/* ── SECTION 6b: VISNINGSINFORMATION ── */}
+          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                Visningsinformation
+              </label>
+              <span className="text-[10px] text-gray-400">Valfritt — för visningsinbjudan</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <FormField control={form.control} name="visningstid" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Visningstid</FormLabel>
+                  <FormControl><Input placeholder="Sön 15 jun, 13:00–14:00" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="maklarnamn" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Mäklarens namn</FormLabel>
+                  <FormControl><Input placeholder="Anna Svensson" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="maklartelefon" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Telefon</FormLabel>
+                  <FormControl><Input placeholder="070-000 00 00" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
+            </div>
           </div>
 
           {/* ── SECTION 7: PLATTFORM, STIL & SUBMIT ── */}

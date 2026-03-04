@@ -1,6 +1,6 @@
 ﻿import {
   optimizations, type InsertOptimization, type Optimization, PLAN_LIMITS,
-  users, type User, sessionUsage, type SessionUsage,
+  users, type User, sessionUsage, type SessionUsage, sessions,
   teams, type Team, type InsertTeam,
   teamMembers, type TeamMember, type InsertTeamMember,
   sharedPrompts, type SharedPrompt, type InsertSharedPrompt,
@@ -21,6 +21,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | null>;
   getUserById(userId: string): Promise<User | null>;
   updateUserProfile(userId: string, data: { displayName?: string; avatarColor?: string }): Promise<User | null>;
+  deleteUser(userId: string): Promise<void>;
   updateUserStripeCustomer(userId: string, stripeCustomerId: string): Promise<void>;
   // Usage methods
   resetUserPromptsIfNewDay(user: User): Promise<User>;
@@ -265,6 +266,38 @@ export class DatabaseStorage implements IStorage {
     return result || null;
   }
 
+  async deleteUser(userId: string): Promise<void> {
+    // 1. Delete owned teams (cascade: comments, invites, presence, members, prompts)
+    const ownedTeams = await db.select({ id: teams.id }).from(teams).where(eq(teams.ownerId, userId));
+    for (const team of ownedTeams) {
+      await this.deleteTeam(team.id);
+    }
+    // 2. Remove from teams where member (not owner)
+    await db.delete(teamMembers).where(eq(teamMembers.userId, userId));
+    // 3. Comments on any prompt
+    await db.delete(promptComments).where(eq(promptComments.userId, userId));
+    // 4. Presence sessions
+    await db.delete(presenceSessions).where(eq(presenceSessions.userId, userId));
+    // 5. Team invites sent by user
+    await db.delete(teamInvites).where(eq(teamInvites.invitedBy, userId));
+    // 6. Shared prompts created by user (not in owned teams — those deleted above)
+    await db.delete(sharedPrompts).where(eq(sharedPrompts.creatorId, userId));
+    // 7. Optimizations history
+    await db.delete(optimizations).where(eq(optimizations.userId, userId));
+    // 8. Personal styles
+    await db.delete(personalStyles).where(eq(personalStyles.userId, userId));
+    // 9. Usage tracking
+    await db.delete(usageTracking).where(eq(usageTracking.userId, userId));
+    // 10. Email rate limits
+    await db.delete(emailRateLimits).where(eq(emailRateLimits.email,
+      (await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1).then(r => r[0]?.email || ''))
+    ));
+    // 11. Sessions
+    await db.delete(sessions).where(sql`sess->>'userId' = ${userId}`);
+    // 12. User
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
   async createTeam(team: InsertTeam): Promise<Team> {
     const [result] = await db.insert(teams).values(team).returning();
     return result;
@@ -305,6 +338,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTeam(teamId: number): Promise<void> {
+    const prompts = await db.select({ id: sharedPrompts.id }).from(sharedPrompts).where(eq(sharedPrompts.teamId, teamId));
+    for (const prompt of prompts) {
+      await db.delete(promptComments).where(eq(promptComments.promptId, prompt.id));
+    }
+    await db.delete(presenceSessions).where(eq(presenceSessions.teamId, teamId));
+    await db.delete(teamInvites).where(eq(teamInvites.teamId, teamId));
     await db.delete(teamMembers).where(eq(teamMembers.teamId, teamId));
     await db.delete(sharedPrompts).where(eq(sharedPrompts.teamId, teamId));
     await db.delete(teams).where(eq(teams.id, teamId));
