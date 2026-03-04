@@ -875,15 +875,29 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 6: MER DETALJER (expandable) ── */}
-          <div className="border-t" style={{ borderColor: "#E8E5DE" }}>
+          <div className="border-t pt-4" style={{ borderColor: "#E8E5DE" }}>
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
-              className="w-full flex items-center justify-between py-4 text-sm font-medium transition-colors hover:text-gray-700"
-              style={{ color: "#9CA3AF" }}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all"
+              style={{
+                background: showDetails ? "#F0FDF4" : "#FAFAF7",
+                borderColor: showDetails ? "#86EFAC" : "#D1D5DB",
+                color: showDetails ? "#2D6A4F" : "#374151",
+              }}
             >
-              <span>Material, läge & fler detaljer</span>
-              {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold">Material, läge &amp; fler detaljer</span>
+                {!showDetails && (
+                  <span className="text-[11px]" style={{ color: "#9CA3AF" }}>— golv, uppvärmning, parkering, utsikt och mer</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold" style={{ color: showDetails ? "#2D6A4F" : "#6B7280" }}>
+                  {showDetails ? "Dölj" : "Lägg till"}
+                </span>
+                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </div>
             </button>
 
             {showDetails && (
