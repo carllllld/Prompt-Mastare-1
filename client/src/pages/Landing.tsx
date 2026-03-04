@@ -230,7 +230,7 @@ export default function Landing() {
               { value: "15 sek", label: "per generering" },
               { value: "5 texter", label: "på en gång" },
               { value: "397+", label: "klyschor filtreras" },
-              { value: "6 steg", label: "AI-pipeline" },
+              { value: "7 steg", label: "AI-pipeline" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-xl sm:text-2xl font-bold" style={{ color: "#2D6A4F" }}>{stat.value}</div>
@@ -252,7 +252,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
               { step: "1", title: "Fyll i fastighetsdata", desc: "Adress, yta, rum, skick, balkong, renovering — allt i ett strukturerat formulär." },
-              { step: "2", title: "AI genererar 5 texter", desc: "6-stegs pipeline: extraktion → analys → textgenerering → klyschfilter → faktagranskning → förbättringsförslag." },
+              { step: "2", title: "AI genererar 5 texter", desc: "7-stegs pipeline: extraktion → analys → textgenerering → klyschfilter → expansion → faktagranskning → förbättringsförslag." },
               { step: "3", title: "Kopiera & publicera", desc: "Texterna är redo för Hemnet, Booli, Instagram och visningsinbjudan. Redigera om du vill." },
             ].map((s) => (
               <div key={s.step} className="text-center">
@@ -330,7 +330,7 @@ export default function Landing() {
               Byggt för svenska mäklare
             </h2>
             <p className="text-sm max-w-xl mx-auto" style={{ color: "#6B7280" }}>
-              Inte ytterligare ett "klistra in i ChatGPT"-verktyg. OptiPrompt är en 6-stegs AI-pipeline specifikt tränad för svensk fastighetsmarknad.
+              Inte ytterligare ett "klistra in i ChatGPT"-verktyg. OptiPrompt är en 7-stegs AI-pipeline specifikt byggd för svensk fastighetsmarknad.
             </p>
           </div>
 

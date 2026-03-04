@@ -205,7 +205,7 @@ export default function Home() {
     <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
 
       {/* ── NAV ── */}
-      <header className="sticky top-0 z-50 border-b" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
+      <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
@@ -313,42 +313,59 @@ export default function Home() {
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
           <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl leading-snug mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-              5 texter. 1 klick. Redo att publicera.
-            </h1>
-            <p className="text-sm leading-relaxed" style={{ color: "#9CA3AF" }}>
-              Fyll i fastighetsdata — få objektbeskrivning, rubrik, Instagram-inlägg, visningsinbjudan och kortannons. Allt på en gång.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+              <h1 className="text-2xl sm:text-3xl leading-snug" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+                Fyll i fastighetsdata. Få 5 texter.
+              </h1>
+              {userStatus?.resetTime && (
+                <span className="text-xs shrink-0" style={{ color: "#9CA3AF" }}>
+                  Kvot återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: "Objektbeskrivning", sub: "Hemnet & Booli" },
+                { label: "Rubrik", sub: "max 70 tecken" },
+                { label: "Instagram", sub: "+ hashtags" },
+                { label: "Visningsinbjudan", sub: "mäklarinfo" },
+                { label: "Kortannons", sub: "max 40 ord" },
+              ].map((pill) => (
+                <div key={pill.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#2D6A4F" }} />
+                  <span className="font-medium" style={{ color: "#374151" }}>{pill.label}</span>
+                  <span style={{ color: "#9CA3AF" }}>· {pill.sub}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Limit warning */}
         {isAuthenticated && remaining === 0 && !result && (
-          <div className="mb-8 flex items-center gap-4 p-4 rounded-lg border" style={{ background: "#FFF7ED", borderColor: "#FDBA74" }}>
-            <div className="flex-1">
-              <p className="text-sm font-medium" style={{ color: "#9A3412" }}>Du har använt alla {limit} beskrivningar denna månad</p>
-              <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
-                {plan === "free"
-                  ? "Uppgradera till Pro för 10 genereringar + 40 AI-redigeringar per månad."
-                  : `Nästa reset: ${userStatus?.resetTime || "nästa månad"}`}
-              </p>
-              {plan === "free" && (
-                <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
-                  Vill du använda "Sök läge"? Uppgradera till Pro för obegränsad adress-sökning!
+          <div className="mb-6 rounded-xl border overflow-hidden" style={{ borderColor: "#FDBA74" }}>
+            <div className="px-5 py-3.5 flex items-center gap-4" style={{ background: "#FFF7ED" }}>
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#F97316" }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold" style={{ color: "#9A3412" }}>Månadskvoten är slut</p>
+                <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
+                  {plan === "free"
+                    ? "Pro ger dig 10 genereringar + 40 AI-redigeringar per månad."
+                    : `Återställs ${userStatus?.resetTime ? new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }) : "nästa månad"}`}
                 </p>
+              </div>
+              {plan === "free" && (
+                <Button
+                  size="sm"
+                  onClick={() => startCheckout("pro")}
+                  disabled={isCheckoutPending}
+                  className="shrink-0 text-xs font-semibold"
+                  style={{ background: "#2D6A4F", color: "#fff" }}
+                >
+                  {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Uppgradera till Pro"}
+                </Button>
               )}
             </div>
-            {plan === "free" && (
-              <Button
-                size="sm"
-                onClick={() => startCheckout("pro")}
-                disabled={isCheckoutPending}
-                className="shrink-0 text-xs font-medium"
-                style={{ background: "#2D6A4F", color: "#fff" }}
-              >
-                Uppgradera till Pro
-              </Button>
-            )}
           </div>
         )}
 
@@ -390,112 +407,113 @@ export default function Home() {
                 {/* Before/After demo */}
                 <BeforeAfterDemo />
 
-                {/* Usage indicator for logged in */}
+                {/* Usage indicator */}
                 {isAuthenticated && (
-                  <div className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Användning denna månad</span>
-                      <span className="text-xs font-medium" style={{ color: plan === "pro" ? "#D4AF37" : plan === "premium" ? "#8B5CF6" : "#6B7280" }}>
+                  <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                    <div className="px-5 py-3 border-b flex items-center justify-between" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Månadskvot</span>
+                      <span
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{
+                          background: plan === "premium" ? "#F5F3FF" : plan === "pro" ? "#ECFDF5" : "#F3F4F6",
+                          color: plan === "premium" ? "#7C3AED" : plan === "pro" ? "#2D6A4F" : "#4B5563",
+                        }}
+                      >
                         {plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratis"}
                       </span>
                     </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ background: plan === "premium" ? "#8B5CF6" : "#2D6A4F", width: `${Math.min(100, (used / limit) * 100)}%` }}
-                      />
+                    <div className="p-5">
+                      <div className="flex items-end justify-between mb-3">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-bold" style={{ color: remaining === 0 ? "#EF4444" : "#1D2939" }}>{remaining}</span>
+                          <span className="text-sm" style={{ color: "#9CA3AF" }}>/ {limit} kvar</span>
+                        </div>
+                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{used} använda</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            background: remaining === 0 ? "#EF4444" : plan === "premium" ? "#8B5CF6" : "#2D6A4F",
+                            width: `${Math.min(100, (used / limit) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      {userStatus?.resetTime && (
+                        <p className="text-[11px] mt-2.5" style={{ color: "#9CA3AF" }}>
+                          Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
+                        </p>
+                      )}
                     </div>
-                    <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
-                      {remaining} av {limit} texter kvar
-                    </p>
                   </div>
                 )}
 
-                {/* Upgrade CTA — show relevant options based on current plan */}
+                {/* Upgrade CTA */}
                 {isAuthenticated && plan !== "premium" && (
-                  <div className="rounded-xl border p-6" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                    <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-                      {plan === "free" ? "Behöver du fler beskrivningar?" : "Uppgradera till Premium"}
-                    </h3>
-                    <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
-                      {plan === "free"
-                        ? "Välj mellan Pro (10 genereringar + 40 AI-redigeringar/mån + team) eller Premium (25 + 120 + 800 ord)."
-                        : "Premium ger dig 25 genereringar/mån, 120 AI-redigeringar, längre texter (800 ord), team-samarbete och prioriterad support."
-                      }
-                    </p>
-
-                    {/* Show both options for free users */}
-                    {plan === "free" && (
-                      <div className="space-y-2.5 mb-4">
-                        <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "#D1FAE5", background: "#F0FDF4" }}>
-                          <div>
-                            <span className="text-sm font-semibold" style={{ color: "#2D6A4F" }}>Pro</span>
-                            <span className="text-xs text-gray-500 ml-2">299 kr/mån</span>
-                            <p className="text-xs text-gray-500 mt-0.5">10 genereringar · 40 AI-redigeringar · team · skrivstil</p>
+                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                    <div className="px-5 py-4 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                        {plan === "free" ? "Uppgradera" : "Uppgradera till Premium"}
+                      </p>
+                      <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                        {plan === "free" ? "Fler objekt per månad." : "Maximal kapacitet."}
+                      </p>
+                    </div>
+                    <div className="p-4 bg-white space-y-3">
+                      {plan === "free" && (
+                        <div className="rounded-lg border p-4" style={{ borderColor: "#BBF7D0", background: "#F0FDF4" }}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1.5">
+                                <span className="text-sm font-bold" style={{ color: "#2D6A4F" }}>Pro</span>
+                                <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>299 kr/mån</span>
+                              </div>
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
+                                <span>10 texter / mån</span>
+                                <span>40 AI-redigeringar</span>
+                                <span>Personlig skrivstil</span>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => startCheckout("pro")}
+                              disabled={isCheckoutPending}
+                              size="sm"
+                              className="shrink-0 text-xs font-semibold h-8"
+                              style={{ background: "#2D6A4F", color: "#fff" }}
+                            >
+                              {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj Pro"}
+                            </Button>
                           </div>
-                          <Button
-                            onClick={() => startCheckout("pro")}
-                            disabled={isCheckoutPending}
-                            size="sm"
-                            className="shrink-0 text-xs font-medium"
-                            style={{ background: "#2D6A4F", color: "#fff" }}
-                          >
-                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj"}
-                          </Button>
                         </div>
-                        <div className="flex items-center justify-between p-3 rounded-lg border" style={{ borderColor: "#DDD6FE", background: "#F5F3FF" }}>
-                          <div>
-                            <span className="text-sm font-semibold" style={{ color: "#7C3AED" }}>Premium</span>
-                            <span className="text-xs text-gray-500 ml-2">599 kr/mån</span>
-                            <p className="text-xs text-gray-500 mt-0.5">25 genereringar · 120 AI-redigeringar · 800 ord · team</p>
+                      )}
+                      <div className="rounded-lg border p-4" style={{ borderColor: "#DDD6FE", background: "#F5F3FF" }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-sm font-bold" style={{ color: "#7C3AED" }}>Premium</span>
+                              <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>599 kr/mån</span>
+                            </div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
+                              <span>25 texter / mån</span>
+                              <span>120 AI-redigeringar</span>
+                              <span>800 ord / text</span>
+                            </div>
                           </div>
                           <Button
                             onClick={() => startCheckout("premium")}
                             disabled={isCheckoutPending}
                             size="sm"
-                            className="shrink-0 text-xs font-medium"
+                            className="shrink-0 text-xs font-semibold h-8"
                             style={{ background: "#7C3AED", color: "#fff" }}
                           >
-                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj"}
+                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj Premium"}
                           </Button>
                         </div>
                       </div>
-                    )}
-
-                    {/* Show premium upgrade for pro users */}
-                    {plan === "pro" && (
-                      <ul className="space-y-2 mb-5">
-                        {[
-                          "25 genereringar / månad",
-                          "120 AI-textredigeringar / månad",
-                          "Längre texter (upp till 800 ord)",
-                          "Team-samarbete (delade prompter)",
-                          "Prioriterad support"
-                        ].map((f) => (
-                          <li key={f} className="flex items-center gap-2 text-sm" style={{ color: "#374151" }}>
-                            <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#8B5CF6" }} />
-                            {f}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    {/* Single premium button for pro users */}
-                    {plan === "pro" && (
-                      <Button
-                        onClick={() => startCheckout("premium")}
-                        disabled={isCheckoutPending}
-                        className="w-full font-medium"
-                        style={{ background: "#8B5CF6", color: "#fff" }}
-                      >
-                        {isCheckoutPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : (
-                          <Crown className="w-4 h-4 mr-2" />
-                        )}
-                        Uppgradera till Premium (599kr/mån)
-                      </Button>
-                    )}
+                      <p className="text-[10px] text-center pt-1" style={{ color: "#9CA3AF" }}>
+                        Ingen bindningstid · Avsluta när du vill
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -509,23 +527,36 @@ export default function Home() {
                   <PersonalStyle />
                 )}
 
-                {/* Not logged in — minimal CTA in sidebar */}
+                {/* Not logged in — sidebar CTA */}
                 {!isAuthenticated && (
-                  <div className="rounded-xl border p-6 text-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                    <h3 className="text-base font-semibold mb-2" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-                      Skapa ett konto gratis
-                    </h3>
-                    <p className="text-sm mb-4" style={{ color: "#6B7280" }}>
-                      Få 2 kostnadsfria objektbeskrivningar per månad.
-                    </p>
-                    <Button
-                      onClick={() => setAuthModalOpen(true)}
-                      className="font-medium"
-                      style={{ background: "#2D6A4F", color: "#fff" }}
-                    >
-                      Kom igång — det är gratis
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
+                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                    <div className="px-5 py-4" style={{ background: "#2D6A4F" }}>
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A7F3D0" }}>Gratis konto</p>
+                      <p className="text-base font-semibold mt-0.5 text-white" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+                        2 texter per månad, gratis
+                      </p>
+                    </div>
+                    <div className="p-5 bg-white space-y-2.5">
+                      {[
+                        "Objektbeskrivning, Hemnet & Booli",
+                        "Rubrik, Instagram & kortannons",
+                        "Faktagranskning ingår",
+                        "Inget kreditkort krävs",
+                      ].map((f) => (
+                        <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
+                          <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
+                          {f}
+                        </div>
+                      ))}
+                      <Button
+                        onClick={() => setAuthModalOpen(true)}
+                        className="w-full font-semibold mt-1"
+                        style={{ background: "#2D6A4F", color: "#fff" }}
+                      >
+                        Kom igång gratis
+                        <ChevronRight className="w-4 h-4 ml-1.5" />
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
