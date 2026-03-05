@@ -48,10 +48,10 @@ export const personalStyles = pgTable("personal_styles", {
     adjectiveUsage: number; // 1-10
     factFocus: number; // 1-10
     // New: Deep style internalization
-    allowedPhrases: string[]; // Phrases broker uses successfully (e.g., "välkommen till")
+    allowedPhrases: string[]; // Phrases broker uses successfully (e.g., "leder in till", "med utgång mot")
     forbiddenPhrases: string[]; // Custom phrases to avoid (beyond global list)
     tonePriorities: {
-      useWelcoming: boolean; // Allow "välkommen till"
+      useWelcoming: boolean; // Legacy field — no longer used in pipeline
       avoidAdjectives: boolean; // Minimize "fantastisk", "perfekt"
       focusFacts: boolean; // Prioritize measurements over descriptions
       personalTouch: boolean; // Add broker's unique voice elements

@@ -164,15 +164,15 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
   "sentenceLength": 1-10,
   "adjectiveUsage": 1-10,
   "factFocus": 1-10,
-  "allowedPhrases": ["välkommen till", "bra läge", "fin utsikt"],
+  "allowedPhrases": ["leder in till", "med utgång mot", "genomgående"],
   "forbiddenPhrases": ["fantastisk", "perfekt", "utmärkt"],
   "tonePriorities": {
-    "useWelcoming": true,
+    "useWelcoming": false,
     "avoidAdjectives": false,
     "focusFacts": true,
     "personalTouch": true
   },
-  "writingStyleDescription": "Mäklaren skriver kortfattade, faktabaserade texter med fokus på praktiska detaljer. Använder 'välkommen till' ofta men undviker överdrivna adjektiv som 'fantastisk'."
+  "writingStyleDescription": "Mäklaren skriver kortfattade, faktabaserade texter med fokus på praktiska detaljer. Undviker överdrivna adjektiv som 'fantastisk'."
 }`;
 
   try {
@@ -180,6 +180,8 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
       model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
       max_tokens: 1000,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
     });
 
     const styleData = safeJsonParse(response.choices[0]?.message?.content || "{}");
@@ -192,8 +194,12 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
     const adjectiveUsage = Math.max(1, Math.min(10, Number(styleData.adjectiveUsage) || 5));
     const factFocus = Math.max(1, Math.min(10, Number(styleData.factFocus) || 5));
 
-    // Validera nya fält med fallbacks
-    const allowedPhrases = Array.isArray(styleData.allowedPhrases) ? styleData.allowedPhrases.slice(0, 10) : [];
+    // Validera nya fält med fallbacks — filter allowedPhrases against universal forbidden phrases
+    const rawAllowed = Array.isArray(styleData.allowedPhrases) ? styleData.allowedPhrases.slice(0, 10) : [];
+    const forbiddenLower = FORBIDDEN_PHRASES.map(f => f.toLowerCase().trim());
+    const allowedPhrases = rawAllowed.filter((phrase: string) =>
+      !forbiddenLower.some(f => phrase.toLowerCase().includes(f) || f.includes(phrase.toLowerCase()))
+    );
     const forbiddenPhrases = Array.isArray(styleData.forbiddenPhrases) ? styleData.forbiddenPhrases.slice(0, 10) : [];
     const tonePriorities = styleData.tonePriorities && typeof styleData.tonePriorities === 'object' ? {
       useWelcoming: Boolean(styleData.tonePriorities.useWelcoming),
@@ -247,8 +253,13 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
 
 // Generera personaliserad prompt baserat på djup stilanalys
 function generatePersonalizedPrompt(referenceTexts: string[], styleProfile: any): string {
-  const allowedInstructions = styleProfile.allowedPhrases?.length > 0
-    ? `\nTILLÅTNA FRASER (använd gärna dessa eftersom mäklaren gör det): ${styleProfile.allowedPhrases.join(', ')}`
+  // Filter allowedPhrases against universal FORBIDDEN_PHRASES to prevent contradictions
+  const forbiddenLower = FORBIDDEN_PHRASES.map(f => f.toLowerCase().trim());
+  const safeAllowed = (styleProfile.allowedPhrases || []).filter((phrase: string) =>
+    !forbiddenLower.some(f => phrase.toLowerCase().includes(f) || f.includes(phrase.toLowerCase()))
+  );
+  const allowedInstructions = safeAllowed.length > 0
+    ? `\nTILLÅTNA FRASER (använd gärna dessa eftersom mäklaren gör det): ${safeAllowed.join(', ')}`
     : '';
 
   const customForbidden = styleProfile.forbiddenPhrases?.length > 0
@@ -256,7 +267,7 @@ function generatePersonalizedPrompt(referenceTexts: string[], styleProfile: any)
     : '';
 
   const toneInstructions = [];
-  if (styleProfile.tonePriorities?.useWelcoming) toneInstructions.push('Använd välkomnande öppningar som "välkommen till"');
+  // NOTE: useWelcoming removed — 'välkommen till' is universally forbidden
   if (styleProfile.tonePriorities?.avoidAdjectives) toneInstructions.push('Undvik överdrivna adjektiv som "fantastisk", "perfekt"');
   if (styleProfile.tonePriorities?.focusFacts) toneInstructions.push('Fokusera på konkreta fakta och mått');
   if (styleProfile.tonePriorities?.personalTouch) toneInstructions.push('Lägg till personliga, mänskliga detaljer');
@@ -277,7 +288,12 @@ STILPROFIL:
 REFERENSTEXTER (imitera EXAKT denna stil och ton):
 ${referenceTexts.join('\n\n---\n\n')}
 
-VIKTIGT: Skriv som denna specifika mäklare. Använd samma rytm, ordval och perspektiv. Undvik alla allmänna AI-klyschor som "erbjuder generösa ytor", "andas lugn", "perfekt för den som".`;
+VIKTIGT OM PRIORITET:
+- Skriv som denna specifika mäklare: samma meningsrytm, styckeindelning och ordval.
+- Om din personliga stil krockar med TEXTSTIL-sektionen nedan: textstilen har PRIORITET för ton och adjektivanvändning.
+- Din personliga stil styr MENINGSRYTM, STYCKELÄNGD och PERSPEKTIV — men inom textsstilens tillåtna ramar.
+- Undvik ALLTID universella AI-klyschor: "erbjuder generösa ytor", "andas lugn", "perfekt för den som", "välkommen till".
+- Universellt förbjudna fraser gäller ALLTID — oavsett vad referenstexterna innehåller.`;
 }
 
 // Förbjudna fraser - AI-fraser som avslöjar genererad text
@@ -1857,8 +1873,11 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
       condition: pd.condition || null,
       energy_class: pd.energyClass || null,
       elevator: pd.elevator || false,
+      floors: pd.floors || null,
+      biarea: pd.biarea ? `${stripUnit(pd.biarea)} kvm` : null,
       fastighetsbeteckning: pd.fastighetsbeteckning || null,
       renovation_year: pd.renoveringsar || null,
+      tilltradesdag: pd.tilltradesdag || null,
       materials: {
         floors: pd.flooring || null,
         kitchen: pd.kitchenDescription || null,
@@ -1924,7 +1943,8 @@ function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_a
 
   // Build a structured paragraph outline so even free-tier gets well-organized text
   const paragraphs: string[] = [];
-  paragraphs.push(`Öppning: ${pd.address}, ${propertyType} om ${size} kvm${pd.totalRooms ? `, ${pd.totalRooms} rum` : ""}.`);
+  const floorInfo = pd.floors ? `, ${pd.floors}` : "";
+  paragraphs.push(`Öppning: ${pd.address}, ${propertyType} om ${size} kvm${pd.totalRooms ? `, ${pd.totalRooms} rum` : ""}${floorInfo}.`);
   if (pd.layoutDescription) paragraphs.push("Planlösning: hall, vardagsrum, sovrum — rumsordning.");
   if (pd.kitchenDescription) paragraphs.push("Kök: märke, material, vitvaror, matplats.");
   if (pd.bathroomDescription) paragraphs.push("Badrum: material, utrustning, renoveringsår.");
@@ -1968,10 +1988,17 @@ Du är en noggrann granskare. Kontrollera objektbeskrivningen mot dispositionen 
 7. Om inga fel hittas: sätt fact_check_passed=true och corrected_text=null — skriv INTE om en korrekt text
 8. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är
 
-# FÖRBJUDNA AI-FRASER SOM ALLTID SKA FLAGGAS
+# UNIVERSELLT FÖRBJUDNA AI-FRASER (flagga ALLTID, oavsett stil)
 erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd,
 vilket (i relativ bisats), för den som, i hjärtat av, skapar en känsla, bidrar till, välkommen till,
 här finns, här kan du, härlig plats, plats för avkoppling, faciliteter, njut av
+
+# STILMEDVETENHET — VIKTIGT
+Kolla STYLE-fältet i user-meddelandet:
+- Om STYLE = "factual": flagga ALLA beskrivande adjektiv (smakfullt, stilfullt, elegant, genomtänkt, etc.)
+- Om STYLE = "balanced": tillåt milda beskrivningar (genomtänkt, smakfullt, stilfullt, ljus och luftig) OM de stöds av fakta i samma mening
+- Om STYLE = "selling": tillåt beskrivande ord (genomtänkt, smakfullt, stilfullt, elegant, imponerande, charm) OM de stöds av fakta
+- Universellt förbjudna fraser (listan ovan) ska ALLTID flaggas oavsett stil
 
 # OUTPUT FORMAT (JSON)
 
@@ -2271,7 +2298,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const updatedStyle = await storage.updatePersonalStyle(user.id, {
         isActive,
         teamShared,
-        updatedAt: new Date()
       });
 
       if (!updatedStyle) {
@@ -2382,21 +2408,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       console.log(`[Model] Plan: ${plan}, Using: ${aiModel} (fixed)`);
       console.log(`[Style] ${style} — ${FORBIDDEN_PHRASES.length - exemptCount} aktiva förbjudna fraser (${exemptCount} undantagna)`);
 
-      // === DIFFERENTIERAD TEMPERATURE PER STIL OCH PLAN ===
-      // Factual: Låg temp → precision och konsistens
-      // Balanced: Medel → naturligt flöde, varierad meningsrytm
-      // Selling: Högre → kreativt ordval, men fortfarande kontrollerat
-      let baseTemp: number;
-      if (style === "factual") {
-        baseTemp = plan === "premium" ? 0.20 : plan === "pro" ? 0.18 : 0.15;
-      } else if (style === "selling") {
-        baseTemp = plan === "premium" ? 0.45 : plan === "pro" ? 0.42 : 0.38;
-      } else { // balanced
-        baseTemp = plan === "premium" ? 0.35 : plan === "pro" ? 0.32 : 0.28;
-      }
+      // === REASONING EFFORT PER STIL ===
+      // Responses API med reasoning stödjer INTE temperature.
+      // Enda kontrollen är reasoning.effort: "low" | "medium" | "high"
+      // Alla stilar använder "high" för primär generering (mer tänkande = bättre resultat)
+      // Quality gate retry använder "medium" för att få annorlunda output
+      const reasoningEffort: "low" | "medium" | "high" = "high";
 
-      const temperature = baseTemp;
-      console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Temperature: ${temperature}`);
+      // Temperature används BARA av sekundära steg (chat.completions.create):
+      // - Quality gate retry, expansion, surgical correction, improvement analysis
+      const secondaryTemperature = style === "factual" ? 0.15 : style === "selling" ? 0.35 : 0.25;
+      console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Reasoning effort: ${reasoningEffort}, Secondary temp: ${secondaryTemperature}`);
 
       // Bildanalys om bilder finns
       let imageAnalysis = "";
@@ -2477,11 +2499,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       } else {
         // FALLBACK: AI-extraktion från fri text
         console.log("[Step 1] Extracting with AI (no structured data)");
-        const extractionMessages = [
-          { role: "system" as const, content: COMBINED_EXTRACTION_PROMPT },
-          { role: "user" as const, content: `RÅDATA:\n${prompt}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}` },
-        ];
-
         let extractionResult: any = null;
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
@@ -2604,6 +2621,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             model: "gpt-5.2",
             messages: planMessages,
             max_tokens: 1500,
+            temperature: 0.2,
             response_format: { type: "json_object" },
           });
 
@@ -2740,47 +2758,16 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const cleanToneAnalysis = deepClean(toneAnalysis) || toneAnalysis;
       const cleanWritingPlan = deepClean(writingPlan) || writingPlan;
 
-      // SIMPLIFIED PROMPT: Less data, clearer instructions for GPT-5.2
-      const systemContent = `${textPrompt}
-
-${personalStylePrompt}
-
-${styleInstruction}
-
-VIKTIGT: Du måste returnera JSON med fältet "improvedPrompt" som innehåller den färdiga objektbeskrivningen. INTE dispositionen.`;
-
-      const userContent = `OBJEKTFAKTA:
-Adress: ${disposition?.property?.address || "Okänd"}
-Typ: ${disposition?.property?.type || "Bostad"}
-Storlek: ${disposition?.property?.size || "0"} kvm
-Rum: ${disposition?.property?.rooms || "3"}
-Pris: ${disposition?.economics?.askingPrice || "Ej angivet"}
-Omåde: ${disposition?.location?.area || "Okänt"}
-
-ORDMÅL: ${targetWordMin}-${targetWordMax} ord
-PLATTFORM: ${platform}
-
-${imageAnalysis ? `BILDKOMMENTAR: ${imageAnalysis.substring(0, 200)}...\n\n` : ""}EXEMPEL PÅ RÄTT TEXTSTIL:
-${positiveExample}
-
-Skriv en objektbeskrivning som exemplet ovan, baserat på objektfakta. Returnera JSON:
-{"improvedPrompt":"din text här","headline":"rubrik","instagramCaption":"socialt inlägg","showingInvitation":"visningsinbjudan","shortAd":"kort annons","socialCopy":"social copy"}`;
-
-      // Chat Completions format — used for quality gate retry
-      const textMessages = [
-        { role: "system" as const, content: systemContent },
-        { role: "user" as const, content: userContent },
-      ];
+      // Build content strings once — reused for primary generation and quality gate retry
+      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`;
+      const userContent = `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(cleanToneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
-      console.log("[Step 3] Generating text with full prompt engineering...");
-      console.log("[DEBUG] System content length:", systemContent.length);
-      console.log("[DEBUG] User content length:", userContent.length);
-      console.log("[DEBUG] User content preview:", userContent.substring(0, 500) + "...");
+      console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
       const textCompletion = await openai.responses.create({
         model: "gpt-5.2",
-        reasoning: { effort: "high" },
+        reasoning: { effort: reasoningEffort },
         input: [
           { role: "developer", content: systemContent },
           { role: "user", content: userContent }
@@ -2797,59 +2784,7 @@ Skriv en objektbeskrivning som exemplet ovan, baserat på objektfakta. Returnera
       let result: any;
       try {
         result = safeJsonParse(textCompletion.output_text || "{}");
-
-        // DEBUG: Log what AI actually returned
-        console.log("[Step 3] AI response keys:", Object.keys(result || {}));
-        console.log("[Step 3] Full AI response:", JSON.stringify(result, null, 2));
-        if (result.improvedPrompt) {
-          console.log("[Step 3] improvedPrompt length:", result.improvedPrompt.length);
-          console.log("[Step 3] improvedPrompt preview:", result.improvedPrompt.substring(0, 200) + "...");
-          console.log("[Step 3] improvedPrompt first 500 chars:", result.improvedPrompt.substring(0, 500));
-        }
-
-        // CHECK: If AI returned disposition instead of text, create smart fallback
-        if (result.improvedPrompt && (
-          result.improvedPrompt.includes("=== GRUNDINFORMATION ===") ||
-          result.improvedPrompt.includes("OBJEKTDISPOSITION") ||
-          result.improvedPrompt.includes("DISPOSITION:") ||
-          result.improvedPrompt.includes("property:") ||
-          result.improvedPrompt.includes("economics:")
-        )) {
-          console.warn("[Step 3] AI returned disposition instead of text, creating smart fallback");
-
-          // Generate proper text from disposition data
-          const address = disposition?.property?.address || "Objektet";
-          const type = disposition?.property?.type || "bostad";
-          const size = disposition?.property?.size || "0";
-          const rooms = disposition?.property?.rooms || "3";
-          const price = disposition?.economics?.askingPrice || "Pris på förfrågan";
-          const area = disposition?.location?.area || "attraktivt område";
-
-          // Build a proper description from key facts
-          let fallbackText = `${address}. En ${type} om ${size} kvm med ${rooms} rum.`;
-
-          // Add key details if available
-          if (disposition?.property?.buildYear) {
-            fallbackText += ` Byggt ${disposition.property.buildYear}.`;
-          }
-
-          if (disposition?.property?.condition) {
-            fallbackText += ` ${disposition.property.condition}.`;
-          }
-
-          // Add location info
-          if (disposition?.location?.proximity?.length) {
-            const nearest = disposition.location.proximity[0];
-            fallbackText += ` ${nearest.place} ${nearest.distance}.`;
-          }
-
-          // Add price
-          fallbackText += ` ${price}.`;
-
-          result.improvedPrompt = fallbackText;
-          console.log("[Step 3] Smart fallback generated:", fallbackText);
-        }
-
+        console.log("[Step 3] Parsed OK. Keys:", Object.keys(result || {}), "improvedPrompt length:", (result.improvedPrompt || "").length);
       } catch (e) {
         console.error("[Step 3] Failed to parse AI response, attempting raw extraction:", e);
         // Try to extract improvedPrompt from truncated JSON
@@ -2881,20 +2816,23 @@ Skriv en objektbeskrivning som exemplet ovan, baserat på objektfakta. Returnera
         console.log(`[Quality Gate] Score: ${qualityScore.toFixed(2)} (threshold: 0.70)`);
 
         if (qualityScore < 0.70) {
-          console.log(`[Quality Gate] Poor quality detected, retrying with higher temperature...`);
-
-          // Retry med högre temperature
-          const retryTemp = Math.min(temperature + 0.10, 0.55);
-          const retryCompletion = await openai.chat.completions.create({
-            model: "gpt-5.2",
-            messages: textMessages,
-            max_tokens: 4500,
-            temperature: retryTemp,
-            response_format: { type: "json_object" },
-          });
+          console.log(`[Quality Gate] Poor quality (${qualityScore.toFixed(2)}), retrying with reasoning effort "medium"...`);
 
           try {
-            const retryResult = safeJsonParse(retryCompletion.choices[0]?.message?.content || "{}");
+            // Retry med responses API + reasoning "medium" för annorlunda output
+            // (chat.completions.create tappar reasoning/thinking → sämre regelefterlevnad)
+            const retryCompletion = await openai.responses.create({
+              model: "gpt-5.2",
+              reasoning: { effort: "medium" },
+              input: [
+                { role: "developer", content: systemContent },
+                { role: "user", content: userContent }
+              ],
+              max_output_tokens: 8000,
+              text: { format: { type: "json_object" } }
+            });
+
+            const retryResult = safeJsonParse(retryCompletion.output_text || "{}");
             const retryScore = analyzeTextQuality(retryResult.improvedPrompt || "");
 
             if (retryScore > qualityScore) {
@@ -2935,6 +2873,7 @@ Skriv en objektbeskrivning som exemplet ovan, baserat på objektfakta. Returnera
               {
                 role: "system" as const,
                 content: `Du är en kirurgisk korrekturläsare för svenska fastighetstexter.
+TEXTSTIL: ${style === "factual" ? "Faktabaserad — INGA beskrivande adjektiv alls" : style === "selling" ? "Säljande — beskrivande ord OK om de stöds av fakta (genomtänkt, smakfullt, elegant etc)" : "Balanserad — milda beskrivningar OK om de stöds av fakta"}
 
 DITT JOBB: Ersätt EXAKT de felaktiga fraserna med korrekta ersättningar. Ändra INGET annat.
 
@@ -3011,6 +2950,8 @@ ERSÄTTNINGSTABELL:
                 role: "system" as const,
                 content: `Du är en erfaren svensk mäklare. Du ska UTÖKA en befintlig objektbeskrivning så den når rätt längd.
 
+TEXTSTIL: ${style === "factual" ? "Faktabaserad — bara fakta, inga adjektiv, korta meningar" : style === "selling" ? "Säljande — lyft styrkor med konkreta fakta, beskrivande ord OK om de stöds av fakta" : "Balanserad — professionell ton, fakta i fokus med naturlig rytm"}
+
 REGLER:
 1. Behåll ALL befintlig text exakt som den är — ändra INTE befintliga meningar
 2. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
@@ -3019,7 +2960,8 @@ REGLER:
 5. Hitta ALDRIG på fakta — använd BARA dispositionen
 6. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
 7. Texten MÅSTE bli minst ${targetWordMin} ord
-8. Svara med JSON: {"expanded_text": "hela den utökade texten med \\n\\n mellan stycken"}`,
+8. Nya meningar ska matcha TEXTSTILEN ovan
+9. Svara med JSON: {"expanded_text": "hela den utökade texten med \\n\\n mellan stycken"}`,
               },
               {
                 role: "user" as const,
@@ -3031,7 +2973,7 @@ REGLER:
               model: "gpt-5.2",
               messages: expandMessages,
               max_tokens: 3000,
-              temperature: 0.2,
+              temperature: secondaryTemperature,
               response_format: { type: "json_object" },
             });
 
@@ -3058,17 +3000,9 @@ REGLER:
       let factCheckResult: any = null;
       if (plan !== "free" && result.improvedPrompt) {
         try {
-          const factCheckMessages = [
-            { role: "system" as const, content: FACT_CHECK_PROMPT },
-            {
-              role: "user" as const,
-              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`,
-            },
-          ];
-
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
-            reasoning: { effort: "medium" }, // Medium thinking for fact-checking
+            reasoning: { effort: "medium" },
             input: [
               {
                 role: "developer",
@@ -3076,7 +3010,7 @@ REGLER:
               },
               {
                 role: "user",
-                content: `TEXT:\n${result.improvedPrompt}\n\nSTYLE: ${style}\n\nPLATFORM: ${platform}`
+                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}\n\nSTYLE: ${style}\n\nPLATFORM: ${platform}`
               }
             ],
             max_output_tokens: 2000,
@@ -3160,7 +3094,7 @@ Svara med JSON i formatet:
             model: "gpt-5.2",
             messages: improvementMessages,
             max_tokens: 800,
-            temperature: 0.3,
+            temperature: secondaryTemperature,
             response_format: { type: "json_object" },
           });
 
@@ -3284,32 +3218,39 @@ Svara med JSON i formatet:
         input: [
           {
             role: "developer",
-            content: `Du är en erfaren svensk mäklare med 15 år i branschen. Du skriver om delar av objektbeskrivningar på begäran — klyschfritt, specifikt, mänskligt.
+            content: `Du är en erfaren fastighetsmäklare i Sverige. Du redigerar objektbeskrivningar för Hemnet och Booli. Du vet exakt hur en bra svensk objektbeskrivning ska låta.
 
-# DIN UPPGIFT
-Skriv om den markerade texten enligt instruktionen. Behåll stilen från hela texten.
+# DIN ROLL
+Du redigerar objektbeskrivningar åt andra mäklare. Du förstår:
+- Hur rum beskrivs (storlek → material → detaljer → ljus/känsla i den ordningen)
+- Att köpare bryr sig om: skick, renoveringsår, material, planlösning, ljus, läge
+- Att onödig text kostar läsarens uppmärksamhet
+- Att varje mening ska tillföra ny information
 
-# RIKTIG MÄKLARSTIL — SÅ HÄR LÅTER DET
-BRA: "Balkongen vetter mot söder. Köket renoverat 2021 med Ballingslöv-luckor. Skolan 400 meter."
-BRA: "Takhöjd 2,85 meter. Ekparkett genomgående. Hall med garderob."
-BRA: "Två sovrum. Huvudsovrummet rymmer dubbelsäng med nattduksbord."
-DÅLIGT: "En fantastisk balkong som erbjuder sol hela dagen och ger en harmonisk känsla."
-DÅLIGT: "Köket är genomtänkt och stilfullt renoverat vilket gör det perfekt för den matlagningsintresserade."
+# OBJEKTBESKRIVNINGSSTIL
+BRA: "Köket renoverades 2021. Luckor från Ballingslöv, bänkskiva i komposit. Plats för matbord vid fönstret."
+BRA: "Hall med garderobsvägg. Ekparkett genomgående. Takhöjd 2,85 meter."
+BRA: "Badrummet helkaklat 2019. Dubbla handfat, golvvärme och handdukstork."
+BRA: "Buss 4 minuter. Ica och skola inom 500 meter."
+DÅLIGT: "Det fantastiska köket erbjuder en harmonisk matlagningsupplevelse."
+DÅLIGT: "Badrummet präglas av hög kvalitet och genomtänkta materialval."
+DÅLIGT: "Det centrala läget bjuder på närhet till allt."
 
-# FÖRBJUDET — UNIVERSELLA AI-MARKÖRER (använd ALDRIG)
-erbjuder, bjuder på, präglas av, genomsyras av, generös, andas lugn, andas charm
-vilket, som ger en, för den som, i hjärtat av, skapar en känsla, bidrar till, förstärker, inte bara...utan också
+# FÖRBJUDET (AI-klyschor som aldrig förekommer i riktiga objektbeskrivningar)
+erbjuder, bjuder på, präglas av, genomsyras av, generös, andas lugn, andas charm,
+vilket ger, som skapar, för den som, i hjärtat av, bidrar till, förstärker,
+inte bara...utan också, njut av, faciliteter, -möjligheter,
 kontakta oss, boka visning, välkommen till, här finns, här kan du
-njut av, faciliteter, Det finns även, Det finns också, -möjligheter
 
 # REGLER
-1. Skriv om BARA den markerade texten — inte resten
-2. Behåll ALLA fakta. HITTA ALDRIG PÅ ny fakta som inte finns i originaltexten
-3. Korta, direkta meningar. Presens. Varje mening = ett nytt faktum.
-4. "Gör mer säljande" = lyft de starkaste befintliga fakta tydligare, inte lägg till adjektiv
-5. "Kondensera" = ta bort utfyllnad, behåll alla konkreta fakta
-6. "Mer fakta" = be om fler detaljer OM det finns i kontexten — annars kondensera och stärk det som finns
-7. Matcha stilen i hela texten exakt
+1. Skriv om BARA den markerade texten
+2. Behåll ALLA fakta — hitta ALDRIG PÅ nya uppgifter
+3. Mäklare skriver: kort mening → konkret faktum. Presens.
+4. "Skriv om" = andra ord, samma fakta, bättre flöde
+5. "Mer säljande" = lyft starkaste fakta (storlek, läge, skick, material) — INTE fler adjektiv
+6. "Kondensera" = ta bort utfyllnad, behåll konkreta mått/årtal/material
+7. "Bättre flöde" = bind ihop meningar naturligt, variera meningslängd
+8. Matcha stilen i hela texten
 
 Svara med JSON: {"rewritten": "den omskrivna texten"}`
           },
@@ -4234,49 +4175,59 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       console.log(`[Text Improvement] Improving text with type: ${improvementType}`);
 
       const improvementPrompts: Record<string, string> = {
-        more_descriptive: `Gör denna text mer beskrivande genom att lyfta fram KONKRETA detaljer (material, mått, märken, läge). Behåll alla faktapåståenden exakt.`,
-        more_selling: `Gör denna text mer säljande genom att lyfta fram KONKRETA fakta och mått. Ersätt vaga påståenden med specifika detaljer (märken, årtal, kvm). Inga klyschor.`,
-        more_formal: `Gör denna text mer formell och professionell. Använd korrekta fastighetstermer. Inga AI-klyschor.`,
-        more_warm: `Gör denna text mer personlig utan att förlora professionaliteten. Behåll alla faktapåståenden.`,
-        fix_claims: `Ersätt klyschor och vaga påståenden med konkreta fakta. Inga "erbjuder", "bjuder på", "generös", "vilket", "präglas av".`
+        more_descriptive: `Gör texten mer beskrivande på det sätt en mäklare gör: nämn material (ek, komposit, klinker), mått (kvm, meter), renoveringsår, märken (Ballingslöv, Miele). Hitta inte på nya fakta — lyft det som redan finns.`,
+        more_selling: `Gör texten mer säljande genom att lyfta de starkaste fakta först: läge, storlek, skick, material. En bra mäklare säljer med FAKTA (nyrenoverat 2023, 500m till T-bana, söderläge) — INTE med adjektiv (fantastisk, underbar).`,
+        better_flow: `Förbättra textflödet: variera meningslängd, bind ihop korta hackiga meningar naturligt med "med", "som leder in till", "mot". Rumsordning ska följa en naturlig vandring genom bostaden.`,
+        more_concise: `Kondensera texten. Ta bort utfyllnadsord och upprepningar. Behåll alla konkreta fakta (mått, årtal, material). En bra objektbeskrivning är tät — varje mening tillför.`,
+        fix_claims: `Ersätt alla AI-klyschor och vaga påståenden med konkreta fakta. "Generöst kök" → "Kök om 15 kvm". "Ljust och luftigt" → "Fönster i tre väderstreck". Om fakta saknas — stryk meningen hellre än att behålla tomma ord.`
       };
 
       const improvementInstruction = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
 
-      const messages = [
-        {
-          role: "system" as const,
-          content: `Du är en expert på svenska fastighetstexter. Dina texter är klyschfria, faktabaserade och säljande.
-
-KONTEXT: ${context || 'Ingen extra kontext'}
-
-ORIGINALTEXT: ${originalText}
-
-VALD TEXT ATT FÖRBÄTTRA: ${selectedText}
+      const completion = await openai.responses.create({
+        model: "gpt-5.2",
+        reasoning: { effort: "medium" },
+        input: [
+          {
+            role: "developer",
+            content: `Du är en erfaren svensk fastighetsmäklare som redigerar objektbeskrivningar. Du vet hur Hemnet- och Booli-texter ska låta.
 
 ${improvementInstruction}
 
-FÖRBJUDET (universella AI-markörer): erbjuder, bjuder på, präglas av, genomsyras av, generös, vilket, för den som, i hjärtat av, faciliteter, njut av, skapar en känsla, bidrar till, inte bara, utan också, här finns, välkommen till.
+# SÅ SKRIVER MÄKLARE
+- Rum beskrivs: storlek → material → utrustning → ljus/läge
+- Kök: renoveringsår, luckor/märke, bänkskiva, vitvaror, matplats
+- Bad: helkaklat/renoveringsår, utrustning (badkar, dubbla handfat, golvvärme)
+- Läge: avstånd i meter/minuter till kollektivtrafik, skola, butiker
+- Aldrig lista vitvaror som alla har (kyl, frys, spis, micro) — bara det som utmärker sig
 
-Svara ENDAST med den förbättrade texten, inga förklaringar.`
-        },
-        {
-          role: "user" as const,
-          content: selectedText
-        }
-      ];
+# FÖRBJUDET (AI-klyschor)
+erbjuder, bjuder på, präglas av, genomsyras av, generös, andas lugn/charm,
+vilket ger, som skapar, för den som, i hjärtat av, bidrar till, förstärker,
+inte bara...utan också, njut av, faciliteter, här finns, välkommen till
 
-      const completion = await openai.responses.create({
-        model: "gpt-5.2",
-        input: messages,
+Svara med JSON: {"improved": "den förbättrade texten"}`
+          },
+          {
+            role: "user",
+            content: `HELA TEXTEN (för kontext):\n${originalText}\n\nVALD TEXT ATT FÖRBÄTTRA:\n"${selectedText}"${context ? `\n\nEXTRA KONTEXT: ${context}` : ''}`
+          }
+        ],
         max_output_tokens: 500,
+        text: { format: { type: "json_object" } }
       });
 
-      let rawImprovedText = completion.output_text || selectedText;
+      let rawImprovedText = "";
+      try {
+        const parsed = safeJsonParse(completion.output_text || "{}");
+        rawImprovedText = parsed.improved || completion.output_text || selectedText;
+      } catch {
+        rawImprovedText = completion.output_text || selectedText;
+      }
       // Strip quotes, markdown code blocks, and leading/trailing whitespace
       rawImprovedText = rawImprovedText.trim();
       rawImprovedText = rawImprovedText.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, ""); // code blocks
-      rawImprovedText = rawImprovedText.replace(/^[""]|[""]$/g, ""); // smart quotes
+      rawImprovedText = rawImprovedText.replace(/^[""\u201C]|[""\u201D]$/g, ""); // smart quotes
       rawImprovedText = rawImprovedText.replace(/^"|"$/g, ""); // regular quotes
       const improvedText = cleanForbiddenPhrases(rawImprovedText.trim(), personalStyle?.styleProfile);
 

@@ -49,6 +49,9 @@ interface PropertyFormData {
   konstruktionMaterial: string;
   taktyp: string;
   renoveringsar: string;
+  floors: string;
+  biarea: string;
+  tilltradesdag: string;
   platform: "hemnet" | "booli" | "general";
   writingStyle: "factual" | "balanced" | "selling";
   visningstid: string;
@@ -58,52 +61,51 @@ interface PropertyFormData {
 
 // ── CHIP OPTIONS ──
 const KITCHEN_CHIPS = [
-  "Nytt kök", "Stenbänk", "Köksö", "Diskmaskin", "Induktionshäll",
-  "Integrerade vitvaror", "Öppet till vardagsrum", "Matplats för 4+",
-  "Kakelvägg", "Vinkyl",
+  "Nytt kök", "Renoverat kök", "Köksö", "Stenbänk/komposit",
+  "Öppet till vardagsrum", "Integrerade vitvaror", "Platsbyggt kök",
+  "Matplats i kök", "Induktionshäll",
 ];
 const BATHROOM_CHIPS = [
-  "Helkaklat", "Golvvärme", "Dusch", "Badkar", "Dubbla handfat",
-  "Tvättmaskin", "Torktumlare", "Handdukstork", "Renoverat",
+  "Helkaklat", "Badkar", "Dubbla handfat", "Golvvärme",
+  "Handdukstork", "Renoverat", "Tvättmöjlighet",
 ];
 const FLOORING_CHIPS = [
-  "Ekparkett", "Laminat", "Klinker", "Originalparkett",
-  "Marmor", "Stengolv", "Vinyl",
+  "Ekparkett", "Originalparkett", "Björkparkett",
+  "Massivt trägolv", "Klinker", "Stengolv",
 ];
 const HEATING_CHIPS = [
   "Fjärrvärme", "Bergvärme", "Luft-vattenvärmepump", "Luft-luftvärmepump",
-  "Golvvärme", "Elpanna", "Vedpanna", "Direktverkande el",
+  "Golvvärme", "Frånluftsvärmepump", "Vedpanna",
 ];
 const SPECIAL_CHIPS = [
-  "Öppen spis", "Braskamin", "Stuckatur", "Takbjälkar",
+  "Öppen spis", "Kakelugn", "Braskamin", "Stuckatur", "Takbjälkar",
   "Takhöjd 2.7m+", "Inglasad balkong", "Nya fönster",
   "Nytt tak", "Stambyte genomfört", "Fiber",
-  "Laddplats elbil", "Smart hem",
 ];
 const GARDEN_CHIPS = [
-  "Gräsmatta", "Uteplats i söder", "Altan/trädäck", "Fruktträd",
-  "Häck", "Växthus", "Pool", "Förråd/bod",
+  "Välskött trädgård", "Uteplats i söder", "Altan/trädäck",
+  "Fruktträd", "Insynsskyddat", "Förråd/bod", "Pergola", "Eldstad ute",
 ];
 const USP_CHIPS = [
-  "Söderläge", "Tyst läge", "Sjöutsikt", "Havsutsikt", "Parkutsikt",
-  "Öppen planlösning", "Nytt kök", "Nytt badrum", "Hög takhöjd",
-  "Originaldetaljer", "Nära centrum", "Nära kollektivtrafik",
-  "Gavellägenhet", "Stort förråd", "Ingen insyn",
+  "Söderläge", "Tyst läge", "Sjöutsikt", "Havsutsikt", "Fri utsikt",
+  "Öppen planlösning", "Originaldetaljer", "Nära centrum",
+  "Gavellägenhet", "Genomgående", "Ingen insyn", "Hög standard",
 ];
 const PARKING_CHIPS = [
-  "Garage", "Dubbelgarage", "Carport", "P-plats på gård", "Gatumarkering",
-  "Parkeringshus", "Laddplats elbil",
+  "Garage", "Dubbelgarage", "Carport", "P-plats",
+  "Garageplats", "Laddplats elbil",
 ];
 const ROOF_CHIPS = [
-  "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak", "Sedum/grönt tak",
+  "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak",
 ];
 const MATERIAL_CHIPS = [
-  "Trä", "Tegel", "Betong", "Puts", "Leca",
+  "Trä", "Tegel", "Puts", "Betong", "Plåt", "Leca",
 ];
 const PROPERTY_CONDITIONS = [
   "Nyskick", "Mycket gott skick", "Gott skick", "Bra skick", "Behöver renoveras",
 ];
 const ENERGY_CLASSES = ["A", "B", "C", "D", "E", "F", "G"];
+const PROPERTY_FLOORS_OPTIONS = ["1 plan", "1½ plan", "2 plan", "2½ plan", "3 plan", "Suterräng"];
 const BALCONY_DIRECTIONS = [
   "Norr", "Nordost", "Öst", "Sydost", "Söder", "Sydväst", "Väst", "Nordväst",
 ];
@@ -289,6 +291,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       konstruktionMaterial: "",
       taktyp: "",
       renoveringsar: "",
+      floors: "",
+      biarea: "",
+      tilltradesdag: "",
       platform: "hemnet",
       writingStyle: "balanced",
       visningstid: "",
@@ -349,9 +354,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     if (merged.taxeringsvarde) d += `Taxeringsvärde: ${merged.taxeringsvarde} kr\n`;
     if (merged.tomtrattsavgald) d += `Tomträttsavgäld: ${merged.tomtrattsavgald} kr/år\n`;
     if (merged.renoveringsar) d += `Renoverat: ${merged.renoveringsar}\n`;
+    if (merged.tilltradesdag) d += `Tilltr\u00e4de: ${merged.tilltradesdag}\n`;
 
     d += "\n=== YTOR ===\n";
     if (merged.livingArea) d += `Boarea: ${merged.livingArea} kvm\n`;
+    if (merged.biarea) d += `Biarea: ${merged.biarea} kvm\n`;
     if (merged.lotArea) d += `Tomtarea: ${merged.lotArea} kvm\n`;
     if (hasBalcony && merged.balconyArea) d += `Balkong: ${merged.balconyArea} kvm\n`;
     if (hasBalcony && merged.balconyDirection) d += `Balkong väderstreck: ${merged.balconyDirection}\n`;
@@ -360,7 +367,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     d += `Badrum/WC: ${bathrooms}\n`;
 
     d += "\n=== BYGGNAD ===\n";
-    if (merged.buildYear) d += `Byggår: ${merged.buildYear}\n`;
+    if (merged.buildYear) d += `Bygg\u00e5r: ${merged.buildYear}\n`;
+    if (merged.floors) d += `Antal plan: ${merged.floors}\n`;
     if (merged.condition) d += `Skick: ${merged.condition}\n`;
     if (merged.energyClass) d += `Energiklass: ${merged.energyClass}\n`;
     if (isApartmentType) {
@@ -431,6 +439,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       ...(isPro && { wordCountMin, wordCountMax }),
       ...(uploadedImages.length > 0 && { imageUrls: uploadedImages }),
     });
+
+    // Clear draft on successful submit
+    try {
+      localStorage.removeItem('optiprompt-form-draft');
+      localStorage.removeItem('optiprompt-form-chips');
+    } catch { }
   };
 
   // Address lookup with toast-based upgrade flow
@@ -483,6 +497,77 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [form]);
 
+  // ── DRAFT PERSISTENCE: Restore saved draft on mount ──
+  const [draftRestored, setDraftRestored] = useState(false);
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem('optiprompt-form-draft');
+      const savedChips = localStorage.getItem('optiprompt-form-chips');
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        const fieldsToRestore: (keyof PropertyFormData)[] = [
+          'propertyType', 'address', 'area', 'price', 'monthlyFee', 'livingArea',
+          'buildYear', 'condition', 'energyClass', 'floor', 'elevator', 'balconyArea',
+          'balconyDirection', 'brfName', 'storage', 'layoutDescription', 'kitchenDescription',
+          'bathroomDescription', 'uniqueSellingPoints', 'view', 'neighborhood', 'transport',
+          'parking', 'flooring', 'heating', 'lotArea', 'gardenDescription', 'specialFeatures',
+          'otherInfo', 'fastighetsbeteckning', 'taxeringsvarde', 'tomtrattsavgald',
+          'konstruktionMaterial', 'taktyp', 'renoveringsar', 'floors', 'biarea',
+          'tilltradesdag', 'platform', 'writingStyle', 'visningstid', 'maklarnamn', 'maklartelefon',
+        ];
+        fieldsToRestore.forEach((key) => {
+          if (draft[key] !== undefined && draft[key] !== '') {
+            form.setValue(key, draft[key]);
+          }
+        });
+        if (draft.rooms) setRooms(Number(draft.rooms));
+        if (draft.bedrooms) setBedrooms(Number(draft.bedrooms));
+        if (draft.bathrooms) setBathrooms(Number(draft.bathrooms));
+        if (draft.hasBalcony) setHasBalcony(true);
+        if (draft.wordCountMin) setWordCountMin(Number(draft.wordCountMin));
+        if (draft.wordCountMax) setWordCountMax(Number(draft.wordCountMax));
+        setDraftRestored(true);
+      }
+      if (savedChips) {
+        const chips = JSON.parse(savedChips);
+        if (chips.kitchen?.length) setKitchenChips(chips.kitchen);
+        if (chips.bathroom?.length) setBathroomChips(chips.bathroom);
+        if (chips.flooring?.length) setFlooringChips(chips.flooring);
+        if (chips.heating?.length) setHeatingChips(chips.heating);
+        if (chips.special?.length) setSpecialChips(chips.special);
+        if (chips.garden?.length) setGardenChips(chips.garden);
+        if (chips.usp?.length) setUspChips(chips.usp);
+        if (chips.parking?.length) setParkingChips(chips.parking);
+        if (chips.roof?.length) setRoofChips(chips.roof);
+        if (chips.material?.length) setMaterialChips(chips.material);
+      }
+    } catch { /* ignore corrupted drafts */ }
+  }, []);
+
+  // ── DRAFT PERSISTENCE: Auto-save form on changes ──
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      try {
+        localStorage.setItem('optiprompt-form-draft', JSON.stringify({
+          ...values,
+          rooms, bedrooms, bathrooms, hasBalcony, wordCountMin, wordCountMax,
+        }));
+      } catch { /* storage full */ }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, rooms, bedrooms, bathrooms, hasBalcony, wordCountMin, wordCountMax]);
+
+  // ── DRAFT PERSISTENCE: Auto-save chips on changes ──
+  useEffect(() => {
+    try {
+      localStorage.setItem('optiprompt-form-chips', JSON.stringify({
+        kitchen: kitchenChips, bathroom: bathroomChips, flooring: flooringChips,
+        heating: heatingChips, special: specialChips, garden: gardenChips,
+        usp: uspChips, parking: parkingChips, roof: roofChips, material: materialChips,
+      }));
+    } catch { /* storage full */ }
+  }, [kitchenChips, bathroomChips, flooringChips, heatingChips, specialChips, gardenChips, uspChips, parkingChips, roofChips, materialChips]);
+
   return (
     <TooltipProvider>
       <Form {...form}>
@@ -496,7 +581,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </label>
               <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
                 <CheckCircle2 className="w-3 h-3" />
-                Steg 1/3
+                Steg 1
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -531,7 +616,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </label>
               <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
                 <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#92400E" }} />
-                Steg 2/3
+                Steg 2
               </div>
             </div>
 
@@ -568,8 +653,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               )} />
               <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Stadsdel *</FormLabel>
-                  <FormControl><Input placeholder="Vasastan" {...field} className="h-10" /></FormControl>
+                  <FormLabel className="text-xs text-gray-500">Stadsdel / Område *</FormLabel>
+                  <FormControl><Input placeholder="t.ex. Vasastan, Centrum, Tuna" {...field} className="h-10" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -577,24 +662,25 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
             {/* Size + Price + Fee */}
             <div className="grid grid-cols-3 gap-3 mt-3">
-              <FormField control={form.control} name="livingArea" render={({ field }) => (
+              <FormField control={form.control} name="livingArea" rules={{ required: "Ange boarea" }} render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Boarea (kvm)</FormLabel>
+                  <FormLabel className="text-xs text-gray-500">Boarea (kvm) *</FormLabel>
                   <FormControl><Input type="number" placeholder="85" {...field} className="h-10" /></FormControl>
+                  <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Pris (kr)</FormLabel>
-                  <FormControl><Input type="number" placeholder="4 500 000" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input type="number" placeholder="4500000" {...field} className="h-10" /></FormControl>
                 </FormItem>
               )} />
               <FormField control={form.control} name="monthlyFee" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">
-                    {isApartmentType ? "Avgift (kr/mån)" : "Driftskostnad"}
+                    {isApartmentType ? "Avgift (kr/mån)" : "Driftskostnad (kr/år)"}
                   </FormLabel>
-                  <FormControl><Input type="number" placeholder={isApartmentType ? "3 500" : "2 000"} {...field} className="h-10" /></FormControl>
+                  <FormControl><Input type="number" placeholder={isApartmentType ? "3500" : "25000"} {...field} className="h-10" /></FormControl>
                 </FormItem>
               )} />
             </div>
@@ -692,17 +778,34 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             {/* House/Villa-specific */}
             {isHouseType && (
               <>
-                <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                   <FormField control={form.control} name="buildYear" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
                       <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
                     </FormItem>
                   )} />
+                  <FormField control={form.control} name="floors" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Antal plan</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          {PROPERTY_FLOORS_OPTIONS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
                   <FormField control={form.control} name="lotArea" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
                       <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="biarea" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs text-gray-500">Biarea (kvm)</FormLabel>
+                      <FormControl><Input type="number" placeholder="40" {...field} className="h-10" /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -736,7 +839,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <FormControl><Input type="number" placeholder="2 500 000" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="2500000" {...field} className="h-10" /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="tomtrattsavgald" render={({ field }) => (
@@ -752,7 +855,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <FormControl><Input type="number" placeholder="8 000" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="8000" {...field} className="h-10" /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="renoveringsar" render={({ field }) => (
@@ -800,6 +903,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   )} />
                 </div>
               )}
+            </div>
+
+            {/* Tillträdesdag — all property types */}
+            <div className="mt-3">
+              <FormField control={form.control} name="tilltradesdag" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Tillträdesdag</FormLabel>
+                  <FormControl><Input placeholder="Enligt överenskommelse" {...field} className="h-10" /></FormControl>
+                </FormItem>
+              )} />
             </div>
           </div>
 
@@ -862,10 +975,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
             <FormField control={form.control} name="layoutDescription" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs text-gray-500">Planlösning & rum (valfritt)</FormLabel>
+                <FormLabel className="text-xs text-gray-500">Planlösning & rumsbeskrivning (valfritt)</FormLabel>
+                <p className="text-[10px] text-gray-400 mb-1">Beskriv hur rummen hänger ihop och eventuella detaljer om enskilda rum.</p>
                 <FormControl>
                   <Textarea
-                    placeholder="T.ex: Hall med garderob. Öppen planlösning kök/vardagsrum. 2 sovrum, det större ca 12 kvm. Gäst-wc vid hall."
+                    placeholder="T.ex: Hall med garderob. Öppen planlösning kök/vardagsrum. Stort sovrum ca 12 kvm med garderob. Mindre sovrum mot gård. Gäst-wc vid hall."
                     {...field}
                     className="min-h-[56px] resize-none text-sm"
                   />
@@ -1017,7 +1131,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormField control={form.control} name="otherInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
-                    <FormControl><Input placeholder="T.ex: Nytt tak 2022. Stambyte 2015." {...field} className="h-10" /></FormControl>
+                    <FormControl><Input placeholder="T.ex: Stambyte 2015. Fiber installerat. Inglasad tvättstuga." {...field} className="h-10" /></FormControl>
                   </FormItem>
                 )} />
               </div>
@@ -1087,7 +1201,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Textstil</span>
                 <div className="flex gap-1.5">
                   {([
-                    { value: "factual" as const, label: "PM-stil" },
+                    { value: "factual" as const, label: "Faktabaserad" },
                     { value: "balanced" as const, label: "Balanserad" },
                     { value: "selling" as const, label: "Säljande" },
                   ]).map((s) => (
@@ -1107,7 +1221,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   ))}
                 </div>
                 <p className="text-[10px] mt-1.5" style={{ color: "#9CA3AF" }}>
-                  {selectedStyle === "factual" && "Ren fakta, kronologisk, noll säljspråk."}
+                  {selectedStyle === "factual" && "Ren fakta i kronologisk ordning. Noll säljspråk, som ett PM."}
                   {selectedStyle === "balanced" && "Fakta i fokus men med rytm. Lyfter säljpunkter utan klyschor."}
                   {selectedStyle === "selling" && "Klyschfritt men övertygande. Starkare betoning och avslut."}
                 </p>
@@ -1122,8 +1236,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <Select value={String(wordCountMin)} onValueChange={(v) => handleWordCountMin(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: modelLimits.max - modelLimits.min + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                      {Array.from({ length: Math.floor((modelLimits.max - modelLimits.min) / 50) + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1131,8 +1245,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <Select value={String(wordCountMax)} onValueChange={(v) => handleWordCountMax(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: modelLimits.max - modelLimits.min + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
-                        <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                      {Array.from({ length: Math.floor((modelLimits.max - modelLimits.min) / 50) + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

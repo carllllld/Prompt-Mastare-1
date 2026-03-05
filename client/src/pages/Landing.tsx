@@ -29,7 +29,7 @@ const FEATURES = [
   {
     icon: Shield,
     title: "Faktagranskning med AI",
-    desc: "Automatisk kontroll att texten stämmer med dina indata. Fångar faktafel innan publicering.",
+    desc: "Automatisk kontroll att texten stämmer med dina indata. Fångar faktafel innan publicering. (Pro/Premium)",
   },
   {
     icon: Pen,
@@ -39,17 +39,17 @@ const FEATURES = [
   {
     icon: BarChart3,
     title: "Områdesanalys",
-    desc: "AI:n analyserar marknadsposition, arkitektoniskt värde och köparpsykologi för varje objekt.",
+    desc: "AI:n analyserar marknadsposition, arkitektoniskt värde och köparpsykologi för varje objekt. (Pro/Premium)",
   },
   {
     icon: Sparkles,
     title: "Personlig skrivstil",
-    desc: "Ladda upp dina bästa texter — AI:n lär sig din ton och skriver som du, fast snabbare.",
+    desc: "Ladda upp dina bästa texter — AI:n lär sig din ton och skriver som du, fast snabbare. (Pro/Premium)",
   },
   {
     icon: Users,
     title: "Team-funktioner",
-    desc: "Dela skrivstil och mallar med hela kontoret. Konsekvent kvalitet oavsett vem som skriver.",
+    desc: "Dela skrivstil och mallar med hela kontoret. Konsekvent kvalitet oavsett vem som skriver. (Byrå)",
   },
 ];
 

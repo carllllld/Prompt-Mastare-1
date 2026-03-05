@@ -23,8 +23,6 @@ export interface IStorage {
   updateUserProfile(userId: string, data: { displayName?: string; avatarColor?: string }): Promise<User | null>;
   deleteUser(userId: string): Promise<void>;
   updateUserStripeCustomer(userId: string, stripeCustomerId: string): Promise<void>;
-  // Usage methods
-  resetUserPromptsIfNewDay(user: User): Promise<User>;
   // Subscription methods
   upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void>;
   downgradeUserToFree(stripeSubscriptionId: string): Promise<void>;
@@ -141,26 +139,6 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(users).where(eq(users.id, userId));
     if (!result[0]) return null;
     return result[0];
-  }
-
-  async resetUserPromptsIfNewDay(user: User): Promise<User> {
-    // Kalenderbaserad mÃ¥nadsreset: nollstÃ¤ll den 1:a varje mÃ¥nad
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const lastReset = user.lastResetDate ? new Date(user.lastResetDate).toISOString().split('T')[0].substring(0, 7) : '';
-
-    if (lastReset !== currentMonth) {
-      const [updated] = await db.update(users)
-        .set({
-          promptsUsedToday: 0,
-          lastResetDate: new Date().toISOString().split('T')[0]
-        })
-        .where(eq(users.id, user.id))
-        .returning();
-      return updated;
-    }
-
-    return user;
   }
 
   async upgradeUser(userId: string, plan: "pro" | "premium", stripeCustomerId: string, stripeSubscriptionId: string): Promise<void> {

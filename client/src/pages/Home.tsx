@@ -540,7 +540,7 @@ export default function Home() {
                       {[
                         "Objektbeskrivning, Hemnet & Booli",
                         "Rubrik, Instagram & kortannons",
-                        "Faktagranskning ingår",
+                        "397+ klyschor filtreras bort",
                         "Inget kreditkort krävs",
                       ].map((f) => (
                         <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>

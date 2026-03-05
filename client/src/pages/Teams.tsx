@@ -57,7 +57,7 @@ export default function Teams() {
   }
 
   // Kontrollera om användaren har pro- eller premium-plan
-  if (user?.plan !== "pro" && user?.plan !== "premium") {
+  if (user?.subscriptionStatus !== "pro" && user?.subscriptionStatus !== "premium") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">

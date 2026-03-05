@@ -8,12 +8,12 @@ interface TextEditorProps {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Skriv om", instruction: "Skriv om texten med andra ord men behåll ALLA fakta. Använd korta meningar.", icon: Wand2, color: "bg-blue-500" },
-  { label: "Mer fakta", instruction: "Lägg till KONKRETA detaljer om rummet/objektet. Använd mått, material, årtal. Hitta inte på.", icon: Plus, color: "bg-green-500" },
-  { label: "Kondensera", instruction: "Gör texten kortare. Behåll bara viktigaste fakta. Inga utfyllnadsmeningar.", icon: Minus, color: "bg-orange-500" },
-  { label: "Mer säljande", instruction: "Gör texten mer säljande genom att lyfta de starkaste fakta tydligare. Inga klyschor.", icon: Sparkles, color: "bg-purple-500" },
-  { label: "Mer formell", instruction: "Gör texten mer formell och professionell. Använd korrekta fastighetstermer.", icon: PenLine, color: "bg-gray-500" },
-  { label: "Fixa klyschor", instruction: "Ersätt alla klyschor och vaga påståenden med konkreta fakta. Inga 'erbjuder', 'bjuder på', 'fantastisk'.", icon: AlertTriangle, color: "bg-red-500" },
+  { label: "Skriv om", instruction: "Skriv om texten med andra ord men behåll ALLA fakta. Matcha stilen i resten av objektbeskrivningen.", icon: Wand2, gradient: ["#2563EB", "#3B82F6"] },
+  { label: "Lyft fakta", instruction: "Lyft fram de starkaste fakta tydligare: renoveringsår, material, mått, märken, avstånd. Hitta inte på nya uppgifter.", icon: Plus, gradient: ["#16A34A", "#22C55E"] },
+  { label: "Kondensera", instruction: "Korta ner texten. Behåll konkreta fakta (mått, årtal, material). Ta bort utfyllnad och upprepningar.", icon: Minus, gradient: ["#EA580C", "#F97316"] },
+  { label: "Mer säljande", instruction: "Lyft de starkaste säljargumenten (läge, skick, storlek, utsikt) genom att placera dem först. Sälj med FAKTA, inte adjektiv.", icon: Sparkles, gradient: ["#7C3AED", "#8B5CF6"] },
+  { label: "Bättre flöde", instruction: "Förbättra textflödet: variera meningslängd, bind ihop hackiga meningar. Texten ska läsas som en vandring genom bostaden.", icon: PenLine, gradient: ["#4B5563", "#6B7280"] },
+  { label: "Fixa klyschor", instruction: "Ersätt AI-klyschor med konkreta fakta. 'Generöst kök' → 'Kök om 15 kvm'. 'Ljust och luftigt' → 'Fönster i söder och väster'. Stryk meningar utan fakta.", icon: AlertTriangle, gradient: ["#DC2626", "#EF4444"] },
 ];
 
 export function TextEditor({ text, onTextChange }: TextEditorProps) {
@@ -89,8 +89,8 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
     const editorRect = editorRef.current.getBoundingClientRect();
 
     setToolbarPos({
-      top: rect.top - editorRect.top - 52,
-      left: Math.max(0, Math.min(rect.left - editorRect.left + rect.width / 2 - 150, editorRect.width - 320)),
+      top: rect.top - editorRect.top - 220,
+      left: Math.max(8, Math.min(rect.left - editorRect.left + rect.width / 2 - 160, editorRect.width - 340)),
     });
     setShowToolbar(true);
     setShowCustomInput(false);
@@ -238,8 +238,8 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
           style={{ top: toolbarPos.top, left: toolbarPos.left }}
         >
           <div
-            className="rounded-xl shadow-lg border p-1.5 flex flex-col gap-1"
-            style={{ background: "#FFFFFF", borderColor: "#E5E7EB", minWidth: "280px" }}
+            className="rounded-xl shadow-2xl border p-2 flex flex-col gap-1.5"
+            style={{ background: "#FFFFFF", borderColor: "#D1D5DB", minWidth: "320px", boxShadow: "0 20px 60px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05)" }}
           >
             {isRewriting ? (
               <div className="flex items-center gap-2 px-3 py-2 text-xs" style={{ color: "#6B7280" }}>
@@ -254,11 +254,11 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
                     <button
                       key={action.label}
                       onClick={() => doRewrite(action.instruction)}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[11px] font-medium transition-all hover:scale-105 hover:shadow-md border border-transparent"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all hover:scale-[1.03] hover:shadow-md active:scale-[0.98]"
                       style={{
                         color: "#FFFFFF",
-                        background: `linear-gradient(135deg, ${action.color.replace('bg-', '#').replace('500', '600')}, ${action.color.replace('bg-', '#').replace('500', '500')})`,
-                        borderColor: `${action.color.replace('bg-', '#').replace('500', '400')}20`
+                        background: `linear-gradient(135deg, ${action.gradient[0]}, ${action.gradient[1]})`,
+                        boxShadow: `0 2px 6px ${action.gradient[0]}40`
                       }}
                     >
                       <action.icon className="w-3.5 h-3.5" />
@@ -271,19 +271,19 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
                 {!showCustomInput ? (
                   <button
                     onClick={() => setShowCustomInput(true)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all hover:scale-105 border-t"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[11px] font-semibold transition-all hover:scale-[1.02] border mt-0.5"
                     style={{
-                      color: "#6B7280",
-                      borderColor: "#F3F4F6",
-                      background: "linear-gradient(135deg, #F9FAFB, #FFFFFF)"
+                      color: "#374151",
+                      borderColor: "#E5E7EB",
+                      background: "#F9FAFB"
                     }}
                   >
-                    <Wand2 className="w-3.5 h-3.5" />
+                    <Wand2 className="w-3.5 h-3.5" style={{ color: "#2D6A4F" }} />
                     <span>Egen instruktion...</span>
-                    <span className="text-[10px] opacity-60">⌘K</span>
+                    <span className="ml-auto text-[10px] rounded border px-1.5 py-0.5" style={{ color: "#9CA3AF", borderColor: "#E5E7EB" }}>⌘K</span>
                   </button>
                 ) : (
-                  <div className="flex gap-2 border-t pt-2" style={{ borderColor: "#F3F4F6" }}>
+                  <div className="flex gap-2 border-t pt-2 mt-0.5" style={{ borderColor: "#E5E7EB" }}>
                     <input
                       autoFocus
                       value={customInstruction}
@@ -298,18 +298,18 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
                         }
                       }}
                       placeholder="T.ex. 'Gör det mer säljande för unga köpare'"
-                      className="flex-1 text-[11px] px-3 py-2 rounded-lg border outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      className="flex-1 text-xs px-3 py-2.5 rounded-lg border-2 outline-none focus:border-green-600 transition-all"
                       style={{
-                        borderColor: "#E5E7EB",
-                        background: "#FFFFFF",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                        borderColor: "#D1D5DB",
+                        background: "#F9FAFB",
+                        color: "#1F2937"
                       }}
                     />
                     <Button
                       size="sm"
                       onClick={() => customInstruction.trim() && doRewrite(customInstruction.trim())}
-                      className="h-8 text-[10px] px-3 font-medium transition-all hover:scale-105"
-                      style={{ background: "linear-gradient(135deg, #2D6A4F, #40916C)" }}
+                      className="h-9 text-xs px-4 font-semibold transition-all hover:scale-[1.03] active:scale-[0.98]"
+                      style={{ background: "linear-gradient(135deg, #2D6A4F, #40916C)", color: "#FFFFFF" }}
                     >
                       Kör
                     </Button>
