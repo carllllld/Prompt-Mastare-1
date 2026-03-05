@@ -216,12 +216,15 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
         suppressContentEditableWarning
         onMouseUp={handleMouseUp}
         onInput={handleInput}
-        className="whitespace-pre-wrap leading-relaxed text-base font-serif outline-none rounded-lg p-1 -m-1 transition-colors focus:bg-[#FAFAF8] cursor-text"
+        className="whitespace-pre-wrap leading-relaxed text-base font-serif outline-none rounded-lg p-4 -m-1 transition-all focus:bg-[#FAFAF8] cursor-text border-2 shadow-sm"
         style={{
           fontFamily: "'Lora', Georgia, serif",
           color: "#1D2939",
           lineHeight: "1.6",
-          minHeight: "100px",
+          minHeight: "120px",
+          backgroundColor: "#FFFFFF",
+          borderColor: "#D1D5DB",
+          boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
         }}
       >
         {text}

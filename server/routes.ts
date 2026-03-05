@@ -2740,9 +2740,31 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const cleanToneAnalysis = deepClean(toneAnalysis) || toneAnalysis;
       const cleanWritingPlan = deepClean(writingPlan) || writingPlan;
 
-      // Build content strings once — reused for Responses API (primary) and Chat Completions (retry)
-      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`;
-      const userContent = `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(cleanToneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      // SIMPLIFIED PROMPT: Less data, clearer instructions for GPT-5.2
+      const systemContent = `${textPrompt}
+
+${personalStylePrompt}
+
+${styleInstruction}
+
+VIKTIGT: Du måste returnera JSON med fältet "improvedPrompt" som innehåller den färdiga objektbeskrivningen. INTE dispositionen.`;
+
+      const userContent = `OBJEKTFAKTA:
+Adress: ${disposition?.property?.address || "Okänd"}
+Typ: ${disposition?.property?.type || "Bostad"}
+Storlek: ${disposition?.property?.size || "0"} kvm
+Rum: ${disposition?.property?.rooms || "3"}
+Pris: ${disposition?.economics?.askingPrice || "Ej angivet"}
+Omåde: ${disposition?.location?.area || "Okänt"}
+
+ORDMÅL: ${targetWordMin}-${targetWordMax} ord
+PLATTFORM: ${platform}
+
+${imageAnalysis ? `BILDKOMMENTAR: ${imageAnalysis.substring(0, 200)}...\n\n` : ""}EXEMPEL PÅ RÄTT TEXTSTIL:
+${positiveExample}
+
+Skriv en objektbeskrivning som exemplet ovan, baserat på objektfakta. Returnera JSON:
+{"improvedPrompt":"din text här","headline":"rubrik","instagramCaption":"socialt inlägg","showingInvitation":"visningsinbjudan","shortAd":"kort annons","socialCopy":"social copy"}`;
 
       // Chat Completions format — used for quality gate retry
       const textMessages = [
@@ -2752,6 +2774,9 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text with full prompt engineering...");
+      console.log("[DEBUG] System content length:", systemContent.length);
+      console.log("[DEBUG] User content length:", userContent.length);
+      console.log("[DEBUG] User content preview:", userContent.substring(0, 500) + "...");
 
       const textCompletion = await openai.responses.create({
         model: "gpt-5.2",
@@ -2772,6 +2797,59 @@ Fakta i fokus med naturlig rytm och professionell ton.
       let result: any;
       try {
         result = safeJsonParse(textCompletion.output_text || "{}");
+
+        // DEBUG: Log what AI actually returned
+        console.log("[Step 3] AI response keys:", Object.keys(result || {}));
+        console.log("[Step 3] Full AI response:", JSON.stringify(result, null, 2));
+        if (result.improvedPrompt) {
+          console.log("[Step 3] improvedPrompt length:", result.improvedPrompt.length);
+          console.log("[Step 3] improvedPrompt preview:", result.improvedPrompt.substring(0, 200) + "...");
+          console.log("[Step 3] improvedPrompt first 500 chars:", result.improvedPrompt.substring(0, 500));
+        }
+
+        // CHECK: If AI returned disposition instead of text, create smart fallback
+        if (result.improvedPrompt && (
+          result.improvedPrompt.includes("=== GRUNDINFORMATION ===") ||
+          result.improvedPrompt.includes("OBJEKTDISPOSITION") ||
+          result.improvedPrompt.includes("DISPOSITION:") ||
+          result.improvedPrompt.includes("property:") ||
+          result.improvedPrompt.includes("economics:")
+        )) {
+          console.warn("[Step 3] AI returned disposition instead of text, creating smart fallback");
+
+          // Generate proper text from disposition data
+          const address = disposition?.property?.address || "Objektet";
+          const type = disposition?.property?.type || "bostad";
+          const size = disposition?.property?.size || "0";
+          const rooms = disposition?.property?.rooms || "3";
+          const price = disposition?.economics?.askingPrice || "Pris på förfrågan";
+          const area = disposition?.location?.area || "attraktivt område";
+
+          // Build a proper description from key facts
+          let fallbackText = `${address}. En ${type} om ${size} kvm med ${rooms} rum.`;
+
+          // Add key details if available
+          if (disposition?.property?.buildYear) {
+            fallbackText += ` Byggt ${disposition.property.buildYear}.`;
+          }
+
+          if (disposition?.property?.condition) {
+            fallbackText += ` ${disposition.property.condition}.`;
+          }
+
+          // Add location info
+          if (disposition?.location?.proximity?.length) {
+            const nearest = disposition.location.proximity[0];
+            fallbackText += ` ${nearest.place} ${nearest.distance}.`;
+          }
+
+          // Add price
+          fallbackText += ` ${price}.`;
+
+          result.improvedPrompt = fallbackText;
+          console.log("[Step 3] Smart fallback generated:", fallbackText);
+        }
+
       } catch (e) {
         console.error("[Step 3] Failed to parse AI response, attempting raw extraction:", e);
         // Try to extract improvedPrompt from truncated JSON
