@@ -180,7 +180,6 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
       model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
       max_tokens: 1000,
-      temperature: 0.1,
     });
 
     const styleData = safeJsonParse(response.choices[0]?.message?.content || "{}");
@@ -2488,17 +2487,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           try {
             const extractionCompletion = await openai.responses.create({
               model: "gpt-5.2",
-              temperature: 0.1,
               input: [
                 {
                   role: "developer",
                   content: COMBINED_EXTRACTION_PROMPT
                 },
-                {
-                  role: "user",
-                  content: `RÅDATA:\n${prompt}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}`
-                }
+                { role: "user", content: `RÅDATA:\n${prompt}\n\nPLATTFORM: ${platform}\nORDMÅL: ${targetWordMin}-${targetWordMax}` },
               ],
+              max_output_tokens: 4000,
               text: { format: { type: "json_object" } }
             });
             extractionResult = safeJsonParse(extractionCompletion.output_text || "{}");
@@ -2608,7 +2604,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             model: "gpt-5.2",
             messages: planMessages,
             max_tokens: 1500,
-            temperature: 0.1,
             response_format: { type: "json_object" },
           });
 
@@ -2761,7 +2756,6 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const textCompletion = await openai.responses.create({
         model: "gpt-5.2",
         reasoning: { effort: "high" },
-        temperature: temperature,
         input: [
           { role: "developer", content: systemContent },
           { role: "user", content: userContent }
@@ -2996,7 +2990,6 @@ REGLER:
 
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
-            temperature: 0.1,
             reasoning: { effort: "medium" }, // Medium thinking for fact-checking
             input: [
               {
@@ -3005,9 +2998,10 @@ REGLER:
               },
               {
                 role: "user",
-                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nGENERERAD TEXT:\n${result.improvedPrompt}`
+                content: `TEXT:\n${result.improvedPrompt}\n\nSTYLE: ${style}\n\nPLATFORM: ${platform}`
               }
             ],
+            max_output_tokens: 2000,
             text: { format: { type: "json_object" } }
           });
 
@@ -4198,7 +4192,6 @@ Svara ENDAST med den förbättrade texten, inga förklaringar.`
         model: "gpt-5.2",
         input: messages,
         max_output_tokens: 500,
-        temperature: 0.1,  // Sänkt från 0.7 för mer fakta-fokuserat
       });
 
       let rawImprovedText = completion.output_text || selectedText;
