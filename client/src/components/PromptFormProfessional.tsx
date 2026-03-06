@@ -109,6 +109,9 @@ const PROPERTY_FLOORS_OPTIONS = ["1 plan", "1½ plan", "2 plan", "2½ plan", "3 
 const BALCONY_DIRECTIONS = [
   "Norr", "Nordost", "Öst", "Sydost", "Söder", "Sydväst", "Väst", "Nordväst",
 ];
+const exampleInputClass = "h-10 placeholder:italic placeholder:text-gray-400 focus:placeholder-transparent";
+const exampleCompactInputClass = "h-9 text-xs placeholder:italic placeholder:text-gray-400 focus:placeholder-transparent";
+const exampleTextareaClass = "min-h-[56px] resize-none text-sm placeholder:italic placeholder:text-gray-400 focus:placeholder-transparent";
 
 // ── HELPER: Chip Selector ──
 function ChipSelector({ chips, selected, onToggle, variant = "default" }: {
@@ -305,8 +308,23 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const selectedPlatform = form.watch("platform");
   const selectedType = form.watch("propertyType");
   const selectedStyle = form.watch("writingStyle");
+  const addressValue = form.watch("address");
+  const areaValue = form.watch("area");
+  const livingAreaValue = form.watch("livingArea");
+  const conditionValue = form.watch("condition");
+  const uspValue = form.watch("uniqueSellingPoints");
+  const layoutValue = form.watch("layoutDescription");
   const isApartmentType = selectedType === "apartment" || selectedType === "townhouse";
   const isHouseType = selectedType === "house" || selectedType === "villa";
+  const priorityChecklist = [
+    Boolean(addressValue?.trim()),
+    Boolean(areaValue?.trim()),
+    Boolean(livingAreaValue?.trim()),
+    Boolean(conditionValue?.trim()),
+    Boolean(uspValue?.trim() || uspChips.length > 0),
+    Boolean(layoutValue?.trim()),
+  ];
+  const priorityCompleted = priorityChecklist.filter(Boolean).length;
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
   const onLocalSubmit = (values: PropertyFormData) => {
@@ -573,6 +591,69 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-0">
 
+          <div className="mb-5 rounded-xl border px-4 py-3.5" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Fyll bara i det som faktiskt hjälper texten</p>
+                <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
+                  Prioritera skick, renoveringar, material, planlösning, läge och det som gör objektet speciellt. Alla exempel i fälten är just exempel och visas i kursiv stil när fältet är tomt.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-5 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-3">
+            <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Snabbast väg till bra text</p>
+                  <p className="text-sm font-semibold mt-1" style={{ color: "#1D2939" }}>Fyll de viktigaste uppgifterna först</p>
+                </div>
+                <div className="px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#ECFDF5", color: "#2D6A4F" }}>
+                  {priorityCompleted}/6 klara
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                {[
+                  ["Adress", Boolean(addressValue?.trim())],
+                  ["Område", Boolean(areaValue?.trim())],
+                  ["Boarea", Boolean(livingAreaValue?.trim())],
+                  ["Skick", Boolean(conditionValue?.trim())],
+                  ["Det som gör objektet speciellt", Boolean(uspValue?.trim() || uspChips.length > 0)],
+                  ["Planlösning / rumsflöde", Boolean(layoutValue?.trim())],
+                ].map(([label, done]) => (
+                  <div key={String(label)} className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: done ? "#F0FDF4" : "#FAFAF7", color: done ? "#166534" : "#4B5563" }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: done ? "#DCFCE7" : "#E5E7EB", color: done ? "#166534" : "#6B7280" }}>
+                      {done ? "✓" : "•"}
+                    </div>
+                    <span>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
+              <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Så undviker du dubbelinfo</p>
+              <div className="space-y-2 text-xs" style={{ color: "#4B5563" }}>
+                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Kök / badrum</span>
+                  <span> — skriv bara det som inte redan täcks av valda chips.</span>
+                </div>
+                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Viktiga renoveringar</span>
+                  <span> — lägg bara till större åtgärder som inte redan syns i andra fält.</span>
+                </div>
+                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Planlösning</span>
+                  <span> — fokusera på flöde, rumssamband och användning, inte på att upprepa rena fakta.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ── SECTION 1: OBJEKTTYP ── */}
           <div className="pb-5">
             <div className="flex items-center justify-between mb-2.5">
@@ -611,12 +692,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* ── SECTION 2: GRUNDFAKTA ── */}
           <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
-                Grundfakta
-              </label>
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                  Grundfakta
+                </label>
+                <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>Det här är basen för hela objektbeskrivningen. Fyll i först.</p>
+              </div>
               <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
                 <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#92400E" }} />
-                Steg 2
+                Högst prioritet
               </div>
             </div>
 
@@ -626,7 +710,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormItem className="sm:col-span-2">
                   <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
                   <div className="flex gap-2">
-                    <FormControl><Input placeholder="Storgatan 1, Stockholm" {...field} className="h-10 flex-1" /></FormControl>
+                    <FormControl><Input placeholder="Ex: Karlavägen 12, 114 31 Stockholm" {...field} className={`${exampleInputClass} flex-1`} /></FormControl>
                     <Button
                       type="button"
                       variant="outline"
@@ -654,7 +738,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Stadsdel / Område *</FormLabel>
-                  <FormControl><Input placeholder="t.ex. Vasastan, Centrum, Tuna" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input placeholder="Ex: Vasastan, Linnéstaden eller Centrala Sundbyberg" {...field} className={exampleInputClass} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -665,14 +749,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <FormField control={form.control} name="livingArea" rules={{ required: "Ange boarea" }} render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Boarea (kvm) *</FormLabel>
-                  <FormControl><Input type="number" placeholder="85" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input type="number" placeholder="Ex: 84" {...field} className={exampleInputClass} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Pris (kr)</FormLabel>
-                  <FormControl><Input type="number" placeholder="4500000" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input type="number" placeholder="Ex: 4 495 000" {...field} className={exampleInputClass} /></FormControl>
                 </FormItem>
               )} />
               <FormField control={form.control} name="monthlyFee" render={({ field }) => (
@@ -680,7 +764,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormLabel className="text-xs text-gray-500">
                     {isApartmentType ? "Avgift (kr/mån)" : "Driftskostnad (kr/år)"}
                   </FormLabel>
-                  <FormControl><Input type="number" placeholder={isApartmentType ? "3500" : "25000"} {...field} className="h-10" /></FormControl>
+                  <FormControl><Input type="number" placeholder={isApartmentType ? "Ex: 3 842" : "Ex: 39 600"} {...field} className={exampleInputClass} /></FormControl>
                 </FormItem>
               )} />
             </div>
@@ -695,8 +779,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Skick</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger className="h-10"><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
+                      <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
                         {PROPERTY_CONDITIONS.map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
@@ -714,19 +798,19 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormField control={form.control} name="floor" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
-                      <FormControl><Input placeholder="3 av 5" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input placeholder="Ex: 3 av 5" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="brfName" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
-                      <FormControl><Input placeholder="BRF Solhemmet" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Brf Lokstallet 7" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="buildYear" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                      <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 1998" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="elevator" render={({ field }) => (
@@ -762,13 +846,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <FormControl><Input type="number" placeholder="1 200 000" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 1 245 000" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="renoveringsar" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
-                      <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
+                      <FormLabel className="text-xs text-gray-500">Viktiga renoveringar</FormLabel>
+                      <p className="text-[10px] text-gray-400 mb-1">Fyll bara i sådant som inte redan framgår i kök, badrum eller andra fält ovan.</p>
+                      <FormControl><Input placeholder="Ex: Hall renoverad 2022, nya ytskikt 2021, badrum stamrenoverat 2018" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -782,15 +867,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormField control={form.control} name="buildYear" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                      <FormControl><Input type="number" placeholder="1998" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 1987" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="floors" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Antal plan</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent>
+                        <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                        <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
                           {PROPERTY_FLOORS_OPTIONS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -799,13 +884,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormField control={form.control} name="lotArea" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
-                      <FormControl><Input type="number" placeholder="800" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 824" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="biarea" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Biarea (kvm)</FormLabel>
-                      <FormControl><Input type="number" placeholder="40" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 38" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -823,7 +908,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <FormControl><Input placeholder="Solna Hagalund 1:23" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Nacka Sicklaön 145:7" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
@@ -839,7 +924,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <FormControl><Input type="number" placeholder="2500000" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 2 673 000" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="tomtrattsavgald" render={({ field }) => (
@@ -855,13 +940,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <FormControl><Input type="number" placeholder="8000" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 9 600" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="renoveringsar" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Renoverat (vad/år)</FormLabel>
-                      <FormControl><Input placeholder="Kök 2020, Bad 2018" {...field} className="h-10" /></FormControl>
+                      <FormLabel className="text-xs text-gray-500">Viktiga renoveringar</FormLabel>
+                      <p className="text-[10px] text-gray-400 mb-1">Ange bara större åtgärder som inte redan framgår tydligt i övriga fält.</p>
+                      <FormControl><Input placeholder="Ex: Tak omlagt 2021, dränering utförd 2019, kök renoverat 2018" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -887,15 +973,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormField control={form.control} name="balconyArea" render={({ field }) => (
                     <FormItem className="flex-1">
                       <FormLabel className="text-xs text-gray-500">Storlek (kvm)</FormLabel>
-                      <FormControl><Input type="number" placeholder="8" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input type="number" placeholder="Ex: 7" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="balconyDirection" render={({ field }) => (
                     <FormItem className="flex-1">
                       <FormLabel className="text-xs text-gray-500">Väderstreck</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent>
+                        <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                        <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
                           {BALCONY_DIRECTIONS.map((dir) => <SelectItem key={dir} value={dir}>{dir}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -910,7 +996,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <FormField control={form.control} name="tilltradesdag" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Tillträdesdag</FormLabel>
-                  <FormControl><Input placeholder="Enligt överenskommelse" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input placeholder="Ex: Enligt överenskommelse eller snabbt tillträde möjligt" {...field} className={exampleInputClass} /></FormControl>
                 </FormItem>
               )} />
             </div>
@@ -928,8 +1014,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" />
                 <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
                   <FormItem className="mt-2">
+                    <p className="text-[10px] text-gray-400 mb-1">Komplettera bara chipsen med sådant som ger bättre text, till exempel material, fabrikat eller årtal.</p>
                     <FormControl>
-                      <Input placeholder="Övrigt: märke, renoveringsår, speciella detaljer..." {...field} className="h-9 text-xs" />
+                      <Input placeholder="Ex: Marbodalkök från 2019, bänkskiva i kvartskomposit och full maskinell utrustning från Siemens" {...field} className={exampleCompactInputClass} />
                     </FormControl>
                   </FormItem>
                 )} />
@@ -940,8 +1027,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <ChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} variant="bathroom" />
                 <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
                   <FormItem className="mt-2">
+                    <p className="text-[10px] text-gray-400 mb-1">Lägg bara till fakta som inte redan täcks av chipsen, till exempel årtal, tvättdel eller materialval.</p>
                     <FormControl>
-                      <Input placeholder="Övrigt: renoveringsår, speciella detaljer..." {...field} className="h-9 text-xs" />
+                      <Input placeholder="Ex: Badrum renoverat 2020 med golvvärme, duschvägg i glas och kombimaskin under arbetsbänk" {...field} className={exampleCompactInputClass} />
                     </FormControl>
                   </FormItem>
                 )} />
@@ -955,16 +1043,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               ★ Vad gör objektet speciellt?
             </label>
             <p className="text-[10px] text-gray-400 mb-3">
-              Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
+              Det här påverkar textens styrka mest. Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
             </p>
             <ChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} variant="usp" />
             <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
               <FormItem className="mt-2">
                 <FormControl>
                   <Textarea
-                    placeholder="T.ex: Balkong 7 kvm i söderläge med kvällssol. Originalparkett från 1920. Tyst innergård."
+                    placeholder="Ex: Balkong om cirka 7 kvm i söderläge med eftermiddags- och kvällssol. Genomgående planlösning, originalparkett och fritt läge mot lugn innergård."
                     {...field}
-                    className="min-h-[56px] resize-none text-sm"
+                    className={exampleTextareaClass}
                   />
                 </FormControl>
               </FormItem>
@@ -976,12 +1064,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <FormField control={form.control} name="layoutDescription" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs text-gray-500">Planlösning & rumsbeskrivning (valfritt)</FormLabel>
-                <p className="text-[10px] text-gray-400 mb-1">Beskriv hur rummen hänger ihop och eventuella detaljer om enskilda rum.</p>
+                <p className="text-[10px] text-gray-400 mb-1">Beskriv flödet mellan rummen och bara sådant som hjälper mäklartexten framåt. Upprepa inte rena fakta som redan finns ovan.</p>
                 <FormControl>
                   <Textarea
-                    placeholder="T.ex: Hall med garderob. Öppen planlösning kök/vardagsrum. Stort sovrum ca 12 kvm med garderob. Mindre sovrum mot gård. Gäst-wc vid hall."
+                    placeholder="Ex: Hall med avhängning och garderober. Kök och vardagsrum i öppen planlösning med naturlig plats för matbord intill fönster. Sovrum mot gård med garderobsvägg och ytterligare rum som passar bra som barnrum eller kontor."
                     {...field}
-                    className="min-h-[56px] resize-none text-sm"
+                    className={exampleTextareaClass}
                   />
                 </FormControl>
               </FormItem>
@@ -995,7 +1083,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               onClick={() => setShowDetails(!showDetails)}
               className="w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all"
               style={{
-                background: showDetails ? "#F0FDF4" : "#FAFAF7",
+                background: showDetails ? "#F0FDF4" : "#FFFFFF",
                 borderColor: showDetails ? "#86EFAC" : "#D1D5DB",
                 color: showDetails ? "#2D6A4F" : "#374151",
               }}
@@ -1007,6 +1095,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 )}
               </div>
               <div className="flex items-center gap-1.5">
+                {!showDetails && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+                    Bra att ha
+                  </span>
+                )}
                 <span className="text-[10px] font-semibold" style={{ color: showDetails ? "#2D6A4F" : "#6B7280" }}>
                   {showDetails ? "Dölj" : "Lägg till"}
                 </span>
@@ -1022,7 +1115,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <ChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} />
                   <FormField control={form.control} name="flooring" render={({ field }) => (
                     <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Detaljer: t.ex. ekparkett vardagsrum, klinker badrum" {...field} className="h-9 text-xs" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Enstavsparkett i vardagsrum och sovrum, klinker med golvvärme i hall och badrum" {...field} className={exampleCompactInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1039,7 +1132,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} />
                   <FormField control={form.control} name="specialFeatures" render={({ field }) => (
                     <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Övrigt: t.ex. fönster bytta 2018, originalstuckatur" {...field} className="h-9 text-xs" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Fönster bytta 2018, platsbyggd bokhylla och bevarad stuckatur i vardagsrummet" {...field} className={exampleCompactInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1051,7 +1144,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} />
                     <FormField control={form.control} name="gardenDescription" render={({ field }) => (
                       <FormItem className="mt-2">
-                        <FormControl><Input placeholder="Övrigt om trädgården..." {...field} className="h-9 text-xs" /></FormControl>
+                        <FormControl><Input placeholder="Ex: Plan trädgårdstomt med häck, äppelträd, odlingslådor och stor altan i västerläge" {...field} className={exampleCompactInputClass} /></FormControl>
                       </FormItem>
                     )} />
                   </div>
@@ -1062,13 +1155,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormField control={form.control} name="view" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Utsikt</FormLabel>
-                      <FormControl><Input placeholder="Sjöutsikt, parkutsikt, innergård" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Fri utsikt över park, grönska och takåsar" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="transport" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
-                      <FormControl><Input placeholder="5 min till t-bana, buss utanför" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Cirka 4 min promenad till tunnelbana och buss runt hörnet" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1077,7 +1170,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormField control={form.control} name="neighborhood" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
-                    <FormControl><Input placeholder="T.ex: ICA 300 m, grundskola 500 m, nära park" {...field} className="h-10" /></FormControl>
+                    <FormControl><Input placeholder="Ex: Närhet till mataffärer, caféer, förskola, gym och grönområden inom några minuters promenad" {...field} className={exampleInputClass} /></FormControl>
                   </FormItem>
                 )} />
 
@@ -1087,8 +1180,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-10"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent>
+                        <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                        <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
                           {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -1097,7 +1190,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <FormField control={form.control} name="storage" render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs text-gray-500">Förråd</FormLabel>
-                      <FormControl><Input placeholder="8 kvm i källare" {...field} className="h-10" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Källarförråd om cirka 6 kvm samt matkällare" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1108,7 +1201,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} />
                   <FormField control={form.control} name="parking" render={({ field }) => (
                     <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Övrigt: t.ex. garage med el, 2 p-platser" {...field} className="h-9 text-xs" /></FormControl>
+                      <FormControl><Input placeholder="Ex: Isolerat garage med laddbox samt uppfart med plats för två bilar" {...field} className={exampleCompactInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1131,7 +1224,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormField control={form.control} name="otherInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
-                    <FormControl><Input placeholder="T.ex: Stambyte 2015. Fiber installerat. Inglasad tvättstuga." {...field} className="h-10" /></FormControl>
+                    <FormControl><Input placeholder="Ex: Fiber installerat, gemensam tvättstuga i huset och stambyte utfört 2015" {...field} className={exampleInputClass} /></FormControl>
                   </FormItem>
                 )} />
               </div>
@@ -1150,19 +1243,19 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <FormField control={form.control} name="visningstid" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Visningstid</FormLabel>
-                  <FormControl><Input placeholder="Sön 15 jun, 13:00–14:00" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input placeholder="Ex: Sön 15 juni kl. 13:00-14:00" {...field} className={exampleInputClass} /></FormControl>
                 </FormItem>
               )} />
               <FormField control={form.control} name="maklarnamn" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Mäklarens namn</FormLabel>
-                  <FormControl><Input placeholder="Anna Svensson" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input placeholder="Ex: Anna Svensson" {...field} className={exampleInputClass} /></FormControl>
                 </FormItem>
               )} />
               <FormField control={form.control} name="maklartelefon" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs text-gray-500">Telefon</FormLabel>
-                  <FormControl><Input placeholder="070-000 00 00" {...field} className="h-10" /></FormControl>
+                  <FormControl><Input placeholder="Ex: 070-123 45 67" {...field} className={exampleInputClass} /></FormControl>
                 </FormItem>
               )} />
             </div>
@@ -1228,23 +1321,29 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
 
+            <div className="rounded-lg border px-3.5 py-3" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
+              <span className="text-xs font-medium" style={{ color: "#4B5563" }}>
+                Välj plattform och textstil innan du genererar för att få rätt ton från start.
+              </span>
+            </div>
+
             {/* Pro: word count */}
             {isPro && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
                 <div className="flex items-center gap-2">
-                  <Select value={String(wordCountMin)} onValueChange={(v) => handleWordCountMin(Number(v))}>
-                    <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                  <Select value={String(wordCountMin)} onValueChange={(v: string) => handleWordCountMin(Number(v))}>
+                    <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
                       {Array.from({ length: Math.floor((modelLimits.max - modelLimits.min) / 50) + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
                         <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-xs text-gray-300">—</span>
-                  <Select value={String(wordCountMax)} onValueChange={(v) => handleWordCountMax(Number(v))}>
-                    <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                  <span className="text-xs text-gray-400">till</span>
+                  <Select value={String(wordCountMax)} onValueChange={(v: string) => handleWordCountMax(Number(v))}>
+                    <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
                       {Array.from({ length: Math.floor((modelLimits.max - modelLimits.min) / 50) + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
                         <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
                       ))}

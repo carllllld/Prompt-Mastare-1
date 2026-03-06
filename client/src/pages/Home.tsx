@@ -206,7 +206,7 @@ export default function Home() {
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-8 h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
@@ -308,22 +308,27 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-8 py-6 sm:py-8">
 
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
           <div className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-              <h1 className="text-2xl sm:text-3xl leading-snug" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-                Fyll i fastighetsdata. Få 5 texter.
-              </h1>
+              <div>
+                <h1 className="text-2xl sm:text-3xl leading-snug" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+                  Fyll i fastighetsdata. Få 5 texter.
+                </h1>
+                <p className="text-sm mt-2 max-w-3xl" style={{ color: "#6B7280" }}>
+                  Börja med grundfakta, lägg sedan kraft på det som faktiskt säljer objektet: skick, planlösning, renoveringar, material, läge och unika kvaliteter.
+                </p>
+              </div>
               {userStatus?.resetTime && (
                 <span className="text-xs shrink-0" style={{ color: "#9CA3AF" }}>
                   Kvot återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-3">
               {[
                 { label: "Objektbeskrivning", sub: "Hemnet & Booli" },
                 { label: "Rubrik", sub: "max 70 tecken" },
@@ -337,6 +342,13 @@ export default function Home() {
                   <span style={{ color: "#9CA3AF" }}>· {pill.sub}</span>
                 </div>
               ))}
+            </div>
+            <div className="rounded-xl border px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ background: "#FFFFFF", borderColor: "#E8E5DE", color: "#4B5563" }}>
+              <span className="font-semibold" style={{ color: "#1D2939" }}>Rekommenderat arbetsflöde:</span>
+              <span>1. Grundfakta</span>
+              <span>2. Vad som gör objektet speciellt</span>
+              <span>3. Planlösning</span>
+              <span>4. Mer detaljer vid behov</span>
             </div>
           </div>
         )}
@@ -370,10 +382,10 @@ export default function Home() {
         )}
 
         {/* Main grid — 12 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
 
           {/* ── LEFT: Form ── */}
-          <div className={result ? "lg:col-span-5" : "lg:col-span-8"}>
+          <div className={result ? "lg:col-span-6" : "lg:col-span-8 xl:col-span-9"}>
             <div className="bg-white rounded-xl border p-5 sm:p-6" style={{ borderColor: "#E8E5DE" }}>
               <PromptFormProfessional
                 onSubmit={handleSubmit}
@@ -392,7 +404,7 @@ export default function Home() {
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}
-          <div ref={resultRef} className={result ? "lg:col-span-7" : "lg:col-span-4"}>
+          <div ref={resultRef} className={result ? "lg:col-span-6" : "lg:col-span-4 xl:col-span-3"}>
             {result ? (
               <div className="lg:sticky lg:top-24 animate-fade-in">
                 <ResultSection
@@ -444,6 +456,10 @@ export default function Home() {
                           Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
                         </p>
                       )}
+                      <div className="mt-4 rounded-lg border px-3 py-3 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#4B5563" }}>
+                        <p className="font-semibold mb-1" style={{ color: "#1D2939" }}>För bäst resultat</p>
+                        <p>Fyll först i adress, område, boarea, skick, planlösning och objektets starkaste säljpunkter. Resten är förfining.</p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -567,7 +583,7 @@ export default function Home() {
 
       {/* ── FOOTER ── */}
       <footer className="border-t mt-12 py-6" style={{ borderColor: "#E8E5DE" }}>
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
           <span>© {new Date().getFullYear()} OptiPrompt</span>
           <div className="flex gap-4">
             <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>

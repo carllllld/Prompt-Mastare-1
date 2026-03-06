@@ -153,40 +153,26 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
         <CopyAllButton result={liveResult} />
       )}
 
-      {/* ── 1. RUBRIK ── */}
-      {result.headline && (
-        <CopyCard title="Rubrik" icon={Type} text={result.headline} iconColor="#D4AF37" delay="0.03s" />
-      )}
+      <div
+        className="rounded-xl border p-4 sm:p-5 animate-slide-up"
+        style={{ background: "#F8F6F1", borderColor: "#D6D3D1", animationDelay: "0.04s" }}
+      >
 
-      {/* ── 2. OBJEKTBESKRIVNING (editable) ── */}
-      <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
-        <div className="px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
-            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
-              Objektbeskrivning
-            </span>
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
-              <Edit3 className="w-3 h-3" />
-              Redigerbar
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+            <Edit3 className="w-4 h-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>AI-redigera texten efteråt</span>
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full" style={{ background: "#ECFDF5", color: "#2D6A4F" }}>
+                Markera text i beskrivningen
+              </span>
             </div>
+            <p className="text-xs mt-1.5" style={{ color: "#6B7280" }}>
+              Du kan markera valfri mening eller stycke i objektbeskrivningen och låta AI:n skriva om just den delen.
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <PdfExport result={liveResult} />
-            <Button variant="outline" size="sm" onClick={() => copyToClipboard(editedText)}
-              className="h-8 text-xs font-medium transition-shadow"
-              style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}>
-              {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-              {copiedMain ? "Kopierad!" : "Kopiera text"}
-            </Button>
-          </div>
-        </div>
-        <div className="p-6 sm:p-8">
-          <div className="mb-3 flex items-center gap-2 text-xs text-gray-500">
-            <Info className="w-3 h-3" />
-            <span>Du kan redigera texten direkt. Ändringarna syns i PDF-export och kopiering.</span>
-          </div>
-          <TextEditor text={editedText} onTextChange={setEditedText} />
         </div>
       </div>
 
@@ -200,6 +186,46 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           ))}
         </div>
       )}
+
+      {/* ── 1. RUBRIK ── */}
+      {result.headline && (
+        <CopyCard title="Rubrik" icon={Type} text={result.headline} iconColor="#D4AF37" delay="0.03s" />
+      )}
+
+      {/* ── 2. OBJEKTBESKRIVNING (editable) ── */}
+      <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
+        <div className="px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
+
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#6B7280" }}>
+              Objektbeskrivning
+            </span>
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+              <Edit3 className="w-3 h-3" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <PdfExport result={liveResult} />
+            <Button variant="outline" size="sm" onClick={() => copyToClipboard(editedText)}
+              className="h-8 text-xs font-medium transition-shadow"
+              style={{ borderColor: "#D1D5DB", color: copiedMain ? "#2D6A4F" : "#374151" }}>
+              {copiedMain ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+              {copiedMain ? "Kopierad!" : "Kopiera text"}
+            </Button>
+          </div>
+        </div>
+        <div className="p-6 sm:p-8">
+          <div className="mb-4 rounded-lg border px-3.5 py-3 flex items-start gap-2.5 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#6B7280" }}>
+            <Info className="w-3 h-3" />
+            <div>
+              <p className="font-medium" style={{ color: "#374151" }}>Direktredigering + AI-redigering</p>
+              <p className="mt-1">Skriv direkt i texten eller markera ett stycke för AI-hjälp. Alla ändringar följer med i kopiering och PDF-export.</p>
+            </div>
+          </div>
+          <TextEditor text={editedText} onTextChange={setEditedText} />
+        </div>
+      </div>
 
       {/* ── 3. SOCIALT INLÄGG ── */}
       {result.instagramCaption && (
@@ -241,7 +267,6 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
 
       {/* ── INFO CARDS GRID ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up" style={{ animationDelay: "0.25s" }}>
-
         {result.improvements && result.improvements.length > 0 && (
           <div className="rounded-xl border p-5" style={{ background: "#FFFBEB", borderColor: "#FDE68A" }}>
             <div className="flex items-center gap-2 mb-3">

@@ -195,18 +195,27 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
   return (
     <div className="relative">
       {/* Editor label */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5" style={{ color: "#2D6A4F" }} />
           <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
             Markera text för AI-redigering
           </span>
+          {selectedText && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#ECFDF5", color: "#166534" }}>
+              {selectedText.split(/\s+/).filter(Boolean).length} ord markerade
+            </span>
+          )}
         </div>
         {history.length > 0 && (
           <Button variant="ghost" size="sm" onClick={undo} className="h-6 text-[10px] px-2" style={{ color: "#9CA3AF" }}>
             <RotateCcw className="w-3 h-3 mr-1" /> Ångra
           </Button>
         )}
+      </div>
+
+      <div className="mb-3 rounded-lg border px-3.5 py-3 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#6B7280" }}>
+        Skriv direkt i texten eller markera en mening, ett stycke eller ett rumsparti för att förbättra just den delen med AI.
       </div>
 
       {/* Editable text area */}
@@ -297,7 +306,7 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
                           setCustomInstruction("");
                         }
                       }}
-                      placeholder="T.ex. 'Gör det mer säljande för unga köpare'"
+                      placeholder="Ex: Lyft fram kökets material och renoveringsår tydligare utan att ändra fakta"
                       className="flex-1 text-xs px-3 py-2.5 rounded-lg border-2 outline-none focus:border-green-600 transition-all"
                       style={{
                         borderColor: "#D1D5DB",
