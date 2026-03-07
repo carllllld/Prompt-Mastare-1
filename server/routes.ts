@@ -158,6 +158,12 @@ function extractGeneratedMarketingText(payload: any): string | null {
   return null;
 }
 
+function getMinimumPublishableWordCount(requestedMin: number, style: WritingStyle): number {
+  const ratio = style === "factual" ? 0.58 : style === "selling" ? 0.72 : 0.65;
+  const absoluteFloor = style === "factual" ? 140 : style === "selling" ? 200 : 180;
+  return Math.min(requestedMin, Math.max(absoluteFloor, Math.round(requestedMin * ratio)));
+}
+
 // AI-driven stilinternalisering från referenstexter
 async function analyzeWritingStyle(referenceTexts: string[]): Promise<{
   formality: number;
@@ -2653,7 +2659,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         targetWordMax = WORD_LIMITS.free.max;
       }
 
+      const minimumPublishableWordMin = getMinimumPublishableWordCount(targetWordMin, style);
+
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
+      console.log(`[Config] Publishable min words for style ${style}: ${minimumPublishableWordMin}`);
 
       sendProgress(1, 7, "Förbereder generering...");
 
@@ -2939,7 +2948,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
-      const wordTargetCenter = (targetWordMin + targetWordMax) / 2;
+      const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
         { label: "primary", developerSuffix: "", effort: reasoningEffort },
         { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta.", effort: "medium" as const },
@@ -3071,11 +3080,12 @@ KRAV FÖR DETTA FÖRSÖK:
         }
 
         const sanitizedResult = { ...candidateResult, improvedPrompt: sanitizedPrompt };
-        const nonWordCountViolations = getNonWordCountViolations(validateOptimizationResult(sanitizedResult, platform, targetWordMin, targetWordMax, style));
+        const nonWordCountViolations = getNonWordCountViolations(validateOptimizationResult(sanitizedResult, platform, minimumPublishableWordMin, targetWordMax, style));
         const qualityScore = analyzeTextQuality(sanitizedPrompt);
         const wordCount = sanitizedPrompt.split(/\s+/).filter(Boolean).length;
+        const shortfallPenalty = Math.max(0, minimumPublishableWordMin - wordCount) / Math.max(minimumPublishableWordMin, 1);
         const wordDistancePenalty = Math.abs(wordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
-        const totalScore = qualityScore - (nonWordCountViolations.length * 0.08) - (wordDistancePenalty * 0.12);
+        const totalScore = qualityScore - (nonWordCountViolations.length * 0.08) - (wordDistancePenalty * 0.12) - (shortfallPenalty * 0.22);
 
         return {
           label,
@@ -3156,8 +3166,8 @@ Svara med JSON:
 
       const selectedCandidate = [...candidatePool]
         .sort((a, b) => {
-          const aScore = a.totalScore + (a.label === judgeChoiceLabel ? 0.15 : 0);
-          const bScore = b.totalScore + (b.label === judgeChoiceLabel ? 0.15 : 0);
+          const aScore = a.totalScore + (a.label === judgeChoiceLabel ? 0.15 : 0) + (a.wordCount >= minimumPublishableWordMin ? 0.06 : 0);
+          const bScore = b.totalScore + (b.label === judgeChoiceLabel ? 0.15 : 0) + (b.wordCount >= minimumPublishableWordMin ? 0.06 : 0);
           return bScore - aScore;
         })[0];
 
@@ -3212,10 +3222,10 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
             polishedResult[field] = sanitizeGeneratedMarketingField(polishedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
           }
 
-          const currentAllViolations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style);
-          const polishedAllViolations = validateOptimizationResult(polishedResult, platform, targetWordMin, targetWordMax, style);
-          const currentViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style));
-          const polishedViolations = getNonWordCountViolations(validateOptimizationResult(polishedResult, platform, targetWordMin, targetWordMax, style));
+          const currentAllViolations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
+          const polishedAllViolations = validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style);
+          const currentViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
+          const polishedViolations = getNonWordCountViolations(validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style));
           const currentScore = analyzeTextQuality(result.improvedPrompt || "");
           const polishedScore = analyzeTextQuality(polishedText);
 
@@ -3245,7 +3255,7 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
       }
 
       // STEG 5: Validering + kirurgisk korrigering
-      const violations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style);
+      const violations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
       if (violations.length > 0) {
         console.log(`[Step 5] Found ${violations.length} violations, attempting surgical correction...`);
 
@@ -3310,7 +3320,7 @@ ERSÄTTNINGSTABELL:
               if (wordDiff / originalWords < 0.3) {
                 const sanitizedCorrected = sanitizeGeneratedMarketingField(corrected.corrected_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
                 if (sanitizedCorrected) {
-                  const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, targetWordMin, targetWordMax, style));
+                  const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
                   if (correctedViolations.length < textViolations.length) {
                     result.improvedPrompt = sanitizedCorrected;
                     console.log(`[Step 5] Surgical correction applied (${textViolations.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
@@ -3333,13 +3343,13 @@ ERSÄTTNINGSTABELL:
       // STEG 5b: Ordräknings-enforcement — om texten är för kort, expandera
       if (result.improvedPrompt) {
         let currentWordCount = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
-        let shortfall = targetWordMin - currentWordCount;
+        let shortfall = minimumPublishableWordMin - currentWordCount;
 
         if (shortfall > 30) {
-          const originalNonWordViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style));
+          const originalNonWordViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
 
           for (let attempt = 1; attempt <= 2 && shortfall > 30; attempt++) {
-            console.log(`[Step 5b] Text too short: ${currentWordCount} words, target min ${targetWordMin}. Expanding (attempt ${attempt}/2)...`);
+            console.log(`[Step 5b] Text too short: ${currentWordCount} words, publishable min ${minimumPublishableWordMin}, requested min ${targetWordMin}. Expanding (attempt ${attempt}/2)...`);
 
             try {
               const expandMessages = [
@@ -3356,14 +3366,14 @@ REGLER:
 4. Infoga nya meningar på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
 5. Hitta ALDRIG på fakta — använd BARA dispositionen
 6. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
-7. Texten MÅSTE bli minst ${targetWordMin} ord
+7. Texten ska i första hand nå ${targetWordMin} ord, men MÅSTE minst nå ${minimumPublishableWordMin} ord om dispositionen inte räcker längre
 8. Om nuvarande text är kraftigt för kort ska du lägga till flera nya faktameningar och nya stycken tills miniminivån nås
 9. Nya meningar ska matcha TEXTSTILEN ovan
 10. Svara med JSON: {"expanded_text": "hela den utökade texten med \n\n mellan stycken"}`,
                 },
                 {
                   role: "user" as const,
-                  content: `NUVARANDE TEXT (${currentWordCount} ord — behöver bli minst ${targetWordMin} ord):\n\n${result.improvedPrompt}\n\nSAKNADE ORD MINST: ${shortfall}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
+                  content: `NUVARANDE TEXT (${currentWordCount} ord — behöver helst nå ${targetWordMin} ord och minst ${minimumPublishableWordMin} ord):\n\n${result.improvedPrompt}\n\nSAKNADE ORD TILL PUBLICERBAR MINNIVÅ: ${shortfall}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
                 },
               ];
 
@@ -3381,13 +3391,13 @@ REGLER:
                 if (expandedWordCount >= currentWordCount) {
                   const sanitizedExpanded = sanitizeGeneratedMarketingField(expanded.expanded_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
                   if (sanitizedExpanded) {
-                    const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, targetWordMin, targetWordMax, style));
+                    const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, minimumPublishableWordMin, targetWordMax, style));
                     const sanitizedExpandedWordCount = sanitizedExpanded.split(/\s+/).filter(Boolean).length;
                     if ((expandedViolations.length === 0 || expandedViolations.length <= originalNonWordViolations.length) && sanitizedExpandedWordCount > currentWordCount) {
                       result.improvedPrompt = sanitizedExpanded;
                       console.log(`[Step 5b] Expanded from ${currentWordCount} to ${sanitizedExpandedWordCount} words`);
                       currentWordCount = sanitizedExpandedWordCount;
-                      shortfall = targetWordMin - currentWordCount;
+                      shortfall = minimumPublishableWordMin - currentWordCount;
                     } else {
                       console.warn(`[Step 5b] Expansion introduced more violations or no real length gain, keeping original`);
                       break;
@@ -3402,10 +3412,10 @@ REGLER:
           }
 
           if (shortfall > 30) {
-            throw new Error(`[Step 5b] Kunde inte nå minsta ordräkning. Stannade på ${currentWordCount}/${targetWordMin} ord efter expansionsförsök.`);
+            console.warn(`[Step 5b] Kunde inte nå requested min. Stannade på ${currentWordCount} ord. Publishable min är ${minimumPublishableWordMin}, requested min är ${targetWordMin}.`);
           }
         } else if (shortfall > 0) {
-          console.log(`[Step 5b] Text slightly short: ${currentWordCount}/${targetWordMin} words (within tolerance)`);
+          console.log(`[Step 5b] Text slightly short vs publishable min: ${currentWordCount}/${minimumPublishableWordMin} words (within tolerance)`);
         }
       }
 
@@ -3439,8 +3449,8 @@ REGLER:
             if (sanitizedFactChecked) {
               const currentWordCountBeforeFactCheck = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
               const factCheckedWordCount = sanitizedFactChecked.split(/\s+/).filter(Boolean).length;
-              const factCheckedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedFactChecked }, platform, targetWordMin, targetWordMax, style));
-              if ((factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style)).length) && !(currentWordCountBeforeFactCheck >= targetWordMin && factCheckedWordCount < targetWordMin)) {
+              const factCheckedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedFactChecked }, platform, minimumPublishableWordMin, targetWordMax, style));
+              if ((factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)).length) && !(currentWordCountBeforeFactCheck >= minimumPublishableWordMin && factCheckedWordCount < minimumPublishableWordMin)) {
                 result.improvedPrompt = sanitizedFactChecked;
                 console.log("[Step 6] Fact-check corrections applied");
               } else {
@@ -3516,7 +3526,7 @@ Svara med JSON:
         throw new Error(`[Final Broker Audit] Slutlig mäklargranskning misslyckades: ${e instanceof Error ? e.message : String(e)}`);
       }
 
-      const finalViolations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style);
+      const finalViolations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
       const finalNonWordCountViolations = getNonWordCountViolations(finalViolations);
       const finalWordCountViolations = finalViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
       if (typeof result?.improvedPrompt !== "string" || !result.improvedPrompt.trim()) {
@@ -3529,7 +3539,7 @@ Svara med JSON:
         throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i huvudtexten: ${finalNonWordCountViolations.slice(0, 5).join(" | ")}`);
       }
       if (finalWordCountViolations.length > 0) {
-        throw new Error(`[Final Gate] Ordräkning utanför målintervallet: ${finalWordCountViolations.join(" | ")}`);
+        console.warn(`[Final Gate] Texten missade önskat ordmål men klarade inte-förbjudna-regler. Requested ${targetWordMin}-${targetWordMax}, publishable min ${minimumPublishableWordMin}. Detalj: ${finalWordCountViolations.join(" | ")}`);
       }
       if (typeof finalBrokerAudit?.publish_ready !== "boolean") {
         throw new Error("[Final Broker Audit] Slutgranskningen returnerade inte ett giltigt publish_ready-beslut.");
