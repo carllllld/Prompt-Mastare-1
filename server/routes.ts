@@ -665,6 +665,19 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
   const lowerText = text.toLowerCase().trim();
   const sentences = text.split(/(?<=[.!?])\s+/);
 
+  const corruptedPatterns: Array<[RegExp, string]> = [
+    [/\b[a-zåäö]+för att[a-zåäö]*\b/gi, 'Trasigt ord med inbakad "för att"-artefakt'],
+    [/\bsödterass\b/gi, 'Felstavat/trasigt ord: "södterass"'],
+    [/\bterass\b/gi, 'Felstavat ord: "terass" ska vara "terrass"'],
+    [/\bvälsköför att\b/gi, 'Trasigt ord: "välsköför att"'],
+    [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
+  ];
+  for (const [pattern, message] of corruptedPatterns) {
+    if (pattern.test(text)) {
+      violations.push(message);
+    }
+  }
+
   // 1. Check forbidden phrases (filtered by writing style)
   const exempt = getExemptPhrases(style);
   for (const phrase of FORBIDDEN_PHRASES) {
@@ -741,6 +754,11 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
     violations.push(`"vilket" upprepas ${vilketCount} gånger (max 1). Dela upp i korta meningar.`);
   }
 
+  const slashTerms = (text.match(/\b[A-Za-zÅÄÖåäö]+\s*\/\s*[A-Za-zÅÄÖåäö]+\b/g) || []).slice(0, 3);
+  for (const term of slashTerms) {
+    violations.push(`Osäker slash-terminologi i löptext: "${term}" — välj en konsekvent term.`);
+  }
+
   return violations;
 }
 
@@ -778,6 +796,23 @@ function validateOptimizationResult(result: any, platform: string = "hemnet", ta
       }
     }
   }
+
+  const textFields = [result?.improvedPrompt, result?.socialCopy, result?.instagramCaption, result?.showingInvitation, result?.shortAd, result?.headline]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+
+  const joinedText = textFields.join("\n").toLowerCase();
+  const outdoorTerms = ["balkong", "terrass", "altan", "uteplats"].filter((term) => joinedText.includes(term));
+  if (outdoorTerms.length > 1) {
+    violations.push(`Blandad uteplatsterminologi mellan textfält: ${outdoorTerms.join(", ")}`);
+  }
+
+  const riskNotes = Array.isArray(result?.analysis?.risk_notes)
+    ? result.analysis.risk_notes.join(" ").toLowerCase()
+    : "";
+  if (riskNotes.includes("oklar") && /\b(exakt|garanterat|säkerställt)\b/i.test(joinedText)) {
+    violations.push("Texten uttrycker för hög säkerhet trots markerad osäkerhet i analys/risk_notes.");
+  }
+
   return violations;
 }
 
@@ -1042,6 +1077,19 @@ function analyzeTextQuality(text: string): number {
   const specificityCount = specificitySignals.filter(r => r.test(text)).length;
   score += Math.min(0.12, specificityCount * 0.02);
 
+  // 8b. Corrupted word penalty — broken Swedish words must trigger retry/correction
+  const corruptionSignals = [
+    /\b[a-zåäö]+för att[a-zåäö]*\b/gi,
+    /\bsödterass\b/gi,
+    /\bterass\b/gi,
+    /\bvälsköför att\b/gi,
+    /\banvändningssäför att\b/gi,
+  ];
+  const corruptionCount = corruptionSignals.filter((r) => r.test(text)).length;
+  if (corruptionCount > 0) {
+    score -= Math.min(0.3, corruptionCount * 0.12);
+  }
+
   // 9. Connecting language bonus — signs of natural flow
   const connectors = ['leder in till', 'med utgång mot', 'med utsikt mot', 'genomgående', 'som renoverades'];
   const connectorCount = connectors.filter(c => lowerText.includes(c)).length;
@@ -1098,6 +1146,12 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
     [/\bmmångaa\b/gi, "många"],
     [/\bgmångaavstånd\b/gi, "gångavstånd"],
     [/\bsprojsade\b/gi, "spröjsade"],
+    [/\bSödterass\b/g, "Söderterrass"],
+    [/\bsödterass\b/g, "söderterrass"],
+    [/\bTerass\b/g, "Terrass"],
+    [/\bterass\b/g, "terrass"],
+    [/\bvälsköför att\b/gi, "välskött"],
+    [/\banvändningssäför att\b/gi, "användningssätt"],
     // Avhuggna prefix — ordning spelar roll (specifika före generiska)
     [/\bPriset \. Enna\b/gi, "Priset för denna"],
     [/\bPriset \.\b/gi, "Priset för denna"],
@@ -1138,7 +1192,7 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   // Fix orphan 1-3 char fragments with periods (broken sentences)
   // Keep valid Swedish abbreviations: kvm, m², rum, wc, etc.
   const validShortWords = new Set(['kvm', 'rum', 'mån', 'avg', 'brå', 'brf', 'osv', 'dvs', 'mfl', 'tex', 'pga', 'mha', 'tom']);
-  cleaned = cleaned.replace(/(^|\s)([A-ZÅÄÖa-zåäö]{1,3})\.(\s)/gmu, (match: string, prefix: string, word: string, space: string) => {
+  cleaned = cleaned.replace(/(^|\s)([A-ZÅÄÖa-zåäö]{1,3})\.(\s)/gm, (match: string, prefix: string, word: string, space: string) => {
     if (validShortWords.has(word.toLowerCase())) return match; // keep valid abbreviations
     if (/^[A-ZÅÄÖ]/.test(word) && word.length >= 2) return match; // keep capitalized words (names, etc.)
     return `${prefix}${space}`; // remove orphan fragment only when standalone
@@ -1211,8 +1265,13 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
 
   // Pass 6: Fix specific broken patterns
   cleaned = cleaned.replace(/Priset \. Enna/gi, "Priset för denna");
-  cleaned = cleaned.replace(/\. Enna/gi, ". Denna");
-  cleaned = cleaned.replace(/\.\s*\.\s*\./g, ".");
+  cleaned = cleaned.replace(/^\s*[\-–—]\s*/gm, "");
+  cleaned = cleaned.replace(/^\s*[,;:]\s*/gm, "");
+  cleaned = cleaned.replace(/\b(balkong|terrass|altan|uteplats)\s*\/\s*(balkong|terrass|altan|uteplats)\b/gi, "$1");
+  cleaned = cleaned.replace(/\b(det finns|den har)\b(?=\s+\1\b)/gi, "$1");
+  cleaned = cleaned.replace(/\bmed\s+(med)\b/gi, "$1");
+  cleaned = cleaned.replace(/\b(och|med|samt)\s*[,.]/gi, ".");
+  cleaned = cleaned.replace(/(^|[.!?]\s+)(En|Ett)\s+(balkong|terrass|altan|uteplats)\s+(med|i)\s+\3\b/gi, "$1$2 $3 $4");
 
   // Pass 7: Remove leading/trailing punctuation
   cleaned = cleaned.replace(/^[.,!?]\s*/, "").replace(/\s*[.,!?]$/, ".");
@@ -1221,6 +1280,8 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   if (cleaned && !cleaned.match(/[.!?]$/)) {
     cleaned += ".";
   }
+
+  cleaned = cleaned.replace(/\s{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 
   return cleaned;
 }
@@ -1395,6 +1456,9 @@ Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som st
 5. EVIDENCE-GATE: Varje sakpåstående som får förekomma i texten MÅSTE finnas som en post i claims med evidence_path + evidence_value från dispositionen
 6. HÖGRISK-PÅSTÅENDEN: Utsikt (t.ex. havsutsikt), eldstad/öppen spis, balkongtyp (inglasad), väderstreck och kommunikationstyp (pendeltåg/tunnelbana) får bara finnas i claims om det står explicit i dispositionen
 7. ANTI-AI-MALL: forbidden_words måste innehålla en baslista med klassiska generiska fraser (plattformsspecifik). Writer kommer följa den listan strikt.
+8. TERMINOLOGI-LÅS: Om dispositionen anger en föredragen term (t.ex. terrass, altan, uteplats, balkong) ska samma term användas konsekvent. Blanda aldrig ihop flera termer med snedstreck.
+9. KONFLIKTHANTERING: Om DISPOSITION innehåller data_quality_notes eller motstridiga år/fakta ska planen skriva in hur texten ska neutraliseras, tonas ner eller hoppas över.
+10. BETONING: Planen ska tydligt säga vilken detalj som ska få mest utrymme, vilka som ska nämnas kort och vilka som ska utelämnas om de är svaga eller oklara.
 
 # BASLISTA FÖRBJUDNA FRASER (lägg in i forbidden_words)
 
@@ -1433,6 +1497,260 @@ För BOOLI/EGEN SIDA: lägg även in "för den som", "vilket ger en", "en bostad
   "risk_notes": ["varningar: överdrifter, oklara uppgifter, juridiska risker"]
 }
 `;
+
+function deepClean<T>(value: T): T {
+  if (Array.isArray(value)) {
+    const cleaned = value
+      .map((item) => deepClean(item))
+      .filter((item) => {
+        if (item === null || item === undefined) return false;
+        if (typeof item === "string") return item.trim().length > 0;
+        if (Array.isArray(item)) return item.length > 0;
+        if (typeof item === "object") return Object.keys(item as Record<string, unknown>).length > 0;
+        return true;
+      });
+    return cleaned as T;
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .map(([key, val]) => [key, deepClean(val)] as const)
+      .filter(([, val]) => {
+        if (val === null || val === undefined) return false;
+        if (typeof val === "string") return val.trim().length > 0;
+        if (Array.isArray(val)) return val.length > 0;
+        if (typeof val === "object") return Object.keys(val as Record<string, unknown>).length > 0;
+        return true;
+      });
+    return Object.fromEntries(entries) as T;
+  }
+
+  return value;
+}
+
+function matchExamples(disposition: any, toneAnalysis: any): string[] {
+  const propertyType = String(disposition?.property?.type || "lägenhet").toLowerCase();
+  const rooms = Number(disposition?.property?.rooms) || 0;
+  const size = Number(disposition?.property?.size) || 0;
+
+  let bucket: keyof typeof EXAMPLE_DATABASE = "medium_apartment";
+  if (propertyType.includes("villa") || propertyType.includes("hus")) {
+    bucket = "villa";
+  } else if (propertyType.includes("radhus")) {
+    bucket = "radhus";
+  } else if (size > 0 && size < 55) {
+    bucket = "small_apartment";
+  } else if (size >= 85 || rooms >= 4) {
+    bucket = "large_apartment";
+  }
+
+  const examples = EXAMPLE_DATABASE[bucket] || EXAMPLE_DATABASE.medium_apartment;
+  const sorted = [...examples].sort((a, b) => {
+    const roomDelta = Math.abs((a.metadata.rooms || 0) - rooms) - Math.abs((b.metadata.rooms || 0) - rooms);
+    if (roomDelta !== 0) return roomDelta;
+    return Math.abs((a.metadata.size || 0) - size) - Math.abs((b.metadata.size || 0) - size);
+  });
+
+  const selected = sorted.slice(0, 3).map((example) => example.text);
+
+  const outdoorPreference = String(
+    disposition?.property?.preferred_outdoor_term ||
+    disposition?.property?.outdoor_space_term ||
+    toneAnalysis?.terminology_preferences?.outdoor_space ||
+    ""
+  ).toLowerCase();
+
+  if (outdoorPreference && selected.length > 0) {
+    return selected.map((text) => {
+      if (outdoorPreference === "terrass") return text.replace(/uteplats/gi, "terrass").replace(/altan/gi, "terrass");
+      if (outdoorPreference === "altan") return text.replace(/uteplats/gi, "altan").replace(/terrass/gi, "altan");
+      if (outdoorPreference === "uteplats") return text.replace(/altan/gi, "uteplats").replace(/terrass/gi, "uteplats");
+      return text;
+    });
+  }
+
+  return selected;
+}
+
+function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
+  const propertyTypeRaw = String(propertyData.propertyType || propertyData.type || "lägenhet").toLowerCase();
+  const propertyType = propertyTypeRaw === "apartment" ? "lägenhet" : propertyTypeRaw;
+  const livingArea = Number(propertyData.livingArea ?? propertyData.area ?? propertyData.size) || null;
+  const rooms = Number(propertyData.rooms) || null;
+  const bedrooms = Number(propertyData.bedrooms) || null;
+  const price = Number(propertyData.price) || null;
+  const fee = Number(propertyData.monthlyFee ?? propertyData.fee) || null;
+  const pricePerKvm = price && livingArea ? Math.round(price / livingArea) : null;
+  const yearBuilt = propertyData.yearBuilt ?? propertyData.year_built ?? null;
+  const areaName = propertyData.area ?? propertyData.district ?? null;
+  const address = propertyData.address || "";
+  const addressCity = address.split(",").pop()?.trim() || null;
+  const balconyDirection = propertyData.balconyDirection ?? propertyData.direction ?? null;
+  const outdoorSize = propertyData.balconySize ?? propertyData.outdoorSize ?? propertyData.patioSize ?? propertyData.terraceSize ?? null;
+  const rawDescription = [propertyData.description, propertyData.otherInfo, propertyData.layout].filter(Boolean).join(" ");
+
+  const preferredOutdoorTerm = (() => {
+    const values = [
+      propertyData.preferredOutdoorTerm,
+      propertyData.outdoorType,
+      propertyData.balconyType,
+      propertyData.patioType,
+      propertyData.terraceType,
+      propertyData.description,
+      propertyData.otherInfo,
+      propertyData.layout,
+    ].filter(Boolean).map((value) => String(value).toLowerCase());
+
+    if (values.some((value) => value.includes("terrass"))) return "terrass";
+    if (values.some((value) => value.includes("altan"))) return "altan";
+    if (values.some((value) => value.includes("uteplats"))) return "uteplats";
+    if (values.some((value) => value.includes("balkong"))) return "balkong";
+    if (propertyType.includes("villa") || propertyType.includes("radhus")) return "uteplats";
+    return "balkong";
+  })();
+
+  const uniqueSellingPoints = [
+    propertyData.uniqueSellingPoints,
+    propertyData.highlights,
+    propertyData.specialFeatures,
+    propertyData.otherInfo,
+  ]
+    .flatMap((value) => Array.isArray(value) ? value : typeof value === "string" ? value.split(/[,;\n]/) : [])
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  const dataQualityNotes: string[] = [];
+  if (!livingArea) dataQualityNotes.push("Boyta saknas eller är oklar.");
+  if (!rooms) dataQualityNotes.push("Antal rum saknas eller är oklart.");
+  if (!address) dataQualityNotes.push("Adress saknas eller är ofullständig.");
+  if (!price && propertyData.askingPrice) dataQualityNotes.push("Prisfältet är inte normaliserat.");
+  if (propertyData.balcony && propertyData.patio) dataQualityNotes.push("Underlaget nämner flera uteytor; använd konsekvent terminologi och undvik sammanblandning.");
+  if (/\b(balkong|terrass|altan|uteplats)\b.*\b(balkong|terrass|altan|uteplats)\b/i.test(rawDescription) && !preferredOutdoorTerm) {
+    dataQualityNotes.push("Uteytan beskrivs med flera termer i underlaget; välj en term och håll den genom hela texten.");
+  }
+  if (String(yearBuilt || "").includes("/") || String(yearBuilt || "").includes("-")) {
+    dataQualityNotes.push("Byggår eller årtal behöver skrivas försiktigt eftersom underlaget kan tolkas på flera sätt.");
+  }
+
+  const emphasisNotes = [
+    uniqueSellingPoints[0] ? `Ge störst utrymme åt: ${uniqueSellingPoints[0]}.` : null,
+    uniqueSellingPoints[1] ? `Nämn kortare men tydligt: ${uniqueSellingPoints[1]}.` : null,
+    dataQualityNotes.length > 0 ? "Tona ned eller utelämna uppgifter som markerats som oklara i data_quality_notes." : null,
+  ].filter(Boolean);
+
+  const disposition = deepClean({
+    property: {
+      type: propertyType,
+      address,
+      size: livingArea,
+      rooms,
+      bedrooms,
+      floor: propertyData.floor ?? null,
+      year_built: yearBuilt,
+      condition: propertyData.condition ?? null,
+      energy_class: propertyData.energyClass ?? null,
+      elevator: propertyData.elevator ?? null,
+      renovations: propertyData.renovations ?? null,
+      materials: {
+        floors: propertyData.flooring ?? propertyData.floors ?? null,
+        walls: propertyData.walls ?? null,
+        kitchen: propertyData.kitchen ?? null,
+        bathroom: propertyData.bathroom ?? null,
+      },
+      balcony: {
+        exists: propertyData.hasBalcony ?? propertyData.balcony ?? null,
+        direction: balconyDirection,
+        size: outdoorSize,
+        type: propertyData.balconyType ?? null,
+      },
+      ceiling_height: propertyData.ceilingHeight ?? null,
+      layout: propertyData.layout ?? propertyData.floorPlan ?? null,
+      storage: propertyData.storage ?? null,
+      heating: propertyData.heating ?? null,
+      parking: propertyData.parking ?? null,
+      special_features: propertyData.specialFeatures ?? null,
+      unique_selling_points: uniqueSellingPoints,
+      preferred_outdoor_term: preferredOutdoorTerm,
+      data_quality_notes: dataQualityNotes,
+      emphasis_notes: emphasisNotes,
+    },
+    economics: {
+      price,
+      fee,
+      price_per_kvm: pricePerKvm,
+      association: {
+        name: propertyData.brfName ?? propertyData.associationName ?? null,
+        status: propertyData.brfStatus ?? null,
+        renovations: propertyData.brfRenovations ?? null,
+      },
+    },
+    location: {
+      area: areaName,
+      municipality: propertyData.municipality ?? addressCity,
+      transport: propertyData.transport ?? null,
+      amenities: propertyData.amenities ?? null,
+      services: propertyData.services ?? null,
+      parking: propertyData.locationParking ?? null,
+    },
+    unique_features: uniqueSellingPoints,
+    risk_notes: dataQualityNotes,
+    data_quality_notes: dataQualityNotes,
+  });
+
+  const priceCategory = pricePerKvm
+    ? pricePerKvm > 80000 ? "premium"
+      : pricePerKvm < 40000 ? "budget"
+        : "standard"
+    : "standard";
+
+  const targetAudience = propertyType.includes("villa") || propertyType.includes("radhus")
+    ? ((rooms || 0) >= 5 ? "familjer" : "par eller mindre familjer")
+    : ((livingArea || 0) < 45 ? "förstagångsköpare eller singlar"
+      : (livingArea || 0) < 85 ? "par eller liten familj"
+        : "etablerade köpare eller familjer");
+
+  const tone_analysis = deepClean({
+    price_category: priceCategory,
+    location_category: propertyType.includes("villa") || propertyType.includes("radhus") ? "residential" : "urban",
+    target_audience: targetAudience,
+    writing_style: priceCategory === "premium" ? "sophisticated" : "professional",
+    key_selling_points: uniqueSellingPoints.slice(0, 3),
+    local_context: areaName || addressCity || null,
+    terminology_preferences: {
+      outdoor_space: preferredOutdoorTerm,
+    },
+    data_quality_notes: dataQualityNotes,
+    emphasis_strategy: emphasisNotes,
+  });
+
+  const writing_plan = deepClean({
+    opening: "Adress + typ + storlek + stark konkret detalj utan klyscha",
+    paragraphs: [
+      { id: "p1", goal: "Öppning", must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null].filter(Boolean), allowed_flair: uniqueSellingPoints[0] || null },
+      { id: "p2", goal: "Planlösning och rum", must_include: [propertyData.layout, rooms ? `${rooms} rum` : null].filter(Boolean), do_not_include: dataQualityNotes.length > 0 ? ["oklara planlösningspåståenden"] : [] },
+      { id: "p3", goal: "Kök, badrum och material", must_include: [propertyData.kitchen, propertyData.bathroom, propertyData.flooring].filter(Boolean), do_not_include: [] },
+      { id: "p4", goal: "Uteplats och övrigt", must_include: [preferredOutdoorTerm, outdoorSize, balconyDirection, propertyData.parking].filter(Boolean), do_not_include: ["blandad balkong/terrass/altan-terminologi"] },
+      { id: "p5", goal: "Läge", must_include: [areaName, propertyData.transport, propertyData.amenities].filter(Boolean), do_not_include: ["påhittade områdespåståenden"] },
+    ],
+    claims: [
+      livingArea ? { claim: `Boyta om ${livingArea} kvm`, evidence_path: "property.size", evidence_value: livingArea } : null,
+      rooms ? { claim: `${rooms} rum`, evidence_path: "property.rooms", evidence_value: rooms } : null,
+      yearBuilt ? { claim: `Byggår ${yearBuilt}`, evidence_path: "property.year_built", evidence_value: yearBuilt } : null,
+      outdoorSize ? { claim: `${preferredOutdoorTerm} ${outdoorSize}`, evidence_path: "property.balcony.size", evidence_value: outdoorSize } : null,
+      balconyDirection ? { claim: `${preferredOutdoorTerm} i ${balconyDirection}`, evidence_path: "property.balcony.direction", evidence_value: balconyDirection } : null,
+    ].filter(Boolean),
+    must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null, areaName].filter(Boolean),
+    missing_info: dataQualityNotes,
+    forbidden_phrases: ["erbjuder", "välkommen till", "här finns", "bjuder på", "präglas av", "generösa ytor"],
+    risk_notes: dataQualityNotes,
+    emphasis_notes: emphasisNotes,
+    terminology_lock: {
+      outdoor_space: preferredOutdoorTerm,
+    },
+  });
+
+  return { disposition, tone_analysis, writing_plan };
+}
 
 // === EXEMPELDATABAS — RIKSTÄCKANDE MÄKLARTEXTER ===
 // Kategoriserade efter BOSTADSTYP + STORLEK (fungerar för ALLA städer i Sverige)
@@ -1539,448 +1857,63 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
 };
 
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
-const HEMNET_TEXT_PROMPT = `Du är en av Sveriges skickligaste fastighetsmäklare — 15 år i branschen, hundratals affärer avslutade. Du skriver Hemnet-annonser som faktiskt säljer: klyschfritt, specifikt, mänskligt. Tänk dig att du just gått igenom objektet och sätter dig ner för att skriva en annons du är stolt över — varje mening vald med omsorg, varje detalj strategiskt framlyft. Studera MATCHADE EXEMPEL i user-meddelandet och imitera den stilen — det är din bästa guide.
+const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare. Skriv en Hemnet-text som är klyschfri, konkret, mänsklig och publiceringsnära.
 
-# SMART SLUTLEDNING (det här skiljer bra från mediokra mäklartexter)
-Fakta i dispositionen kan berätta mer än de säger rakt ut. Dra korrekta slutsatser:
-- Byggår 1910–1940 + parkett → troligen originalparkett → skriv "originalparkett" om det stämmer med materialbeskrivningen
-- Byggår 1960–1975 + renoverat kök/badrum → totalrenovering → nämn renoveringsår konkret
-- Balkong söderläge → konkret fördel för köparen → skriv "Balkongen vetter mot söder"
-- Takhöjd ≥ 2,70 m → värt att nämna med exakt mått
-- Hiss + hög våning → lyft det (köpargruppsanpassat)
-- Pris/kvm > 80 000 → premiuobjekt → fler detaljer om material, märken, finish
-- Pris/kvm < 40 000 → budgetobjekt → betona läge, potential, kommunikationer
-MEN: Hitta ALDRIG på fakta som inte finns i dispositionen. Slutled bara från vad som faktiskt anges.
+KRAV:
+- Utgå bara från dispositionen och verifierbara fakta.
+- Börja med adress, ort, bostadstyp, storlek och en stark konkret detalj.
+- Varje mening ska tillföra ny information.
+- Terminologi måste vara konsekvent genom hela texten.
+- Om underlaget är motsägelsefullt eller oklart: skriv neutralt eller utelämna hellre än att chansa.
+- Undvik AI-ton, checklistekänsla och mekanisk rumsuppräkning.
+- Ge mer utrymme åt 1-2 verkliga styrkor och mindre åt standarddetaljer.
+- Sista stycket ska handla om läge. Ingen uppmaning, ingen känsloklyscha.
 
-# SÅ SKRIVER EN BRA MÄKLARE (imitera detta — det viktigaste avsnittet)
+UNDVIK ALLTID:
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, här kan du, präglas av, genomsyras av, plats för avkoppling, faciliteter.
 
-ÖPPNING — fånga läsaren med fakta, inte klyschor:
-BRA: "Drottninggatan 42, 4 tr, Uppsala. En trea om 74 kvm med genomgående ekparkett och balkong i söderläge."
-BRA: "Björkvägen 14, Löddeköpinge. Villa om 145 kvm på tomt om 750 kvm, renoverad 2021."
-DÅLIGT: "Drottninggatan 42, 4 tr, Uppsala. Trea om 74 kvm." (för torrt — missar chans att fånga)
+SPRÅK:
+- Naturlig svensk mäklarprosa.
+- Variera meningslängd och meningsstarter.
+- Max 1 bisats per stycke.
+- Inga snedstreck för att dölja osäkerhet.
+- Inga trasiga ord eller halvfärdiga formuleringar.
 
-RUMSBESKRIVNINGAR — fakta MED flöde, bind ihop meningar naturligt:
-BRA: "Hallen har garderob och leder in till vardagsrummet med tre fönster mot gatan. Ekparkett genomgående och takhöjd på 2,85 meter."
-BRA: "Köket renoverades 2021 med luckor från Ballingslöv och bänkskiva i komposit. Vitvaror från Siemens. Matplats för fyra vid fönstret."
-DÅLIGT: "Hallen har garderob. Vardagsrummet har tre fönster. Ekparkett. Takhöjd 2,85 meter." (staccato — låter maskinellt)
+EXTRA TEXTER:
+- Generera också headline, instagramCaption, showingInvitation, shortAd och socialCopy.
+- De ska kännas som skrivna av samma mäklare men anpassade till respektive format.
 
-SELEKTIV BETONING — ge mer utrymme åt starka detaljer:
-- Nytt kök från känt märke → 2-3 meningar (material, vitvaror, matplats)
-- Enkel hall med garderob → 1 kort mening, gå vidare
-- Balkong i söderläge → egen mening med storlek + väderstreck
-- Standard-badrum → 1 mening med renoveringsår och utrustning
-
-KOPPLINGSORD SOM FUNKAR (använd sparsamt, 3-5 per text):
-"leder in till", "med utsikt/utgång mot", "genomgående", "som renoverades [år]", "på [X] kvm"
-
-VAD EN TOPPMÄKLARE GÖR ANNORLUNDA (skriv som om texten tog en timme att skriva):
-- Väljer EN detalj som verkligen sticker ut och ger den 2-3 meningar — inte bara nämner den i förbifarten
-- Rör sig naturligt genom lägenheten i texten — läsaren ska nästan känna sig på visning
-- Varierar aktivt meningslängd: korta slag ("Balkong 5 kvm i söderläge.") varvas med längre beskrivande
-- Upprepar ALDRIG information — varje mening = ett nytt faktum som framför läsaren
-
-# STILREGLER
-- Första meningen: gatuadress + ort + typ + kvm + en fångande detalj. Max 2 meningar.
-- Varje mening ska tillföra ETT nytt faktum. Ingen upprepning, ingen utfyllnad.
-- Starta de flesta meningar med rumsnamn, material eller platsnamn — men VARIERA.
-- Använd artiklar naturligt: "En trea om 74 kvm", "ett kök från Ballingslöv" — inte "Trea om 74 kvm".
-- Max 1x "Det finns" i hela texten. Skriv om: "Förråd om 6 kvm i källaren" istället för "Det finns förråd".
-- Avstånd varieras: "8 minuters promenad", "i kvarteret", "200 meter", "ca 15 min med bil"
-- Slutar med LÄGE — aldrig med känsla eller uppmaning
-
-# FRASER SOM DÖDAR TEXTEN — riktiga mäklare skriver aldrig dessa
-erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd, rymlig känsla
-vilket, som ger en, för den som, i hjärtat av, skapar en känsla, bidrar till, förstärker, inte bara...utan också
-kontakta oss, boka visning, missa inte, välkommen till, välkommen hem, här finns, här kan du, här möts du
-Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
-faciliteter, njut av, härlig plats för, plats för avkoppling
-
-# MENINGSRYTM
-- VARIERA längd: 4–14 ord. Blanda korta fakta ("Balkong 5 kvm i söderläge.") med längre beskrivande ("Köket renoverades 2022 med luckor från Ballingslöv och bänkskiva i komposit.").
-- Starta varje mening med NYTT subjekt: rumsnamn, material, platsnamn, årtal.
-- Max 2x samma meningsstart i hela texten.
-- Max 1 bisats per stycke. Föredra punkt + ny mening.
-- VARIERA aktiv/passiv: "Köket har induktionshäll" (aktiv) / "Köket renoverades 2022" (passiv) → naturligare flöde.
-- UNDVIK staccato: om 3+ meningar i rad är under 5 ord, bind ihop två med "och" eller "med".
-
-# STRUKTUR
-1. ÖPPNING: Gatuadress, ort, typ, kvm, rum. MAX 2 meningar.
-2. PLANLÖSNING: Hall → vardagsrum. Takhöjd (om ≥2,50m — med exakt mått), golv, ljus.
-3. KÖK: Märke, årtal, bänkskiva, vitvaror — BARA från dispositionen.
-4. SOVRUM: Antal, storlek, garderober.
-5. BADRUM: Renoveringsår, material, utrustning.
-6. UTEPLATS: Storlek kvm, väderstreck.
-7. ÖVRIGT: Förråd, garage, golvvärme, energiklass — UTAN "Det finns".
-8. FÖRENING: BRF-namn, avgift, stambyte — om det finns.
-9. LÄGE: Platser med namn + avstånd. VARIERA format. Hitta inte på.
-Saknas info → HOPPA ÖVER punkten. Hitta ALDRIG på.
-
-# EXTRA TEXTER — VIKTIGT: dessa ska låta som en människa, inte som AI
-
-RUBRIK (headline, max 70 tecken):
-Välj den STARKASTE konkreta egenskapen — inte den mest uppenbara.
-INTE: "Lägenhet i Vasastan" (för generisk)
-INTE: "Välplanerad och ljus trea" (adjektivpar = AI-signal)
-BRA: "Upplandsgatan 12 — Trea med originalparkett och tyst innergård"
-BRA: "Björkvägen 8 — Villa med dubbelgarage och 940 kvm tomt"
-
-SOCIALT INLÄGG — Instagram & Facebook (instagramCaption):
-Skriv 4-6 meningar precis som en mäklare skriver när de delar ett objekt på Instagram eller Facebook — direkt, personligt, utan säljsnack.
-- Börja med gatunamnet och den starkaste konkreta egenskapen direkt (bara fakta + känsla, aldrig "nu är det dags" eller liknande)
-- Nämn läget konkret (stadsdelens karaktär, inte bara "centralt" eller "ett populärt område")
-- Avsluta med storlek och pris om det finns i dispositionen
-- Inga emoji, inga utropstecken — professionell men mänsklig ton
-- Undvik ALL marknadsföringsspråk: "unikt tillfälle", "drömhem", "fantastisk", "missa inte"
-- 5 hashtags på EGEN rad: stadsnamn, stadsdel (om känd), bostadstyp, #Hemnet, #TillSalu
-Ex: "Upplandsgatan 12, Vasastan. Trea om 78 kvm med originalparkett från 1932 och utsikt mot den tysta innergården. Köket renoverat 2019 med Siemens-vitvaror. Badrum från 2020. BRF Vasahem, avgift 3 800 kr/mån.
-Vasastan är ett av Stockholms mest efterfrågade områden — matbutik 100 meter, tunnelbana 4 minuter.
-
-#Stockholm #Vasastan #Lägenhet #Hemnet #TillSalu"
-
-VISNINGSINBJUDAN (showingInvitation):
-Skriv som ett kort, faktabaserat meddelande — tänk: ett SMS från mäklaren till intressenter.
-- Börja: "Visning — [gatuadress]"
-- Rad 2: typ + kvm + 2 konkreta höjdpunkter (aldrig vaga)
-- Inga uppmaningar, inga "välkommen", inga klyschor
-- Avsluta med Tid/Plats/Anmälan på separata rader
-Ex: "Visning — Upplandsgatan 12, Vasastan.
-Trea om 78 kvm med originalparkett och renoverat badrum 2020.
-
-Tid: [TID]
-Plats: Upplandsgatan 12, 3 tr
-Anmälan: [KONTAKT]"
-
-KORTANNONS (shortAd, max 40 ord):
-Faktapåstående, inte säljtext. Tänk: rubrik i en tidning.
-Ex: "Upplandsgatan 12, Vasastan. Trea, 78 kvm. Originalparkett 1932. Renoverat 2019–2020. BRF, avgift 3 800 kr/mån."
-
-SOCIALCOPY (socialCopy, max 280 tecken):
-Twitter/LinkedIn-stil. En mening om objektet + en om läget.
-Ex: "Upplandsgatan 12 i Vasastan — trea om 78 kvm med originalparkett från 1932 och renoverat kök och badrum. Tunnelbana 4 minuter."
-
-# OUTPUT (JSON)
-{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Hemnet-texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram-text + hashtags på EGEN rad","showingInvitation":"Visningsinbjudan","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Exakt målgrupp med motivering","area_advantage":"Konkret lägesfördel","pricing_factors":"Vad höjer/sänker värdet"},"missing_info":["Vilken info saknas och varför den hade hjälpt"],"text_tips":["Konkreta förbättringstips för mäklaren"]}
-
-# LÄS DETTA SIST — DET VIKTIGASTE
-
-1. Börja med gatuadressen + "En trea om..." (med artikel). ALDRIG "Välkommen", "Här", "Denna", "I".
-2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen — men SLUTLED gärna från fakta.
-3. NOLL universellt förbjudna ord: "erbjuder", "bjuder på", "generös", "vilket", "präglas av". Följ TEXTSTIL-sektionen för vilka beskrivande ord som är OK.
-4. Varje mening = ny fakta. Noll utfyllnad. Noll upprepning.
-5. VARIERA meningsstarter. Max 2x samma start i hela texten. Max 1x "Det finns".
-6. BIND IHOP meningar naturligt — undvik staccato (3+ korta meningar i rad). Använd "och", "med", "leder in till".
-7. Sista stycket = LÄGE. Aldrig känsla, aldrig uppmaning.
-8. De extra texterna (Instagram, visning, kortannons) ska kännas mänskliga och specifika — inte som copy-paste från AI.
-9. Generera ALLA fält i JSON.
-10. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.`;
+OUTPUT:
+Svara med JSON och fyll alla fält.`;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du är en av Sveriges skickligaste fastighetsmäklare — 15 år i branschen, hundratals affärer avslutade. Du skriver objektbeskrivningar för Booli och egna mäklarsidor: klyschfritt, specifikt, mänskligt. Tänk dig att du just gått igenom objektet och sätter dig ner för att skriva en text du är stolt över — varje rum beskrivet med precision, varje säljpunkt väl vald. Studera MATCHADE EXEMPEL och imitera den stilen. Booli tillåter mer detalj och pris.
+const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk fastighetsmäklare. Skriv en längre objektbeskrivning för Booli eller egen mäklarsida: konkret, trovärdig, mänsklig och detaljrik utan AI-klyschor.
 
-# SMART SLUTLEDNING (det här skiljer bra från mediokra mäklartexter)
-Fakta i dispositionen kan berätta mer än de säger rakt ut. Dra korrekta slutsatser:
-- Byggår 1910–1940 + parkett → troligen originalparkett → nämn "originalparkett" om materialbeskrivningen bekräftar det
-- Byggår 1960–1975 + renoverat kök/badrum → nämn renoveringsår konkret
-- Balkong söderläge → skriv "Balkongen vetter mot söder" (aldrig "sol hela dagen")
-- Takhöjd ≥ 2,70 m → värt att nämna med exakt mått
-- Stor tomt + villa → lyft specifika ytor (tomt kvm, uteplats kvm)
-- Pris/kvm > 80 000 → premiumobjekt → fler detaljer om material, märken, finish
-- Pris/kvm < 40 000 → betona läge, potential, kommunikationer
-MEN: Hitta ALDRIG på fakta. Slutled bara från vad som faktiskt anges.
+KRAV:
+- Utgå bara från dispositionen och verifierbara fakta.
+- Börja med adress, ort, bostadstyp, storlek och en stark konkret detalj.
+- Varje mening ska tillföra ny information.
+- Terminologi måste vara konsekvent genom hela texten.
+- Om underlaget är motsägelsefullt eller oklart: skriv neutralt eller utelämna hellre än att chansa.
+- Undvik mekanisk rumsuppräkning. Ge mer utrymme åt verkliga styrkor.
+- Avsluta med läge och pris om pris finns.
 
-# SÅ SKRIVER EN BRA MÄKLARE (imitera detta — det viktigaste avsnittet)
+UNDVIK ALLTID:
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, här kan du, präglas av, genomsyras av, plats för avkoppling, faciliteter.
 
-ÖPPNING — fånga läsaren med fakta, inte klyschor:
-BRA: "Tallvägen 8, Djursholm. En villa om 180 kvm på tomt om 920 kvm, tillbyggd 2015 med nytt kök och altan i västerläge."
-BRA: "Rönnvägen 12, 1 tr, Malmö. Tvåa om 62 kvm med balkong i söderläge och golvvärme i badrummet."
-DÅLIGT: "Tallvägen 8, Djursholm. Villa om 180 kvm." (för torrt — missar chans att fånga)
+SPRÅK:
+- Naturlig svensk mäklarprosa.
+- Variera meningslängd och meningsstarter.
+- Max 1 bisats per stycke.
+- Inga snedstreck för att dölja osäkerhet.
+- Inga trasiga ord eller halvfärdiga formuleringar.
 
-RUMSBESKRIVNINGAR — fakta MED flöde:
-BRA: "Entréplan med hall, vardagsrum och kök i öppen planlösning. Vardagsrummet har eldstad och utgång till altanen. Ekparkett genomgående."
-BRA: "Köket är från HTH 2015 med bänkskiva i granit och induktionshäll. Matplats för sex vid fönstret mot trädgården."
-DÅLIGT: "Entréplan. Hall. Vardagsrum med eldstad. Kök. Ekparkett." (staccato — låter maskinellt)
+EXTRA TEXTER:
+- Generera också headline, instagramCaption, showingInvitation, shortAd och socialCopy.
+- De ska kännas som skrivna av samma mäklare men anpassade till respektive format.
 
-SELEKTIV BETONING — ge mer utrymme åt starka detaljer:
-- Nytt kök från känt märke → 2-3 meningar
-- Enkel hall → 1 kort mening
-- Stor tomt med uteplats → lyft specifika ytor och väderstreck
-- Standard-badrum → 1 mening
-
-KOPPLINGSORD SOM FUNKAR (använd sparsamt, 3-5 per text):
-"leder in till", "med utgång mot", "genomgående", "som renoverades [år]", "på [X] kvm"
-
-VAD EN TOPPMÄKLARE GÖR ANNORLUNDA (skriv som om texten tog en timme att skriva):
-- Väljer EN detalj som verkligen sticker ut och ger den 2-3 meningar — inte bara nämner den i förbifarten
-- Rör sig naturligt genom huset/lägenheten i texten — läsaren ska nästan känna sig på visning
-- Varierar aktivt meningslängd: korta slag varvas med längre beskrivande meningar
-- Upprepar ALDRIG information — varje mening = ett nytt faktum som framför läsaren
-
-# STILREGLER
-- Första meningen: gatuadress + ort + typ + kvm + en fångande detalj. Max 2 meningar.
-- Varje mening ska tillföra ETT nytt faktum. Ingen upprepning, ingen utfyllnad.
-- Starta de flesta meningar med rumsnamn, material eller platsnamn — men VARIERA.
-- Använd artiklar naturligt: "En villa om 180 kvm", "ett kök från HTH" — inte bara "Villa om 180 kvm".
-- Max 1x "Det finns" i hela texten. Skriv om: "Förråd om 12 kvm vid garaget" istället för "Det finns förråd".
-- Avstånd varieras: "5 minuter", "400 meter", "ca 10 minuters promenad"
-- Slutar med LÄGE + PRIS — aldrig känsla
-
-# FRASER SOM DÖDAR TEXTEN — riktiga mäklare skriver aldrig dessa
-erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd, rymlig känsla
-vilket, som ger en, för den som, i hjärtat av, skapar en känsla, bidrar till, förstärker, inte bara...utan också
-kontakta oss, boka visning, missa inte, välkommen till, välkommen hem, här finns, här kan du, här möts du
-Det finns även, Det finns också, -möjligheter (förvaringsmöjligheter etc)
-faciliteter, njut av, härlig plats för, plats för avkoppling
-
-# MENINGSRYTM
-- VARIERA längd: 4–14 ord. Blanda korta fakta med längre beskrivande meningar.
-- Starta varje mening med NYTT subjekt: rumsnamn, material, platsnamn, årtal.
-- Max 2x samma meningsstart i hela texten.
-- Max 1 bisats per stycke. Föredra punkt + ny mening.
-- VARIERA aktiv/passiv: "Köket har..." / "Köket renoverades 2022" → naturligare flöde.
-- UNDVIK staccato: bind ihop korta fakta med "och" eller "med" när 3+ korta meningar hamnar i rad.
-
-# STRUKTUR (mer detalj än Hemnet — inkludera pris)
-1. ÖPPNING: Gatuadress, ort, typ, kvm, rum. MAX 2 meningar.
-2. PLANLÖSNING: Hall → vardagsrum. Takhöjd (med exakt mått om ≥2,50m), golv, ljus.
-3. KÖK: Märke, årtal, bänkskiva, vitvaror, matplats.
-4. SOVRUM: Antal, storlek, garderober.
-5. BADRUM: Renoveringsår, material, utrustning.
-6. UTEPLATS: Storlek kvm, väderstreck.
-7. ÖVRIGT: Förråd, garage, golvvärme, energiklass — UTAN "Det finns".
-8. FÖRENING: BRF-namn, avgift, stambyte.
-9. LÄGE: Platser med namn + avstånd. VARIERA format.
-10. PRIS: Utgångspris om det finns.
-Saknas info → HOPPA ÖVER. Hitta ALDRIG på.
-
-# EXTRA TEXTER — ska låta som en människa, inte som AI
-
-RUBRIK (headline, max 70 tecken):
-Välj den STARKASTE konkreta egenskapen.
-INTE: "Välplanerad villa med bra läge" (för generisk)
-BRA: "Tallvägen 8 — Villa med dubbelgarage och 920 kvm tomt"
-BRA: "Storgatan 4 — Trea med originalparkett och renoverat 2021"
-
-SOCIALT INLÄGG — Instagram & Facebook (instagramCaption):
-Skriv 4-6 meningar precis som en mäklare skriver när de delar ett objekt på Instagram eller Facebook.
-- Börja med gatunamnet och objektets starkaste konkreta egenskap direkt
-- Nämn läget specifikt (stadsdelens karaktär, inte bara "centralt" eller "lugnt")
-- Avsluta med storlek och pris om det finns i dispositionen
-- Inga emoji, inga utropstecken — professionell men mänsklig ton
-- Undvik ALL marknadsföringsspråk: "unikt tillfälle", "drömhem", "fantastisk", "missa inte"
-- 5 hashtags på EGEN rad
-Ex: "Tallvägen 8, Djursholm. Villa om 180 kvm med HTH-kök från 2015, dubbelgarage och altan i västerläge. Tomt 920 kvm. Djursholm är ett av norra Stockholms mest söka villaområden — lugnt, grönt, 20 minuter till city.
-
-#Djursholm #Villa #TillSalu #Hemnet #Stockholm"
-
-VISNINGSINBJUDAN (showingInvitation):
-Faktabaserat SMS-format från mäklaren till intressenter.
-- Börja: "Visning — [gatuadress]"
-- Rad 2: typ + kvm + 2 konkreta höjdpunkter med specifika detaljer
-- Inga klyschor, inga uppmaningar
-- Avsluta med Tid/Plats/Anmälan
-Ex: "Visning — Tallvägen 8, Djursholm.
-Villa om 180 kvm med HTH-kök 2015 och altan i västerläge. Tomt 920 kvm. Dubbelgarage.
-
-Tid: [TID]
-Plats: Tallvägen 8
-Anmälan: [KONTAKT]"
-
-KORTANNONS (shortAd, max 40 ord):
-Faktapåstående. Tänk: rubrik i en tidning.
-Ex: "Tallvägen 8, Djursholm. Villa 180 kvm. HTH-kök 2015. Dubbelgarage. Tomt 920 kvm. Altan västerläge."
-
-SOCIALCOPY (socialCopy, max 280 tecken):
-En mening om objektet + en om läget.
-Ex: "Tallvägen 8 i Djursholm — villa om 180 kvm med HTH-kök och dubbelgarage på 920 kvm tomt. Lugnt villaområde 20 minuter från Stockholm city."
-
-# OUTPUT (JSON)
-{"highlights":["konkret säljpunkt 1","konkret säljpunkt 2","konkret säljpunkt 3"],"improvedPrompt":"Texten med stycken separerade av \\n\\n","headline":"Max 70 tecken","instagramCaption":"Instagram + hashtags på EGEN rad","showingInvitation":"Visningsinbjudan","shortAd":"Max 40 ord","socialCopy":"Max 280 tecken","analysis":{"target_group":"Exakt målgrupp med motivering","area_advantage":"Konkret lägesfördel","pricing_factors":"Vad höjer/sänker värdet"},"missing_info":["Saknad info och varför den hade hjälpt"],"text_tips":["Konkreta förbättringstips för mäklaren"]}
-
-# LÄS DETTA SIST — DET VIKTIGASTE
-
-1. Börja med gatuadressen + "En villa om..." (med artikel). ALDRIG "Välkommen", "Här", "Denna", "I".
-2. Hitta ALDRIG på. Varje påstående måste finnas i dispositionen — men SLUTLED gärna från fakta.
-3. NOLL universellt förbjudna ord: "erbjuder", "bjuder på", "generös", "vilket", "präglas av". Följ TEXTSTIL-sektionen för vilka beskrivande ord som är OK.
-4. Varje mening = ny fakta. Noll utfyllnad. Noll upprepning.
-5. VARIERA meningsstarter. Max 2x samma start i hela texten. Max 1x "Det finns".
-6. BIND IHOP meningar naturligt — undvik staccato (3+ korta meningar i rad). Använd "och", "med", "leder in till".
-7. Sista stycket = LÄGE + PRIS. Aldrig känsla, aldrig uppmaning.
-8. De extra texterna ska kännas mänskliga och specifika — inte som copy-paste från AI.
-9. Generera ALLA fält i JSON.
-10. ORDMÅLET i user-meddelandet är KRITISKT. Texten (improvedPrompt) MÅSTE vara inom angivet ordintervall. Om det står 300-450 ord, skriv MINST 300 ord. Utveckla rumsbeskrivningar, lägg till meningar om material, mått och detaljer från dispositionen tills du når ordmålet. Skriv ALDRIG under minsta ordmålet.
-
-Skriv som en riktig mäklare — kort, rakt, specifikt, mänskligt.`;
-
-// Lokal exempelmatchning — enkel typ+storlek, fungerar för ALLA städer i Sverige
-function matchExamples(disposition: any, _toneAnalysis: any): string[] {
-  const type = (disposition?.property?.type || 'lägenhet').toLowerCase();
-  const size = Number(disposition?.property?.size) || 0;
-
-  let candidates: { text: string, metadata: any }[] = [];
-
-  if (type.includes('villa')) {
-    candidates = [...EXAMPLE_DATABASE.villa];
-  } else if (type.includes('radhus')) {
-    candidates = [...EXAMPLE_DATABASE.radhus];
-  } else {
-    if (size > 0 && size < 55) {
-      candidates = [...EXAMPLE_DATABASE.small_apartment, ...EXAMPLE_DATABASE.medium_apartment];
-    } else if (size >= 85) {
-      candidates = [...EXAMPLE_DATABASE.large_apartment, ...EXAMPLE_DATABASE.medium_apartment];
-    } else {
-      candidates = [...EXAMPLE_DATABASE.medium_apartment, ...EXAMPLE_DATABASE.small_apartment];
-    }
-  }
-
-  // Sort by size similarity — closest match first (instead of blindly picking first 2)
-  if (size > 0) {
-    candidates.sort((a, b) => Math.abs(a.metadata.size - size) - Math.abs(b.metadata.size - size));
-  }
-
-  return candidates.slice(0, 3).map((ex) => ex.text);
-}
-
-// Strip null/empty values from objects to reduce noise in AI prompts
-function deepClean(obj: any): any {
-  if (Array.isArray(obj)) {
-    const cleaned = obj.map(deepClean).filter((v: any) => v != null && v !== "");
-    return cleaned.length > 0 ? cleaned : undefined;
-  }
-  if (obj && typeof obj === "object") {
-    const cleaned: any = {};
-    for (const [k, v] of Object.entries(obj)) {
-      const cv = deepClean(v);
-      if (cv !== undefined && cv !== null && cv !== "" && cv !== 0 && cv !== false) {
-        cleaned[k] = cv;
-      }
-    }
-    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
-  }
-  return obj;
-}
-
-// Bygg disposition direkt från strukturerad formulärdata — HOPPA ÖVER AI-extraktion
-function stripUnit(val: string | number | null | undefined): number {
-  if (val == null) return 0;
-  return Number(String(val).replace(/\s*(kvm|m²|kr|kr\/mån|kr\/år)\s*/gi, "").trim()) || 0;
-}
-function buildDispositionFromStructuredData(pd: any): { disposition: any, tone_analysis: any, writing_plan: any } {
-  const typeLabels: Record<string, string> = {
-    apartment: "lägenhet", house: "villa", townhouse: "radhus", villa: "villa",
-  };
-  const propertyType = typeLabels[pd.propertyType] || pd.propertyType || "lägenhet";
-  const size = stripUnit(pd.livingArea);
-
-  const disposition = {
-    property: {
-      type: propertyType,
-      address: pd.address || "",
-      size: size,
-      rooms: Number(pd.totalRooms) || 0,
-      bedrooms: Number(pd.bedrooms) || 0,
-      bathrooms: Number(pd.bathrooms) || 0,
-      floor: pd.floor || null,
-      year_built: pd.buildYear || null,
-      condition: pd.condition || null,
-      energy_class: pd.energyClass || null,
-      elevator: pd.elevator || false,
-      floors: pd.floors || null,
-      biarea: pd.biarea ? `${stripUnit(pd.biarea)} kvm` : null,
-      fastighetsbeteckning: pd.fastighetsbeteckning || null,
-      renovation_year: pd.renoveringsar || null,
-      tilltradesdag: pd.tilltradesdag || null,
-      materials: {
-        floors: pd.flooring || null,
-        kitchen: pd.kitchenDescription || null,
-        bathroom: pd.bathroomDescription || null,
-        construction: pd.konstruktionMaterial || null,
-        roof: pd.taktyp || null,
-      },
-      balcony: pd.balconyArea ? {
-        exists: true, direction: pd.balconyDirection || null, size: `${stripUnit(pd.balconyArea)} kvm`,
-      } : { exists: false },
-      layout: pd.layoutDescription || null,
-      storage: pd.storage ? [pd.storage] : [],
-      heating: pd.heating || null,
-      parking: pd.parking || null,
-      lot_area: pd.lotArea ? `${stripUnit(pd.lotArea)} kvm` : null,
-      garden: pd.gardenDescription || null,
-      special_features: pd.specialFeatures ? pd.specialFeatures.split(/[,\n]+/).map((s: string) => s.trim()).filter(Boolean) : [],
-      unique_selling_points: pd.uniqueSellingPoints || null,
-      other_info: pd.otherInfo || null,
-    },
-    economics: {
-      price: stripUnit(pd.price) || null,
-      fee: stripUnit(pd.monthlyFee) || null,
-      taxeringsvarde: stripUnit(pd.taxeringsvarde) || null,
-      tomtrattsavgald: stripUnit(pd.tomtrattsavgald) || null,
-      association: pd.brfName ? { name: pd.brfName } : null,
-    },
-    location: {
-      area: pd.area || null,
-      transport: pd.transport || null,
-      neighborhood: pd.neighborhood || null,
-      view: pd.view || null,
-    },
-  };
-
-  const price = disposition.economics.price;
-  let priceCategory = "standard";
-  if (price && size) {
-    const pricePerKvm = price / size;
-    if (pricePerKvm > 120000) priceCategory = "luxury";
-    else if (pricePerKvm > 80000) priceCategory = "premium";
-    else if (pricePerKvm < 30000) priceCategory = "budget";
-  }
-
-  // Detect premium views that should be highlighted
-  const premiumViews = /sjö|hav|vatten|park|skog|berg|utsikt/i;
-  const hasViewHighlight = pd.view && premiumViews.test(pd.view);
-
-  const tone_analysis = {
-    price_category: priceCategory,
-    target_audience: size > 100 ? "families" : size > 60 ? "couples" : "singles_couples",
-    writing_style: "professional",
-    condition_note: pd.condition || null,
-    key_selling_points: [
-      pd.uniqueSellingPoints,
-      hasViewHighlight ? `utsikt: ${pd.view}` : null,
-      pd.kitchenDescription ? "kök" : null,
-      pd.balconyArea ? "balkong/uteplats" : null,
-      pd.condition === "Nyskick" ? "nyskick" : null,
-      pd.renoveringsar ? `renoverat ${pd.renoveringsar}` : null,
-    ].filter(Boolean).slice(0, 4),
-  };
-
-  // Build a structured paragraph outline so even free-tier gets well-organized text
-  const paragraphs: string[] = [];
-  const floorInfo = pd.floors ? `, ${pd.floors}` : "";
-  paragraphs.push(`Öppning: ${pd.address}, ${propertyType} om ${size} kvm${pd.totalRooms ? `, ${pd.totalRooms} rum` : ""}${floorInfo}.`);
-  if (pd.layoutDescription) paragraphs.push("Planlösning: hall, vardagsrum, sovrum — rumsordning.");
-  if (pd.kitchenDescription) paragraphs.push("Kök: märke, material, vitvaror, matplats.");
-  if (pd.bathroomDescription) paragraphs.push("Badrum: material, utrustning, renoveringsår.");
-  if (pd.balconyArea) paragraphs.push(`Balkong/uteplats: ${stripUnit(pd.balconyArea)} kvm${pd.balconyDirection ? `, ${pd.balconyDirection}` : ""}.`);
-  if (pd.gardenDescription) paragraphs.push("Trädgård: storlek, uteplats, växter.");
-  const extras = [pd.storage && "förråd", pd.heating && "uppvärmning", pd.energyClass && "energiklass", pd.specialFeatures && "särskilda egenskaper"].filter(Boolean);
-  if (extras.length > 0) paragraphs.push(`Övrigt: ${extras.join(", ")}.`);
-  if (pd.area || pd.transport || pd.neighborhood) paragraphs.push("Läge: avstånd till kollektivtrafik, butiker, skolor — avsluta med läge.");
-
-  const writing_plan = {
-    opening: `${pd.address} — ${propertyType} om ${size} kvm`,
-    paragraph_outline: paragraphs,
-    must_include: [
-      pd.address && "adress", pd.livingArea && "storlek", pd.totalRooms && "rum",
-      pd.kitchenDescription && "kök", pd.bathroomDescription && "badrum",
-      Number(pd.bathrooms) > 1 && `${pd.bathrooms} badrum`,
-      pd.balconyArea && "balkong", pd.area && "läge",
-      pd.uniqueSellingPoints && "säljpunkter",
-      hasViewHighlight && "utsikt",
-    ].filter(Boolean),
-    forbidden_phrases: ["erbjuder", "perfekt för", "i hjärtat av", "vilket", "för den som", "välkommen", "bjuder på", "präglas av"],
-  };
-
-  return { disposition, tone_analysis, writing_plan };
-}
+OUTPUT:
+Svara med JSON och fyll alla fält.`;
 
 // Faktagranskning med kirurgisk korrigering — fixa BARA felen, bevara allt rätt
 const FACT_CHECK_PROMPT = `
@@ -2893,9 +2826,10 @@ REGLER:
 2. Byt BARA ut de markerade felen — rör INTE resten
 3. Om en fras ska tas bort: ta bort den och städa meningen grammatiskt
 4. Om en fras ska ersättas: byt ut den och behåll meningsstrukturen
-5. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är
+5. Behåll ALLA styckebrytningar (\n\n) exakt som de är
 6. Lägg ALDRIG till nya meningar eller information
-7. Svara med JSON: {"corrected_text": "hela texten med bara felen fixade"}
+7. Om texten innehåller trasiga ord eller avhuggna svenska ordformer måste du återställa dem till korrekt svenska
+8. Svara med JSON: {"corrected_text": "hela texten med bara felen fixade"}
 
 ERSÄTTNINGSTABELL:
 - "erbjuder" → "har"
@@ -2908,7 +2842,8 @@ ERSÄTTNINGSTABELL:
 - "ljus och luftig" → "ljus"
 - "stilrent och modernt" → "modernt"
 - Alla "X och Y"-adjektivpar → behåll bara det första
-- "Det finns även/också" → börja med vad som finns istället`,
+- "Det finns även/också" → börja med vad som finns istället
+- Trasiga ord som "södterass", "välsköför att", "användningssäför att" måste korrigeras till korrekt svenska ord`,
               },
               {
                 role: "user" as const,
