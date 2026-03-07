@@ -783,6 +783,9 @@ function checkWordCount(text: string, platform: string, targetMin?: number, targ
 function validateOptimizationResult(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number, style: WritingStyle = "balanced"): string[] {
   const violations: string[] = [];
   if (typeof result?.improvedPrompt === "string") {
+    if (isDispositionLikeOutput(result.improvedPrompt)) {
+      violations.push("Huvudtexten är en objektdisposition eller rå faktalista i stället för en löpande objektbeskrivning.");
+    }
     violations.push(...findRuleViolations(result.improvedPrompt, platform, style));
     violations.push(...checkWordCount(result.improvedPrompt, platform, targetMin, targetMax));
   }
@@ -794,6 +797,12 @@ function validateOptimizationResult(result: any, platform: string = "hemnet", ta
       for (const v of fieldViolations) {
         violations.push(`[${field}] ${v}`);
       }
+    }
+  }
+
+  for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
+    if (typeof result?.[field] === "string" && isDispositionLikeOutput(result[field])) {
+      violations.push(`[${field}] Är en disposition/faktalista i stället för färdig marknadstext.`);
     }
   }
 
@@ -1015,7 +1024,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
 
 // === QUALITY ANALYSIS FUNCTION ===
 function analyzeTextQuality(text: string): number {
-  if (!text || text.length < 50) return 0.1;
+  if (!text || text.trim().length < 50) return 0;
 
   let score = 0.5; // Base score
 
@@ -1110,7 +1119,86 @@ function analyzeTextQuality(text: string): number {
   // 12. Word count appropriateness
   if (words.length >= 100 && words.length <= 500) score += 0.03;
 
+  // 13. Hard penalty for disposition/raw-data layout instead of prose
+  const dispositionMarkers = [
+    'objektdisposition',
+    'grundinformation',
+    'planlösning & rum',
+    'läge & omgivning',
+    'försäljningsargument',
+    'särskilda egenskaper',
+    '===',
+    'typ:',
+    'adress:',
+    'boarea:',
+    'tomtarea:',
+  ];
+  const dispositionMarkerCount = dispositionMarkers.filter((marker) => lowerText.includes(marker)).length;
+  if (dispositionMarkerCount >= 3) {
+    score -= 0.45;
+  }
+
   return Math.max(0, Math.min(1, score));
+}
+
+function isDispositionLikeOutput(text: string): boolean {
+  if (!text) return false;
+
+  const normalized = text.toLowerCase();
+  const strongMarkers = [
+    'objektdisposition',
+    '=== grundinformation ===',
+    '=== ytor ===',
+    '=== byggnad ===',
+    '=== planlösning & rum ===',
+    '=== kök ===',
+    '=== badrum ===',
+    '=== läge & omgivning ===',
+    '=== försäljningsargument ===',
+    '=== trädgård & uteplats ===',
+    '=== särskilda egenskaper ===',
+  ];
+  const strongHitCount = strongMarkers.filter((marker) => normalized.includes(marker)).length;
+  if (strongHitCount >= 2) return true;
+
+  const colonFieldMarkers = [
+    'typ:',
+    'adress:',
+    'pris:',
+    'boarea:',
+    'tomtarea:',
+    'antal rum:',
+    'sovrum:',
+    'byggår:',
+    'energiklass:',
+    'kommunikationer:',
+    'parkering:',
+  ];
+  const colonHitCount = colonFieldMarkers.filter((marker) => normalized.includes(marker)).length;
+  const lineCount = text.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
+  const headingLineCount = text.split(/\r?\n/).filter((line) => /^={3,}|^[A-ZÅÄÖ\s&]+:$/.test(line.trim())).length;
+
+  return colonHitCount >= 5 || (headingLineCount >= 3 && lineCount >= 8);
+}
+
+function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, style: WritingStyle = "balanced", options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean }): string | null {
+  if (typeof text !== "string") return null;
+
+  let cleaned = cleanForbiddenPhrases(text, styleProfile, style).trim();
+  if (!cleaned) return null;
+  if (isDispositionLikeOutput(cleaned)) {
+    return options?.nullIfInvalid ? null : cleaned;
+  }
+
+  if (options?.allowParagraphs) {
+    cleaned = addParagraphs(cleaned);
+  }
+
+  return cleaned.trim() || null;
+}
+
+function getNonWordCountViolations(violations: string[]): string[] {
+  return violations.filter((v) => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
 }
 
 // Haversine distance between two lat/lng points in meters
@@ -1572,8 +1660,102 @@ function matchExamples(disposition: any, toneAnalysis: any): string[] {
   return selected;
 }
 
+function normalizeCommonSwedishRealEstateTypos(value: string): string {
+  return value
+    .replace(/\bterass\b/gi, (match) => match[0] === match[0].toUpperCase() ? "Terrass" : "terrass")
+    .replace(/\bjaccuzi\b/gi, (match) => match[0] === match[0].toUpperCase() ? "Jacuzzi" : "jacuzzi")
+    .replace(/\btilläggaisolering\b/gi, "tilläggsisolering")
+    .replace(/\bvälsköför att\b/gi, "välskött")
+    .replace(/\banvändningssäför att\b/gi, "användningssätt");
+}
+
+function sanitizeStructuredText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const text = normalizeCommonSwedishRealEstateTypos(String(value))
+    .replace(/\bNaN\s*(km|m|meter)?\b/gi, "")
+    .replace(/\bundefined\b/gi, "")
+    .replace(/\bnull\b/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s+\./g, ".")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (!text) return null;
+  if (/^(nan|undefined|null|okänd)$/i.test(text)) return null;
+  return text;
+}
+
+function sanitizeStructuredList(value: unknown): string[] {
+  const rawItems = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[,;\n]/)
+      : [];
+
+  const cleaned = rawItems
+    .map((item) => sanitizeStructuredText(item))
+    .filter((item): item is string => Boolean(item))
+    .map((item) => item.replace(/^[-–—]\s*/, "").trim())
+    .filter((item) => item.length > 1)
+    .filter((item) => !/\bnan\b/i.test(item))
+    .filter((item, index, array) => array.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+
+  return cleaned;
+}
+
+function normalizeOutdoorTerm(value: string | null, propertyType: string): string {
+  const normalized = (value || "").toLowerCase();
+  if (normalized.includes("terrass")) return "terrass";
+  if (normalized.includes("altan") || normalized.includes("trädäck")) return "altan";
+  if (normalized.includes("uteplats")) return "uteplats";
+  if (normalized.includes("balkong")) return "balkong";
+  if (propertyType.includes("villa") || propertyType.includes("radhus")) return "uteplats";
+  return "balkong";
+}
+
+function detectConflictingYears(values: Array<unknown>): string[] {
+  const years = values
+    .flatMap((value) => sanitizeStructuredList(value))
+    .flatMap((text) => Array.from(text.matchAll(/\b(19\d{2}|20\d{2})\b/g)).map((match) => match[1]));
+
+  return Array.from(new Set(years));
+}
+
+function resolveLocationAreaName(propertyData: Record<string, any>): string | null {
+  const candidates = [
+    propertyData.areaName,
+    propertyData.district,
+    propertyData.neighborhood,
+    propertyData.cityDistrict,
+    propertyData.locationArea,
+  ];
+
+  for (const candidate of candidates) {
+    const sanitized = sanitizeStructuredText(candidate);
+    if (!sanitized) continue;
+    if (/^\d+(?:[.,]\d+)?$/.test(sanitized)) continue;
+    if (/^\d+(?:[.,]\d+)?\s*kvm$/i.test(sanitized)) continue;
+    return sanitized;
+  }
+
+  return null;
+}
+
+function normalizeBooleanish(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1 ? true : value === 0 ? false : null;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["ja", "yes", "true", "1", "finns"].includes(normalized)) return true;
+    if (["nej", "no", "false", "0", "saknas"].includes(normalized)) return false;
+  }
+  return null;
+}
+
 function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
-  const propertyTypeRaw = String(propertyData.propertyType || propertyData.type || "lägenhet").toLowerCase();
+  const propertyTypeRaw = sanitizeStructuredText(propertyData.propertyType || propertyData.type || "lägenhet")?.toLowerCase() || "lägenhet";
   const propertyType = propertyTypeRaw === "apartment" ? "lägenhet" : propertyTypeRaw;
   const livingArea = Number(propertyData.livingArea ?? propertyData.area ?? propertyData.size) || null;
   const rooms = Number(propertyData.rooms) || null;
@@ -1581,33 +1763,25 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
   const price = Number(propertyData.price) || null;
   const fee = Number(propertyData.monthlyFee ?? propertyData.fee) || null;
   const pricePerKvm = price && livingArea ? Math.round(price / livingArea) : null;
-  const yearBuilt = propertyData.yearBuilt ?? propertyData.year_built ?? null;
-  const areaName = propertyData.area ?? propertyData.district ?? null;
-  const address = propertyData.address || "";
+  const yearBuilt = sanitizeStructuredText(propertyData.yearBuilt ?? propertyData.year_built ?? null);
+  const areaName = resolveLocationAreaName(propertyData);
+  const address = sanitizeStructuredText(propertyData.address) || "";
   const addressCity = address.split(",").pop()?.trim() || null;
-  const balconyDirection = propertyData.balconyDirection ?? propertyData.direction ?? null;
-  const outdoorSize = propertyData.balconySize ?? propertyData.outdoorSize ?? propertyData.patioSize ?? propertyData.terraceSize ?? null;
-  const rawDescription = [propertyData.description, propertyData.otherInfo, propertyData.layout].filter(Boolean).join(" ");
+  const balconyDirection = sanitizeStructuredText(propertyData.balconyDirection ?? propertyData.direction ?? null);
+  const outdoorSize = sanitizeStructuredText(propertyData.balconySize ?? propertyData.outdoorSize ?? propertyData.patioSize ?? propertyData.terraceSize ?? null);
+  const rawDescription = sanitizeStructuredText([propertyData.description, propertyData.otherInfo, propertyData.layout].filter(Boolean).join(" ")) || "";
 
-  const preferredOutdoorTerm = (() => {
-    const values = [
-      propertyData.preferredOutdoorTerm,
-      propertyData.outdoorType,
-      propertyData.balconyType,
-      propertyData.patioType,
-      propertyData.terraceType,
-      propertyData.description,
-      propertyData.otherInfo,
-      propertyData.layout,
-    ].filter(Boolean).map((value) => String(value).toLowerCase());
-
-    if (values.some((value) => value.includes("terrass"))) return "terrass";
-    if (values.some((value) => value.includes("altan"))) return "altan";
-    if (values.some((value) => value.includes("uteplats"))) return "uteplats";
-    if (values.some((value) => value.includes("balkong"))) return "balkong";
-    if (propertyType.includes("villa") || propertyType.includes("radhus")) return "uteplats";
-    return "balkong";
-  })();
+  const outdoorSignals = [
+    propertyData.preferredOutdoorTerm,
+    propertyData.outdoorType,
+    propertyData.balconyType,
+    propertyData.patioType,
+    propertyData.terraceType,
+    propertyData.description,
+    propertyData.otherInfo,
+    propertyData.layout,
+  ].map((value) => sanitizeStructuredText(value)).filter(Boolean) as string[];
+  const preferredOutdoorTerm = normalizeOutdoorTerm(outdoorSignals.join(" "), propertyType);
 
   const uniqueSellingPoints = [
     propertyData.uniqueSellingPoints,
@@ -1615,9 +1789,32 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     propertyData.specialFeatures,
     propertyData.otherInfo,
   ]
-    .flatMap((value) => Array.isArray(value) ? value : typeof value === "string" ? value.split(/[,;\n]/) : [])
-    .map((value) => String(value).trim())
-    .filter(Boolean);
+    .flatMap((value) => sanitizeStructuredList(value))
+    .filter((value) => value.length >= 3)
+    .filter((value) => !/^renoverat\s+kök$/i.test(value))
+    .filter((value) => !/^renoverat$/i.test(value));
+
+  const transport = sanitizeStructuredText(propertyData.transport ?? null);
+  const amenities = sanitizeStructuredList(propertyData.amenities);
+  const services = sanitizeStructuredList(propertyData.services);
+  const specialFeatures = sanitizeStructuredList(propertyData.specialFeatures);
+  const renovations = sanitizeStructuredList(propertyData.renovations);
+  const renovationYears = detectConflictingYears([
+    propertyData.renovations,
+    propertyData.kitchen,
+    propertyData.bathroom,
+    propertyData.otherInfo,
+  ]);
+  const kitchenText = sanitizeStructuredText(propertyData.kitchen);
+  const bathroomText = sanitizeStructuredText(propertyData.bathroom);
+  const flooringText = sanitizeStructuredText(propertyData.flooring ?? propertyData.floors);
+  const parkingText = sanitizeStructuredText(propertyData.parking);
+  const heatingText = sanitizeStructuredText(propertyData.heating);
+  const layoutText = sanitizeStructuredText(propertyData.layout ?? propertyData.floorPlan);
+  const storageList = sanitizeStructuredList(propertyData.storage);
+  const floorText = sanitizeStructuredText(propertyData.floor ?? null);
+  const elevatorValue = normalizeBooleanish(propertyData.elevator);
+  const balconyExists = normalizeBooleanish(propertyData.hasBalcony ?? propertyData.balcony);
 
   const dataQualityNotes: string[] = [];
   if (!livingArea) dataQualityNotes.push("Boyta saknas eller är oklar.");
@@ -1625,11 +1822,20 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
   if (!address) dataQualityNotes.push("Adress saknas eller är ofullständig.");
   if (!price && propertyData.askingPrice) dataQualityNotes.push("Prisfältet är inte normaliserat.");
   if (propertyData.balcony && propertyData.patio) dataQualityNotes.push("Underlaget nämner flera uteytor; använd konsekvent terminologi och undvik sammanblandning.");
-  if (/\b(balkong|terrass|altan|uteplats)\b.*\b(balkong|terrass|altan|uteplats)\b/i.test(rawDescription) && !preferredOutdoorTerm) {
+  if (/\b(balkong|terrass|altan|uteplats)\b.*\b(balkong|terrass|altan|uteplats)\b/i.test(rawDescription) && outdoorSignals.length > 1) {
     dataQualityNotes.push("Uteytan beskrivs med flera termer i underlaget; välj en term och håll den genom hela texten.");
   }
   if (String(yearBuilt || "").includes("/") || String(yearBuilt || "").includes("-")) {
     dataQualityNotes.push("Byggår eller årtal behöver skrivas försiktigt eftersom underlaget kan tolkas på flera sätt.");
+  }
+  if (!transport && typeof propertyData.transport === "string" && propertyData.transport.trim().length > 0) {
+    dataQualityNotes.push("Kommunikationsfältet innehöll ogiltiga eller ofullständiga värden och har tonats ned.");
+  }
+  if (amenities.length === 0 && typeof propertyData.amenities === "string" && propertyData.amenities.trim().length > 0) {
+    dataQualityNotes.push("Områdes-/platsdata var för brusig för att användas direkt i texten.");
+  }
+  if (renovationYears.length >= 2 && renovations.length > 0) {
+    dataQualityNotes.push(`Renoveringsuppgifter innehåller flera årtal (${renovationYears.join(", ")}); skriv neutralt och undvik exakt koppling om underlaget är oklart.`);
   }
 
   const emphasisNotes = [
@@ -1645,30 +1851,30 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
       size: livingArea,
       rooms,
       bedrooms,
-      floor: propertyData.floor ?? null,
+      floor: floorText,
       year_built: yearBuilt,
-      condition: propertyData.condition ?? null,
-      energy_class: propertyData.energyClass ?? null,
-      elevator: propertyData.elevator ?? null,
-      renovations: propertyData.renovations ?? null,
+      condition: sanitizeStructuredText(propertyData.condition ?? null),
+      energy_class: sanitizeStructuredText(propertyData.energyClass ?? null),
+      elevator: elevatorValue,
+      renovations,
       materials: {
-        floors: propertyData.flooring ?? propertyData.floors ?? null,
-        walls: propertyData.walls ?? null,
-        kitchen: propertyData.kitchen ?? null,
-        bathroom: propertyData.bathroom ?? null,
+        floors: flooringText,
+        walls: sanitizeStructuredText(propertyData.walls ?? null),
+        kitchen: kitchenText,
+        bathroom: bathroomText,
       },
       balcony: {
-        exists: propertyData.hasBalcony ?? propertyData.balcony ?? null,
+        exists: balconyExists,
         direction: balconyDirection,
         size: outdoorSize,
-        type: propertyData.balconyType ?? null,
+        type: sanitizeStructuredText(propertyData.balconyType ?? null),
       },
-      ceiling_height: propertyData.ceilingHeight ?? null,
-      layout: propertyData.layout ?? propertyData.floorPlan ?? null,
-      storage: propertyData.storage ?? null,
-      heating: propertyData.heating ?? null,
-      parking: propertyData.parking ?? null,
-      special_features: propertyData.specialFeatures ?? null,
+      ceiling_height: sanitizeStructuredText(propertyData.ceilingHeight ?? null),
+      layout: layoutText,
+      storage: storageList,
+      heating: heatingText,
+      parking: parkingText,
+      special_features: specialFeatures,
       unique_selling_points: uniqueSellingPoints,
       preferred_outdoor_term: preferredOutdoorTerm,
       data_quality_notes: dataQualityNotes,
@@ -1679,18 +1885,18 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
       fee,
       price_per_kvm: pricePerKvm,
       association: {
-        name: propertyData.brfName ?? propertyData.associationName ?? null,
-        status: propertyData.brfStatus ?? null,
-        renovations: propertyData.brfRenovations ?? null,
+        name: sanitizeStructuredText(propertyData.brfName ?? propertyData.associationName ?? null),
+        status: sanitizeStructuredText(propertyData.brfStatus ?? null),
+        renovations: sanitizeStructuredText(propertyData.brfRenovations ?? null),
       },
     },
     location: {
       area: areaName,
-      municipality: propertyData.municipality ?? addressCity,
-      transport: propertyData.transport ?? null,
-      amenities: propertyData.amenities ?? null,
-      services: propertyData.services ?? null,
-      parking: propertyData.locationParking ?? null,
+      municipality: sanitizeStructuredText(propertyData.municipality ?? null) ?? addressCity,
+      transport,
+      amenities,
+      services,
+      parking: sanitizeStructuredText(propertyData.locationParking ?? null),
     },
     unique_features: uniqueSellingPoints,
     risk_notes: dataQualityNotes,
@@ -1727,10 +1933,10 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     opening: "Adress + typ + storlek + stark konkret detalj utan klyscha",
     paragraphs: [
       { id: "p1", goal: "Öppning", must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null].filter(Boolean), allowed_flair: uniqueSellingPoints[0] || null },
-      { id: "p2", goal: "Planlösning och rum", must_include: [propertyData.layout, rooms ? `${rooms} rum` : null].filter(Boolean), do_not_include: dataQualityNotes.length > 0 ? ["oklara planlösningspåståenden"] : [] },
-      { id: "p3", goal: "Kök, badrum och material", must_include: [propertyData.kitchen, propertyData.bathroom, propertyData.flooring].filter(Boolean), do_not_include: [] },
-      { id: "p4", goal: "Uteplats och övrigt", must_include: [preferredOutdoorTerm, outdoorSize, balconyDirection, propertyData.parking].filter(Boolean), do_not_include: ["blandad balkong/terrass/altan-terminologi"] },
-      { id: "p5", goal: "Läge", must_include: [areaName, propertyData.transport, propertyData.amenities].filter(Boolean), do_not_include: ["påhittade områdespåståenden"] },
+      { id: "p2", goal: "Planlösning och rum", must_include: [layoutText, rooms ? `${rooms} rum` : null].filter(Boolean), do_not_include: dataQualityNotes.length > 0 ? ["oklara planlösningspåståenden"] : [] },
+      { id: "p3", goal: "Kök, badrum och material", must_include: [kitchenText, bathroomText, flooringText].filter(Boolean), do_not_include: [] },
+      { id: "p4", goal: "Uteplats och övrigt", must_include: [preferredOutdoorTerm, outdoorSize, balconyDirection, parkingText].filter(Boolean), do_not_include: ["blandad balkong/terrass/altan-terminologi"] },
+      { id: "p5", goal: "Läge", must_include: [areaName, transport, ...amenities.slice(0, 2)].filter(Boolean), do_not_include: ["påhittade områdespåståenden"] },
     ],
     claims: [
       livingArea ? { claim: `Boyta om ${livingArea} kvm`, evidence_path: "property.size", evidence_value: livingArea } : null,
@@ -2470,9 +2676,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           toneAnalysis = extractionResult.tone_analysis || {};
           writingPlan = extractionResult.writing_plan || {};
         } else {
-          disposition = { property: { type: "lägenhet", address: "Okänd" } };
-          toneAnalysis = { price_category: "standard" };
-          writingPlan = { opening: "Okänd adress" };
+          throw new Error("[Step 1] Extraktion misslyckades: kunde inte bygga disposition från fri text.");
         }
       }
 
@@ -2709,97 +2913,273 @@ Fakta i fokus med naturlig rytm och professionell ton.
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
-      const textCompletion = await openai.responses.create({
-        model: "gpt-5.2",
-        reasoning: { effort: reasoningEffort },
-        input: [
-          { role: "developer", content: systemContent },
-          { role: "user", content: userContent }
-        ],
-        max_output_tokens: 8000,
-        text: { format: { type: "json_object" } }
-      });
+      const wordTargetCenter = (targetWordMin + targetWordMax) / 2;
+      const candidateConfigs = [
+        { label: "primary", developerSuffix: "", effort: reasoningEffort },
+        { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta.", effort: "medium" as const },
+        { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism.", effort: "medium" as const },
+      ];
 
-      // Detect truncation — if output was truncated
-      if (textCompletion.status === "incomplete") {
-        console.warn("[Step 3] WARNING: Output truncated. Token limit hit.");
+      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high") => {
+        const completion = await openai.responses.create({
+          model: "gpt-5.2",
+          reasoning: { effort },
+          input: [
+            { role: "developer", content: `${systemContent}${developerSuffix}` },
+            { role: "user", content: userContent }
+          ],
+          max_output_tokens: 8000,
+          text: { format: { type: "json_object" } }
+        });
+
+        if (completion.status === "incomplete") {
+          console.warn(`[Step 3:${label}] WARNING: Output truncated. Token limit hit.`);
+        }
+
+        let candidateResult: any;
+        try {
+          candidateResult = safeJsonParse(completion.output_text || "{}");
+        } catch (e) {
+          const raw = completion.output_text || "";
+          const match = raw.match(/"improvedPrompt"\s*:\s*"([\s\S]*?)(?:"|$)/);
+          if (match) {
+            candidateResult = { improvedPrompt: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') };
+          } else {
+            throw new Error(`[Step 3:${label}] Modellen returnerade inte giltig JSON eller återvinningsbar improvedPrompt.`);
+          }
+        }
+
+        if (candidateResult.improvedPrompt && completion.status === "incomplete") {
+          const text = candidateResult.improvedPrompt;
+          const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
+          if (lastPeriod > text.length * 0.5) {
+            candidateResult.improvedPrompt = text.substring(0, lastPeriod + 1);
+          }
+        }
+
+        if (typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) {
+          throw new Error(`[Step 3:${label}] improvedPrompt saknas eller är tom.`);
+        }
+
+        if (isDispositionLikeOutput(candidateResult.improvedPrompt)) {
+          const retryAfterDispositionCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "medium" },
+            input: [
+              {
+                role: "developer",
+                content: `${systemContent}${developerSuffix}
+
+KRITISK STOPPREGEL:
+- Du skriver nu ENDAST färdig objektbeskrivning i löpande prosa.
+- Du får ALDRIG returnera disposition, råfakta, rubriker, sektioner, punktlista eller kolonformat.
+- Förbjudna format inkluderar exempelvis: "OBJEKTDISPOSITION", "GRUNDINFORMATION", "YTOR", "Typ:", "Adress:", "Boarea:".
+- Om du är osäker ska du ändå skriva sammanhängande objektbeskrivning, aldrig disposition.
+- JSON-svaret måste innehålla improvedPrompt som färdig marknadstext.`
+              },
+              {
+                role: "user",
+                content: `${userContent}
+
+OGILTIGT FÖRRA SVAR:
+Modellen returnerade disposition/råfakta i stället för löpande objektbeskrivning.
+
+KRAV FÖR DETTA FÖRSÖK:
+- improvedPrompt måste vara färdig objektsbeskrivning i stycken
+- inga rubriker
+- inga kolonrader
+- inga sektioner
+- ingen faktalista`
+              }
+            ],
+            max_output_tokens: 8000,
+            text: { format: { type: "json_object" } }
+          });
+
+          const retried = safeJsonParse(retryAfterDispositionCompletion.output_text || "{}");
+          if (typeof retried?.improvedPrompt === "string" && !isDispositionLikeOutput(retried.improvedPrompt)) {
+            candidateResult = { ...candidateResult, ...retried };
+          } else {
+            throw new Error(`[Step 3:${label}] Disposition-like output även efter omgenerering.`);
+          }
+        }
+
+        const sanitizedPrompt = sanitizeGeneratedMarketingField(candidateResult.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        if (!sanitizedPrompt) {
+          throw new Error(`[Step 3:${label}] improvedPrompt blev ogiltig efter sanering.`);
+        }
+
+        const sanitizedResult = { ...candidateResult, improvedPrompt: sanitizedPrompt };
+        const nonWordCountViolations = getNonWordCountViolations(validateOptimizationResult(sanitizedResult, platform, targetWordMin, targetWordMax, style));
+        const qualityScore = analyzeTextQuality(sanitizedPrompt);
+        const wordCount = sanitizedPrompt.split(/\s+/).filter(Boolean).length;
+        const wordDistancePenalty = Math.abs(wordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
+        const totalScore = qualityScore - (nonWordCountViolations.length * 0.08) - (wordDistancePenalty * 0.12);
+
+        return {
+          label,
+          result: sanitizedResult,
+          qualityScore,
+          nonWordCountViolations,
+          wordCount,
+          totalScore,
+        };
+      };
+
+      const candidatePool: Array<{
+        label: string;
+        result: any;
+        qualityScore: number;
+        nonWordCountViolations: string[];
+        wordCount: number;
+        totalScore: number;
+      }> = [];
+
+      for (const config of candidateConfigs) {
+        try {
+          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort);
+          candidatePool.push(candidate);
+          console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
+        } catch (e) {
+          console.warn(`[Step 3:${config.label}] Candidate failed:`, e);
+        }
       }
 
-      let result: any;
+      if (candidatePool.length === 0) {
+        throw new Error("[Step 3] Ingen giltig kandidat kunde genereras.");
+      }
+
+      let judgeChoiceLabel: string | null = null;
+      if (candidatePool.length > 1) {
+        try {
+          const judgeCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "medium" },
+            input: [
+              {
+                role: "developer",
+                content: `Du är kvalitetschef och toppmäklare. Välj den bästa objektbeskrivningen mellan flera kandidater.
+
+Välj den text som bäst uppfyller ALLT nedan:
+- låter som en mycket skicklig svensk fastighetsmäklare
+- är konkret, naturlig och publiceringsklar
+- har stark öppning och bra styckeflöde
+- lyfter rätt detaljer tidigt
+- känns mänsklig, selektiv och trygg
+- innehåller inga AI-klyschor eller faktalistekänsla
+
+Svara med JSON:
+{"chosen_label":"label","reason":"kort motivering"}`
+              },
+              {
+                role: "user",
+                content: JSON.stringify(candidatePool.map((candidate) => ({
+                  label: candidate.label,
+                  qualityScore: Number(candidate.qualityScore.toFixed(3)),
+                  nonWordCountViolations: candidate.nonWordCountViolations,
+                  wordCount: candidate.wordCount,
+                  text: candidate.result.improvedPrompt,
+                })), null, 2)
+              }
+            ],
+            max_output_tokens: 800,
+            text: { format: { type: "json_object" } }
+          });
+
+          const judged = safeJsonParse(judgeCompletion.output_text || "{}");
+          judgeChoiceLabel = typeof judged?.chosen_label === "string" ? judged.chosen_label : null;
+        } catch (e) {
+          console.warn("[Step 3 Judge] Candidate ranking failed, using local scoring:", e);
+        }
+      }
+
+      const selectedCandidate = [...candidatePool]
+        .sort((a, b) => {
+          const aScore = a.totalScore + (a.label === judgeChoiceLabel ? 0.15 : 0);
+          const bScore = b.totalScore + (b.label === judgeChoiceLabel ? 0.15 : 0);
+          return bScore - aScore;
+        })[0];
+
+      let result: any = selectedCandidate.result;
+
       try {
-        result = safeJsonParse(textCompletion.output_text || "{}");
-        console.log("[Step 3] Parsed OK. Keys:", Object.keys(result || {}), "improvedPrompt length:", (result.improvedPrompt || "").length);
-      } catch (e) {
-        console.error("[Step 3] Failed to parse AI response, attempting raw extraction:", e);
-        // Try to extract improvedPrompt from truncated JSON
-        const raw = textCompletion.output_text || "";
-        const match = raw.match(/"improvedPrompt"\s*:\s*"([\s\S]*?)(?:"|$)/);
-        if (match) {
-          result = { improvedPrompt: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') };
-          console.log("[Step 3] Recovered improvedPrompt from truncated JSON");
-        } else {
-          result = { improvedPrompt: prompt };
-        }
-      }
+        const polishCompletion = await openai.responses.create({
+          model: "gpt-5.2",
+          reasoning: { effort: "medium" },
+          input: [
+            {
+              role: "developer",
+              content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör.
 
-      // Truncation recovery: if text ends mid-word or mid-sentence, trim to last complete sentence
-      if (result.improvedPrompt && textCompletion.status === "incomplete") {
-        const text = result.improvedPrompt;
-        const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
-        if (lastPeriod > text.length * 0.5) {
-          result.improvedPrompt = text.substring(0, lastPeriod + 1);
-          console.log(`[Step 3] Trimmed truncated text from ${text.length} to ${result.improvedPrompt.length} chars (last complete sentence)`);
+UPPGIFT:
+Förfina en redan bra objektbeskrivning till publiceringsklar toppnivå.
+
+DU MÅSTE:
+- behålla ALLA fakta korrekta
+- inte hitta på något nytt
+- inte göra texten mer klyschig
+- inte skriva om till disposition, lista eller rubrikformat
+- förbättra öppning, rytm, selektiv betoning och övergångar
+- låta texten kännas skriven av en mycket skicklig svensk mäklare
+
+FÖRBÄTTRA SÄRSKILT:
+- första stycket
+- naturligt styckeflöde
+- mikro-rytm mellan meningar
+- att de starkaste detaljerna får rätt plats tidigt
+
+Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
+            },
+            {
+              role: "user",
+              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(result, null, 2)}`
+            }
+          ],
+          max_output_tokens: 5000,
+          text: { format: { type: "json_object" } }
+        });
+
+        const polishedRaw = safeJsonParse(polishCompletion.output_text || "{}");
+        const polishedText = sanitizeGeneratedMarketingField(polishedRaw?.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        if (polishedText) {
+          const polishedResult = {
+            ...result,
+            ...polishedRaw,
+            improvedPrompt: polishedText,
+          };
+          for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
+            polishedResult[field] = sanitizeGeneratedMarketingField(polishedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+          }
+
+          const currentAllViolations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style);
+          const polishedAllViolations = validateOptimizationResult(polishedResult, platform, targetWordMin, targetWordMax, style);
+          const currentViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style));
+          const polishedViolations = getNonWordCountViolations(validateOptimizationResult(polishedResult, platform, targetWordMin, targetWordMax, style));
+          const currentScore = analyzeTextQuality(result.improvedPrompt || "");
+          const polishedScore = analyzeTextQuality(polishedText);
+
+          if (polishedAllViolations.length <= currentAllViolations.length && (polishedViolations.length < currentViolations.length || polishedScore > currentScore + 0.02)) {
+            result = polishedResult;
+            console.log(`[Step 3 Polish] Accepted polished winner. Score ${currentScore.toFixed(2)} -> ${polishedScore.toFixed(2)}, violations ${currentViolations.length} -> ${polishedViolations.length}`);
+          } else {
+            console.log(`[Step 3 Polish] Kept selected candidate. Score ${currentScore.toFixed(2)} vs ${polishedScore.toFixed(2)}, violations ${currentViolations.length} vs ${polishedViolations.length}`);
+          }
         }
+      } catch (e) {
+        console.warn("[Step 3 Polish] Polishing failed, keeping selected candidate:", e);
       }
 
       sendProgress(5, 7, "Kontrollerar textkvalitet...");
-
-      // === QUALITY GATE: Analysera textkvalitet direkt ===
-      if (result.improvedPrompt) {
-        const qualityScore = analyzeTextQuality(result.improvedPrompt);
-        console.log(`[Quality Gate] Score: ${qualityScore.toFixed(2)} (threshold: 0.70)`);
-
-        if (qualityScore < 0.70) {
-          console.log(`[Quality Gate] Poor quality (${qualityScore.toFixed(2)}), retrying with reasoning effort "medium"...`);
-
-          try {
-            // Retry med responses API + reasoning "medium" för annorlunda output
-            // (chat.completions.create tappar reasoning/thinking → sämre regelefterlevnad)
-            const retryCompletion = await openai.responses.create({
-              model: "gpt-5.2",
-              reasoning: { effort: "medium" },
-              input: [
-                { role: "developer", content: systemContent },
-                { role: "user", content: userContent }
-              ],
-              max_output_tokens: 8000,
-              text: { format: { type: "json_object" } }
-            });
-
-            const retryResult = safeJsonParse(retryCompletion.output_text || "{}");
-            const retryScore = analyzeTextQuality(retryResult.improvedPrompt || "");
-
-            if (retryScore > qualityScore) {
-              console.log(`[Quality Gate] Retry improved score: ${retryScore.toFixed(2)} > ${qualityScore.toFixed(2)}`);
-              result = retryResult;
-            } else {
-              console.log(`[Quality Gate] Retry didn't improve, keeping original`);
-            }
-          } catch (e) {
-            console.warn("[Quality Gate] Retry failed, keeping original:", e);
-          }
-        }
-      }
+      console.log(`[Step 3] Selected candidate: ${selectedCandidate.label}. Score ${selectedCandidate.qualityScore.toFixed(2)}, violations ${selectedCandidate.nonWordCountViolations.length}, words ${selectedCandidate.wordCount}`);
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
-        result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile, style);
-        result.improvedPrompt = addParagraphs(result.improvedPrompt);
+        result.improvedPrompt = sanitizeGeneratedMarketingField(result.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
       }
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
-          result[field] = cleanForbiddenPhrases(result[field], personalStyle?.styleProfile, style);
+          result[field] = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
         }
       }
 
@@ -2810,7 +3190,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
         try {
           // Filtrera bort ordräknings-violations (kan inte fixas genom textredigering)
-          const textViolations = violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
+          const textViolations = getNonWordCountViolations(violations);
 
           if (textViolations.length > 0) {
             const correctionMessages = [
@@ -2867,13 +3247,20 @@ ERSÄTTNINGSTABELL:
               const wordDiff = Math.abs(originalWords - correctedWords);
 
               if (wordDiff / originalWords < 0.3) {
-                result.improvedPrompt = cleanForbiddenPhrases(corrected.corrected_text, personalStyle?.styleProfile, style);
-                result.improvedPrompt = addParagraphs(result.improvedPrompt);
-                console.log(`[Step 5] Surgical correction applied (${textViolations.length} violations fixed, ${wordDiff} words changed)`);
+                const sanitizedCorrected = sanitizeGeneratedMarketingField(corrected.corrected_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                if (sanitizedCorrected) {
+                  const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, targetWordMin, targetWordMax, style));
+                  if (correctedViolations.length < textViolations.length) {
+                    result.improvedPrompt = sanitizedCorrected;
+                    console.log(`[Step 5] Surgical correction applied (${textViolations.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
+                  } else {
+                    console.warn(`[Step 5] Correction did not reduce violations (${textViolations.length} -> ${correctedViolations.length}), keeping original`);
+                  }
+                }
               } else {
                 console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
                 // Kör ändå cleanForbiddenPhrases som fallback
-                result.improvedPrompt = cleanForbiddenPhrases(result.improvedPrompt, personalStyle?.styleProfile, style);
+                result.improvedPrompt = sanitizeGeneratedMarketingField(result.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
               }
             }
           }
@@ -2927,9 +3314,16 @@ REGLER:
             if (expanded.expanded_text) {
               const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
               if (expandedWordCount >= currentWordCount) {
-                result.improvedPrompt = cleanForbiddenPhrases(expanded.expanded_text, personalStyle?.styleProfile, style);
-                result.improvedPrompt = addParagraphs(result.improvedPrompt);
-                console.log(`[Step 5b] Expanded from ${currentWordCount} to ${expandedWordCount} words`);
+                const sanitizedExpanded = sanitizeGeneratedMarketingField(expanded.expanded_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                if (sanitizedExpanded) {
+                  const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, targetWordMin, targetWordMax, style));
+                  if (expandedViolations.length === 0 || expandedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style)).length) {
+                    result.improvedPrompt = sanitizedExpanded;
+                    console.log(`[Step 5b] Expanded from ${currentWordCount} to ${expandedWordCount} words`);
+                  } else {
+                    console.warn(`[Step 5b] Expansion introduced more violations, keeping original`);
+                  }
+                }
               }
             }
           } catch (e) {
@@ -2966,20 +3360,120 @@ REGLER:
           factCheckResult = safeJsonParse(factCheckCompletion.output_text || "{}");
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
-            result.improvedPrompt = cleanForbiddenPhrases(factCheckResult.corrected_text, personalStyle?.styleProfile, style);
-            result.improvedPrompt = addParagraphs(result.improvedPrompt);
-            console.log("[Step 6] Fact-check corrections applied");
+            const sanitizedFactChecked = sanitizeGeneratedMarketingField(factCheckResult.corrected_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+            if (sanitizedFactChecked) {
+              const factCheckedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedFactChecked }, platform, targetWordMin, targetWordMax, style));
+              if (factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style)).length) {
+                result.improvedPrompt = sanitizedFactChecked;
+                console.log("[Step 6] Fact-check corrections applied");
+              } else {
+                console.warn("[Step 6] Fact-check correction introduced new issues, keeping original");
+              }
+            }
           }
         } catch (e) {
           console.warn("[Step 6] Fact-check failed, continuing:", e);
         }
       }
 
+      // Auto-fill [TID] and [KONTAKT] placeholders in showing invitation
+      let finalShowingInvitation = result.showingInvitation || null;
+      if (finalShowingInvitation && propertyData) {
+        const tid = (propertyData.visningstid || "").trim();
+        const kontakt = [propertyData.maklarnamn, propertyData.maklartelefon].filter(Boolean).join(", ");
+        if (tid) finalShowingInvitation = finalShowingInvitation.replace(/\[TID\]/g, tid);
+        if (kontakt) finalShowingInvitation = finalShowingInvitation.replace(/\[KONTAKT\]/g, kontakt);
+      }
+
+      finalShowingInvitation = sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true });
+      result.showingInvitation = finalShowingInvitation;
+
+      for (const field of ['socialCopy', 'instagramCaption', 'shortAd', 'headline']) {
+        result[field] = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+      }
+
+      result.improvedPrompt = sanitizeGeneratedMarketingField(result.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+
+      sendProgress(7, 7, "Slutgranskar mäklarkvalitet...");
+
+      let finalBrokerAudit: any = null;
+      try {
+        const brokerAuditCompletion = await openai.responses.create({
+          model: "gpt-5.2",
+          reasoning: { effort: "medium" },
+          input: [
+            {
+              role: "developer",
+              content: `Du är kvalitetschef för svenska premiumannonser inom fastighetsförmedling.
+
+Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå.
+
+Krav:
+- naturlig svensk mäklarprosa
+- stark och konkret öppning
+- selektiv betoning av rätt detaljer
+- trovärdig, mänsklig, professionell ton
+- inga AI-klyschor eller mekaniskt språk
+- inga dispositionstendenser eller råfaktakänsla
+- bra styckeflöde och tydlig prioritering
+
+Svara med JSON:
+{
+  "publish_ready": true,
+  "broker_quality_score": 0.0,
+  "issues": ["kort lista över återstående problem"],
+  "verdict": "kort sammanfattning"
+}`
+            },
+            {
+              role: "user",
+              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}`
+            }
+          ],
+          max_output_tokens: 1200,
+          text: { format: { type: "json_object" } }
+        });
+
+        finalBrokerAudit = safeJsonParse(brokerAuditCompletion.output_text || "{}");
+      } catch (e) {
+        throw new Error(`[Final Broker Audit] Slutlig mäklargranskning misslyckades: ${e instanceof Error ? e.message : String(e)}`);
+      }
+
+      const finalViolations = validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style);
+      const finalNonWordCountViolations = getNonWordCountViolations(finalViolations);
+      const finalWordCountViolations = finalViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
+      if (typeof result?.improvedPrompt !== "string" || !result.improvedPrompt.trim()) {
+        throw new Error("[Final Gate] Huvudtext saknas efter pipelinebearbetning.");
+      }
+      if (isDispositionLikeOutput(result.improvedPrompt)) {
+        throw new Error("[Final Gate] Huvudtexten är fortfarande dispositionslik vid slutsvaret.");
+      }
+      if (finalNonWordCountViolations.length > 0) {
+        throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i huvudtexten: ${finalNonWordCountViolations.slice(0, 5).join(" | ")}`);
+      }
+      if (finalWordCountViolations.length > 0) {
+        throw new Error(`[Final Gate] Ordräkning utanför målintervallet: ${finalWordCountViolations.join(" | ")}`);
+      }
+      if (typeof finalBrokerAudit?.publish_ready !== "boolean") {
+        throw new Error("[Final Broker Audit] Slutgranskningen returnerade inte ett giltigt publish_ready-beslut.");
+      }
+      if (typeof finalBrokerAudit?.broker_quality_score !== "number") {
+        throw new Error("[Final Broker Audit] Slutgranskningen returnerade inte ett giltigt broker_quality_score.");
+      }
+      if (finalBrokerAudit && finalBrokerAudit.publish_ready === false) {
+        const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
+        throw new Error(`[Final Broker Audit] Texten är inte publiceringsklar: ${auditIssues}`);
+      }
+      if (finalBrokerAudit.broker_quality_score < 0.78) {
+        const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
+        throw new Error(`[Final Broker Audit] Broker quality score för låg (${finalBrokerAudit.broker_quality_score}). ${auditIssues}`);
+      }
+
       // Spara resultat
       await storage.createOptimization({
         userId: user.id,
         originalPrompt: prompt,
-        improvedPrompt: result.improvedPrompt || prompt,
+        improvedPrompt: result.improvedPrompt,
         category: type,
         improvements: [
           result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
@@ -2992,7 +3486,7 @@ REGLER:
         socialCopy: result.socialCopy || null,
         headline: result.headline || null,
         instagramCaption: result.instagramCaption || null,
-        showingInvitation: result.showingInvitation || null,
+        showingInvitation: finalShowingInvitation || null,
         shortAd: result.shortAd || null,
       });
 
@@ -3052,25 +3546,20 @@ Svara med JSON i formatet:
         }
       }
 
-      sendProgress(7, 7, "Finsliper och sparar...");
-
       // Increment usage after successful generation
       await storage.incrementUsage(user.id, 'texts');
 
       const tips = result.text_tips || result.pro_tips || [];
-
-      // Auto-fill [TID] and [KONTAKT] placeholders in showing invitation
-      let showingInvitation = result.showingInvitation || null;
-      if (showingInvitation && propertyData) {
-        const tid = (propertyData.visningstid || "").trim();
-        const kontakt = [propertyData.maklarnamn, propertyData.maklartelefon].filter(Boolean).join(", ");
-        if (tid) showingInvitation = showingInvitation.replace(/\[TID\]/g, tid);
-        if (kontakt) showingInvitation = showingInvitation.replace(/\[KONTAKT\]/g, kontakt);
-      }
+      const finalFactCheckPassed = finalNonWordCountViolations.length === 0;
+      const finalFactCheckIssues = finalNonWordCountViolations.map((issue) => ({ quote: issue, reason: "" }));
+      const finalQualityScore = factCheckResult?.quality_score ?? null;
+      const finalBrokerTips = factCheckResult?.broker_tips || [];
+      const finalBrokerAuditScore = typeof finalBrokerAudit?.broker_quality_score === "number" ? finalBrokerAudit.broker_quality_score : null;
+      const finalBrokerAuditVerdict = typeof finalBrokerAudit?.verdict === "string" ? finalBrokerAudit.verdict : null;
 
       const responseData = {
         originalPrompt: prompt,
-        improvedPrompt: result.improvedPrompt || prompt,
+        improvedPrompt: result.improvedPrompt,
         highlights: result.highlights || [],
         analysis: result.analysis || {},
         improvements: result.missing_info || [],
@@ -3080,23 +3569,21 @@ Svara med JSON i formatet:
         socialCopy: result.socialCopy || null,
         headline: result.headline || null,
         instagramCaption: result.instagramCaption || null,
-        showingInvitation,
+        showingInvitation: finalShowingInvitation,
         shortAd: result.shortAd || null,
         improvement_suggestions: improvementSuggestions,
-        factCheck: factCheckResult ? {
-          fact_check_passed: factCheckResult.fact_check_passed !== false,
-          issues: (factCheckResult.issues || []).map((issue: any) =>
-            typeof issue === "string" ? { quote: issue, reason: "" } : issue
-          ),
-          quality_score: factCheckResult.quality_score ?? null,
-          broker_tips: factCheckResult.broker_tips || [],
-        } : {
-          fact_check_passed: violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord")).length === 0,
-          issues: violations.filter(v => !v.startsWith("För få ord") && !v.startsWith("För många ord")).map(v => ({ quote: v, reason: "" })),
-          quality_score: null,
-          broker_tips: [],
+        broker_audit: {
+          publish_ready: finalBrokerAudit?.publish_ready !== false,
+          broker_quality_score: finalBrokerAuditScore,
+          verdict: finalBrokerAuditVerdict,
         },
-        wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+        factCheck: {
+          fact_check_passed: finalFactCheckPassed,
+          issues: finalFactCheckIssues,
+          quality_score: finalQualityScore,
+          broker_tips: finalBrokerTips,
+        },
+        wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
         model: aiModel,
       };
 
@@ -3128,7 +3615,8 @@ Svara med JSON i formatet:
       return res.status(403).json({ message: "Text-omskrivning är endast för Pro/Premium-användare" });
     }
     try {
-      const { selectedText, fullText, instruction } = req.body;
+      const { selectedText, fullText, instruction, writingStyle } = req.body;
+      const style: WritingStyle = writingStyle === "factual" || writingStyle === "selling" ? writingStyle : "balanced";
       if (!selectedText || !fullText || !instruction) {
         return res.status(400).json({ message: "Markerad text, fulltext och instruktion krävs" });
       }
@@ -3165,6 +3653,8 @@ Svara med JSON i formatet:
           {
             role: "developer",
             content: `Du är en erfaren fastighetsmäklare i Sverige. Du redigerar objektbeskrivningar för Hemnet och Booli. Du vet exakt hur en bra svensk objektbeskrivning ska låta.
+
+TEXTSTIL: ${style === "factual" ? "Faktabaserad och stram" : style === "selling" ? "Säljande men konkret" : "Balanserad, professionell och naturlig"}
 
 # DIN ROLL
 Du redigerar objektbeskrivningar åt andra mäklare. Du förstår:
@@ -3210,9 +3700,9 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
 
       const raw = rewriteCompletion.output_text || "{}";
       let parsed: any;
-      try { parsed = JSON.parse(raw); } catch { parsed = { rewritten: selectedText }; }
+      try { parsed = JSON.parse(raw); } catch { parsed = {}; }
 
-      const rewritten = cleanForbiddenPhrases(parsed.rewritten || selectedText, personalStyle?.styleProfile);
+      const rewritten = sanitizeGeneratedMarketingField(parsed.rewritten, personalStyle?.styleProfile, style) || selectedText;
 
       // More robust text replacement - handle edge cases
       let newFullText = fullText;
@@ -3249,35 +3739,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         });
       }
 
-      // Check area search usage limits
-      const usage = await storage.getMonthlyUsage(user.id, user) || {
-        textsGenerated: 0,
-        areaSearchesUsed: 0,
-        textEditsUsed: 0,
-        personalStyleAnalyses: 0,
-      };
-
-
-      const limits = PLAN_LIMITS[plan];
-      if (usage.areaSearchesUsed >= limits.areaSearches) {
-        return res.status(429).json({
-          message: plan === "free"
-            ? "Adress-sökning är endast för Pro- och Premium-användare. Uppgradera för att använda denna funktion!"
-            : `Du har nått din månadsgräns för adress-sökningar. Gräns: ${limits.areaSearches}`,
-          upgradeRequired: true,
-          currentPlan: plan,
-          usage: {
-            areaSearchesUsed: usage.areaSearchesUsed,
-            areaSearchesLimit: limits.areaSearches,
-          }
-        });
-      }
-
       const { address } = req.body;
       if (!address) return res.status(400).json({ message: "Adress krävs" });
-
-      // Increment area search usage
-      await storage.incrementUsage(user.id, 'areaSearches');
 
       try {
         // Step 1: Geocode with Nominatim
@@ -4081,7 +4544,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         return res.status(404).json({ message: "Användare hittades inte" });
       }
 
-      const { originalText, selectedText, improvementType, context } = req.body;
+      const { originalText, selectedText, improvementType, context, writingStyle } = req.body;
+      const style: WritingStyle = writingStyle === "factual" || writingStyle === "selling" ? writingStyle : "balanced";
 
       if (!selectedText || !improvementType) {
         return res.status(400).json({ message: "Markerad text och förbättringstyp krävs" });
@@ -4128,6 +4592,10 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         fix_claims: `Ersätt alla AI-klyschor och vaga påståenden med konkreta fakta. "Generöst kök" → "Kök om 15 kvm". "Ljust och luftigt" → "Fönster i tre väderstreck". Om fakta saknas — stryk meningen hellre än att behålla tomma ord.`
       };
 
+      if (!(improvementType in improvementPrompts)) {
+        return res.status(400).json({ message: "Ogiltig förbättringstyp" });
+      }
+
       const improvementInstruction = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
 
       const completion = await openai.responses.create({
@@ -4137,6 +4605,8 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
           {
             role: "developer",
             content: `Du är en erfaren svensk fastighetsmäklare som redigerar objektbeskrivningar. Du vet hur Hemnet- och Booli-texter ska låta.
+
+TEXTSTIL: ${style === "factual" ? "Faktabaserad och återhållsam" : style === "selling" ? "Säljande men klyschfri" : "Balanserad, naturlig och professionell"}
 
 ${improvementInstruction}
 
@@ -4166,16 +4636,16 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
       let rawImprovedText = "";
       try {
         const parsed = safeJsonParse(completion.output_text || "{}");
-        rawImprovedText = parsed.improved || completion.output_text || selectedText;
+        rawImprovedText = parsed.improved || completion.output_text || "";
       } catch {
-        rawImprovedText = completion.output_text || selectedText;
+        rawImprovedText = completion.output_text || "";
       }
       // Strip quotes, markdown code blocks, and leading/trailing whitespace
       rawImprovedText = rawImprovedText.trim();
       rawImprovedText = rawImprovedText.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, ""); // code blocks
       rawImprovedText = rawImprovedText.replace(/^[""\u201C]|[""\u201D]$/g, ""); // smart quotes
       rawImprovedText = rawImprovedText.replace(/^"|"$/g, ""); // regular quotes
-      const improvedText = cleanForbiddenPhrases(rawImprovedText.trim(), personalStyle?.styleProfile);
+      const improvedText = sanitizeGeneratedMarketingField(rawImprovedText.trim(), personalStyle?.styleProfile, style) || selectedText;
 
       // Track text edit usage
       await storage.incrementUsage(user.id, 'textEdits');
