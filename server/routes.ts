@@ -918,6 +918,11 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["förvaringsmöjligheter", "förvaring"],
   ["parkeringsmöjligheter", "parkering"],
   ["i mycket gott skick", "i gott skick"],
+  ["fungerande vardagslogistik", "bra vardagsflöde"],
+  ["kan påverka inomhusklimatet", "påverkar helhetsintrycket"],
+  ["är registrerad", "finns registrerad"],
+  ["tydlig del av husets yttre standard", "del av husets yttre uttryck"],
+  ["utan att kännas genomgångs", "utan genomgångskänsla"],
   ["tidlös och elegant", ""],
   ["mysigt och ombonat", ""],
   ["charmigt och välplanerat", "välplanerat"],
@@ -2145,6 +2150,7 @@ const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare. Skriv e
 KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
 - Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
+- Om dispositionen innehåller starka, sinnliga men verifierbara kvaliteter som söderläge, kvällssol, uteplats, terrass, lugnt läge, insynsskydd eller utsikt ska öppningen helst konkretisera minst en sådan kvalitet i faktisk situation i stället för att fastna i allmänna konstateranden.
 - Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
 - Varje mening ska tillföra ny information.
 - Terminologi måste vara konsekvent genom hela texten.
@@ -2154,6 +2160,7 @@ KRAV:
 - Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
 - Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
 - Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
+- Undvik kantiga formuleringar som låter tekniska eller interna, till exempel "fungerande vardagslogistik", "är registrerad" eller liknande administrativa konstruktioner.
 - Sista stycket ska handla om läge. Ingen uppmaning, ingen känsloklyscha.
 
 UNDVIK ALLTID:
@@ -2179,6 +2186,7 @@ const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk fastighetsmäklare. S
 KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
 - Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
+- Om dispositionen innehåller starka, sinnliga men verifierbara kvaliteter som söderläge, kvällssol, uteplats, terrass, lugnt läge, insynsskydd eller utsikt ska öppningen helst konkretisera minst en sådan kvalitet i faktisk situation i stället för att fastna i allmänna konstateranden.
 - Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
 - Varje mening ska tillföra ny information.
 - Terminologi måste vara konsekvent genom hela texten.
@@ -2187,6 +2195,7 @@ KRAV:
 - Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
 - Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
 - Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
+- Undvik kantiga formuleringar som låter tekniska eller interna, till exempel "fungerande vardagslogistik", "är registrerad" eller liknande administrativa konstruktioner.
 - Avsluta med läge och pris om pris finns.
 
 UNDVIK ALLTID:
@@ -3433,6 +3442,8 @@ REGLER:
 10. Nya meningar ska matcha TEXTSTILEN ovan
 11. Skriv närområde som naturlig prosa, inte som rå lista med butiker/restauranger i parentes eller egna korta rader
 12. Undvik att upprepa boarea, antal rum eller andra nyckeltal i onödan
+13. Ersätt kantiga eller administrativa formuleringar med naturlig mäklarprosa. Skriv till exempel inte "fungerande vardagslogistik", "är registrerad" eller liknande tekniska formuleringar
+14. Om underlaget har stark uteplats-, solläges- eller lugn/läges-kvalitet ska dessa gärna lyftas mer konkret och sammanhållet, särskilt i öppningen eller tidigt i texten
 13. Svara med JSON: {"expanded_text": "hela den förbättrade och utökade texten med \n\n mellan stycken"}`,
                 },
                 {
@@ -3548,6 +3559,7 @@ REGLER:
       sendProgress(7, 7, "Slutgranskar mäklarkvalitet...");
 
       let finalBrokerAudit: any = null;
+      const brokerQualityThreshold = plan === "premium" ? 0.78 : plan === "pro" ? 0.74 : 0.72;
       try {
         const brokerAuditCompletion = await openai.responses.create({
           model: "gpt-5.2",
@@ -3555,9 +3567,9 @@ REGLER:
           input: [
             {
               role: "developer",
-              content: `Du är kvalitetschef för svenska premiumannonser inom fastighetsförmedling.
+              content: `Du är kvalitetschef för svenska bostadsannonser inom fastighetsförmedling.
 
-Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå.
+Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå för angiven nivå.
 
 Krav:
 - naturlig svensk mäklarprosa
@@ -3567,6 +3579,11 @@ Krav:
 - inga AI-klyschor eller mekaniskt språk
 - inga dispositionstendenser eller råfaktakänsla
 - bra styckeflöde och tydlig prioritering
+
+NIVÅANPASSNING:
+- Om LEVEL = premium: kräv toppnivå med starkt säljtryck, elegant detaljprioritering och mycket hög finish
+- Om LEVEL = pro: kräv tydligt publiceringsklar mäklarnivå, men underkänn inte en bra text bara för att den inte känns lyxig eller premiumdriven
+- Bedöm utifrån korrekt nivå, inte alltid premium
 
 Svara med JSON:
 {
@@ -3578,7 +3595,7 @@ Svara med JSON:
             },
             {
               role: "user",
-              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}`
+              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}\nLEVEL: ${plan}`
             }
           ],
           max_output_tokens: 1200,
@@ -3603,10 +3620,10 @@ Svara med JSON:
               input: [
                 {
                   role: "developer",
-                  content: `Du är senior kvalitetsredaktör för svenska premiumannonser inom fastighetsförmedling.
+                  content: `Du är senior kvalitetsredaktör för svenska bostadsannonser inom fastighetsförmedling.
 
 UPPGIFT:
-Skriv om objektbeskrivningen så att den blir publiceringsklar på första mäklarnivå utifrån auditens konkreta invändningar.
+Skriv om objektbeskrivningen så att den blir publiceringsklar på rätt mäklarnivå utifrån auditens konkreta invändningar.
 
 DU MÅSTE:
 - behålla alla korrekta fakta
@@ -3621,12 +3638,17 @@ SÄRSKILT VIKTIGT:
 - boarea och andra nyckelfakta får inte upprepas i onödan
 - närområde ska skrivas som selektiv, naturlig prosa — aldrig lista
 - mekaniska faktarader ska vävas in naturligt eller utelämnas om de inte lyfter texten
+- om audit nämner uteplats, solläge, lugn eller centrum närhet ska de vävas in elegant i löpande prosa, inte punktvis
+
+NIVÅANPASSNING:
+- premium = mycket hög finish och säljtryck
+- pro = tydligt publiceringsklar mäklarnivå utan krav på lyxig premiumton
 
 Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
                 },
                 {
                   role: "user",
-                  content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${rescueIssues.map((issue: string, index: number) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(result, null, 2)}`
+                  content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nLEVEL: ${plan}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${rescueIssues.map((issue: string, index: number) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(result, null, 2)}`
                 }
               ],
               max_output_tokens: 5000,
@@ -3662,9 +3684,9 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
                   input: [
                     {
                       role: "developer",
-                      content: `Du är kvalitetschef för svenska premiumannonser inom fastighetsförmedling.
+                      content: `Du är kvalitetschef för svenska bostadsannonser inom fastighetsförmedling.
 
-Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå.
+Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå för angiven nivå.
 
 Krav:
 - naturlig svensk mäklarprosa
@@ -3674,6 +3696,10 @@ Krav:
 - inga AI-klyschor eller mekaniskt språk
 - inga dispositionstendenser eller råfaktakänsla
 - bra styckeflöde och tydlig prioritering
+
+NIVÅANPASSNING:
+- premium = toppnivå
+- pro = tydligt publiceringsklar mäklarnivå utan premiumkrav
 
 Svara med JSON:
 {
@@ -3685,7 +3711,7 @@ Svara med JSON:
                     },
                     {
                       role: "user",
-                      content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}`
+                      content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}\nLEVEL: ${plan}`
                     }
                   ],
                   max_output_tokens: 1200,
@@ -3733,9 +3759,9 @@ Svara med JSON:
         const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
         throw new Error(`[Final Broker Audit] Texten är inte publiceringsklar: ${auditIssues}`);
       }
-      if (finalBrokerAudit.broker_quality_score < 0.78) {
+      if (finalBrokerAudit.broker_quality_score < brokerQualityThreshold) {
         const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
-        throw new Error(`[Final Broker Audit] Broker quality score för låg (${finalBrokerAudit.broker_quality_score}). ${auditIssues}`);
+        throw new Error(`[Final Broker Audit] Broker quality score för låg (${finalBrokerAudit.broker_quality_score}). Krav för ${plan}: ${brokerQualityThreshold}. ${auditIssues}`);
       }
 
       // Spara resultat
