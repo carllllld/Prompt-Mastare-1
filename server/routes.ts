@@ -2620,6 +2620,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
         return res.status(429).json({
           message: upgradeMsg,
+          limitReached: true,
           upgradeRequired: true,
           currentPlan: plan,
           usage: {

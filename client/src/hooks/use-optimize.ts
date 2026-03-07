@@ -3,6 +3,7 @@ import { useRef, useCallback } from "react";
 import { api, type OptimizeRequest, type OptimizeResponse } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { ErrorHandler } from "@/lib/error-handler";
+import { queryClient } from "@/lib/queryClient";
 
 interface LimitError extends Error {
   limitReached?: boolean;
@@ -107,6 +108,8 @@ export function useOptimize() {
       return streamOptimize(data, progressCallbackRef.current);
     },
     onError: (error: LimitError) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+
       if (error.limitReached) {
         const appError = ErrorHandler.classifyError(error);
         ErrorHandler.logError(appError, 'useOptimize - limit reached');

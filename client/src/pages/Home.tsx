@@ -174,6 +174,17 @@ export default function Home() {
       setAuthModalOpen(true);
       return;
     }
+
+    if ((userStatus?.textsRemaining ?? 0) <= 0) {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
+      toast({
+        title: "Månadskvot uppnådd",
+        description: "Du har inga genereringar kvar den här månaden.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLastSubmitData(data);
     mutate(data, {
       onSuccess: (res: OptimizeResponse) => {
@@ -182,10 +193,12 @@ export default function Home() {
         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       },
       onError: (error: any) => {
+        queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
         if (error.limitReached) {
           toast({
             title: "Månadskvot uppnådd",
-            description: "Uppgradera till Pro för fler beskrivningar.",
+            description: error?.message || "Du har nått din månadsgräns för beskrivningar.",
+            variant: "destructive",
           });
         } else {
           toast({
