@@ -1075,6 +1075,19 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function replaceWholePhrase(text: string, phrase: string, replacement: string): string {
+  if (!text || !phrase) return text;
+
+  const escapedPhrase = escapeRegex(phrase);
+  const pattern = new RegExp(`(^|[^\\p{L}\\p{N}])(${escapedPhrase})(?=$|[^\\p{L}\\p{N}])`, "giu");
+
+  return text.replace(pattern, (_match, prefix: string) => `${prefix}${replacement}`);
+}
+
 function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
   if (!text) return text;
   let cleaned = text;
@@ -1125,10 +1138,10 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   // Fix orphan 1-3 char fragments with periods (broken sentences)
   // Keep valid Swedish abbreviations: kvm, m², rum, wc, etc.
   const validShortWords = new Set(['kvm', 'rum', 'mån', 'avg', 'brå', 'brf', 'osv', 'dvs', 'mfl', 'tex', 'pga', 'mha', 'tom']);
-  cleaned = cleaned.replace(/\b([A-ZÅÄÖa-zåäö]{1,3})\.(\s)/g, (match: string, word: string, space: string) => {
+  cleaned = cleaned.replace(/(^|\s)([A-ZÅÄÖa-zåäö]{1,3})\.(\s)/gmu, (match: string, prefix: string, word: string, space: string) => {
     if (validShortWords.has(word.toLowerCase())) return match; // keep valid abbreviations
     if (/^[A-ZÅÄÖ]/.test(word) && word.length >= 2) return match; // keep capitalized words (names, etc.)
-    return space; // remove orphan fragment
+    return `${prefix}${space}`; // remove orphan fragment only when standalone
   });
 
   // === STAGE 2: Replace forbidden phrases (filtered by writing style) ===
@@ -1140,16 +1153,14 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
     if (styleProfile?.allowedPhrases?.some((allowed: string) => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
       continue;
     }
-    const regex = new RegExp(phrase, "gi");
-    cleaned = cleaned.replace(regex, replacement);
+    cleaned = replaceWholePhrase(cleaned, phrase, replacement);
   }
 
   // Add custom forbidden phrases from styleProfile
   if (styleProfile?.forbiddenPhrases?.length > 0) {
     for (const customPhrase of styleProfile.forbiddenPhrases) {
       // Replace custom forbidden phrases with empty string or simple alternative
-      const customRegex = new RegExp(customPhrase, "gi");
-      cleaned = cleaned.replace(customRegex, "");
+      cleaned = replaceWholePhrase(cleaned, customPhrase, "");
     }
   }
 
