@@ -3332,63 +3332,77 @@ ERSÄTTNINGSTABELL:
 
       // STEG 5b: Ordräknings-enforcement — om texten är för kort, expandera
       if (result.improvedPrompt) {
-        const currentWordCount = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
-        const shortfall = targetWordMin - currentWordCount;
+        let currentWordCount = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
+        let shortfall = targetWordMin - currentWordCount;
 
         if (shortfall > 30) {
-          console.log(`[Step 5b] Text too short: ${currentWordCount} words, target min ${targetWordMin}. Expanding...`);
+          const originalNonWordViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style));
 
-          try {
-            const expandMessages = [
-              {
-                role: "system" as const,
-                content: `Du är en erfaren svensk mäklare. Du ska UTÖKA en befintlig objektbeskrivning så den når rätt längd.
+          for (let attempt = 1; attempt <= 2 && shortfall > 30; attempt++) {
+            console.log(`[Step 5b] Text too short: ${currentWordCount} words, target min ${targetWordMin}. Expanding (attempt ${attempt}/2)...`);
+
+            try {
+              const expandMessages = [
+                {
+                  role: "system" as const,
+                  content: `Du är en erfaren svensk mäklare. Du ska UTÖKA en befintlig objektbeskrivning så den når rätt längd.
 
 TEXTSTIL: ${style === "factual" ? "Faktabaserad — bara fakta, inga adjektiv, korta meningar" : style === "selling" ? "Säljande — lyft styrkor med konkreta fakta, beskrivande ord OK om de stöds av fakta" : "Balanserad — professionell ton, fakta i fokus med naturlig rytm"}
 
 REGLER:
 1. Behåll ALL befintlig text exakt som den är — ändra INTE befintliga meningar
 2. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
-3. Varje ny mening = nytt faktum (material, mått, utrustning, avstånd)
+3. Varje ny mening = nytt faktum (material, mått, utrustning, avstånd, planlösning, tomt, drift, förråd, parkering, renoveringar, närområde)
 4. Infoga nya meningar på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
 5. Hitta ALDRIG på fakta — använd BARA dispositionen
 6. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
 7. Texten MÅSTE bli minst ${targetWordMin} ord
-8. Nya meningar ska matcha TEXTSTILEN ovan
-9. Svara med JSON: {"expanded_text": "hela den utökade texten med \\n\\n mellan stycken"}`,
-              },
-              {
-                role: "user" as const,
-                content: `NUVARANDE TEXT (${currentWordCount} ord — behöver bli minst ${targetWordMin} ord):\n\n${result.improvedPrompt}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
-              },
-            ];
+8. Om nuvarande text är kraftigt för kort ska du lägga till flera nya faktameningar och nya stycken tills miniminivån nås
+9. Nya meningar ska matcha TEXTSTILEN ovan
+10. Svara med JSON: {"expanded_text": "hela den utökade texten med \n\n mellan stycken"}`,
+                },
+                {
+                  role: "user" as const,
+                  content: `NUVARANDE TEXT (${currentWordCount} ord — behöver bli minst ${targetWordMin} ord):\n\n${result.improvedPrompt}\n\nSAKNADE ORD MINST: ${shortfall}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
+                },
+              ];
 
-            const expandCompletion = await openai.chat.completions.create({
-              model: "gpt-5.2",
-              messages: expandMessages,
-              max_completion_tokens: 3000,
-              temperature: secondaryTemperature,
-              response_format: { type: "json_object" },
-            });
+              const expandCompletion = await openai.chat.completions.create({
+                model: "gpt-5.2",
+                messages: expandMessages,
+                max_completion_tokens: 3000,
+                temperature: secondaryTemperature,
+                response_format: { type: "json_object" },
+              });
 
-            const expanded = safeJsonParse(expandCompletion.choices[0]?.message?.content || "{}");
-            if (expanded.expanded_text) {
-              const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
-              if (expandedWordCount >= currentWordCount) {
-                const sanitizedExpanded = sanitizeGeneratedMarketingField(expanded.expanded_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
-                if (sanitizedExpanded) {
-                  const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, targetWordMin, targetWordMax, style));
-                  if (expandedViolations.length === 0 || expandedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style)).length) {
-                    result.improvedPrompt = sanitizedExpanded;
-                    console.log(`[Step 5b] Expanded from ${currentWordCount} to ${expandedWordCount} words`);
-                  } else {
-                    console.warn(`[Step 5b] Expansion introduced more violations, keeping original`);
+              const expanded = safeJsonParse(expandCompletion.choices[0]?.message?.content || "{}");
+              if (expanded.expanded_text) {
+                const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
+                if (expandedWordCount >= currentWordCount) {
+                  const sanitizedExpanded = sanitizeGeneratedMarketingField(expanded.expanded_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                  if (sanitizedExpanded) {
+                    const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, targetWordMin, targetWordMax, style));
+                    const sanitizedExpandedWordCount = sanitizedExpanded.split(/\s+/).filter(Boolean).length;
+                    if ((expandedViolations.length === 0 || expandedViolations.length <= originalNonWordViolations.length) && sanitizedExpandedWordCount > currentWordCount) {
+                      result.improvedPrompt = sanitizedExpanded;
+                      console.log(`[Step 5b] Expanded from ${currentWordCount} to ${sanitizedExpandedWordCount} words`);
+                      currentWordCount = sanitizedExpandedWordCount;
+                      shortfall = targetWordMin - currentWordCount;
+                    } else {
+                      console.warn(`[Step 5b] Expansion introduced more violations or no real length gain, keeping original`);
+                      break;
+                    }
                   }
                 }
               }
+            } catch (e) {
+              console.warn("[Step 5b] Expansion failed, keeping original:", e);
+              break;
             }
-          } catch (e) {
-            console.warn("[Step 5b] Expansion failed, keeping original:", e);
+          }
+
+          if (shortfall > 30) {
+            throw new Error(`[Step 5b] Kunde inte nå minsta ordräkning. Stannade på ${currentWordCount}/${targetWordMin} ord efter expansionsförsök.`);
           }
         } else if (shortfall > 0) {
           console.log(`[Step 5b] Text slightly short: ${currentWordCount}/${targetWordMin} words (within tolerance)`);
@@ -3423,12 +3437,14 @@ REGLER:
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
             const sanitizedFactChecked = sanitizeGeneratedMarketingField(factCheckResult.corrected_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
             if (sanitizedFactChecked) {
+              const currentWordCountBeforeFactCheck = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
+              const factCheckedWordCount = sanitizedFactChecked.split(/\s+/).filter(Boolean).length;
               const factCheckedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedFactChecked }, platform, targetWordMin, targetWordMax, style));
-              if (factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style)).length) {
+              if ((factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, targetWordMin, targetWordMax, style)).length) && !(currentWordCountBeforeFactCheck >= targetWordMin && factCheckedWordCount < targetWordMin)) {
                 result.improvedPrompt = sanitizedFactChecked;
                 console.log("[Step 6] Fact-check corrections applied");
               } else {
-                console.warn("[Step 6] Fact-check correction introduced new issues, keeping original");
+                console.warn("[Step 6] Fact-check correction introduced new issues or shortened text below minimum, keeping original");
               }
             }
           }
