@@ -917,6 +917,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["gott om", "bra"],
   ["förvaringsmöjligheter", "förvaring"],
   ["parkeringsmöjligheter", "parkering"],
+  ["i mycket gott skick", "i gott skick"],
   ["tidlös och elegant", ""],
   ["mysigt och ombonat", ""],
   ["charmigt och välplanerat", "välplanerat"],
@@ -2108,12 +2109,16 @@ const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare. Skriv e
 
 KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
-- Börja med adress, ort, bostadstyp, storlek och en stark konkret detalj.
+- Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
+- Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
 - Varje mening ska tillföra ny information.
 - Terminologi måste vara konsekvent genom hela texten.
 - Om underlaget är motsägelsefullt eller oklart: skriv neutralt eller utelämna hellre än att chansa.
 - Undvik AI-ton, checklistekänsla och mekanisk rumsuppräkning.
 - Ge mer utrymme åt 1-2 verkliga styrkor och mindre åt standarddetaljer.
+- Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
+- Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
+- Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
 - Sista stycket ska handla om läge. Ingen uppmaning, ingen känsloklyscha.
 
 UNDVIK ALLTID:
@@ -2138,11 +2143,15 @@ const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk fastighetsmäklare. S
 
 KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
-- Börja med adress, ort, bostadstyp, storlek och en stark konkret detalj.
+- Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
+- Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
 - Varje mening ska tillföra ny information.
 - Terminologi måste vara konsekvent genom hela texten.
 - Om underlaget är motsägelsefullt eller oklart: skriv neutralt eller utelämna hellre än att chansa.
 - Undvik mekanisk rumsuppräkning. Ge mer utrymme åt verkliga styrkor.
+- Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
+- Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
+- Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
 - Avsluta med läge och pris om pris finns.
 
 UNDVIK ALLTID:
@@ -2976,7 +2985,15 @@ SVARSFORMAT:
 - Returnera ALLTID giltig JSON.
 - Huvudtexten ska finnas i improvedPrompt.
 - Om du också returnerar hemnetText måste improvedPrompt innehålla samma huvudtext.
-- improvedPrompt måste vara färdig löpande objektbeskrivning i stycken.` },
+- improvedPrompt måste vara färdig löpande objektbeskrivning i stycken.
+
+KRITISKA KVALITETSKRAV FÖR improvedPrompt:
+- Öppningen får inte kännas administrativ eller som en objektspecifikation.
+- Prioritera det bästa först: söderläge, uteplats, planlösning, renoverat kök, gårdsläge eller annan stark detalj ska märkas tidigt om fakta finns.
+- Nämn inte samma boarea eller annan nyckelfakta två gånger tätt inpå varandra.
+- Skriv aldrig restauranger, butiker, skolor eller kommunikationer som rå lista, parentesrad eller staplade kortmeningar. Omvandla till naturlig mäklarprosa.
+- Undvik mekaniska meningar som "Energiklass är B". Skriv naturligare eller utelämna svaga detaljfakta om de stör rytmen.
+- Texten måste låta som publicerad svensk mäklare, inte som sammanställd rådata.` },
             { role: "user", content: userContent }
           ],
           max_output_tokens: 8000,
@@ -3364,25 +3381,28 @@ ERSÄTTNINGSTABELL:
               const expandMessages = [
                 {
                   role: "system" as const,
-                  content: `Du är en erfaren svensk mäklare. Du ska UTÖKA en befintlig objektbeskrivning så den når rätt längd.
+                  content: `Du är en erfaren svensk mäklare. Du ska FÖRBÄTTRA OCH UTÖKA en befintlig objektbeskrivning så den når rätt längd och blir mer publiceringsklar.
 
 TEXTSTIL: ${style === "factual" ? "Faktabaserad — bara fakta, inga adjektiv, korta meningar" : style === "selling" ? "Säljande — lyft styrkor med konkreta fakta, beskrivande ord OK om de stöds av fakta" : "Balanserad — professionell ton, fakta i fokus med naturlig rytm"}
 
 REGLER:
-1. Behåll ALL befintlig text exakt som den är — ändra INTE befintliga meningar
-2. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
-3. Varje ny mening = nytt faktum (material, mått, utrustning, avstånd, planlösning, tomt, drift, förråd, parkering, renoveringar, närområde)
-4. Infoga nya meningar på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
-5. Hitta ALDRIG på fakta — använd BARA dispositionen
-6. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
-7. Texten ska i första hand nå ${targetWordMin} ord, men MÅSTE minst nå ${minimumPublishableWordMin} ord om dispositionen inte räcker längre
-8. Om nuvarande text är kraftigt för kort ska du lägga till flera nya faktameningar och nya stycken tills miniminivån nås
-9. Nya meningar ska matcha TEXTSTILEN ovan
-10. Svara med JSON: {"expanded_text": "hela den utökade texten med \n\n mellan stycken"}`,
+1. Du FÅR skriva om lokala partier för bättre rytm, men ska bevara alla korrekta fakta
+2. Förbättra särskilt svag öppning, upprepade fakta, mekaniska faktarader och listig närområdestext om sådant finns
+3. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
+4. Varje ny mening = nytt faktum eller en tydlig förbättring av flödet med samma fakta
+5. Infoga eller skriv om på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
+6. Hitta ALDRIG på fakta — använd BARA dispositionen
+7. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
+8. Texten ska i första hand nå ${targetWordMin} ord, men MÅSTE minst nå ${minimumPublishableWordMin} ord om dispositionen inte räcker längre
+9. Om nuvarande text är kraftigt för kort ska du lägga till flera nya faktameningar och nya stycken tills miniminivån nås
+10. Nya meningar ska matcha TEXTSTILEN ovan
+11. Skriv närområde som naturlig prosa, inte som rå lista med butiker/restauranger i parentes eller egna korta rader
+12. Undvik att upprepa boarea, antal rum eller andra nyckeltal i onödan
+13. Svara med JSON: {"expanded_text": "hela den förbättrade och utökade texten med \n\n mellan stycken"}`,
                 },
                 {
                   role: "user" as const,
-                  content: `NUVARANDE TEXT (${currentWordCount} ord — behöver helst nå ${targetWordMin} ord och minst ${minimumPublishableWordMin} ord):\n\n${result.improvedPrompt}\n\nSAKNADE ORD TILL PUBLICERBAR MINNIVÅ: ${shortfall}\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
+                  content: `NUVARANDE TEXT (${currentWordCount} ord — behöver helst nå ${targetWordMin} ord och minst ${minimumPublishableWordMin} ord):\n\n${result.improvedPrompt}\n\nSAKNADE ORD TILL PUBLICERBAR MINNIVÅ: ${shortfall}\n\nFÖRBÄTTRA SÄRSKILT OM DET FINNS I TEXTEN:\n- administrativ öppning\n- upprepade mått/fakta\n- rådata-listor om läge eller service\n- korta mekaniska faktarader\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
                 },
               ];
 
