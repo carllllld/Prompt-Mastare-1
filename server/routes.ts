@@ -139,6 +139,7 @@ function extractGeneratedMarketingText(payload: any): string | null {
 
   const candidateKeys = [
     "improvedPrompt",
+    "hemnetText",
     "improvedText",
     "text",
     "rewritten",
@@ -2950,7 +2951,14 @@ Fakta i fokus med naturlig rytm och professionell ton.
           model: "gpt-5.2",
           reasoning: { effort },
           input: [
-            { role: "developer", content: `${systemContent}${developerSuffix}` },
+            {
+              role: "developer", content: `${systemContent}${developerSuffix}
+
+SVARSFORMAT:
+- Returnera ALLTID giltig JSON.
+- Huvudtexten ska finnas i improvedPrompt.
+- Om du också returnerar hemnetText måste improvedPrompt innehålla samma huvudtext.
+- improvedPrompt måste vara färdig löpande objektbeskrivning i stycken.` },
             { role: "user", content: userContent }
           ],
           max_output_tokens: 8000,
