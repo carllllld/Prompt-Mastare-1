@@ -1171,6 +1171,41 @@ function analyzeTextQuality(text: string): number {
     score -= 0.45;
   }
 
+  // 14. Penalize repeated core facts too close together (common raw-data feel)
+  const sqmMentions = text.match(/\b\d+\s*kvm\b/gi) || [];
+  const duplicatedSqmMentions = new Set(sqmMentions.map((m) => m.toLowerCase())).size < sqmMentions.length;
+  if (duplicatedSqmMentions) {
+    score -= 0.08;
+  }
+
+  // 15. Penalize parenthetical clutter and stacked venue lists in area prose
+  const parentheticalCount = (text.match(/\([^\n)]{2,80}\)/g) || []).length;
+  if (parentheticalCount >= 2) {
+    score -= Math.min(0.09, parentheticalCount * 0.03);
+  }
+
+  const rawAmenitySignals = [
+    /\b(restauranger|butiker|caféer|kommunikationer|service)\s*[:\-]/i,
+    /\b(ica|coop|willys|hemköp|förskola|skola|restaurang|bageri)\b[^.!?\n]{0,30},\s*\b(ica|coop|willys|hemköp|förskola|skola|restaurang|bageri)\b/i,
+    /\n\s*[A-ZÅÄÖa-zåäö][^\n]{0,40}\n\s*[A-ZÅÄÖa-zåäö][^\n]{0,40}\n/,
+  ];
+  const rawAmenityCount = rawAmenitySignals.filter((r) => r.test(text)).length;
+  if (rawAmenityCount > 0) {
+    score -= Math.min(0.12, rawAmenityCount * 0.05);
+  }
+
+  // 16. Penalize mechanical fact-line constructions
+  const mechanicalPatterns = [
+    /\benergiklass(?:en)?\s+är\s+[A-G]\b/i,
+    /\bfiber\s+är\s+installerat\b/i,
+    /\bboarea(?:n)?\s+är\s+\d+\s*kvm\b/i,
+    /\bavgiften\s+är\s+\d+/i,
+  ];
+  const mechanicalCount = mechanicalPatterns.filter((r) => r.test(text)).length;
+  if (mechanicalCount > 0) {
+    score -= Math.min(0.12, mechanicalCount * 0.04);
+  }
+
   return Math.max(0, Math.min(1, score));
 }
 
@@ -3553,6 +3588,117 @@ Svara med JSON:
         finalBrokerAudit = safeJsonParse(brokerAuditCompletion.output_text || "{}");
       } catch (e) {
         throw new Error(`[Final Broker Audit] Slutlig mäklargranskning misslyckades: ${e instanceof Error ? e.message : String(e)}`);
+      }
+
+      if (finalBrokerAudit?.publish_ready === false && typeof result?.improvedPrompt === "string" && result.improvedPrompt.trim()) {
+        try {
+          const rescueIssues = Array.isArray(finalBrokerAudit.issues)
+            ? finalBrokerAudit.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0).slice(0, 5)
+            : [];
+
+          if (rescueIssues.length > 0) {
+            const rescueCompletion = await openai.responses.create({
+              model: "gpt-5.2",
+              reasoning: { effort: "medium" },
+              input: [
+                {
+                  role: "developer",
+                  content: `Du är senior kvalitetsredaktör för svenska premiumannonser inom fastighetsförmedling.
+
+UPPGIFT:
+Skriv om objektbeskrivningen så att den blir publiceringsklar på första mäklarnivå utifrån auditens konkreta invändningar.
+
+DU MÅSTE:
+- behålla alla korrekta fakta
+- inte hitta på något nytt
+- inte skriva disposition, rubriker eller punktlista
+- förbättra öppning, rytm, prioritering och lägesprosa
+- ta bort repetition och rådata-känsla
+- skriva naturlig svensk mäklarprosa
+
+SÄRSKILT VIKTIGT:
+- öppningen får inte kännas administrativ
+- boarea och andra nyckelfakta får inte upprepas i onödan
+- närområde ska skrivas som selektiv, naturlig prosa — aldrig lista
+- mekaniska faktarader ska vävas in naturligt eller utelämnas om de inte lyfter texten
+
+Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
+                },
+                {
+                  role: "user",
+                  content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${rescueIssues.map((issue: string, index: number) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(result, null, 2)}`
+                }
+              ],
+              max_output_tokens: 5000,
+              text: { format: { type: "json_object" } }
+            });
+
+            const rescueRaw = safeJsonParse(rescueCompletion.output_text || "{}");
+            const rescuedText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(rescueRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
+            if (rescuedText) {
+              const rescuedResult = {
+                ...result,
+                ...rescueRaw,
+                improvedPrompt: rescuedText,
+              };
+              for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
+                rescuedResult[field] = sanitizeGeneratedMarketingField(rescuedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+              }
+
+              const rescuedMainViolations = validateMainMarketingText(rescuedResult, platform, minimumPublishableWordMin, targetWordMax, style);
+              const currentMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
+              const rescuedScore = analyzeTextQuality(rescuedText);
+              const currentScore = analyzeTextQuality(result.improvedPrompt || "");
+              const currentWordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
+              const rescuedWordCount = rescuedText.split(/\s+/).filter(Boolean).length;
+
+              if (getNonWordCountViolations(rescuedMainViolations).length <= getNonWordCountViolations(currentMainViolations).length && rescuedScore >= currentScore && rescuedWordCount >= Math.min(currentWordCount, minimumPublishableWordMin)) {
+                result = rescuedResult;
+                console.log(`[Final Broker Audit Rescue] Accepted rescue rewrite. Score ${currentScore.toFixed(2)} -> ${rescuedScore.toFixed(2)}, words ${currentWordCount} -> ${rescuedWordCount}`);
+
+                const brokerAuditRetry = await openai.responses.create({
+                  model: "gpt-5.2",
+                  reasoning: { effort: "medium" },
+                  input: [
+                    {
+                      role: "developer",
+                      content: `Du är kvalitetschef för svenska premiumannonser inom fastighetsförmedling.
+
+Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå.
+
+Krav:
+- naturlig svensk mäklarprosa
+- stark och konkret öppning
+- selektiv betoning av rätt detaljer
+- trovärdig, mänsklig, professionell ton
+- inga AI-klyschor eller mekaniskt språk
+- inga dispositionstendenser eller råfaktakänsla
+- bra styckeflöde och tydlig prioritering
+
+Svara med JSON:
+{
+  "publish_ready": true,
+  "broker_quality_score": 0.0,
+  "issues": ["kort lista över återstående problem"],
+  "verdict": "kort sammanfattning"
+}`
+                    },
+                    {
+                      role: "user",
+                      content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}`
+                    }
+                  ],
+                  max_output_tokens: 1200,
+                  text: { format: { type: "json_object" } }
+                });
+
+                finalBrokerAudit = safeJsonParse(brokerAuditRetry.output_text || "{}");
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[Final Broker Audit Rescue] Rescue rewrite failed, keeping pre-audit text:", e);
+        }
       }
 
       const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
