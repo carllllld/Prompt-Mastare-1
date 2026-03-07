@@ -2961,15 +2961,19 @@ Fakta i fokus med naturlig rytm och professionell ton.
           console.warn(`[Step 3:${label}] WARNING: Output truncated. Token limit hit.`);
         }
 
+        const rawOutput = (completion.output_text || "").trim();
         let candidateResult: any;
         try {
-          candidateResult = safeJsonParse(completion.output_text || "{}");
+          candidateResult = safeJsonParse(rawOutput || "{}");
         } catch (e) {
-          const raw = completion.output_text || "";
+          const raw = rawOutput;
           const match = raw.match(/"improvedPrompt"\s*:\s*"([\s\S]*?)(?:"|$)/);
           if (match) {
             candidateResult = { improvedPrompt: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') };
+          } else if (raw && !raw.startsWith("{") && !raw.startsWith("[")) {
+            candidateResult = { improvedPrompt: raw };
           } else {
+            console.warn(`[Step 3:${label}] Could not parse candidate JSON. Raw length ${raw.length}. Preview: ${raw.slice(0, 500)}`);
             throw new Error(`[Step 3:${label}] Modellen returnerade inte giltig JSON eller återvinningsbar improvedPrompt.`);
           }
         }
@@ -2977,6 +2981,22 @@ Fakta i fokus med naturlig rytm och professionell ton.
         const extractedCandidateText = extractGeneratedMarketingText(candidateResult);
         if (extractedCandidateText) {
           candidateResult = { ...candidateResult, improvedPrompt: extractedCandidateText };
+        }
+
+        if ((typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) && rawOutput) {
+          const strippedRawOutput = rawOutput
+            .replace(/^```(?:json|text)?\s*/i, "")
+            .replace(/```$/i, "")
+            .trim();
+
+          if (strippedRawOutput && !strippedRawOutput.startsWith("{") && !strippedRawOutput.startsWith("[")) {
+            candidateResult = { ...candidateResult, improvedPrompt: strippedRawOutput };
+            console.warn(`[Step 3:${label}] Recovered candidate from raw text fallback. Length ${strippedRawOutput.length}.`);
+          }
+        }
+
+        if (typeof candidateResult === "object" && candidateResult !== null) {
+          console.log(`[Step 3:${label}] Candidate response keys: ${Object.keys(candidateResult).slice(0, 12).join(", ") || "<none>"}. Raw length ${rawOutput.length}.`);
         }
 
         if (candidateResult.improvedPrompt && completion.status === "incomplete") {
@@ -2988,6 +3008,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
         }
 
         if (typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) {
+          console.warn(`[Step 3:${label}] Empty improvedPrompt after parsing. Raw preview: ${rawOutput.slice(0, 500)}`);
           throw new Error(`[Step 3:${label}] improvedPrompt saknas eller är tom.`);
         }
 
