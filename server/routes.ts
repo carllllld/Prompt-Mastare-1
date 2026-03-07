@@ -132,6 +132,31 @@ function safeJsonParse(rawText: string): any {
   return JSON.parse(sanitized);
 }
 
+function extractGeneratedMarketingText(payload: any): string | null {
+  if (typeof payload === "string" && payload.trim()) {
+    return payload.trim();
+  }
+
+  const candidateKeys = [
+    "improvedPrompt",
+    "improvedText",
+    "text",
+    "rewritten",
+    "corrected_text",
+    "expanded_text",
+    "content",
+    "output",
+  ];
+
+  for (const key of candidateKeys) {
+    if (typeof payload?.[key] === "string" && payload[key].trim()) {
+      return payload[key].trim();
+    }
+  }
+
+  return null;
+}
+
 // AI-driven stilinternalisering från referenstexter
 async function analyzeWritingStyle(referenceTexts: string[]): Promise<{
   formality: number;
@@ -179,7 +204,7 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
-      max_tokens: 1000,
+      max_completion_tokens: 1000,
       temperature: 0.3,
       response_format: { type: "json_object" },
     });
@@ -2596,7 +2621,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const imageCompletion = await openai.chat.completions.create({
             model: "gpt-5.2",
             messages: imageMessages,
-            max_tokens: 1000,
+            max_completion_tokens: 1000,
             temperature: 0.3,
           });
 
@@ -2768,7 +2793,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const planCompletion = await openai.chat.completions.create({
             model: "gpt-5.2",
             messages: planMessages,
-            max_tokens: 1500,
+            max_completion_tokens: 1500,
             temperature: 0.2,
             response_format: { type: "json_object" },
           });
@@ -2949,6 +2974,11 @@ Fakta i fokus med naturlig rytm och professionell ton.
           }
         }
 
+        const extractedCandidateText = extractGeneratedMarketingText(candidateResult);
+        if (extractedCandidateText) {
+          candidateResult = { ...candidateResult, improvedPrompt: extractedCandidateText };
+        }
+
         if (candidateResult.improvedPrompt && completion.status === "incomplete") {
           const text = candidateResult.improvedPrompt;
           const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
@@ -2997,7 +3027,9 @@ KRAV FÖR DETTA FÖRSÖK:
           });
 
           const retried = safeJsonParse(retryAfterDispositionCompletion.output_text || "{}");
-          if (typeof retried?.improvedPrompt === "string" && !isDispositionLikeOutput(retried.improvedPrompt)) {
+          const retriedText = extractGeneratedMarketingText(retried);
+          if (typeof retriedText === "string" && !isDispositionLikeOutput(retriedText)) {
+            retried.improvedPrompt = retriedText;
             candidateResult = { ...candidateResult, ...retried };
           } else {
             throw new Error(`[Step 3:${label}] Disposition-like output även efter omgenerering.`);
@@ -3140,7 +3172,7 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
         });
 
         const polishedRaw = safeJsonParse(polishCompletion.output_text || "{}");
-        const polishedText = sanitizeGeneratedMarketingField(polishedRaw?.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        const polishedText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(polishedRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
         if (polishedText) {
           const polishedResult = {
             ...result,
@@ -3234,7 +3266,7 @@ ERSÄTTNINGSTABELL:
             const correctionCompletion = await openai.chat.completions.create({
               model: "gpt-5.2",
               messages: correctionMessages,
-              max_tokens: 4500,
+              max_completion_tokens: 4500,
               temperature: 0.05,
               response_format: { type: "json_object" },
             });
@@ -3305,7 +3337,7 @@ REGLER:
             const expandCompletion = await openai.chat.completions.create({
               model: "gpt-5.2",
               messages: expandMessages,
-              max_tokens: 3000,
+              max_completion_tokens: 3000,
               temperature: secondaryTemperature,
               response_format: { type: "json_object" },
             });
@@ -3533,7 +3565,7 @@ Svara med JSON i formatet:
           const improvementCompletion = await openai.chat.completions.create({
             model: "gpt-5.2",
             messages: improvementMessages,
-            max_tokens: 800,
+            max_completion_tokens: 800,
             temperature: secondaryTemperature,
             response_format: { type: "json_object" },
           });
