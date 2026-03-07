@@ -3765,27 +3765,6 @@ Svara med JSON:
         throw new Error(`[Final Broker Audit] Broker quality score för låg (${finalBrokerAudit.broker_quality_score}). Krav för ${plan}: ${brokerQualityThreshold}. ${auditIssues}`);
       }
 
-      // Spara resultat
-      await storage.createOptimization({
-        userId: user.id,
-        originalPrompt: prompt,
-        improvedPrompt: result.improvedPrompt,
-        category: type,
-        improvements: [
-          result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
-          result.analysis?.target_group ? "Målgrupp: " + result.analysis.target_group : null,
-          result.analysis?.area_advantage ? "Område: " + result.analysis.area_advantage : null,
-          result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
-          result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
-        ].filter(Boolean) as string[],
-        suggestions: result.text_tips || result.pro_tips || [],
-        socialCopy: result.socialCopy || null,
-        headline: result.headline || null,
-        instagramCaption: result.instagramCaption || null,
-        showingInvitation: finalShowingInvitation || null,
-        shortAd: result.shortAd || null,
-      });
-
       // AI-förbättringsanalys (körs efter textgenerering)
       let improvementSuggestions = undefined;
       if (plan !== "free") {
@@ -3842,9 +3821,6 @@ Svara med JSON i formatet:
         }
       }
 
-      // Increment usage after successful generation
-      await storage.incrementUsage(user.id, 'texts');
-
       const tips = result.text_tips || result.pro_tips || [];
       const finalFactCheckPassed = finalNonWordCountViolations.length === 0;
       const finalFactCheckIssues = finalNonWordCountViolations.map((issue) => ({ quote: issue, reason: "" }));
@@ -3852,6 +3828,25 @@ Svara med JSON i formatet:
       const finalBrokerTips = factCheckResult?.broker_tips || [];
       const finalBrokerAuditScore = typeof finalBrokerAudit?.broker_quality_score === "number" ? finalBrokerAudit.broker_quality_score : null;
       const finalBrokerAuditVerdict = typeof finalBrokerAudit?.verdict === "string" ? finalBrokerAudit.verdict : null;
+      const optimizationRecord = {
+        userId: user.id,
+        originalPrompt: prompt,
+        improvedPrompt: result.improvedPrompt,
+        category: type,
+        improvements: [
+          result.analysis?.identified_epoch ? "Epok: " + result.analysis.identified_epoch : null,
+          result.analysis?.target_group ? "Målgrupp: " + result.analysis.target_group : null,
+          result.analysis?.area_advantage ? "Område: " + result.analysis.area_advantage : null,
+          result.analysis?.pricing_factors ? "Prisfaktorer: " + result.analysis.pricing_factors : null,
+          result.analysis?.association_status ? "Förening: " + result.analysis.association_status : null,
+        ].filter(Boolean) as string[],
+        suggestions: result.text_tips || result.pro_tips || [],
+        socialCopy: result.socialCopy || null,
+        headline: result.headline || null,
+        instagramCaption: result.instagramCaption || null,
+        showingInvitation: finalShowingInvitation || null,
+        shortAd: result.shortAd || null,
+      };
 
       const responseData = {
         originalPrompt: prompt,
@@ -3882,6 +3877,39 @@ Svara med JSON i formatet:
         wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
         model: aiModel,
       };
+
+      let responseSettled = false;
+      const persistSuccessfulDelivery = async () => {
+        if (responseSettled) return;
+        responseSettled = true;
+
+        try {
+          await storage.createOptimization(optimizationRecord);
+          await storage.incrementUsage(user.id, 'texts');
+        } catch (persistError) {
+          console.error("[Optimize Persist] Failed to persist successful optimization:", persistError);
+        }
+      };
+
+      const cancelPersistence = () => {
+        if (responseSettled) return;
+        responseSettled = true;
+        console.warn("[Optimize Persist] Response closed before completion, skipping usage/history persistence");
+      };
+
+      res.once("finish", () => {
+        if (res.statusCode < 400) {
+          void persistSuccessfulDelivery();
+        } else {
+          cancelPersistence();
+        }
+      });
+
+      res.once("close", () => {
+        if (!res.writableEnded) {
+          cancelPersistence();
+        }
+      });
 
       if (wantsStream) {
         res.write(JSON.stringify({ type: "complete", data: responseData }) + "\n");
