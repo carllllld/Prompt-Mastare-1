@@ -1233,6 +1233,15 @@ function getNonWordCountViolations(violations: string[]): string[] {
   return violations.filter((v) => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
 }
 
+function validateMainMarketingText(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number, style: WritingStyle = "balanced"): string[] {
+  const violations: string[] = [];
+  if (typeof result?.improvedPrompt === "string") {
+    violations.push(...findRuleViolations(result.improvedPrompt, platform, style));
+    violations.push(...checkWordCount(result.improvedPrompt, platform, targetMin, targetMax));
+  }
+  return violations;
+}
+
 // Haversine distance between two lat/lng points in meters
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -3526,9 +3535,13 @@ Svara med JSON:
         throw new Error(`[Final Broker Audit] Slutlig mäklargranskning misslyckades: ${e instanceof Error ? e.message : String(e)}`);
       }
 
-      const finalViolations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
-      const finalNonWordCountViolations = getNonWordCountViolations(finalViolations);
-      const finalWordCountViolations = finalViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
+      const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
+      const finalNonWordCountViolations = getNonWordCountViolations(finalMainViolations);
+      const finalWordCountViolations = finalMainViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
+      const finalExtraFieldViolations = getNonWordCountViolations(
+        validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
+          .filter((v) => v.startsWith("["))
+      );
       if (typeof result?.improvedPrompt !== "string" || !result.improvedPrompt.trim()) {
         throw new Error("[Final Gate] Huvudtext saknas efter pipelinebearbetning.");
       }
@@ -3540,6 +3553,9 @@ Svara med JSON:
       }
       if (finalWordCountViolations.length > 0) {
         console.warn(`[Final Gate] Texten missade önskat ordmål men klarade inte-förbjudna-regler. Requested ${targetWordMin}-${targetWordMax}, publishable min ${minimumPublishableWordMin}. Detalj: ${finalWordCountViolations.join(" | ")}`);
+      }
+      if (finalExtraFieldViolations.length > 0) {
+        console.warn(`[Final Gate] Extratexter har kvarvarande kvalitetsanmärkningar men blockerar inte huvudtexten: ${finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
       }
       if (typeof finalBrokerAudit?.publish_ready !== "boolean") {
         throw new Error("[Final Broker Audit] Slutgranskningen returnerade inte ett giltigt publish_ready-beslut.");
