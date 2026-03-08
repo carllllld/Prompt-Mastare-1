@@ -158,6 +158,127 @@ function extractGeneratedMarketingText(payload: any): string | null {
   return null;
 }
 
+function extractImprovedPromptFromLooseJson(raw: string): string | null {
+  if (!raw) return null;
+
+  const patterns = [
+    /"improvedPrompt"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
+    /"hemnetText"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
+    /"improvedText"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
+    /"text"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = raw.match(pattern);
+    if (!match?.[1]) continue;
+    const recovered = match[1]
+      .replace(/\\n/g, "\n")
+      .replace(/\\r/g, "")
+      .replace(/\\t/g, " ")
+      .replace(/\\"/g, '"')
+      .trim();
+    if (recovered) return recovered;
+  }
+
+  return null;
+}
+
+function formatFallbackValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+  return null;
+}
+
+function buildDeterministicFallbackDescription(disposition: any, style: WritingStyle): string {
+  const property = disposition?.property || {};
+  const location = disposition?.location || {};
+  const financial = disposition?.financial || {};
+  const propertyType = formatFallbackValue(property.type) || "bostad";
+  const address = formatFallbackValue(property.address) || formatFallbackValue(location.address) || "Bostaden";
+  const rooms = formatFallbackValue(property.rooms);
+  const livingArea = formatFallbackValue(property.living_area || property.area || property.size);
+  const outdoorType = formatFallbackValue(property.outdoor_space?.type) || formatFallbackValue(property.balcony?.type) || (property.balcony?.exists ? "balkong" : null);
+  const outdoorDirection = formatFallbackValue(property.outdoor_space?.direction) || formatFallbackValue(property.balcony?.direction);
+  const outdoorSize = formatFallbackValue(property.outdoor_space?.size) || formatFallbackValue(property.balcony?.size);
+  const kitchen = formatFallbackValue(property.materials?.kitchen);
+  const bathroom = formatFallbackValue(property.materials?.bathroom);
+  const layout = formatFallbackValue(property.layout);
+  const renovations = Array.isArray(property.renovations) ? property.renovations.filter((item: unknown) => typeof item === "string" && item.trim()).slice(0, 2) : [];
+  const features = Array.isArray(disposition?.unique_features) ? disposition.unique_features.filter((item: unknown) => typeof item === "string" && item.trim()).slice(0, 3) : [];
+  const amenities = Array.isArray(location.amenities) ? location.amenities.filter((item: unknown) => typeof item === "string" && item.trim()).slice(0, 2) : [];
+  const services = Array.isArray(location.services) ? location.services.filter((item: unknown) => typeof item === "string" && item.trim()).slice(0, 2) : [];
+  const transport = formatFallbackValue(location.transport);
+  const municipality = formatFallbackValue(location.municipality);
+  const area = formatFallbackValue(location.area);
+  const fee = typeof financial.fee === "number" && Number.isFinite(financial.fee) ? `${Math.round(financial.fee).toLocaleString("sv-SE")} kr/mån` : formatFallbackValue(financial.fee);
+
+  const openingParts = [address];
+  if (rooms) openingParts.push(`${rooms} rum`);
+  if (livingArea) openingParts.push(`${livingArea} kvm`);
+  let opening = openingParts.join(", ");
+
+  if (style === "selling") {
+    if (outdoorType && outdoorDirection) {
+      opening += `. Här bor du med ${outdoorType} i ${outdoorDirection.toLowerCase()} och en planlösning som tar vara på bostadens bästa kvaliteter.`;
+    } else {
+      opening += `. Här möts funktion och trivsel i en bostad som lyfter fram sina starkaste kvaliteter redan från första steget in.`;
+    }
+  } else if (style === "factual") {
+    opening += `. ${propertyType.charAt(0).toUpperCase() + propertyType.slice(1)} med genomgående disponerade ytor.`;
+  } else {
+    if (outdoorType && outdoorDirection) {
+      opening += `. Bostaden kombinerar välplanerade ytor med ${outdoorType} i ${outdoorDirection.toLowerCase()}.`;
+    } else {
+      opening += `. Bostaden har en planlösning som ger ett naturligt flöde mellan rummen.`;
+    }
+  }
+
+  const middleSentences: string[] = [];
+  if (layout) middleSentences.push(`Planlösningen präglas av ${layout.charAt(0).toLowerCase() + layout.slice(1)}.`);
+  if (kitchen) middleSentences.push(`Köket är utrustat med ${kitchen.charAt(0).toLowerCase() + kitchen.slice(1)}.`);
+  if (bathroom) middleSentences.push(`Badrummet erbjuder ${bathroom.charAt(0).toLowerCase() + bathroom.slice(1)}.`);
+  if (renovations.length > 0) middleSentences.push(`Under senare år har bostaden uppdaterats med ${renovations.join(" och ")}.`);
+  if (features.length > 0) middleSentences.push(`Detaljer som ${features.join(", ")} bidrar till helhetsintrycket.`);
+
+  const outdoorParts: string[] = [];
+  if (outdoorType) outdoorParts.push(outdoorType);
+  if (outdoorSize) outdoorParts.push(`${outdoorSize}`);
+  if (outdoorDirection) outdoorParts.push(`i ${outdoorDirection.toLowerCase()}`);
+  if (outdoorParts.length > 0) {
+    middleSentences.push(`Utemiljön består av ${outdoorParts.join(" ")}.`);
+  }
+
+  const locationBits: string[] = [];
+  if (area) locationBits.push(area);
+  if (municipality && municipality !== area) locationBits.push(municipality);
+  if (transport) locationBits.push(transport);
+  if (amenities.length > 0) locationBits.push(amenities.join(", "));
+  if (services.length > 0) locationBits.push(services.join(", "));
+
+  let closing = "";
+  if (locationBits.length > 0 && fee) {
+    closing = `Läget kompletteras av ${locationBits.join(". ")}. Avgiften uppgår till ${fee}.`;
+  } else if (locationBits.length > 0) {
+    closing = `Läget kompletteras av ${locationBits.join(". ")}.`;
+  } else if (fee) {
+    closing = `Avgiften uppgår till ${fee}.`;
+  } else {
+    closing = "Bostaden presenteras med fokus på planlösning, funktion och de kvaliteter som märks i vardagen.";
+  }
+
+  const paragraphs = [
+    opening,
+    middleSentences.join(" ").trim(),
+    closing,
+  ].filter((paragraph) => paragraph && paragraph.trim());
+
+  return paragraphs.join("\n\n").trim();
+}
+
 function getMinimumPublishableWordCount(requestedMin: number, style: WritingStyle): number {
   const ratio = style === "factual" ? 0.58 : style === "selling" ? 0.72 : 0.65;
   const absoluteFloor = style === "factual" ? 140 : style === "selling" ? 200 : 180;
@@ -3031,6 +3152,9 @@ SVARSFORMAT:
 - Huvudtexten ska finnas i improvedPrompt.
 - Om du också returnerar hemnetText måste improvedPrompt innehålla samma huvudtext.
 - improvedPrompt måste vara färdig löpande objektbeskrivning i stycken.
+- improvedPrompt måste inledas direkt med bostaden eller dess starkaste konkreta kvalitet, aldrig med meta-kommentarer.
+- Returnera aldrig markdown, kodblock eller förklaringar före eller efter JSON.
+- Om du blir osäker: skriv ändå en publicerbar objektsbeskrivning i improvedPrompt och lämna övriga fält tomma eller utelämnade.
 
 KRITISKA KVALITETSKRAV FÖR improvedPrompt:
 - Öppningen får inte kännas administrativ eller som en objektspecifikation.
@@ -3038,7 +3162,14 @@ KRITISKA KVALITETSKRAV FÖR improvedPrompt:
 - Nämn inte samma boarea eller annan nyckelfakta två gånger tätt inpå varandra.
 - Skriv aldrig restauranger, butiker, skolor eller kommunikationer som rå lista, parentesrad eller staplade kortmeningar. Omvandla till naturlig mäklarprosa.
 - Undvik mekaniska meningar som "Energiklass är B". Skriv naturligare eller utelämna svaga detaljfakta om de stör rytmen.
-- Texten måste låta som publicerad svensk mäklare, inte som sammanställd rådata.` },
+- Texten måste låta som publicerad svensk mäklare, inte som sammanställd rådata.
+
+OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
+- disposition
+- sektioner med rubriker
+- rå JSON i improvedPrompt
+- listor eller kolonrader
+- tom improvedPrompt` },
             { role: "user", content: userContent }
           ],
           max_output_tokens: 8000,
@@ -3055,9 +3186,9 @@ KRITISKA KVALITETSKRAV FÖR improvedPrompt:
           candidateResult = safeJsonParse(rawOutput || "{}");
         } catch (e) {
           const raw = rawOutput;
-          const match = raw.match(/"improvedPrompt"\s*:\s*"([\s\S]*?)(?:"|$)/);
-          if (match) {
-            candidateResult = { improvedPrompt: match[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') };
+          const recoveredPrompt = extractImprovedPromptFromLooseJson(raw);
+          if (recoveredPrompt) {
+            candidateResult = { improvedPrompt: recoveredPrompt };
           } else if (raw && !raw.startsWith("{") && !raw.startsWith("[")) {
             candidateResult = { improvedPrompt: raw };
           } else {
@@ -3080,6 +3211,14 @@ KRITISKA KVALITETSKRAV FÖR improvedPrompt:
           if (strippedRawOutput && !strippedRawOutput.startsWith("{") && !strippedRawOutput.startsWith("[")) {
             candidateResult = { ...candidateResult, improvedPrompt: strippedRawOutput };
             console.warn(`[Step 3:${label}] Recovered candidate from raw text fallback. Length ${strippedRawOutput.length}.`);
+          }
+        }
+
+        if ((typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) && rawOutput) {
+          const looseRecovered = extractImprovedPromptFromLooseJson(rawOutput.replace(/\n/g, " "));
+          if (looseRecovered) {
+            candidateResult = { ...candidateResult, improvedPrompt: looseRecovered };
+            console.warn(`[Step 3:${label}] Recovered candidate from loose JSON pattern fallback.`);
           }
         }
 
@@ -3145,7 +3284,44 @@ KRAV FÖR DETTA FÖRSÖK:
           }
         }
 
-        const sanitizedPrompt = sanitizeGeneratedMarketingField(candidateResult.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        let sanitizedPrompt = sanitizeGeneratedMarketingField(candidateResult.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        if (!sanitizedPrompt || isDispositionLikeOutput(sanitizedPrompt)) {
+          try {
+            const rescueCandidateCompletion = await openai.responses.create({
+              model: "gpt-5.2",
+              reasoning: { effort: "low" },
+              input: [
+                {
+                  role: "developer",
+                  content: `${systemContent}${developerSuffix}
+
+KANDIDATRÄDDNING:
+- Du får nu en nästan användbar text som måste räddas.
+- Skriv om den till färdig svensk objektsbeskrivning i löpande prosa.
+- Behåll fakta, ta bort disposition/listkänsla, gör öppningen mänsklig och konkret.
+- Returnera endast JSON med improvedPrompt.`
+                },
+                {
+                  role: "user",
+                  content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nTEXT SOM MÅSTE RÄDDAS:\n${candidateResult.improvedPrompt}`
+                }
+              ],
+              max_output_tokens: 4000,
+              text: { format: { type: "json_object" } }
+            });
+
+            const rescuedRaw = safeJsonParse(rescueCandidateCompletion.output_text || "{}");
+            const rescuedText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(rescuedRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
+            if (rescuedText && !isDispositionLikeOutput(rescuedText)) {
+              candidateResult = { ...candidateResult, ...rescuedRaw, improvedPrompt: rescuedText };
+              sanitizedPrompt = rescuedText;
+              console.warn(`[Step 3:${label}] Candidate rescued by rewrite path.`);
+            }
+          } catch (e) {
+            console.warn(`[Step 3:${label}] Candidate rescue rewrite failed:`, e);
+          }
+        }
+
         if (!sanitizedPrompt) {
           throw new Error(`[Step 3:${label}] improvedPrompt blev ogiltig efter sanering.`);
         }
@@ -3188,7 +3364,74 @@ KRAV FÖR DETTA FÖRSÖK:
       }
 
       if (candidatePool.length === 0) {
-        throw new Error("[Step 3] Ingen giltig kandidat kunde genereras.");
+        console.warn("[Step 3] All candidate variants failed. Entering emergency fallback generation.");
+
+        let emergencyResult: any = null;
+
+        try {
+          const emergencyCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "low" },
+            input: [
+              {
+                role: "developer",
+                content: `${systemContent}
+
+NÖDLÄGE:
+- Du måste nu leverera en färdig svensk objektsbeskrivning även om tidigare försök har misslyckats.
+- Prioritera robust leverans över perfektion.
+- Returnera ENDAST giltig JSON.
+- improvedPrompt måste innehålla 3-5 stycken sammanhängande löpande prosa.
+- Skriv aldrig disposition, lista, rådata, rubriker eller kolonrader.
+- Om underlaget är tunt ska du ändå skriva en trygg, saklig och publicerbar objektsbeskrivning utan att hitta på fakta.`
+              },
+              {
+                role: "user",
+                content: `${userContent}
+
+Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivning i improvedPrompt.`
+              }
+            ],
+            max_output_tokens: 5000,
+            text: { format: { type: "json_object" } }
+          });
+
+          const emergencyRaw = safeJsonParse(emergencyCompletion.output_text || "{}");
+          const emergencyText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(emergencyRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
+          if (emergencyText && !isDispositionLikeOutput(emergencyText)) {
+            emergencyResult = {
+              ...emergencyRaw,
+              improvedPrompt: emergencyText,
+            };
+          }
+        } catch (e) {
+          console.warn("[Step 3 Emergency] AI rescue generation failed:", e);
+        }
+
+        if (!emergencyResult) {
+          const localFallbackText = sanitizeGeneratedMarketingField(buildDeterministicFallbackDescription(cleanDisposition, style), personalStyle?.styleProfile, style, { allowParagraphs: true })
+            || buildDeterministicFallbackDescription(cleanDisposition, style);
+          emergencyResult = {
+            improvedPrompt: localFallbackText,
+          };
+          console.warn("[Step 3 Emergency] Using deterministic local fallback description.");
+        }
+
+        const emergencyPrompt = emergencyResult.improvedPrompt;
+        const emergencyViolations = getNonWordCountViolations(validateOptimizationResult(emergencyResult, platform, minimumPublishableWordMin, targetWordMax, style));
+        const emergencyQualityScore = analyzeTextQuality(emergencyPrompt);
+        const emergencyWordCount = emergencyPrompt.split(/\s+/).filter(Boolean).length;
+        const emergencyShortfallPenalty = Math.max(0, minimumPublishableWordMin - emergencyWordCount) / Math.max(minimumPublishableWordMin, 1);
+        const emergencyWordDistancePenalty = Math.abs(emergencyWordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
+
+        candidatePool.push({
+          label: "emergency",
+          result: emergencyResult,
+          qualityScore: emergencyQualityScore,
+          nonWordCountViolations: emergencyViolations,
+          wordCount: emergencyWordCount,
+          totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22),
+        });
       }
 
       let judgeChoiceLabel: string | null = null;
