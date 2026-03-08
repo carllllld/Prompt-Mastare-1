@@ -86,6 +86,22 @@ describe('AI Pipeline Tests', () => {
       expect(violations.filter((v) => v.includes('för att'))).toHaveLength(0);
     });
 
+    it('should preserve energy class letters and repair mechanical artifact sentences', () => {
+      const cleaned = sanitizeGeneratedMarketingField(
+        'Fönster har bytts och tilläggsisolering har gjorts. Energiklass är B. Fiber är installerat. Parkering har laddplats för elbil. Kikka ligger nära när det passar med en måltid Buss tar cirka 25 minuter till Slussen.',
+        undefined,
+        'balanced'
+      );
+
+      expect(cleaned).toBeTruthy();
+      expect(cleaned).toContain('Bostaden har energiklass B och fiber är installerat.');
+      expect(cleaned).toContain('Parkering med laddplats för elbil');
+      expect(cleaned).toContain('I samma riktning finns Kikka när det passar att äta ute. Med buss tar det cirka 25 minuter till Slussen');
+
+      const violations = validateOptimizationResult({ improvedPrompt: cleaned }, 'hemnet', 1, 500, 'balanced');
+      expect(violations.filter((v) => v.includes('energiklass') || v.includes('Parkering har') || v.includes('meningsgräns') || v.includes('servicefras'))).toHaveLength(0);
+    });
+
     it('should validate AI output quality against the current helper rules', () => {
       const goodOutput = 'Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i västerläge och kök renoverat 2022.';
       const badOutput = 'Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en underbar känsla.';
@@ -95,6 +111,22 @@ describe('AI Pipeline Tests', () => {
 
       expect(goodViolations.filter((v) => !v.startsWith('För få ord') && !v.startsWith('För många ord'))).toHaveLength(0);
       expect(badViolations.length).toBeGreaterThan(0);
+    });
+
+    it('should reject a generic Hemnet opening without a strong early detail', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'En trea om 76 kvm. Vardagsrummet har fönster mot gatan. Köket renoverades 2022 med luckor från Ballingslöv. Resecentrum 5 minuter.'
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('Generisk öppning'))).toBe(true);
+    });
+
+    it('should reject a weak Hemnet location ending that reads like a raw place line', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Storgatan 12, 3 tr, Linköping. Balkong i västerläge ger ett fint extrarum under den varmare delen av året. Köket renoverades 2022 med luckor från Ballingslöv. ICA.'
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('Svagt lägesslut'))).toBe(true);
     });
   });
 

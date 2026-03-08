@@ -892,6 +892,8 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
   const violations: string[] = [];
   const lowerText = text.toLowerCase().trim();
   const sentences = text.split(/(?<=[.!?])\s+/);
+  const firstSentence = sentences[0]?.trim() || "";
+  const lastSentence = sentences[sentences.length - 1]?.trim() || "";
 
   const corruptedPatterns: Array<[RegExp, string]> = [
     [/\b[a-zåäö]+för att[a-zåäö]*\b/gi, 'Trasigt ord med inbakad "för att"-artefakt'],
@@ -901,6 +903,19 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
     [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
   ];
   for (const [pattern, message] of corruptedPatterns) {
+    if (pattern.test(text)) {
+      violations.push(message);
+    }
+  }
+
+  const mechanicalQualityPatterns: Array<[RegExp, string]> = [
+    [/\benergiklass(?:en)?\s+är\s+(?:fiber|installerat|parkering|buss)\b/i, 'Trasig energiklass-/teknikmening'],
+    [/\benergiklass\s+[A-G]\.\s+fiber\s+är\s+installerat\b/i, 'Mekanisk teknikrad efter energiklass'],
+    [/\bparkering\s+har\s+(?:laddplats|garage|carport|plats)\b/i, 'Mekanisk parkeringsfras: "Parkering har ..."'],
+    [/\bnär det passar med en måltid\s+buss\s+tar\b/i, 'Saknad meningsgräns före kommunikationsmening'],
+    [/\b(kikka|come 2 eat|chopchop asian express värmdö)[^.!?\n]{0,90}när det passar med en måltid\b/i, 'Svag servicefras i lägesstycke'],
+  ];
+  for (const [pattern, message] of mechanicalQualityPatterns) {
     if (pattern.test(text)) {
       violations.push(message);
     }
@@ -927,6 +942,16 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
   }
   if (lowerText.startsWith('i ') && !lowerText.match(/^i [a-zåäö]+(gatan|vägen|stigen|gränd)/)) {
     violations.push('Börjar med "I" — börja med gatuadress');
+  }
+
+  if (platform === 'hemnet') {
+    if (/^en\s+(etta|tvåa|trea|fyra|femma|villa|radhus|lägenhet)\s+om\s+\d+/i.test(firstSentence) && !/(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence)) {
+      violations.push('Generisk öppning utan tydlig stark detalj — första meningen måste kännas som publicerad mäklartext.');
+    }
+
+    if (lastSentence && /^\b(ica|coop|willys|hemköp|centrum|skola|förskola|resecentrum|centralstationen?)\b/i.test(lastSentence) && !/(promenad|buss|pendling|vardag|nära|runt hörnet|i kvarteret|på cykel)/i.test(lastSentence)) {
+      violations.push('Svagt lägesslut — sista meningen känns som uppräkning i stället för selektiv lägesprosa.');
+    }
   }
 
   // 3. "Det finns" / "Den har" repetition (max 1 allowed)
@@ -1350,6 +1375,16 @@ function analyzeTextQuality(text: string): number {
     score += 0.05;
   }
 
+  const firstSentence = sentences[0]?.trim() || '';
+  const genericOpeningPatterns = [
+    /^en\s+(etta|tvåa|trea|fyra|femma|villa|radhus|lägenhet)\s+om\s+\d+/i,
+    /^\w+[^.!?]{0,80}\bmed\s+(balkong|uteplats|terrass)\b/i,
+  ];
+  const genericOpeningHitCount = genericOpeningPatterns.filter((pattern) => pattern.test(firstSentence)).length;
+  if (genericOpeningHitCount > 0 && !/(söderläge|västerläge|gård|utsikt|kvällssol|lugn|renoverat kök|takhöjd|terrass|uteplats)/i.test(firstSentence)) {
+    score -= 0.06;
+  }
+
   // 12. Word count appropriateness
   if (words.length >= 100 && words.length <= 500) score += 0.03;
 
@@ -1393,6 +1428,18 @@ function analyzeTextQuality(text: string): number {
   const rawAmenityCount = rawAmenitySignals.filter((r) => r.test(text)).length;
   if (rawAmenityCount > 0) {
     score -= Math.min(0.12, rawAmenityCount * 0.05);
+  }
+
+  const lastSentence = sentences[sentences.length - 1]?.trim() || '';
+  if (lastSentence) {
+    const weakLocationEndingPatterns = [
+      /^\b(ica|coop|willys|hemköp|centrum|skola|förskola|resecentrum|centralstationen?)\b/i,
+      /^\b\w+\s+\d+\s+(meter|minuter)\b/i,
+    ];
+    const weakLocationEndingCount = weakLocationEndingPatterns.filter((pattern) => pattern.test(lastSentence)).length;
+    if (weakLocationEndingCount > 0 && !/(promenad|buss|pendling|vardag|nära|runt hörnet|i kvarteret|på cykel)/i.test(lastSentence)) {
+      score -= 0.05;
+    }
   }
 
   // 16. Penalize mechanical fact-line constructions
@@ -1466,6 +1513,85 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   return cleaned.trim() || null;
 }
 
+function finalizeMainMarketingText(
+  text: unknown,
+  platform: string,
+  styleProfile?: any,
+  style: WritingStyle = "balanced",
+  options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean }
+): string | null {
+  const sanitized = sanitizeGeneratedMarketingField(text, styleProfile, style, options);
+  if (!sanitized) return null;
+
+  let finalized = sanitized;
+
+  if (platform === "hemnet") {
+    const filteredSentences = finalized
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter(Boolean)
+      .filter((sentence) => {
+        const lower = sentence.toLowerCase();
+
+        if (/^bostaden har energiklass\s+[a-g](?:\s+och\s+fiber\s+är\s+installerat)?\.?$/i.test(sentence)) {
+          return false;
+        }
+        if (/^energiklass(?:en)?\s+[a-g]\.?$/i.test(sentence)) {
+          return false;
+        }
+        if (/^fiber\s+är\s+installerat\.?$/i.test(sentence)) {
+          return false;
+        }
+        if (/^parkering med laddplats för elbil\.?$/i.test(sentence)) {
+          return false;
+        }
+        if (/^uppvärmning sker via\s+/i.test(lower) && sentence.split(/\s+/).length <= 8) {
+          return false;
+        }
+        return true;
+      });
+
+    finalized = filteredSentences.join(" ").replace(/\s{2,}/g, " ").trim();
+    if (!finalized) return null;
+    finalized = sanitizeGeneratedMarketingField(finalized, styleProfile, style, options) || finalized;
+  }
+
+  return finalized.trim() || null;
+}
+
+function isStrongPublishableCandidate(
+  text: string,
+  platform: string,
+  minimumPublishableWordMin: number,
+  targetWordMax: number,
+  style: WritingStyle,
+  plan: PlanType
+): boolean {
+  const mainViolations = validateMainMarketingText({ improvedPrompt: text }, platform, minimumPublishableWordMin, targetWordMax, style);
+  const nonWordCountViolations = getNonWordCountViolations(mainViolations);
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const publishableEnough = wordCount >= minimumPublishableWordMin;
+  const qualityScore = analyzeTextQuality(text);
+  const threshold = plan === "premium" ? 0.85 : plan === "pro" ? 0.8 : 0.77;
+  const firstSentence = text.split(/[.!?]+/).find((sentence) => sentence.trim().length > 0)?.trim() || "";
+  const strongOpening = /(söderläge|västerläge|uteplats|terrass|balkong|gård|utsikt|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence);
+  return nonWordCountViolations.length === 0 && publishableEnough && !isTooThinForDelivery(text, minimumPublishableWordMin) && qualityScore >= threshold && strongOpening;
+}
+
+function countWeakHemnetDetailSignals(text: string, platform: string): number {
+  if (platform !== "hemnet" || !text) return 0;
+
+  const weakDetailPatterns = [
+    /\benergiklass(?:en)?\b/gi,
+    /\bfiber\s+är\s+installerat\b/gi,
+    /\bparkering med laddplats för elbil\b/gi,
+    /\buppvärmning sker via\b/gi,
+    /\b(fjärrvärme|bergvärme|luft-vattenvärmepump|luftvärmepump)\b/gi,
+  ];
+
+  return weakDetailPatterns.reduce((count, pattern) => count + ((text.match(pattern) || []).length > 0 ? 1 : 0), 0);
+}
+
 function getNonWordCountViolations(violations: string[]): string[] {
   return violations.filter((v) => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
 }
@@ -1508,6 +1634,22 @@ function repairEmbeddedForAttArtifacts(text: string): string {
   return text
     .replace(/\b([A-Za-zÅÄÖåäö]{3,})för att([A-Za-zÅÄÖåäö]{2,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`)
     .replace(/\b([A-Za-zÅÄÖåäö]{2,})för att([A-Za-zÅÄÖåäö]{3,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`);
+}
+
+function repairMechanicalBrokerArtifacts(text: string): string {
+  if (!text) return text;
+
+  return text
+    .replace(/\b[Ee]nergiklass(?:en)?\s+är\s+([A-G])\.\s*Fiber\s+är\s+installerat\b/g, 'Bostaden har energiklass $1 och fiber är installerat')
+    .replace(/\b[Ee]nergiklass(?:en)?\s+är\s+Fiber\s+är\s+installerat\b/g, 'Fiber är installerat')
+    .replace(/\b[Pp]arkering\s+har\s+laddplats\s+för\s+elbil\b/g, 'Parkering med laddplats för elbil')
+    .replace(/\b[Pp]arkering\s+har\s+(garage|carport|plats)\b/g, 'Parkering med $1')
+    .replace(/(^|[.!?]\s+)([A-ZÅÄÖ][A-Za-zÅÄÖåäö0-9&' -]{1,60})\s+ligger\s+nära\s+när\s+det\s+passar\s+med\s+en\s+måltid\b/g, '$1I samma riktning finns $2 när det passar att äta ute')
+    .replace(/(när det passar med en måltid)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2')
+    .replace(/(när det passar med en måltid)\s+(Buss\s+tar)/g, '$1. $2')
+    .replace(/(när det passar att äta ute)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2')
+    .replace(/(när det passar att äta ute)\s+(Buss\s+tar)/g, '$1. $2')
+    .replace(/\bBuss\s+tar\s+cirka\s+(\d+\s+minuter[^.!?\n]*)/g, 'Med buss tar det cirka $1');
 }
 
 function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
@@ -1564,12 +1706,14 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   }
 
   cleaned = repairEmbeddedForAttArtifacts(cleaned);
+  cleaned = repairMechanicalBrokerArtifacts(cleaned);
 
   // Fix orphan 1-3 char fragments with periods (broken sentences)
   // Keep valid Swedish abbreviations: kvm, m², rum, wc, etc.
   const validShortWords = new Set(['kvm', 'rum', 'mån', 'avg', 'brå', 'brf', 'osv', 'dvs', 'mfl', 'tex', 'pga', 'mha', 'tom']);
-  cleaned = cleaned.replace(/(^|\s)([A-ZÅÄÖa-zåäö]{1,3})\.(\s)/gm, (match: string, prefix: string, word: string, space: string) => {
+  cleaned = cleaned.replace(/(^|\s)([A-ZÅÄÖa-zåäö]{1,2})\.(\s)/gm, (match: string, prefix: string, word: string, space: string) => {
     if (validShortWords.has(word.toLowerCase())) return match; // keep valid abbreviations
+    if (/^[A-G]$/.test(word)) return match; // keep energy class letters like "B."
     if (/^[A-ZÅÄÖ]/.test(word) && word.length >= 2) return match; // keep capitalized words (names, etc.)
     return `${prefix}${space}`; // remove orphan fragment only when standalone
   });
@@ -1595,6 +1739,7 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   }
 
   cleaned = repairEmbeddedForAttArtifacts(cleaned);
+  cleaned = repairMechanicalBrokerArtifacts(cleaned);
 
   // === STAGE 3: Advanced grammar cleanup (NEW) ===
 
@@ -2219,13 +2364,25 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     emphasis_strategy: emphasisNotes,
   });
 
+  const weakHemnetFacts = [
+    propertyData.energyClass ? "energiklass" : null,
+    heatingText ? "uppvärmning" : null,
+    parkingText ? "parkering" : null,
+    /fiber/i.test(String(propertyData.otherInfo ?? "")) || /fiber/i.test(String(propertyData.description ?? "")) ? "fiber" : null,
+  ].filter(Boolean) as string[];
+
+  const hemnetDeprioritizeNotes = [
+    weakHemnetFacts.length > 0 ? `I Hemnet-huvudtext: tona ned eller utelämna svaga teknikfakta som ${weakHemnetFacts.join(", ")} om de inte tydligt stärker köparnyttan.` : null,
+    "Låt aldrig teknikfakta ta plats från öppning, planlösning, uteplats, ljus, kökskvalitet eller lägesprosa i Hemnet.",
+  ].filter(Boolean);
+
   const writing_plan = deepClean({
     opening: "Adress + typ + storlek + stark konkret detalj utan klyscha",
     paragraphs: [
-      { id: "p1", goal: "Öppning", must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null].filter(Boolean), allowed_flair: uniqueSellingPoints[0] || null },
+      { id: "p1", goal: "Öppning", must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null].filter(Boolean), do_not_include: weakHemnetFacts, allowed_flair: uniqueSellingPoints[0] || null },
       { id: "p2", goal: "Planlösning och rum", must_include: [layoutText, rooms ? `${rooms} rum` : null].filter(Boolean), do_not_include: dataQualityNotes.length > 0 ? ["oklara planlösningspåståenden"] : [] },
       { id: "p3", goal: "Kök, badrum och material", must_include: [kitchenText, bathroomText, flooringText].filter(Boolean), do_not_include: [] },
-      { id: "p4", goal: "Uteplats och övrigt", must_include: [preferredOutdoorTerm, outdoorSize, balconyDirection, parkingText].filter(Boolean), do_not_include: ["blandad balkong/terrass/altan-terminologi"] },
+      { id: "p4", goal: "Uteplats och övrigt", must_include: [preferredOutdoorTerm, outdoorSize, balconyDirection].filter(Boolean), mention_if_space_allows: [parkingText, heatingText, sanitizeStructuredText(propertyData.energyClass ?? null)].filter(Boolean), do_not_include: ["blandad balkong/terrass/altan-terminologi", ...weakHemnetFacts] },
       { id: "p5", goal: "Läge", must_include: [areaName, transport, ...amenities.slice(0, 2)].filter(Boolean), do_not_include: ["påhittade områdespåståenden"] },
     ],
     claims: [
@@ -2238,8 +2395,9 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null, areaName].filter(Boolean),
     missing_info: dataQualityNotes,
     forbidden_phrases: ["erbjuder", "välkommen till", "här finns", "bjuder på", "präglas av", "generösa ytor"],
+    deprioritize_for_hemnet: hemnetDeprioritizeNotes,
     risk_notes: dataQualityNotes,
-    emphasis_notes: emphasisNotes,
+    emphasis_notes: [...emphasisNotes, ...hemnetDeprioritizeNotes],
     terminology_lock: {
       outdoor_space: preferredOutdoorTerm,
     },
@@ -2359,6 +2517,8 @@ KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
 - Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
 - Om dispositionen innehåller starka, sinnliga men verifierbara kvaliteter som söderläge, kvällssol, uteplats, terrass, lugnt läge, insynsskydd eller utsikt ska öppningen helst konkretisera minst en sådan kvalitet i faktisk situation i stället för att fastna i allmänna konstateranden.
+- Om stark uteplats, solläge, utsikt, takhöjd, köksrenovering eller lugnt läge finns ska öppningen kännas som början på en publicerad annons, inte som sammanställd fakta. Börja i upplevelsen eller den starkaste konkreta detaljen, väv därefter in bostadstyp/storlek naturligt.
+- För villor och radhus: prioritera uteplats, solläge, trädgård, sällskapsytor och kök före tekniska bihang. För lägenheter: prioritera ljus, balkong/uteplats, planlösning, kök och läge.
 - Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
 - Varje mening ska tillföra ny information.
 - Terminologi måste vara konsekvent genom hela texten.
@@ -2367,6 +2527,7 @@ KRAV:
 - Ge mer utrymme åt 1-2 verkliga styrkor och mindre åt standarddetaljer.
 - Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
 - Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
+- I lägesstycket: välj hellre 2-3 relevanta närhetsfakta med köparnytta än att nämna många namn. Bind ihop service, kommunikation och vardag på naturlig svenska.
 - Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
 - Undvik kantiga formuleringar som låter tekniska eller interna, till exempel "fungerande vardagslogistik", "är registrerad" eller liknande administrativa konstruktioner.
 - Sista stycket ska handla om läge. Ingen uppmaning, ingen känsloklyscha.
@@ -2395,6 +2556,7 @@ KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
 - Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
 - Om dispositionen innehåller starka, sinnliga men verifierbara kvaliteter som söderläge, kvällssol, uteplats, terrass, lugnt läge, insynsskydd eller utsikt ska öppningen helst konkretisera minst en sådan kvalitet i faktisk situation i stället för att fastna i allmänna konstateranden.
+- Öppningen ska kännas publicerad och selektiv: lyft det som faktiskt bär annonsen först och låt svagare detaljfakta komma senare eller falla bort om de stör rytmen.
 - Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
 - Varje mening ska tillföra ny information.
 - Terminologi måste vara konsekvent genom hela texten.
@@ -2402,6 +2564,7 @@ KRAV:
 - Undvik mekanisk rumsuppräkning. Ge mer utrymme åt verkliga styrkor.
 - Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
 - Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
+- Lägesstycket ska förklara hur vardagen fungerar i området, inte bara rada upp namn. Välj de mest relevanta platserna och bind ihop dem med transport eller service på naturligt sätt.
 - Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
 - Undvik kantiga formuleringar som låter tekniska eller interna, till exempel "fungerande vardagslogistik", "är registrerad" eller liknande administrativa konstruktioner.
 - Avsluta med läge och pris om pris finns.
@@ -3171,6 +3334,7 @@ Mäklaren vill maximera intresset — men med SUBSTANS, inte tomma ord.
 - Öppna med de 1-2 starkaste konkreta säljpunkterna: "Balkong i söderläge på 8 kvm" > "fantastisk balkong"
 - Betona det som gör objektet unikt TIDIGT — inte sist
 - Välj aktivt VAD du lyfter: ge mer utrymme åt starka detaljer, kortare om svaga
+- Första 2-3 meningarna ska bära annonsen. Om köket, uteplatsen, ljuset, utsikten eller lugna läget är starkast ska det märkas direkt.
 - Sista stycke: läge + en konkret köparnytta (pendlingstid, skola, affär)
 - Du FÅR använda dessa beskrivande ord när de stöds av fakta:
   genomtänkt, smakfullt, stilfullt, elegant, hög standard, ljus och luftig, rofyllt, trivsamt
@@ -3185,6 +3349,7 @@ Mäklaren vill maximera intresset — men med SUBSTANS, inte tomma ord.
           : `\n# TEXTSTIL: BALANSERAD (STANDARD MÄKLARTEXT)
 Fakta i fokus med naturlig rytm och professionell ton.
 - Lyfter rätt saker utan att sälja hårt
+- Första stycket ska kännas selektivt och tryggt, inte heltäckande. Lyft hellre 1-2 starka kvaliteter tydligt än 5 halvviktiga fakta.
 - Du FÅR använda dessa milda beskrivningar när de stöds av fakta:
   genomtänkt, smakfullt, stilfullt, elegant, hög standard
   ljus och luftig (om det finns fönster/takhöjd som stöd), rofyllt
@@ -3226,8 +3391,9 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
         { label: "primary", developerSuffix: "", effort: reasoningEffort },
-        { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta.", effort: "medium" as const },
-        { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism.", effort: "medium" as const },
+        { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta. Lägesstycket ska kännas som publicerad Hemnet-/Booli-prosa, aldrig som uppräkning.", effort: "medium" as const },
+        { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism. Ovidkommande teknik- eller standardfakta ska få minimalt utrymme.", effort: "medium" as const },
+        { label: "broker", developerSuffix: "\n\nVARIANTMÅL: Skriv som en toppresterande svensk mäklare. Första stycket ska bära annonsen direkt med rätt detaljprioritering. Välj aktivt bort svagare fakta om de stör öppning, rytm eller lägesprosa.", effort: "medium" as const },
       ];
 
       const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high") => {
@@ -3250,8 +3416,10 @@ SVARSFORMAT:
 KRITISKA KVALITETSKRAV FÖR improvedPrompt:
 - Öppningen får inte kännas administrativ eller som en objektspecifikation.
 - Prioritera det bästa först: söderläge, uteplats, planlösning, renoverat kök, gårdsläge eller annan stark detalj ska märkas tidigt om fakta finns.
+- Första stycket ska kunna stå i en publicerad svensk annons utan efterförklaring. Om öppningen kan bytas ut mot nästan vilken bostad som helst är den för svag.
 - Nämn inte samma boarea eller annan nyckelfakta två gånger tätt inpå varandra.
 - Skriv aldrig restauranger, butiker, skolor eller kommunikationer som rå lista, parentesrad eller staplade kortmeningar. Omvandla till naturlig mäklarprosa.
+- Lägesstycket ska kännas selektivt: välj de mest relevanta platserna och koppla dem till vardag, pendling eller närservice i naturlig prosa.
 - Undvik mekaniska meningar som "Energiklass är B". Skriv naturligare eller utelämna svaga detaljfakta om de stör rytmen.
 - Texten måste låta som publicerad svensk mäklare, inte som sammanställd rådata.
 
@@ -3375,7 +3543,7 @@ KRAV FÖR DETTA FÖRSÖK:
           }
         }
 
-        let sanitizedPrompt = sanitizeGeneratedMarketingField(candidateResult.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        let sanitizedPrompt = finalizeMainMarketingText(candidateResult.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
         if (!sanitizedPrompt || isDispositionLikeOutput(sanitizedPrompt)) {
           try {
             const rescueCandidateCompletion = await openai.responses.create({
@@ -3402,7 +3570,7 @@ KANDIDATRÄDDNING:
             });
 
             const rescuedRaw = safeJsonParse(rescueCandidateCompletion.output_text || "{}");
-            const rescuedText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(rescuedRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
+            const rescuedText = finalizeMainMarketingText(extractGeneratedMarketingText(rescuedRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
             if (rescuedText && !isDispositionLikeOutput(rescuedText)) {
               candidateResult = { ...candidateResult, ...rescuedRaw, improvedPrompt: rescuedText };
               sanitizedPrompt = rescuedText;
@@ -3421,9 +3589,10 @@ KANDIDATRÄDDNING:
         const nonWordCountViolations = getNonWordCountViolations(validateOptimizationResult(sanitizedResult, platform, minimumPublishableWordMin, targetWordMax, style));
         const qualityScore = analyzeTextQuality(sanitizedPrompt);
         const wordCount = sanitizedPrompt.split(/\s+/).filter(Boolean).length;
+        const weakHemnetDetailCount = countWeakHemnetDetailSignals(sanitizedPrompt, platform);
         const shortfallPenalty = Math.max(0, minimumPublishableWordMin - wordCount) / Math.max(minimumPublishableWordMin, 1);
         const wordDistancePenalty = Math.abs(wordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
-        const totalScore = qualityScore - (nonWordCountViolations.length * 0.08) - (wordDistancePenalty * 0.12) - (shortfallPenalty * 0.22);
+        const totalScore = qualityScore - (nonWordCountViolations.length * 0.08) - (wordDistancePenalty * 0.12) - (shortfallPenalty * 0.22) - (weakHemnetDetailCount * 0.05);
 
         return {
           label,
@@ -3431,6 +3600,7 @@ KANDIDATRÄDDNING:
           qualityScore,
           nonWordCountViolations,
           wordCount,
+          weakHemnetDetailCount,
           totalScore,
         };
       };
@@ -3441,6 +3611,7 @@ KANDIDATRÄDDNING:
         qualityScore: number;
         nonWordCountViolations: string[];
         wordCount: number;
+        weakHemnetDetailCount: number;
         totalScore: number;
       }> = [];
 
@@ -3496,7 +3667,7 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
           });
 
           const emergencyRaw = safeJsonParse(emergencyCompletion.output_text || "{}");
-          const emergencyText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(emergencyRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
+          const emergencyText = finalizeMainMarketingText(extractGeneratedMarketingText(emergencyRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
           if (emergencyText && !isDispositionLikeOutput(emergencyText)) {
             emergencyResult = {
               ...emergencyRaw,
@@ -3527,7 +3698,8 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
           qualityScore: emergencyQualityScore,
           nonWordCountViolations: emergencyViolations,
           wordCount: emergencyWordCount,
-          totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22),
+          weakHemnetDetailCount: countWeakHemnetDetailSignals(emergencyPrompt, platform),
+          totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22) - (countWeakHemnetDetailSignals(emergencyPrompt, platform) * 0.05),
         });
       }
 
@@ -3560,6 +3732,7 @@ Svara med JSON:
                   qualityScore: Number(candidate.qualityScore.toFixed(3)),
                   nonWordCountViolations: candidate.nonWordCountViolations,
                   wordCount: candidate.wordCount,
+                  weakHemnetDetailCount: candidate.weakHemnetDetailCount,
                   text: candidate.result.improvedPrompt,
                 })), null, 2)
               }
@@ -3577,21 +3750,23 @@ Svara med JSON:
 
       const selectedCandidate = [...candidatePool]
         .sort((a, b) => {
-          const aScore = a.totalScore + (a.label === judgeChoiceLabel ? 0.15 : 0) + (a.wordCount >= minimumPublishableWordMin ? 0.06 : 0);
-          const bScore = b.totalScore + (b.label === judgeChoiceLabel ? 0.15 : 0) + (b.wordCount >= minimumPublishableWordMin ? 0.06 : 0);
+          const aScore = a.totalScore + (a.label === judgeChoiceLabel ? 0.15 : 0) + (a.wordCount >= minimumPublishableWordMin ? 0.06 : 0) - (a.weakHemnetDetailCount * 0.03) + (a.qualityScore >= 0.82 ? 0.04 : 0);
+          const bScore = b.totalScore + (b.label === judgeChoiceLabel ? 0.15 : 0) + (b.wordCount >= minimumPublishableWordMin ? 0.06 : 0) - (b.weakHemnetDetailCount * 0.03) + (b.qualityScore >= 0.82 ? 0.04 : 0);
           return bScore - aScore;
         })[0];
 
       let result: any = selectedCandidate.result;
+      let strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
 
-      try {
-        const polishCompletion = await openai.responses.create({
-          model: "gpt-5.2",
-          reasoning: { effort: "medium" },
-          input: [
-            {
-              role: "developer",
-              content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör.
+      if (!strongCandidateFastPath) {
+        try {
+          const polishCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "medium" },
+            input: [
+              {
+                role: "developer",
+                content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör.
 
 UPPGIFT:
 Förfina en redan bra objektbeskrivning till publiceringsklar toppnivå.
@@ -3611,44 +3786,47 @@ FÖRBÄTTRA SÄRSKILT:
 - att de starkaste detaljerna får rätt plats tidigt
 
 Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
-            },
-            {
-              role: "user",
-              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(result, null, 2)}`
+              },
+              {
+                role: "user",
+                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(result, null, 2)}`
+              }
+            ],
+            max_output_tokens: 5000,
+            text: { format: { type: "json_object" } }
+          });
+
+          const polishedRaw = safeJsonParse(polishCompletion.output_text || "{}");
+          const polishedText = finalizeMainMarketingText(extractGeneratedMarketingText(polishedRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+          if (polishedText) {
+            const polishedResult = {
+              ...result,
+              ...polishedRaw,
+              improvedPrompt: polishedText,
+            };
+            for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
+              polishedResult[field] = sanitizeGeneratedMarketingField(polishedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
             }
-          ],
-          max_output_tokens: 5000,
-          text: { format: { type: "json_object" } }
-        });
 
-        const polishedRaw = safeJsonParse(polishCompletion.output_text || "{}");
-        const polishedText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(polishedRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
-        if (polishedText) {
-          const polishedResult = {
-            ...result,
-            ...polishedRaw,
-            improvedPrompt: polishedText,
-          };
-          for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
-            polishedResult[field] = sanitizeGeneratedMarketingField(polishedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+            const currentAllViolations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
+            const polishedAllViolations = validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style);
+            const currentViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
+            const polishedViolations = getNonWordCountViolations(validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style));
+            const currentScore = analyzeTextQuality(result.improvedPrompt || "");
+            const polishedScore = analyzeTextQuality(polishedText);
+
+            if (polishedAllViolations.length <= currentAllViolations.length && (polishedViolations.length < currentViolations.length || polishedScore > currentScore + 0.03)) {
+              result = polishedResult;
+              console.log(`[Step 3 Polish] Accepted polished winner. Score ${currentScore.toFixed(2)} -> ${polishedScore.toFixed(2)}, violations ${currentViolations.length} -> ${polishedViolations.length}`);
+            } else {
+              console.log(`[Step 3 Polish] Kept selected candidate. Score ${currentScore.toFixed(2)} vs ${polishedScore.toFixed(2)}, violations ${currentViolations.length} vs ${polishedViolations.length}`);
+            }
           }
-
-          const currentAllViolations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
-          const polishedAllViolations = validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style);
-          const currentViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
-          const polishedViolations = getNonWordCountViolations(validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style));
-          const currentScore = analyzeTextQuality(result.improvedPrompt || "");
-          const polishedScore = analyzeTextQuality(polishedText);
-
-          if (polishedAllViolations.length <= currentAllViolations.length && (polishedViolations.length < currentViolations.length || polishedScore > currentScore + 0.02)) {
-            result = polishedResult;
-            console.log(`[Step 3 Polish] Accepted polished winner. Score ${currentScore.toFixed(2)} -> ${polishedScore.toFixed(2)}, violations ${currentViolations.length} -> ${polishedViolations.length}`);
-          } else {
-            console.log(`[Step 3 Polish] Kept selected candidate. Score ${currentScore.toFixed(2)} vs ${polishedScore.toFixed(2)}, violations ${currentViolations.length} vs ${polishedViolations.length}`);
-          }
+        } catch (e) {
+          console.warn("[Step 3 Polish] Polishing failed, keeping selected candidate:", e);
         }
-      } catch (e) {
-        console.warn("[Step 3 Polish] Polishing failed, keeping selected candidate:", e);
+      } else {
+        console.log("[Step 3 Polish] Skipped — selected candidate already meets strong publishable threshold.");
       }
 
       sendProgress(5, 7, "Kontrollerar textkvalitet...");
@@ -3656,7 +3834,8 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
-        result.improvedPrompt = sanitizeGeneratedMarketingField(result.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+        result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+        strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       }
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
@@ -3729,7 +3908,7 @@ ERSÄTTNINGSTABELL:
               const wordDiff = Math.abs(originalWords - correctedWords);
 
               if (wordDiff / originalWords < 0.3) {
-                const sanitizedCorrected = sanitizeGeneratedMarketingField(corrected.corrected_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                const sanitizedCorrected = finalizeMainMarketingText(corrected.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
                 if (sanitizedCorrected) {
                   const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
                   if (correctedViolations.length < textViolations.length) {
@@ -3742,7 +3921,7 @@ ERSÄTTNINGSTABELL:
               } else {
                 console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
                 // Kör ändå cleanForbiddenPhrases som fallback
-                result.improvedPrompt = sanitizeGeneratedMarketingField(result.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+                result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
               }
             }
           }
@@ -3752,7 +3931,7 @@ ERSÄTTNINGSTABELL:
       }
 
       // STEG 5b: Ordräknings-enforcement — om texten är för kort, expandera
-      if (result.improvedPrompt) {
+      if (result.improvedPrompt && !strongCandidateFastPath) {
         let currentWordCount = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
         let shortfall = minimumPublishableWordMin - currentWordCount;
 
@@ -3805,7 +3984,7 @@ REGLER:
               if (expanded.expanded_text) {
                 const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
                 if (expandedWordCount >= currentWordCount) {
-                  const sanitizedExpanded = sanitizeGeneratedMarketingField(expanded.expanded_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                  const sanitizedExpanded = finalizeMainMarketingText(expanded.expanded_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
                   if (sanitizedExpanded) {
                     const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, minimumPublishableWordMin, targetWordMax, style));
                     const sanitizedExpandedWordCount = sanitizedExpanded.split(/\s+/).filter(Boolean).length;
@@ -3842,7 +4021,7 @@ REGLER:
 
       // STEG 6: Faktagranskning (Pro/Premium)
       let factCheckResult: any = null;
-      if (plan !== "free" && result.improvedPrompt) {
+      if (plan !== "free" && result.improvedPrompt && !strongCandidateFastPath) {
         try {
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
@@ -3864,7 +4043,7 @@ REGLER:
           factCheckResult = safeJsonParse(factCheckCompletion.output_text || "{}");
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
-            const sanitizedFactChecked = sanitizeGeneratedMarketingField(factCheckResult.corrected_text, personalStyle?.styleProfile, style, { allowParagraphs: true });
+            const sanitizedFactChecked = finalizeMainMarketingText(factCheckResult.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
             if (sanitizedFactChecked) {
               const currentWordCountBeforeFactCheck = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
               const factCheckedWordCount = sanitizedFactChecked.split(/\s+/).filter(Boolean).length;
@@ -3901,26 +4080,31 @@ REGLER:
         result[field] = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
       }
 
-      result.improvedPrompt = sanitizeGeneratedMarketingField(result.improvedPrompt, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+      result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
 
       sendProgress(7, 7, "Slutgranskar mäklarkvalitet...");
 
       let finalBrokerAudit: any = null;
-      const brokerQualityThreshold = plan === "premium" ? 0.78 : plan === "pro" ? 0.74 : 0.72;
+      const brokerQualityThreshold = plan === "premium" ? 0.82 : plan === "pro" ? 0.78 : 0.75;
+      const currentLocalTopBrokerReady = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       const buildLocalBrokerAuditFallback = (reason: string, issues?: string[]) => ({
-        publish_ready: true,
-        broker_quality_score: Number(Math.max(brokerQualityThreshold, analyzeTextQuality(result?.improvedPrompt || "")).toFixed(3)),
+        publish_ready: currentLocalTopBrokerReady,
+        broker_quality_score: Number(analyzeTextQuality(result?.improvedPrompt || "").toFixed(3)),
         issues: Array.isArray(issues) ? issues.slice(0, 5) : [],
         verdict: reason,
       });
-      try {
-        const brokerAuditCompletion = await openai.responses.create({
-          model: "gpt-5.2",
-          reasoning: { effort: "medium" },
-          input: [
-            {
-              role: "developer",
-              content: `Du är kvalitetschef för svenska bostadsannonser inom fastighetsförmedling.
+      if (strongCandidateFastPath) {
+        console.log("[Final Broker Audit] Skipped — strong candidate already satisfies local top-broker threshold.");
+        finalBrokerAudit = buildLocalBrokerAuditFallback("Stark kandidat klarade lokal toppnivågrind; extern slutgranskning hoppades över för snabbare och billigare leverans.");
+      } else {
+        try {
+          const brokerAuditCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "medium" },
+            input: [
+              {
+                role: "developer",
+                content: `Du är kvalitetschef för svenska bostadsannonser inom fastighetsförmedling.
 
 Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå för angiven nivå.
 
@@ -3945,23 +4129,24 @@ Svara med JSON:
   "issues": ["kort lista över återstående problem"],
   "verdict": "kort sammanfattning"
 }`
-            },
-            {
-              role: "user",
-              content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}\nLEVEL: ${plan}`
-            }
-          ],
-          max_output_tokens: 1200,
-          text: { format: { type: "json_object" } }
-        });
+              },
+              {
+                role: "user",
+                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}\nLEVEL: ${plan}`
+              }
+            ],
+            max_output_tokens: 1200,
+            text: { format: { type: "json_object" } }
+          });
 
-        finalBrokerAudit = safeJsonParse(brokerAuditCompletion.output_text || "{}");
-      } catch (e) {
-        if (isOpenAIInsufficientQuotaError(e)) {
-          throw createUpstreamQuotaError("slutlig mäklargranskning", e);
+          finalBrokerAudit = safeJsonParse(brokerAuditCompletion.output_text || "{}");
+        } catch (e) {
+          if (isOpenAIInsufficientQuotaError(e)) {
+            throw createUpstreamQuotaError("slutlig mäklargranskning", e);
+          }
+          console.warn("[Final Broker Audit] Slutlig mäklargranskning misslyckades, använder lokal fallback:", e);
+          finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit misslyckades; lokal kvalitetsgranskning användes i stället.");
         }
-        console.warn("[Final Broker Audit] Slutlig mäklargranskning misslyckades, använder lokal fallback:", e);
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit misslyckades; lokal kvalitetsgranskning användes i stället.");
       }
 
       if (finalBrokerAudit?.publish_ready === false && typeof result?.improvedPrompt === "string" && result.improvedPrompt.trim()) {
@@ -4013,7 +4198,7 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
             });
 
             const rescueRaw = safeJsonParse(rescueCompletion.output_text || "{}");
-            const rescuedText = sanitizeGeneratedMarketingField(extractGeneratedMarketingText(rescueRaw), personalStyle?.styleProfile, style, { allowParagraphs: true });
+            const rescuedText = finalizeMainMarketingText(extractGeneratedMarketingText(rescueRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
             if (rescuedText) {
               const rescuedResult = {
                 ...result,
@@ -4087,6 +4272,7 @@ Svara med JSON:
       const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
       const finalNonWordCountViolations = getNonWordCountViolations(finalMainViolations);
       const finalWordCountViolations = finalMainViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
+      const finalLocalTopBrokerReady = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       const finalExtraFieldViolations = getNonWordCountViolations(
         validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
           .filter((v) => v.startsWith("["))
@@ -4111,26 +4297,38 @@ Svara med JSON:
       }
       if (typeof finalBrokerAudit?.publish_ready !== "boolean") {
         console.warn("[Final Broker Audit] Slutgranskningen returnerade inte giltigt publish_ready. Faller tillbaka till lokal audit.");
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit returnerade ogiltigt publish_ready; lokal kvalitetsgranskning användes i stället.");
+        if (!finalLocalTopBrokerReady) {
+          throw new Error("[Final Gate] Slutgranskningen returnerade ogiltigt publish_ready och lokal toppmäklargrind godkände inte texten.");
+        }
+        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit returnerade ogiltigt publish_ready; stark lokal kvalitetsgranskning användes i stället.");
       }
       if (typeof finalBrokerAudit?.broker_quality_score !== "number") {
         console.warn("[Final Broker Audit] Slutgranskningen returnerade inte giltigt broker_quality_score. Faller tillbaka till lokal audit.");
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit returnerade ogiltigt kvalitetsbetyg; lokal kvalitetsgranskning användes i stället.", finalBrokerAudit?.issues);
+        if (!finalLocalTopBrokerReady) {
+          throw new Error("[Final Gate] Slutgranskningen returnerade ogiltigt kvalitetsbetyg och lokal toppmäklargrind godkände inte texten.");
+        }
+        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit returnerade ogiltigt kvalitetsbetyg; stark lokal kvalitetsgranskning användes i stället.", finalBrokerAudit?.issues);
       }
       if (finalBrokerAudit && finalBrokerAudit.publish_ready === false) {
         const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
-        console.warn(`[Final Broker Audit] AI-audit underkände texten men lokala grindar godkände huvudtexten. Levererar ändå. Detalj: ${auditIssues}`);
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit var striktare än de lokala publiceringsgrindarna; huvudtexten levererades ändå.", Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues : []);
+        if (!finalLocalTopBrokerReady) {
+          throw new Error(`[Final Gate] AI-audit underkände texten och lokal toppmäklargrind godkände inte texten: ${auditIssues}`);
+        }
+        console.warn(`[Final Broker Audit] AI-audit underkände texten men stark lokal toppmäklargrind godkände huvudtexten. Levererar. Detalj: ${auditIssues}`);
+        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit var striktare än den starka lokala toppmäklargrinden; huvudtexten levererades ändå.", Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues : []);
       }
       if (finalBrokerAudit.broker_quality_score < brokerQualityThreshold) {
         const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
-        console.warn(`[Final Broker Audit] Broker quality score låg under tröskeln men huvudtexten klarade lokala grindar. Levererar ändå. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
-        finalBrokerAudit = buildLocalBrokerAuditFallback(`AI-audit gav lägre betyg än tröskeln för ${plan}; lokal kvalitetsgranskning användes i stället.`, Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues : []);
+        if (!finalLocalTopBrokerReady) {
+          throw new Error(`[Final Gate] Broker quality score låg under tröskeln och lokal toppmäklargrind godkände inte texten. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
+        }
+        console.warn(`[Final Broker Audit] Broker quality score låg under tröskeln men stark lokal toppmäklargrind godkände huvudtexten. Levererar. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
+        finalBrokerAudit = buildLocalBrokerAuditFallback(`AI-audit gav lägre betyg än tröskeln för ${plan}; stark lokal toppmäklargrind användes i stället.`, Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues : []);
       }
 
       // AI-förbättringsanalys (körs efter textgenerering)
       let improvementSuggestions = undefined;
-      if (plan !== "free") {
+      if (plan !== "free" && !strongCandidateFastPath) {
         console.log("[Improvement Analysis] Analyzing generated text for improvements...");
 
         const improvementPrompt = `Analysera denna objektbeskrivning ur ett rent text- och kommunikationsperspektiv:
@@ -4185,6 +4383,8 @@ Svara med JSON i formatet:
           }
           console.warn("[Improvement Analysis] Failed, skipping...", e);
         }
+      } else if (plan !== "free") {
+        console.log("[Improvement Analysis] Skipped — strong candidate fast path.");
       }
 
       const tips = result.text_tips || result.pro_tips || [];
@@ -5358,6 +5558,7 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
 export {
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
+  finalizeMainMarketingText,
   sanitizeGeneratedMarketingField,
   validateOptimizationResult,
 };

@@ -346,4 +346,34 @@ describe('AI Regression Test Suite - current helper architecture', () => {
     expect(sanitized).not.toContain('(matbutik)');
     expect(sanitized).not.toContain('Kikka. COME 2 EAT. ChopChop Asian Express Värmdö.');
   });
+
+  it('should deprioritize weak technical facts in the Hemnet writing plan', () => {
+    const structured = buildDispositionFromStructuredData({
+      propertyType: 'villa',
+      address: 'Ekorrvägen 10, Mörtnäs, Värmdö',
+      livingArea: 146,
+      rooms: 6,
+      balconyDirection: 'söder',
+      outdoorSize: '25 kvm',
+      layout: 'öppen planlösning mellan kök och vardagsrum',
+      kitchen: 'renoverat kök med matplats',
+      parking: 'laddplats för elbil',
+      heating: 'luft-vattenvärmepump',
+      energyClass: 'B',
+      transport: '25 minuter med buss till Slussen',
+      amenities: ['Willys Värmdö'],
+      uniqueSellingPoints: 'söderläge, fri utsikt, tyst läge',
+    });
+
+    expect(structured.writing_plan.deprioritize_for_hemnet).toBeTruthy();
+    expect(structured.writing_plan.deprioritize_for_hemnet.join(' ')).toContain('energiklass');
+    expect(structured.writing_plan.deprioritize_for_hemnet.join(' ')).toContain('uppvärmning');
+    expect(structured.writing_plan.deprioritize_for_hemnet.join(' ')).toContain('parkering');
+
+    const outdoorParagraph = structured.writing_plan.paragraphs.find((p: any) => p.id === 'p4');
+    expect(outdoorParagraph).toBeTruthy();
+    expect(outdoorParagraph.must_include).not.toContain('laddplats för elbil');
+    expect(outdoorParagraph.mention_if_space_allows).toContain('laddplats för elbil');
+  });
+
 });
