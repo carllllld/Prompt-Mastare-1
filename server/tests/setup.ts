@@ -1,5 +1,9 @@
 import { vi } from 'vitest';
 
+const nativeSetTimeout = global.setTimeout;
+const nativeSetInterval = global.setInterval;
+const nativeDate = global.Date;
+
 // Mock environment variables
 process.env.NODE_ENV = 'test';
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
@@ -8,6 +12,7 @@ process.env.RESEND_API_KEY = 'test-resend-key';
 process.env.FROM_EMAIL = 'test@example.com';
 process.env.APP_URL = 'http://localhost:3000';
 process.env.OPENAI_API_KEY = 'test-openai-key';
+process.env.STRIPE_SECRET_KEY = 'sk_test_dummy';
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -21,19 +26,19 @@ global.console = {
 
 // Mock setTimeout/setInterval for consistent testing
 global.setTimeout = vi.fn((fn, delay) => {
-  return setTimeout(fn, delay);
+  return nativeSetTimeout(fn, delay);
 }) as any;
 
 global.setInterval = vi.fn((fn, delay) => {
-  return setInterval(fn, delay);
+  return nativeSetInterval(fn, delay);
 }) as any;
 
 // Mock Date.now for consistent timestamps
-const mockDate = new Date('2024-01-01T00:00:00.000Z');
+const mockDate = new nativeDate('2024-01-01T00:00:00.000Z');
 global.Date = vi.fn(() => mockDate) as any;
 global.Date.now = vi.fn(() => mockDate.getTime()) as any;
-global.Date.parse = vi.fn((date) => Date.parse(date)) as any;
-global.Date.UTC = vi.fn((...args) => Date.UTC(...args)) as any;
+global.Date.parse = vi.fn((date) => nativeDate.parse(date)) as any;
+global.Date.UTC = vi.fn((...args: Parameters<typeof nativeDate.UTC>) => nativeDate.UTC(...args)) as any;
 
 // Setup global test utilities
 global.testUtils = {
@@ -45,7 +50,7 @@ global.testUtils = {
     createdAt: new Date(),
     ...overrides
   }),
-  
+
   createMockPropertyData: (overrides = {}) => ({
     propertyType: 'apartment',
     address: 'Testgatan 1, Stockholm',
@@ -71,7 +76,7 @@ global.testUtils = {
     otherInfo: '',
     ...overrides
   }),
-  
+
   createMockEmailJob: (overrides = {}) => ({
     id: 'test-job-id',
     type: 'verification',

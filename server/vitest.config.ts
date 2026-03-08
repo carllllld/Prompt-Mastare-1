@@ -13,11 +13,12 @@ export default defineConfig({
         '**/*.spec.ts'
       ]
     },
-    setupFiles: ['./tests/setup.ts']
+    setupFiles: ['./server/tests/setup.ts']
   },
   resolve: {
     alias: {
-      '@': '/server'
+      '@': '/server',
+      '@shared': '/shared'
     }
   }
 });

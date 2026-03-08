@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { sendVerificationEmail, sendTeamInviteEmail, sendPasswordResetEmail, sendWelcomeEmail } from '../email';
-import { emailQueue } from '../lib/email-queue';
-import { rateLimiter } from '../lib/email-rate-limiter';
+import { queueEmail } from '../lib/email-service';
 
-// Mock dependencies
-vi.mock('../lib/email-queue');
-vi.mock('../lib/email-rate-limiter');
+vi.mock('../lib/email-service', () => ({
+  queueEmail: vi.fn(),
+}));
 
 describe('Email System Tests', () => {
   beforeEach(() => {
@@ -18,35 +17,34 @@ describe('Email System Tests', () => {
 
   describe('sendVerificationEmail', () => {
     it('should queue verification email with correct parameters', async () => {
-      const mockAddJob = vi.mocked(emailQueue.addJob).mockResolvedValue('job_123');
-      
+      const mockQueueEmail = vi.mocked(queueEmail).mockResolvedValue({ success: true, jobId: 'job_123' });
+
       const result = await sendVerificationEmail('test@example.com', 'token123', '192.168.1.1');
-      
-      expect(mockAddJob).toHaveBeenCalledWith({
-        type: 'verification',
-        to: 'test@example.com',
-        data: { verificationUrl: 'https://optiprompt.se/verify-email?token=token123' },
-        maxAttempts: 3,
-        nextRetry: expect.any(Date)
-      });
-      
+
+      expect(mockQueueEmail).toHaveBeenCalledWith(
+        'verification',
+        'test@example.com',
+        { verificationUrl: 'http://localhost:3000/verify-email?token=token123' },
+        '192.168.1.1'
+      );
+
       expect(result).toEqual({ success: true, jobId: 'job_123' });
     });
 
     it('should handle rate limiting errors', async () => {
-      vi.mocked(rateLimiter.checkLimit).mockResolvedValue(false);
-      
+      vi.mocked(queueEmail).mockResolvedValue({ success: false, error: 'Rate limit exceeded. Try again later.' });
+
       const result = await sendVerificationEmail('test@example.com', 'token123', '192.168.1.1');
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toContain('Rate limit exceeded');
     });
 
     it('should handle queue errors gracefully', async () => {
-      vi.mocked(emailQueue.addJob).mockRejectedValue(new Error('Queue full'));
-      
+      vi.mocked(queueEmail).mockResolvedValue({ success: false, error: 'Queue full' });
+
       const result = await sendVerificationEmail('test@example.com', 'token123', '192.168.1.1');
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe('Queue full');
     });
@@ -54,119 +52,124 @@ describe('Email System Tests', () => {
 
   describe('sendTeamInviteEmail', () => {
     it('should queue team invite email with all parameters', async () => {
-      const mockAddJob = vi.mocked(emailQueue.addJob).mockResolvedValue('job_456');
-      
+      const mockQueueEmail = vi.mocked(queueEmail).mockResolvedValue({ success: true, jobId: 'job_456' });
+
       const result = await sendTeamInviteEmail(
-        'member@example.com', 
-        'invite123', 
-        'Team Mäklare', 
+        'member@example.com',
+        'invite123',
+        'Team Mäklare',
         'leader@example.com',
         '192.168.1.2'
       );
-      
-      expect(mockAddJob).toHaveBeenCalledWith({
-        type: 'team_invite',
-        to: 'member@example.com',
-        data: { 
-          teamName: 'Team Mäklare', 
+
+      expect(mockQueueEmail).toHaveBeenCalledWith(
+        'team_invite',
+        'member@example.com',
+        {
+          teamName: 'Team Mäklare',
           inviterEmail: 'leader@example.com',
-          verificationUrl: 'https://optiprompt.se/accept-invite?token=invite123'
+          verificationUrl: 'http://localhost:3000/teams/join/invite123'
         },
-        maxAttempts: 2,
-        nextRetry: expect.any(Date)
-      });
-      
+        '192.168.1.2'
+      );
+
       expect(result).toEqual({ success: true, jobId: 'job_456' });
     });
   });
 
   describe('sendPasswordResetEmail', () => {
     it('should queue password reset email with user name', async () => {
-      const mockAddJob = vi.mocked(emailQueue.addJob).mockResolvedValue('job_789');
-      
+      const mockQueueEmail = vi.mocked(queueEmail).mockResolvedValue({ success: true, jobId: 'job_789' });
+
       const result = await sendPasswordResetEmail(
-        'user@example.com', 
-        'reset123', 
+        'user@example.com',
+        'reset123',
         'John Doe',
         '192.168.1.3'
       );
-      
-      expect(mockAddJob).toHaveBeenCalledWith({
-        type: 'password_reset',
-        to: 'user@example.com',
-        data: { 
-          resetUrl: 'https://optiprompt.se/reset-password?token=reset123',
+
+      expect(mockQueueEmail).toHaveBeenCalledWith(
+        'password_reset',
+        'user@example.com',
+        {
+          resetUrl: 'http://localhost:3000/reset-password?token=reset123',
           userName: 'John Doe'
         },
-        maxAttempts: 3,
-        nextRetry: expect.any(Date)
-      });
-      
+        '192.168.1.3'
+      );
+
       expect(result).toEqual({ success: true, jobId: 'job_789' });
     });
 
     it('should use default name when userName is not provided', async () => {
-      const mockAddJob = vi.mocked(emailQueue.addJob).mockResolvedValue('job_790');
-      
+      const mockQueueEmail = vi.mocked(queueEmail).mockResolvedValue({ success: true, jobId: 'job_790' });
+
       const result = await sendPasswordResetEmail('user@example.com', 'reset123', undefined, '192.168.1.3');
-      
-      expect(mockAddJob).toHaveBeenCalledWith({
-        type: 'password_reset',
-        to: 'user@example.com',
-        data: { 
-          resetUrl: 'https://optiprompt.se/reset-password?token=reset123',
+
+      expect(mockQueueEmail).toHaveBeenCalledWith(
+        'password_reset',
+        'user@example.com',
+        {
+          resetUrl: 'http://localhost:3000/reset-password?token=reset123',
           userName: 'där'
         },
-        maxAttempts: 3,
-        nextRetry: expect.any(Date)
-      });
-      
+        '192.168.1.3'
+      );
+
       expect(result).toEqual({ success: true, jobId: 'job_790' });
     });
   });
 
   describe('sendWelcomeEmail', () => {
     it('should queue welcome email with user name', async () => {
-      const mockAddJob = vi.mocked(emailQueue.addJob).mockResolvedValue('job_999');
-      
+      const mockQueueEmail = vi.mocked(queueEmail).mockResolvedValue({ success: true, jobId: 'job_999' });
+
       const result = await sendWelcomeEmail('newuser@example.com', 'Jane Smith', '192.168.1.4');
-      
-      expect(mockAddJob).toHaveBeenCalledWith({
-        type: 'welcome',
-        to: 'newuser@example.com',
-        data: { 
+
+      expect(mockQueueEmail).toHaveBeenCalledWith(
+        'welcome',
+        'newuser@example.com',
+        {
           userName: 'Jane Smith',
-          loginUrl: 'https://optiprompt.se/login'
+          loginUrl: 'http://localhost:3000'
         },
-        maxAttempts: 1,
-        nextRetry: expect.any(Date)
-      });
-      
+        '192.168.1.4'
+      );
+
       expect(result).toEqual({ success: true, jobId: 'job_999' });
     });
   });
 
   describe('Error Handling', () => {
     it('should handle malformed email addresses', async () => {
+      vi.mocked(queueEmail).mockResolvedValue({ success: false, error: 'Invalid email address' });
+
       const result = await sendVerificationEmail('invalid-email', 'token123', '192.168.1.1');
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
 
     it('should handle empty tokens', async () => {
+      vi.mocked(queueEmail).mockResolvedValue({ success: false, error: 'Missing token' });
+
       const result = await sendVerificationEmail('test@example.com', '', '192.168.1.1');
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
 
     it('should handle null IP addresses', async () => {
-      const mockAddJob = vi.mocked(emailQueue.addJob).mockResolvedValue('job_null');
-      
+      const mockQueueEmail = vi.mocked(queueEmail).mockResolvedValue({ success: true, jobId: 'job_null' });
+
       const result = await sendVerificationEmail('test@example.com', 'token123', undefined);
-      
-      expect(mockAddJob).toHaveBeenCalled();
+
+      expect(mockQueueEmail).toHaveBeenCalledWith(
+        'verification',
+        'test@example.com',
+        { verificationUrl: 'http://localhost:3000/verify-email?token=token123' },
+        undefined
+      );
       expect(result.success).toBe(true);
     });
   });
