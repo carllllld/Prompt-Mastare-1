@@ -165,8 +165,22 @@ export class DatabaseStorage implements IStorage {
 
   // Admin function to set plan directly (no Stripe required)
   async setUserPlan(userId: string, plan: "free" | "pro" | "premium"): Promise<void> {
+    const existing = await db.select({
+      plan: users.plan,
+      planStartAt: users.planStartAt,
+    })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const current = existing[0];
+    const shouldResetPlanStartAt = current?.plan !== plan && (plan === "free" || current?.plan === "free" || !current?.planStartAt);
+
     await db.update(users)
-      .set({ plan })
+      .set({
+        plan,
+        ...(shouldResetPlanStartAt ? { planStartAt: new Date() } : {}),
+      })
       .where(eq(users.id, userId));
   }
 

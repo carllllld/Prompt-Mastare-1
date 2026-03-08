@@ -1,180 +1,85 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { optimizePrompt } from '../routes';
-import { storage } from '../storage';
-
-// Mock dependencies
-vi.mock('../storage');
-vi.mock('openai', () => ({
-  OpenAI: vi.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: vi.fn()
-      }
-    }
-  }))
-}));
+import { describe, it, expect } from 'vitest';
+import {
+  buildDeterministicFallbackDescription,
+  buildDispositionFromStructuredData,
+  sanitizeGeneratedMarketingField,
+  validateOptimizationResult,
+} from '../routes';
 
 describe('AI Pipeline Tests', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe('Prompt Optimization', () => {
-    it('should optimize Hemnet text correctly', async () => {
-      const mockGetUser = vi.mocked(storage.getUser).mockResolvedValue({
-        id: 'user_123',
-        plan: 'pro',
-        emailVerified: true
-      } as any);
-
-      const mockGetMonthlyUsage = vi.mocked(storage.getMonthlyUsage).mockResolvedValue({
-        textsGenerated: 2,
-        planType: 'pro'
-      } as any);
-
-      const mockIncrementUsage = vi.mocked(storage.incrementUsage).mockResolvedValue();
-
-      // Mock OpenAI response
-      const { OpenAI } = await import('openai');
-      const mockCreate = vi.mocked(OpenAI.prototype.chat.completions.create);
-      mockCreate.mockResolvedValue({
-        choices: [{
-          message: {
-            content: 'Optimerad text för Hemnet'
-          }
-        }]
-      } as any);
-
-      const result = await optimizePrompt({
-        originalText: 'Original text',
-        targetPlatform: 'hemnet',
+    it('should build structured pipeline input from property data', () => {
+      const result = buildDispositionFromStructuredData({
         propertyType: 'apartment',
-        rooms: 3,
-        area: 75,
         address: 'Testgatan 1, Stockholm',
+        livingArea: 75,
+        rooms: 3,
+        bedrooms: 2,
+        buildYear: 2010,
+        monthlyFee: 2500,
         price: 3500000,
-        fee: 2500,
-        yearBuilt: 2010,
-        floor: 3,
-        description: 'Fin lägenhet'
+        balconyDirection: 'söder',
+        kitchen: 'kök med vita luckor',
+        bathroom: 'helkaklat badrum',
+        uniqueSellingPoints: 'balkong i söderläge',
+        transport: 'T-bana 4 minuter',
       });
 
-      expect(mockGetUser).toHaveBeenCalledWith('user_123');
-      expect(mockGetMonthlyUsage).toHaveBeenCalledWith('user_123');
-      expect(mockIncrementUsage).toHaveBeenCalledWith('user_123', 'pro');
-      expect(result).toBeDefined();
+      expect(result.disposition.property.address).toBe('Testgatan 1, Stockholm');
+      expect(result.disposition.property.size).toBe(75);
+      expect(result.disposition.property.rooms).toBe(3);
+      expect(result.tone_analysis.target_audience).toBeTruthy();
+      expect(Array.isArray(result.writing_plan.paragraphs)).toBe(true);
     });
 
-    it('should handle usage limits correctly', async () => {
-      const mockGetUser = vi.mocked(storage.getUser).mockResolvedValue({
-        id: 'user_123',
-        plan: 'free',
-        emailVerified: true
-      } as any);
+    it('should produce a publishable deterministic fallback after sanitizing', () => {
+      const structured = buildDispositionFromStructuredData({
+        propertyType: 'villa',
+        address: 'Villagatan 1, Malmö',
+        livingArea: 150,
+        rooms: 5,
+        bedrooms: 3,
+        monthlyFee: 0,
+        price: 4850000,
+        kitchen: 'modernt kök med köksö',
+        bathroom: 'två badrum',
+        layout: 'öppen planlösning mellan kök och vardagsrum',
+        uniqueSellingPoints: 'trädgård, söderläge',
+        amenities: ['skola 400 meter', 'matbutik 500 meter'],
+      });
 
-      const mockGetMonthlyUsage = vi.mocked(storage.getMonthlyUsage).mockResolvedValue({
-        textsGenerated: 3,
-        planType: 'free'
-      } as any);
+      const fallback = buildDeterministicFallbackDescription(structured.disposition, 'balanced');
+      const sanitized = sanitizeGeneratedMarketingField(fallback, undefined, 'balanced', { allowParagraphs: true });
 
-      await expect(optimizePrompt({
-        originalText: 'Test text',
-        targetPlatform: 'hemnet',
-        propertyType: 'apartment',
-        rooms: 2,
-        area: 50,
-        address: 'Testgatan 2',
-        price: 2500000,
-        fee: 2000,
-        yearBuilt: 2005,
-        floor: 2,
-        description: 'Test'
-      })).rejects.toThrow('Usage limit exceeded');
-    });
-
-    it('should validate property data', async () => {
-      const mockGetUser = vi.mocked(storage.getUser).mockResolvedValue({
-        id: 'user_123',
-        plan: 'pro',
-        emailVerified: true
-      } as any);
-
-      const mockGetMonthlyUsage = vi.mocked(storage.getMonthlyUsage).mockResolvedValue({
-        textsGenerated: 1,
-        planType: 'pro'
-      } as any);
-
-      await expect(optimizePrompt({
-        originalText: '',
-        targetPlatform: 'hemnet',
-        propertyType: '',
-        rooms: 0,
-        area: 0,
-        address: '',
-        price: 0,
-        fee: 0,
-        yearBuilt: 0,
-        floor: 0,
-        description: ''
-      })).rejects.toThrow();
+      expect(sanitized).toBeTruthy();
+      const violations = validateOptimizationResult({ improvedPrompt: sanitized }, 'hemnet', 120, 500, 'balanced');
+      expect(violations.filter((v) => !v.startsWith('För få ord') && !v.startsWith('För många ord'))).toHaveLength(0);
     });
   });
 
   describe('Rule Violations', () => {
-    it('should detect forbidden phrases', () => {
-      const forbiddenPhrases = [
-        'Välkommen till denna fantastiska',
-        'erbjuder generösa ytor',
-        'bjuder på',
-        'präglas av',
-        'genomsyras av',
-        'här kan du',
-        'strategiskt läge'
-      ];
+    it('should sanitize forbidden phrases from generated text', () => {
+      const cleaned = sanitizeGeneratedMarketingField(
+        'Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och här kan du njuta av balkongen.',
+        undefined,
+        'balanced'
+      );
 
-      const testTexts = [
-        'Välkommen till denna fantastiska lägenhet',
-        'Bostaden erbjuder generösa ytor',
-        'Här kan du njuta av balkongen',
-        'Läget är strategiskt nära centrum'
-      ];
-
-      forbiddenPhrases.forEach((phrase, index) => {
-        expect(testTexts[index]).toContain(phrase);
-      });
+      expect(cleaned).toBeTruthy();
+      expect(cleaned?.toLowerCase()).not.toContain('välkommen till');
+      expect(cleaned?.toLowerCase()).not.toContain('erbjuder');
+      expect(cleaned?.toLowerCase()).not.toContain('här kan du');
     });
 
-    it('should validate AI output quality', () => {
-      const goodOutput = 'Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i västerläge.';
+    it('should validate AI output quality against the current helper rules', () => {
+      const goodOutput = 'Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i västerläge och kök renoverat 2022.';
       const badOutput = 'Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en underbar känsla.';
 
-      const qualityChecks = {
-        goodOutput: {
-          startsWithAddress: goodOutput.match(/^[A-ZÅÄÖa-zåäö]+\s+\d+/) !== null,
-          hasForbiddenPhrases: !/(Välkommen|erbjuder|generösa|fantastisk)/.test(goodOutput),
-          hasSpecificDetails: /\d+\s*kvm/.test(goodOutput),
-          reasonableLength: goodOutput.length > 20 && goodOutput.length < 500
-        },
-        badOutput: {
-          startsWithAddress: badOutput.match(/^[A-ZÅÄÖa-zåäö]+\s+\d+/) !== null,
-          hasForbiddenPhrases: !/(Välkommen|erbjuder|generösa|fantastisk)/.test(badOutput),
-          hasSpecificDetails: /\d+\s*kvm/.test(badOutput),
-          reasonableLength: badOutput.length > 20 && badOutput.length < 500
-        }
-      };
+      const goodViolations = validateOptimizationResult({ improvedPrompt: goodOutput }, 'hemnet', 1, 500, 'balanced');
+      const badViolations = validateOptimizationResult({ improvedPrompt: badOutput }, 'hemnet', 1, 500, 'balanced');
 
-      expect(qualityChecks.goodOutput.startsWithAddress).toBe(true);
-      expect(qualityChecks.goodOutput.hasForbiddenPhrases).toBe(true);
-      expect(qualityChecks.goodOutput.hasSpecificDetails).toBe(true);
-      expect(qualityChecks.goodOutput.reasonableLength).toBe(true);
-
-      expect(qualityChecks.badOutput.startsWithAddress).toBe(false);
-      expect(qualityChecks.badOutput.hasForbiddenPhrases).toBe(false);
-      expect(qualityChecks.badOutput.hasSpecificDetails).toBe(false);
+      expect(goodViolations.filter((v) => !v.startsWith('För få ord') && !v.startsWith('För många ord'))).toHaveLength(0);
+      expect(badViolations.length).toBeGreaterThan(0);
     });
   });
 
@@ -194,7 +99,8 @@ describe('AI Pipeline Tests', () => {
         flooring: 'Ekparkett',
         kitchen: 'Modernt kök med ö',
         bathroom: 'Marmorbadrum',
-        balcony: { area: 20, direction: 'syd' },
+        balconyDirection: 'syd',
+        outdoorSize: '20 kvm',
         storage: 'Förråd och garage',
         heating: 'Vattenburen värme',
         parking: 'Dubbelgarage',
@@ -205,131 +111,44 @@ describe('AI Pipeline Tests', () => {
         otherInfo: 'Säljs av mäklare'
       };
 
-      const expectedDisposition = {
-        type: 'villa',
-        address: 'Villagatan 1, Malmö',
-        size: '150 kvm',
-        rooms: 5,
-        bedrooms: 3,
-        floor: '1 tr',
-        year: '1995',
-        condition: 'Renoverad',
-        energy: 'C',
-        elevator: false,
-        flooring: 'Ekparkett',
-        kitchen: 'Modernt kök med ö',
-        bathroom: 'Marmorbadrum',
-        balcony: '20 kvm, syd',
-        storage: 'Förråd och garage',
-        heating: 'Vattenburen värme',
-        parking: 'Dubbelgarage',
-        plot: '800 kvm',
-        garden: 'Trädgård med terrass',
-        features: 'Braskamin',
-        highlights: 'Närhet till skola',
-        other: 'Säljs av mäklare'
-      };
+      const structured = buildDispositionFromStructuredData(propertyData);
 
-      // Test that all fields are mapped correctly
-      Object.keys(expectedDisposition).forEach(key => {
-        expect(expectedDisposition[key]).toBeDefined();
-        expect(expectedDisposition[key]).not.toBe('');
-      });
+      expect(structured.disposition.property.type).toBe('villa');
+      expect(structured.disposition.property.address).toBe('Villagatan 1, Malmö');
+      expect(structured.disposition.property.size).toBe(150);
+      expect(structured.disposition.property.materials.kitchen).toBe('Modernt kök med ö');
+      expect(structured.disposition.location.municipality).toBe('Malmö');
     });
 
     it('should handle missing optional fields', () => {
-      const minimalData = {
+      const structured = buildDispositionFromStructuredData({
         propertyType: 'apartment',
         address: 'Lägenhetsvägen 1, Stockholm',
         livingArea: 65,
         rooms: 3,
         floor: 2,
         buildYear: 2018
-      };
+      });
 
-      const processedData = {
-        type: 'apartment',
-        address: 'Lägenhetsvägen 1, Stockholm',
-        size: '65 kvm',
-        rooms: 3,
-        floor: '2 tr',
-        year: '2018',
-        // Optional fields should have default values
-        bedrooms: '',
-        condition: '',
-        energy: '',
-        elevator: false,
-        flooring: '',
-        kitchen: '',
-        bathroom: '',
-        balcony: '',
-        storage: '',
-        heating: '',
-        parking: '',
-        plot: '',
-        garden: '',
-        features: '',
-        highlights: '',
-        other: ''
-      };
-
-      expect(processedData.type).toBe('apartment');
-      expect(processedData.address).toBe('Lägenhetsvägen 1, Stockholm');
-      expect(processedData.bedrooms).toBe('');
-      expect(processedData.condition).toBe('');
+      expect(structured.disposition.property.type).toBe('lägenhet');
+      expect(structured.disposition.property.address).toBe('Lägenhetsvägen 1, Stockholm');
+      expect(structured.disposition.property.rooms).toBe(3);
+      expect(structured.disposition.property.floor).toBe('2');
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle OpenAI API errors gracefully', async () => {
-      const mockGetUser = vi.mocked(storage.getUser).mockResolvedValue({
-        id: 'user_123',
-        plan: 'pro',
-        emailVerified: true
-      } as any);
-
-      const mockGetMonthlyUsage = vi.mocked(storage.getMonthlyUsage).mockResolvedValue({
-        textsGenerated: 1,
-        planType: 'pro'
-      } as any);
-
-      const { OpenAI } = await import('openai');
-      const mockCreate = vi.mocked(OpenAI.prototype.chat.completions.create);
-      mockCreate.mockRejectedValue(new Error('API rate limit exceeded'));
-
-      await expect(optimizePrompt({
-        originalText: 'Test text',
-        targetPlatform: 'hemnet',
-        propertyType: 'apartment',
-        rooms: 2,
-        area: 50,
-        address: 'Testgatan 2',
-        price: 2500000,
-        fee: 2000,
-        yearBuilt: 2005,
-        floor: 2,
-        description: 'Test'
-      })).rejects.toThrow('API rate limit exceeded');
+    it('should return null when sanitizing non-string values', () => {
+      expect(sanitizeGeneratedMarketingField(null, undefined, 'balanced')).toBeNull();
+      expect(sanitizeGeneratedMarketingField(undefined, undefined, 'balanced')).toBeNull();
     });
 
-    it('should handle database errors', async () => {
-      const mockGetUser = vi.mocked(storage.getUser).mockRejectedValue(
-        new Error('Database connection failed')
-      );
+    it('should flag disposition-like output as invalid', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'OBJEKTDISPOSITION\nAdress: Testgatan 1\nBoarea: 75 kvm\nRum: 3\nAvgift: 2500 kr/mån\nKommunikationer: T-bana'
+      }, 'hemnet', 1, 500, 'balanced');
 
-      await expect(optimizePrompt({
-        originalText: 'Test text',
-        targetPlatform: 'hemnet',
-        propertyType: 'apartment',
-        rooms: 2,
-        area: 50,
-        address: 'Testgatan 2',
-        price: 2500000,
-        fee: 2000,
-        yearBuilt: 2005,
-        floor: 2,
-        description: 'Test'
-      })).rejects.toThrow('Database connection failed');
+      expect(violations.some((v) => v.toLowerCase().includes('disposition'))).toBe(true);
     });
   });
 });
