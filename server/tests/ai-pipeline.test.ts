@@ -71,6 +71,21 @@ describe('AI Pipeline Tests', () => {
       expect(cleaned?.toLowerCase()).not.toContain('här kan du');
     });
 
+    it('should repair embedded "för att" word artifacts before validation', () => {
+      const cleaned = sanitizeGeneratedMarketingField(
+        'Köket har en sammanhåför attllen utformning med matplats vid fönstret och vardagsrummet får ett naturligt ljusinsläpp.',
+        undefined,
+        'balanced'
+      );
+
+      expect(cleaned).toBeTruthy();
+      expect(cleaned).toContain('sammanhållen');
+      expect(cleaned).not.toContain('för attllen');
+
+      const violations = validateOptimizationResult({ improvedPrompt: cleaned }, 'hemnet', 1, 500, 'balanced');
+      expect(violations.filter((v) => v.includes('för att'))).toHaveLength(0);
+    });
+
     it('should validate AI output quality against the current helper rules', () => {
       const goodOutput = 'Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i västerläge och kök renoverat 2022.';
       const badOutput = 'Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en underbar känsla.';

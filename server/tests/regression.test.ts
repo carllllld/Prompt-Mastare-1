@@ -319,4 +319,31 @@ describe('AI Regression Test Suite - current helper architecture', () => {
     expect(fallback.toLowerCase()).not.toContain('drömboende');
     expect(fallback.toLowerCase()).not.toContain('fantastisk');
   });
+
+  it('should turn nearby places into prose instead of a raw list in deterministic fallback', () => {
+    const structured = buildDispositionFromStructuredData({
+      propertyType: 'villa',
+      address: 'Ekorrvägen 10, Mörtnäs, Värmdö',
+      livingArea: 146,
+      rooms: 6,
+      kitchen: 'renoverat kök',
+      layout: 'öppna sällskapsytor mellan kök och vardagsrum',
+      balconyDirection: 'söder',
+      uniqueSellingPoints: 'söderläge, tyst läge, originaldetaljer',
+      amenities: ['Willys Värmdö (matbutik)', 'Kikka (restaurang)'],
+      services: ['COME 2 EAT (restaurang)', 'ChopChop Asian Express Värmdö (restaurang)'],
+      transport: '25 minuter med buss till Slussen',
+      municipality: 'Värmdö',
+    });
+
+    const fallback = buildDeterministicFallbackDescription(structured.disposition, 'balanced');
+    const sanitized = sanitizeGeneratedMarketingField(fallback, undefined, 'balanced', { allowParagraphs: true });
+
+    expect(sanitized).toBeTruthy();
+    expect((sanitized || '').split(/\s+/).filter(Boolean).length).toBeGreaterThan(70);
+    expect(sanitized).toContain('I närområdet finns bland annat');
+    expect(sanitized).not.toContain('(restaurang)');
+    expect(sanitized).not.toContain('(matbutik)');
+    expect(sanitized).not.toContain('Kikka. COME 2 EAT. ChopChop Asian Express Värmdö.');
+  });
 });

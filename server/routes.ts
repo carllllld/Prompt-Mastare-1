@@ -158,6 +158,22 @@ function extractGeneratedMarketingText(payload: any): string | null {
   return null;
 }
 
+function isOpenAIInsufficientQuotaError(error: unknown): boolean {
+  const candidate = error as any;
+  return candidate?.status === 429 && (candidate?.code === "insufficient_quota" || candidate?.type === "insufficient_quota" || candidate?.error?.code === "insufficient_quota" || candidate?.error?.type === "insufficient_quota");
+}
+
+function createUpstreamQuotaError(stage: string, error?: unknown): Error & { statusCode: number; code: string; upstreamQuota: boolean; stage: string } {
+  const message = `OpenAI-kvoten är slut uppströms under ${stage}. Detta är inte samma sak som användarens återstående texter i appen.`;
+  const wrapped = new Error(message) as Error & { statusCode: number; code: string; upstreamQuota: boolean; stage: string; cause?: unknown };
+  wrapped.statusCode = 503;
+  wrapped.code = "openai_upstream_quota_exceeded";
+  wrapped.upstreamQuota = true;
+  wrapped.stage = stage;
+  if (error) wrapped.cause = error;
+  return wrapped;
+}
+
 function extractImprovedPromptFromLooseJson(raw: string): string | null {
   if (!raw) return null;
 
@@ -191,6 +207,70 @@ function formatFallbackValue(value: unknown): string | null {
     return trimmed || null;
   }
   return null;
+}
+
+function toSentenceCase(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function normalizeFallbackLocationItem(value: string): string {
+  return value
+    .replace(/\s*\([^)]*\)\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function buildFallbackLocationSentence(area: string | null, municipality: string | null, transport: string | null, amenities: string[], services: string[]): string {
+  const cleanedAmenities = amenities
+    .map(normalizeFallbackLocationItem)
+    .filter(Boolean)
+    .slice(0, 2);
+  const cleanedServices = services
+    .map(normalizeFallbackLocationItem)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  const areaLabel = area || municipality;
+  const locationSentences: string[] = [];
+
+  if (areaLabel && transport) {
+    locationSentences.push(`${toSentenceCase(areaLabel)} har ${transport.charAt(0).toLowerCase() + transport.slice(1)}.`);
+  } else if (transport) {
+    locationSentences.push(`Kommunikationerna nås med ${transport.charAt(0).toLowerCase() + transport.slice(1)}.`);
+  } else if (areaLabel) {
+    locationSentences.push(`${toSentenceCase(areaLabel)} ger ett vardagsnära läge med service inom bekvämt räckhåll.`);
+  }
+
+  const nearby = [...cleanedAmenities, ...cleanedServices].filter(Boolean).slice(0, 3);
+  if (nearby.length === 1) {
+    locationSentences.push(`I närområdet finns bland annat ${nearby[0]}.`);
+  } else if (nearby.length === 2) {
+    locationSentences.push(`I närområdet finns bland annat ${nearby[0]} och ${nearby[1]}.`);
+  } else if (nearby.length >= 3) {
+    locationSentences.push(`I närområdet finns bland annat ${nearby.slice(0, -1).join(", ")} och ${nearby[nearby.length - 1]}.`);
+  }
+
+  if (municipality && municipality !== areaLabel) {
+    locationSentences.push(`${municipality} bidrar med ytterligare service och utbud i vardagen.`);
+  }
+
+  return locationSentences.join(" ").trim();
+}
+
+function isTooThinForDelivery(text: string, minimumPublishableWordMin: number): boolean {
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount < Math.max(90, Math.min(minimumPublishableWordMin, 130))) return true;
+
+  const shortLineCount = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => line.split(/\s+/).filter(Boolean).length <= 6).length;
+
+  const rawListPattern = /(?:^|[.!?]\s+)(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)\s*(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)\s*(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)/u;
+
+  return shortLineCount >= 2 || rawListPattern.test(text);
 }
 
 function buildDeterministicFallbackDescription(disposition: any, style: WritingStyle): string {
@@ -238,9 +318,9 @@ function buildDeterministicFallbackDescription(disposition: any, style: WritingS
   }
 
   const middleSentences: string[] = [];
-  if (layout) middleSentences.push(`Planlösningen präglas av ${layout.charAt(0).toLowerCase() + layout.slice(1)}.`);
-  if (kitchen) middleSentences.push(`Köket är utrustat med ${kitchen.charAt(0).toLowerCase() + kitchen.slice(1)}.`);
-  if (bathroom) middleSentences.push(`Badrummet erbjuder ${bathroom.charAt(0).toLowerCase() + bathroom.slice(1)}.`);
+  if (layout) middleSentences.push(`Planlösningen samlar ${layout.charAt(0).toLowerCase() + layout.slice(1)} i ett genomtänkt flöde mellan rummen.`);
+  if (kitchen) middleSentences.push(`Köket är utfört med ${kitchen.charAt(0).toLowerCase() + kitchen.slice(1)}.`);
+  if (bathroom) middleSentences.push(`Badrummet är inrett med ${bathroom.charAt(0).toLowerCase() + bathroom.slice(1)}.`);
   if (renovations.length > 0) middleSentences.push(`Under senare år har bostaden uppdaterats med ${renovations.join(" och ")}.`);
   if (features.length > 0) middleSentences.push(`Detaljer som ${features.join(", ")} bidrar till helhetsintrycket.`);
 
@@ -249,21 +329,16 @@ function buildDeterministicFallbackDescription(disposition: any, style: WritingS
   if (outdoorSize) outdoorParts.push(`${outdoorSize}`);
   if (outdoorDirection) outdoorParts.push(`i ${outdoorDirection.toLowerCase()}`);
   if (outdoorParts.length > 0) {
-    middleSentences.push(`Utemiljön består av ${outdoorParts.join(" ")}.`);
+    middleSentences.push(`Utomhus finns ${outdoorParts.join(" ")} som förlänger bostaden under den varmare delen av året.`);
   }
 
-  const locationBits: string[] = [];
-  if (area) locationBits.push(area);
-  if (municipality && municipality !== area) locationBits.push(municipality);
-  if (transport) locationBits.push(transport);
-  if (amenities.length > 0) locationBits.push(amenities.join(", "));
-  if (services.length > 0) locationBits.push(services.join(", "));
+  const locationProse = buildFallbackLocationSentence(area, municipality, transport, amenities, services);
 
   let closing = "";
-  if (locationBits.length > 0 && fee) {
-    closing = `Läget kompletteras av ${locationBits.join(". ")}. Avgiften uppgår till ${fee}.`;
-  } else if (locationBits.length > 0) {
-    closing = `Läget kompletteras av ${locationBits.join(". ")}.`;
+  if (locationProse && fee) {
+    closing = `${locationProse} Avgiften uppgår till ${fee}.`;
+  } else if (locationProse) {
+    closing = locationProse;
   } else if (fee) {
     closing = `Avgiften uppgår till ${fee}.`;
   } else {
@@ -1427,6 +1502,14 @@ function replaceWholePhrase(text: string, phrase: string, replacement: string): 
   return text.replace(pattern, (_match, prefix: string) => `${prefix}${replacement}`);
 }
 
+function repairEmbeddedForAttArtifacts(text: string): string {
+  if (!text) return text;
+
+  return text
+    .replace(/\b([A-Za-zÅÄÖåäö]{3,})för att([A-Za-zÅÄÖåäö]{2,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`)
+    .replace(/\b([A-Za-zÅÄÖåäö]{2,})för att([A-Za-zÅÄÖåäö]{3,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`);
+}
+
 function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
   if (!text) return text;
   let cleaned = text;
@@ -1480,6 +1563,8 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
     cleaned = cleaned.replace(regex, replacement);
   }
 
+  cleaned = repairEmbeddedForAttArtifacts(cleaned);
+
   // Fix orphan 1-3 char fragments with periods (broken sentences)
   // Keep valid Swedish abbreviations: kvm, m², rum, wc, etc.
   const validShortWords = new Set(['kvm', 'rum', 'mån', 'avg', 'brå', 'brf', 'osv', 'dvs', 'mfl', 'tex', 'pga', 'mha', 'tom']);
@@ -1508,6 +1593,8 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
       cleaned = replaceWholePhrase(cleaned, customPhrase, "");
     }
   }
+
+  cleaned = repairEmbeddedForAttArtifacts(cleaned);
 
   // === STAGE 3: Advanced grammar cleanup (NEW) ===
 
@@ -2857,6 +2944,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let disposition: any = null;
       let toneAnalysis: any = null;
       let writingPlan: any = null;
+      let upstreamQuotaFailure: (Error & { statusCode?: number; code?: string; upstreamQuota?: boolean; stage?: string }) | null = null;
 
       if (propertyData && propertyData.address) {
         // FAST PATH: Structured form data → skippa AI-extraktion
@@ -2998,6 +3086,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             console.log(`[Step 2] Writing plan created with ${aiPlan.claims?.length || 0} evidence-gated claims`);
           }
         } catch (e) {
+          if (isOpenAIInsufficientQuotaError(e)) {
+            throw createUpstreamQuotaError("steg 2 skrivplan", e);
+          }
           console.warn("[Step 2] Plan generation failed, using basic plan:", e);
         }
       }
@@ -3359,11 +3450,19 @@ KANDIDATRÄDDNING:
           candidatePool.push(candidate);
           console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
         } catch (e) {
+          if (isOpenAIInsufficientQuotaError(e)) {
+            upstreamQuotaFailure = createUpstreamQuotaError(`steg 3 kandidat ${config.label}`, e);
+            console.warn(`[Step 3:${config.label}] Upstream quota exhausted, aborting remaining candidate generation.`);
+            break;
+          }
           console.warn(`[Step 3:${config.label}] Candidate failed:`, e);
         }
       }
 
       if (candidatePool.length === 0) {
+        if (upstreamQuotaFailure) {
+          throw upstreamQuotaFailure;
+        }
         console.warn("[Step 3] All candidate variants failed. Entering emergency fallback generation.");
 
         let emergencyResult: any = null;
@@ -3405,16 +3504,14 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
             };
           }
         } catch (e) {
+          if (isOpenAIInsufficientQuotaError(e)) {
+            throw createUpstreamQuotaError("steg 3 emergency rescue", e);
+          }
           console.warn("[Step 3 Emergency] AI rescue generation failed:", e);
         }
 
         if (!emergencyResult) {
-          const localFallbackText = sanitizeGeneratedMarketingField(buildDeterministicFallbackDescription(cleanDisposition, style), personalStyle?.styleProfile, style, { allowParagraphs: true })
-            || buildDeterministicFallbackDescription(cleanDisposition, style);
-          emergencyResult = {
-            improvedPrompt: localFallbackText,
-          };
-          console.warn("[Step 3 Emergency] Using deterministic local fallback description.");
+          throw new Error("[Step 3 Emergency] Alla AI-kandidater misslyckades och ingen emergency-text kunde genereras. Lokal fallback är inte tillåten här.");
         }
 
         const emergencyPrompt = emergencyResult.improvedPrompt;
@@ -3725,6 +3822,9 @@ REGLER:
                 }
               }
             } catch (e) {
+              if (isOpenAIInsufficientQuotaError(e)) {
+                throw createUpstreamQuotaError("steg 5b expansion", e);
+              }
               console.warn("[Step 5b] Expansion failed, keeping original:", e);
               break;
             }
@@ -3778,6 +3878,9 @@ REGLER:
             }
           }
         } catch (e) {
+          if (isOpenAIInsufficientQuotaError(e)) {
+            throw createUpstreamQuotaError("steg 6 faktagranskning", e);
+          }
           console.warn("[Step 6] Fact-check failed, continuing:", e);
         }
       }
@@ -3854,6 +3957,9 @@ Svara med JSON:
 
         finalBrokerAudit = safeJsonParse(brokerAuditCompletion.output_text || "{}");
       } catch (e) {
+        if (isOpenAIInsufficientQuotaError(e)) {
+          throw createUpstreamQuotaError("slutlig mäklargranskning", e);
+        }
         console.warn("[Final Broker Audit] Slutlig mäklargranskning misslyckades, använder lokal fallback:", e);
         finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit misslyckades; lokal kvalitetsgranskning användes i stället.");
       }
@@ -3997,6 +4103,9 @@ Svara med JSON:
       if (finalWordCountViolations.length > 0) {
         console.warn(`[Final Gate] Texten missade önskat ordmål men klarade inte-förbjudna-regler. Requested ${targetWordMin}-${targetWordMax}, publishable min ${minimumPublishableWordMin}. Detalj: ${finalWordCountViolations.join(" | ")}`);
       }
+      if (isTooThinForDelivery(result.improvedPrompt, minimumPublishableWordMin)) {
+        throw new Error(`[Final Gate] Huvudtexten är fortfarande för tunn eller listig för leverans. Words ${(result.improvedPrompt || "").split(/\s+/).filter(Boolean).length}.`);
+      }
       if (finalExtraFieldViolations.length > 0) {
         console.warn(`[Final Gate] Extratexter har kvarvarande kvalitetsanmärkningar men blockerar inte huvudtexten: ${finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
       }
@@ -4071,6 +4180,9 @@ Svara med JSON i formatet:
           improvementSuggestions = safeJsonParse(improvementText);
           console.log("[Improvement Analysis] Completed");
         } catch (e) {
+          if (isOpenAIInsufficientQuotaError(e)) {
+            throw createUpstreamQuotaError("förbättringsanalys", e);
+          }
           console.warn("[Improvement Analysis] Failed, skipping...", e);
         }
       }
@@ -4175,11 +4287,11 @@ Svara med JSON i formatet:
       console.error("Optimize error:", err);
       if (wantsStream) {
         try {
-          res.write(JSON.stringify({ type: "error", message: err.message || "Optimering misslyckades" }) + "\n");
+          res.write(JSON.stringify({ type: "error", message: err.message || "Optimering misslyckades", code: err.code || null, upstreamQuota: Boolean(err.upstreamQuota) }) + "\n");
           res.end();
         } catch { res.end(); }
       } else {
-        res.status(500).json({ message: err.message || "Optimering misslyckades" });
+        res.status(err.statusCode || 500).json({ message: err.message || "Optimering misslyckades", code: err.code || null, upstreamQuota: Boolean(err.upstreamQuota) });
       }
     }
   });
