@@ -81,7 +81,7 @@ export class SecurityMonitor {
    */
   blockIP(ip: string, durationMs: number): void {
     this.blockedIPs.add(ip);
-    
+
     console.warn('[SECURITY] IP blocked:', {
       ip,
       duration: durationMs / 1000 / 60, // minutes
@@ -110,10 +110,10 @@ export class SecurityMonitor {
    */
   private getRecentEventCount(type: string, ip: string, timeWindowMs: number): number {
     const cutoff = Date.now() - timeWindowMs;
-    
-    return this.events.filter(event => 
-      event.type === type && 
-      event.ip === ip && 
+
+    return this.events.filter(event =>
+      event.type === type &&
+      event.ip === ip &&
       event.timestamp.getTime() > cutoff
     ).length;
   }
@@ -287,7 +287,7 @@ export class SecurityMonitor {
       report += '- 📈 High number of high severity events detected\n';
     }
     if (metrics.topOffenders[0]?.count > 20) {
-      report += '- 🚫 Consider permanent blocking top offender: ${metrics.topOffenders[0].ip}\n`;
+      report += `- 🚫 Consider permanent blocking top offender: ${metrics.topOffenders[0].ip}\n`;
     }
     if (this.blockedIPs.size > 100) {
       report += '- 📊 High number of blocked IPs, review security policies\n';
@@ -336,19 +336,19 @@ export class SecurityMonitor {
     const metrics = this.getMetrics();
     const now = new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    
+
     const recentEvents = this.events.filter(event => event.timestamp > last24h);
     const criticalCount = recentEvents.filter(e => e.severity === 'critical').length;
     const highCount = recentEvents.filter(e => e.severity === 'high').length;
     const mediumCount = recentEvents.filter(e => e.severity === 'medium').length;
-    
+
     // Base score 100, subtract points for events
     let score = 100;
     score -= criticalCount * 25;
     score -= highCount * 10;
     score -= mediumCount * 5;
     score -= this.blockedIPs.size * 2;
-    
+
     return Math.max(0, Math.min(100, score));
   }
 
@@ -366,7 +366,7 @@ export class SecurityMonitor {
     const now = new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const recentCritical = this.events.filter(e => e.severity === 'critical' && e.timestamp > last24h).length;
-    
+
     let level: 'secure' | 'warning' | 'critical' = 'secure';
     if (score < 50 || recentCritical > 0) {
       level = 'critical';

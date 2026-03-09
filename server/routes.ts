@@ -1005,10 +1005,14 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
   const lastSentence = sentences[sentences.length - 1]?.trim() || "";
 
   const corruptedPatterns: Array<[RegExp, string]> = [
-    [/\b[a-zåäö]+för att[a-zåäö]*\b/gi, 'Trasigt ord med inbakad "för att"-artefakt'],
-    [/\bsödterass\b/gi, 'Felstavat/trasigt ord: "södterass"'],
-    // Only match standalone "terass" (not part of "terrass")
-    [/\bterass\b(?![a-zåäö])/gi, 'Felstavat ord: "terass" ska vara "terrass"'],
+    // Specific fused words from AI glitches - room names + "för att"
+    [/\bköketför att\b/gi, 'Trasigt ord: "köketför att"'],
+    [/\bvardagsrummetför att\b/gi, 'Trasigt ord: "vardagsrummetför att"'],
+    [/\bsovrumetför att\b/gi, 'Trasigt ord: "sovrumetför att"'],
+    [/\bbadrummetför att\b/gi, 'Trasigt ord: "badrummetför att"'],
+    [/\bhallenför att\b/gi, 'Trasigt ord: "hallenför att"'],
+    // Specific known typos
+    [/\bsödterass\b/gi, 'Felstavat ord: "södterass"'],
     [/\bvälsköför att\b/gi, 'Trasigt ord: "välsköför att"'],
     [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
   ];
@@ -1721,7 +1725,8 @@ function isStrongPublishableCandidate(
   const strongWordFloor = getStrongPublishableWordFloor(minimumPublishableWordMin, plan);
   const publishableEnough = wordCount >= strongWordFloor;
   const qualityScore = analyzeTextQuality(text);
-  const threshold = plan === "premium" ? 0.88 : plan === "pro" ? 0.84 : 0.79;
+  // EXCELLENT thresholds - aiming for highest quality, not just "good enough"
+  const threshold = plan === "premium" ? 0.92 : plan === "pro" ? 0.88 : 0.84;
   const firstSentence = text.split(/[.!?]+/).find((sentence) => sentence.trim().length > 0)?.trim() || "";
   const strongOpening = /(söderläge|västerläge|uteplats|terrass|balkong|gård|utsikt|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence);
   const concreteEvidenceSignals = countConcreteEvidenceSignals(text);
@@ -1797,17 +1802,18 @@ function repairEmbeddedForAttArtifacts(text: string): string {
 
 function hasCorruptedWordArtifacts(text: string): boolean {
   if (!text) return false;
-
-  const corruptedPatterns = [
-    /\b[a-zåäö]+för att[a-zåäö]*\b/gi,
+  // Only check for specific fused words, not general patterns
+  const specificCorruptions = [
+    /\bköketför att\b/gi,
+    /\bvardagsrummetför att\b/gi,
+    /\bsovrumetför att\b/gi,
+    /\bbadrummetför att\b/gi,
+    /\bhallenför att\b/gi,
     /\bsödterass\b/gi,
-    // Only match standalone "terass" (not part of "terrass")
-    /\bterass\b(?![a-zåäö])/gi,
     /\bvälsköför att\b/gi,
     /\banvändningssäför att\b/gi,
   ];
-
-  return corruptedPatterns.some((pattern) => pattern.test(text));
+  return specificCorruptions.some((pattern) => pattern.test(text));
 }
 
 function repairMechanicalBrokerArtifacts(text: string): string {
@@ -2687,6 +2693,13 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
 const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare. Skriv en Hemnet-text som är klyschfri, konkret, mänsklig och publiceringsnära.
 
+HÅRDA LÄNGDKRAV (MÅSTE FÖLJAS):
+- MINIMUM 300 ord - aldrig kortare
+- MÅL: 350-400 ord för optimal annons
+- MAXIMUM 450 ord
+- Om du skriver färre än 300 ord är texten underkänd och måste skrivas om
+- Räkna orden: öppning ~80-100 ord, planlösning ~80-100 ord, kök/bad ~60-80 ord, uteplats ~40-60 ord, läge ~60-80 ord
+
 KRAV:
 - Utgå bara från dispositionen och verifierbara fakta.
 - Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
@@ -3209,7 +3222,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Temperature används BARA av sekundära steg (chat.completions.create):
       // - Quality gate retry, expansion, surgical correction, improvement analysis
-      const secondaryTemperature = style === "factual" ? 0.15 : style === "selling" ? 0.35 : 0.25;
+      const secondaryTemperature = style === "factual" ? 0.2 : style === "selling" ? 0.45 : 0.4;
       console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Reasoning effort: ${reasoningEffort}, Secondary temp: ${secondaryTemperature}`);
 
       // Bildanalys om bilder finns
@@ -3551,13 +3564,13 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       if (propType.includes("villa") || propType.includes("hus")) {
         negativeExample = `"Välkommen till denna fantastiska villa som erbjuder generösa ytor och en ljus och luftig atmosfär. Huset präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla av rymd. Trädgården erbjuder en grön oas perfekt för den som söker lugn och avkoppling. Den strategiskt placerade villan ger en unik möjlighet att njuta av natursköna omgivningar. Kontakta oss för visning!"`;
-        positiveExample = `"Björkvägen 14, Löddeköpinge. En villa om 145 kvm på tomt om 750 kvm, renoverad 2021.\n\nEntréplan med hall, vardagsrum och kök i öppen planlösning. Köket är nytt från 2021 med IKEA-stomme och Bosch-vitvaror. Vardagsrummet har utgång till trädgården.\n\nÖvervåning med fyra sovrum. Badrummet är helkaklat med dusch och badkar.\n\nTomten har stenlagd uteplats i söderläge och gräsmatta. Garage och förråd om 12 kvm.\n\nLöddeköpinge skola 400 meter. Willys ca 5 minuters promenad. Malmö 15 min med bil."`;
+        positiveExample = `"Björkvägen 14, Löddeköpinge. Solen står redan högt när vi kliver ur bilen på uppfarten, och den västra gaveln på huset ligger i morgonsol. Tomten är inte så stor att den kräver hela helgen, men tillräcklig för att äppelträden ska hinna ge skugga till uteplatsen innan eftermiddagen.\n\nVi kliver in i hallen på entréplanet. Golvet har klinker med golvvärme, något som märks direkt under fötterna en kall februarimorgon. Till vänster ligger köket, renoverat 2021 med IKEA-stomme och vitvaror från Bosch. Den rostfria diskbänken är på 120 centimeter, tillräckligt för att två personer ska kunna jobba samtidigt utan att stöta ihop. Köket har öppen planlösning mot vardagsrummet där tre fönster i söder vetter mot trädgården.\n\nEn trappa upp finns fyra sovrum. Det största har garderober längs hela väggen mot hallen, och fönstret vetter mot gården - lugnare än gatansida. Badrummet mellan sovrummen är helkaklat med duschhörna, tvättmaskin och handdukstork. Ett separat wc på entréplanet gör att morgonrusningen inte behöver koordineras lika noga.\n\nTrädgården har en stenlagd uteplats på cirka 40 kvadrat, placerad så att den får kvällssol. Gräsmattan är tillräcklig för en studsmatta eller ett par solstolar. I utkanten av tomten står ett garage om 12 kvadratmeter med el indragen - fungerar lika bra för cyklar och trädgårdsredskap som för den som vill ha en liten verkstad.\n\nLöddeköpinge skola ligger fem minuter bort till fots. Willys och apotek når du på samma avstånd. Pågatåget till Malmö och Lund går var femtonde minut på vardagar, till Köpenhamn tar du dig på 35 minuter.\n\nVilla, 145 kvm, tomt 750 kvm. Byggår 1989, renoverad 2021. Energiklass C, fjärrvärme. Fibernät indraget."`;
       } else if (propType.includes("radhus")) {
         negativeExample = `"Välkommen till detta charmiga och välplanerade radhus som erbjuder en perfekt kombination av modern komfort och klassisk charm. Den genomtänkta planlösningen bjuder på generösa ytor som skapar en harmonisk känsla. Trädgården erbjuder en härlig plats för avkoppling och sociala tillställningar. Kontakta oss för visning!"`;
-        positiveExample = `"Solnavägen 23, Solna. Ett radhus om 120 kvm med fyra rum och kök.\n\nBottenvåningen har kök och vardagsrum i öppen planlösning. Köket från IKEA 2021 med Bosch-vitvaror. Vardagsrummet har utgång till trädgården.\n\nÖvervåningen har tre sovrum och badrum. Huvudsovrummet har walk-in-closet. Badrummet är helkaklat med dusch. Laminatgolv genomgående.\n\nTrädgård med gräsmatta och uteplats i söderläge. Förråd om 10 kvm och carport för två bilar.\n\nSkola och förskola i promenadavstånd. Matbutik 300 meter."`;
+        positiveExample = `"Solnavägen 23, Solna. När vi kliver in i entrén på detta radhus från 2015 slås vi direkt av ljuset som strömmar in genom de stora fönstren i vardagsrummet. Köket, renoverat 2021, har vita luckor från IKEA och rostfri diskbänk från Bosch. Här ryms en matplats för sex personer med utsikt mot den egna trädgården.\n\nÖvervåningen har tre sovrum. Det största sovrummet har walk-in-closet och fönster mot den lugna gården. Badrummet är helkaklat med både dusch och tvättmaskin, och ett separat wc på samma våning gör morgonrusningen enklare.\n\nTrädgården om 150 kvm har en stenlagd uteplats i söderläge där kvällssolen kan njutas. Gräsmattan är tillräckligt stor för lek, och carporten rymmer två bilar. Ett förråd om 10 kvm ger plats för cyklar och trädgårdsredskap.\n\nFör familjen är läget perfekt. Skola och förskola ligger inom fem minuters promenad. Matbutiken är 300 meter bort, och till Solna Centrum tar det tio minuter att gå. T-banan till Stockholm City går på kvarten.\n\nBRF Solna Trädgårdshus är en stabil förening. Avgiften på 4 200 kr/mån inkluderar värme, vatten och kabel-tv. Energiklass B håller driftkostnaderna nere."`;
       } else {
         negativeExample = `"Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket erbjuder gott om arbetsyta vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!"`;
-        positiveExample = `"Storgatan 12, 3 tr, Linköping. En trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob och leder in till vardagsrummet med tre fönster mot gatan. Ekparkett genomgående och takhöjd på 2,70 meter.\n\nKöket renoverades 2022 med luckor från Ballingslöv och vitvaror från Siemens. Matplats för fyra vid fönstret.\n\nSovrummet rymmer dubbelsäng och har garderob. Badrummet är helkaklat med dusch och tvättmaskin.\n\nBalkong om 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuters promenad. Coop 200 meter."`;
+        positiveExample = `"Storgatan 12, 3 tr, Linköping. En ljus trea om 76 kvm med balkong i söderläge. När vi kliver in möts vi av ekparketten som löper genom hela lägenheten, och ljuset från de tre fönstren i vardagsrummet. Takhöjden på 2,70 meter ger en luftig känsla.\n\nKöket renoverades 2022 med luckor från Ballingslöv och vitvaror från Siemens inklusive induktionshäll och diskmaskin. Matplatsen vid fönstret mot innergården rymmer fyra personer. Kyl och frys i fullhöjd ger gott om förvaring.\n\nSovrum 1 har plats för dubbelsäng och garderobsvägg. Sovrum 2 fungerar bra som barnrum eller kontor. Badrummet från 2019 är helkaklat med dusch, handfat med kommod och tvättmaskin.\n\nBalkongen på 8 kvm i söderläge har kvällssol. Här ryms middagsbord och två stolar, med utsikt mot den gröna innergården.\n\nBRF Storgården är en äkta förening med 45 lägenheter. Avgiften på 3 900 kr/mån inkluderar värme, vatten och kabel-tv. Fibernät är indraget.\n\nResecentrum ligger fem minuter bort. Coop och Ica når du på 200 meter. Linköpings universitet tar tio minuter med buss."`;
       }
 
       // Clean null/empty values from data sent to AI — reduces noise significantly
@@ -3582,17 +3595,15 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       // Build content strings once — reused for primary generation and quality gate retry
       const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
-      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - varje stycke ska utvecklas fullt ut):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: "", effort: reasoningEffort, exampleCount: 2, minimalFields: true },
-        { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta. Lägesstycket ska kännas som publicerad Hemnet-/Booli-prosa, aldrig som uppräkning.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
-        { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism. Ovidkommande teknik- eller standardfakta ska få minimalt utrymme.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
-        { label: "broker", developerSuffix: "\n\nVARIANTMÅL: Skriv som en toppresterande svensk mäklare. Första stycket ska bära annonsen direkt med rätt detaljprioritering. Välj aktivt bort svagare fakta om de stör öppning, rytm eller lägesprosa.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
+        { label: "primary", developerSuffix: "\n\nVARIANTMÅL: Skriv en excellent, fullständig text på 350-400 ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.", effort: reasoningEffort, exampleCount: 3, minimalFields: false },
+        { label: "alternative", developerSuffix: "\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta.", effort: "medium" as const, exampleCount: 2, minimalFields: false },
       ];
       const runState = createListingRunState();
 

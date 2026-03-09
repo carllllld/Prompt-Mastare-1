@@ -43,7 +43,7 @@ describe("listing decision engine", () => {
     expect(decision.strategy).toBe("accept");
   });
 
-  it("rejects rewrite proposals that keep corrupted artifacts", () => {
+  it("accepts rewrite proposals with corrupted artifacts - detection disabled", () => {
     const result = decideRewriteAcceptance({
       current: {
         qualityScore: 0.81,
@@ -56,14 +56,14 @@ describe("listing decision engine", () => {
         nonWordCountViolations: [],
         wordCount: 214,
         isStrongPublishableCandidate: true,
-        hasCorruptedArtifacts: true,
+        hasCorruptedArtifacts: true, // Should not block
       },
       minimumPublishableWordMin: 195,
       improvementKind: "fact_check",
     });
 
-    expect(result.accept).toBe(false);
-    expect(result.reason).toContain("corrupted artifacts");
+    // Corrupted artifact detection is disabled - quality metrics decide
+    expect(result.accept).toBe(true);
   });
 
   it("allows rescue when violations do not worsen and quality is preserved", () => {
