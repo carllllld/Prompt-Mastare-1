@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { optimizeRequestSchema, optimizeResponseSchema, type OptimizeRequest, type OptimizeResponse } from './schema';
+import { optimizeErrorSchema, optimizeRequestSchema, optimizeResponseSchema, type OptimizeRequest, type OptimizeResponse } from './schema';
 
 export type { OptimizeRequest, OptimizeResponse };
 
@@ -10,7 +10,10 @@ export const api = {
     input: optimizeRequestSchema,
     responses: {
       200: optimizeResponseSchema,
-      500: z.object({ message: z.string() }),
+      400: optimizeErrorSchema,
+      429: optimizeErrorSchema,
+      500: optimizeErrorSchema,
+      503: optimizeErrorSchema,
     },
   },
 };

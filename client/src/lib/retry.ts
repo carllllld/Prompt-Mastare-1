@@ -17,13 +17,13 @@ export async function retryWithBackoff<T>(
   } = options;
 
   let lastError: Error;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      
+
       // Don't retry on certain error types
       if (error instanceof Error && (
         error.message.includes('401') || // Unauthorized
@@ -36,27 +36,27 @@ export async function retryWithBackoff<T>(
       )) {
         throw error;
       }
-      
+
       // Last attempt, throw the error
       if (attempt === maxRetries) {
         throw error;
       }
-      
+
       // Calculate delay with exponential backoff + jitter
       const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt), maxDelay);
       const jitter = Math.random() * 0.1 * exponentialDelay; // 10% jitter
       const delay = exponentialDelay + jitter;
-      
+
       // Notify about retry
       if (onRetry) {
         onRetry(lastError, attempt + 1);
       }
-      
+
       // Wait before retry
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-  
+
   throw lastError!;
 }
 
@@ -68,23 +68,26 @@ export async function retryApiCall<T>(
 ): Promise<T> {
   return retryWithBackoff(async () => {
     const response = await fetch(url, options);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      
+
       // Try to parse JSON error responses (e.g. 429 with limitReached)
       let parsed: any = null;
-      try { parsed = JSON.parse(errorText); } catch {}
-      
+      try { parsed = JSON.parse(errorText); } catch { }
+
       const error: any = new Error(parsed?.message || `HTTP ${response.status}: ${errorText}`);
       if (parsed?.limitReached) error.limitReached = true;
+      if (parsed?.upgradeRequired) error.upgradeRequired = true;
+      if (parsed?.code) error.code = parsed.code;
+      if (parsed?.upstreamQuota) error.upstreamQuota = true;
       // Don't retry 429 (rate limit) or 401/403 (auth)
       if (response.status === 429 || response.status === 401 || response.status === 403) {
         error.message = parsed?.message || error.message;
       }
       throw error;
     }
-    
+
     return response.json();
   }, retryOptions);
 }

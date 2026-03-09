@@ -5,8 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ErrorHandler } from "@/lib/error-handler";
 import { queryClient } from "@/lib/queryClient";
 
-interface LimitError extends Error {
+interface OptimizeClientError extends Error {
   limitReached?: boolean;
+  upgradeRequired?: boolean;
+  upstreamQuota?: boolean;
+  code?: string;
 }
 
 interface ProgressEvent {
@@ -28,7 +31,7 @@ async function streamOptimize(
     method: api.optimize.method,
     headers: {
       "Content-Type": "application/json",
-      "Accept": "text/event-stream",
+      "Accept": "application/x-ndjson, text/event-stream",
     },
     body: JSON.stringify(validated),
     credentials: "include",
@@ -41,12 +44,15 @@ async function streamOptimize(
     try { parsed = JSON.parse(errorText); } catch { }
     const error: any = new Error(parsed?.message || `HTTP ${response.status}: ${errorText}`);
     if (parsed?.limitReached || parsed?.upgradeRequired) error.limitReached = true;
+    if (parsed?.code) error.code = parsed.code;
+    if (parsed?.upstreamQuota) error.upstreamQuota = true;
+    if (parsed?.upgradeRequired) error.upgradeRequired = true;
     throw error;
   }
 
   // If server doesn't support streaming, fall back to JSON
   const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("text/event-stream")) {
+  if (!contentType.includes("text/event-stream") && !contentType.includes("application/x-ndjson")) {
     return response.json();
   }
 
@@ -74,7 +80,11 @@ async function streamOptimize(
         } else if (event.type === "complete") {
           return event.data as OptimizeResponse;
         } else if (event.type === "error") {
-          throw new Error(event.message || "Optimering misslyckades");
+          const error: any = new Error(event.message || "Optimering misslyckades");
+          if (event.limitReached || event.upgradeRequired) error.limitReached = true;
+          if (event.code) error.code = event.code;
+          if (event.upstreamQuota) error.upstreamQuota = true;
+          throw error;
         }
       } catch (e) {
         if (e instanceof SyntaxError) continue; // Skip malformed lines
@@ -88,7 +98,13 @@ async function streamOptimize(
     try {
       const event = JSON.parse(buffer);
       if (event.type === "complete") return event.data as OptimizeResponse;
-      if (event.type === "error") throw new Error(event.message);
+      if (event.type === "error") {
+        const error: any = new Error(event.message || "Optimering misslyckades");
+        if (event.limitReached || event.upgradeRequired) error.limitReached = true;
+        if (event.code) error.code = event.code;
+        if (event.upstreamQuota) error.upstreamQuota = true;
+        throw error;
+      }
     } catch { }
   }
 
@@ -107,7 +123,7 @@ export function useOptimize() {
     mutationFn: async (data: OptimizeRequest): Promise<OptimizeResponse> => {
       return streamOptimize(data, progressCallbackRef.current);
     },
-    onError: (error: LimitError) => {
+    onError: (error: OptimizeClientError) => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
 
       if (error.limitReached) {

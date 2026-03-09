@@ -3,6 +3,7 @@ import {
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
   isStrongPublishableCandidate,
+  safeJsonParse,
   sanitizeGeneratedMarketingField,
   validateOptimizationResult,
 } from '../routes';
@@ -85,6 +86,21 @@ describe('AI Pipeline Tests', () => {
 
       const violations = validateOptimizationResult({ improvedPrompt: cleaned }, 'hemnet', 1, 500, 'balanced');
       expect(violations.filter((v) => v.includes('för att'))).toHaveLength(0);
+    });
+
+    it('should remove lingering forbidden travel phrase and embedded "för att" artifact in the same final text', () => {
+      const cleaned = sanitizeGeneratedMarketingField(
+        'Läget gör det enkelt att ta sig till och från city och planlösningen är sammanhåför attllen med plats för både matbord och soffgrupp.',
+        undefined,
+        'balanced'
+      );
+
+      expect(cleaned).toBeTruthy();
+      expect(cleaned?.toLowerCase()).not.toContain('gör det enkelt att');
+      expect(cleaned).not.toContain('för attllen');
+
+      const violations = validateOptimizationResult({ improvedPrompt: cleaned }, 'hemnet', 1, 500, 'balanced');
+      expect(violations.filter((v) => v.includes('gör det enkelt att') || v.includes('för att'))).toHaveLength(0);
     });
 
     it('should preserve energy class letters and repair mechanical artifact sentences', () => {
@@ -198,6 +214,19 @@ describe('AI Pipeline Tests', () => {
   });
 
   describe('Error Handling', () => {
+    it('should recover malformed model JSON that is missing commas between properties', () => {
+      const parsed = safeJsonParse(`{
+        "fact_check_passed": false
+        "corrected_text": "Korrigerad text"
+        "issues": [{"quote": "gör det enkelt att", "reason": "förbjuden fras"}]
+      }`);
+
+      expect(parsed.fact_check_passed).toBe(false);
+      expect(parsed.corrected_text).toBe('Korrigerad text');
+      expect(Array.isArray(parsed.issues)).toBe(true);
+      expect(parsed.issues[0]?.quote).toBe('gör det enkelt att');
+    });
+
     it('should return null when sanitizing non-string values', () => {
       expect(sanitizeGeneratedMarketingField(null, undefined, 'balanced')).toBeNull();
       expect(sanitizeGeneratedMarketingField(undefined, undefined, 'balanced')).toBeNull();

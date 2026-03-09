@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Lock, Unlock, Sparkles, Send, Users, Copy, Check } from "lucide-react";
 
 const AVATAR_COLORS = [
-  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", 
+  "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",
   "#3b82f6", "#8b5cf6", "#ec4899", "#f43f5e", "#6366f1"
 ];
 
@@ -175,12 +175,17 @@ export default function PromptEditor() {
   const handleOptimize = async () => {
     setIsOptimizing(true);
     try {
-      const response = await apiRequest("POST", "/api/optimize", { prompt: content, type: "General" });
+      const response = await apiRequest("POST", "/api/optimize", {
+        prompt: content,
+        type: "General",
+        platform: "general",
+        writingStyle: "balanced",
+      });
       const result = await response.json();
       setOptimizedContent(result.improvedPrompt);
-      await updatePromptMutation.mutateAsync({ 
+      await updatePromptMutation.mutateAsync({
         optimizedContent: result.improvedPrompt,
-        status: "optimized" 
+        status: "optimized"
       });
       broadcastPromptUpdate(promptId!, { optimizedContent: result.improvedPrompt });
       toast({ title: "Optimized!", description: "Your prompt has been enhanced." });
@@ -262,54 +267,54 @@ export default function PromptEditor() {
               </Button>
             </Link>
             <div>
-            {otherViewers.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div className="flex -space-x-2">
-                  {otherViewers.slice(0, 3).map(viewer => (
-                    <Avatar key={viewer.userId} className="h-7 w-7 border-2 border-background">
-                      <AvatarFallback 
-                        style={{ backgroundColor: getAvatarColor(viewer.userId, viewer.user.avatarColor) }}
-                        className="text-white text-xs"
-                      >
-                        {getInitials(viewer.user.email, viewer.user.displayName)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                  {otherViewers.length > 3 && (
-                    <Avatar className="h-7 w-7 border-2 border-background">
-                      <AvatarFallback className="text-xs">+{otherViewers.length - 3}</AvatarFallback>
-                    </Avatar>
-                  )}
+              {otherViewers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex -space-x-2">
+                    {otherViewers.slice(0, 3).map(viewer => (
+                      <Avatar key={viewer.userId} className="h-7 w-7 border-2 border-background">
+                        <AvatarFallback
+                          style={{ backgroundColor: getAvatarColor(viewer.userId, viewer.user.avatarColor) }}
+                          className="text-white text-xs"
+                        >
+                          {getInitials(viewer.user.email, viewer.user.displayName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                    {otherViewers.length > 3 && (
+                      <Avatar className="h-7 w-7 border-2 border-background">
+                        <AvatarFallback className="text-xs">+{otherViewers.length - 3}</AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {isEditing ? (
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => unlockMutation.mutate()} data-testid="button-cancel-edit">
-                  Cancel
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => unlockMutation.mutate()} data-testid="button-cancel-edit">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave} disabled={updatePromptMutation.isPending} data-testid="button-save">
+                    {updatePromptMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  onClick={() => lockMutation.mutate()}
+                  disabled={!canEdit || lockMutation.isPending}
+                  data-testid="button-edit"
+                >
+                  {prompt.isLocked && prompt.lockedBy !== user?.id ? (
+                    <>
+                      <Lock className="h-4 w-4 mr-2" />
+                      Locked
+                    </>
+                  ) : (
+                    "Edit"
+                  )}
                 </Button>
-                <Button onClick={handleSave} disabled={updatePromptMutation.isPending} data-testid="button-save">
-                  {updatePromptMutation.isPending ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            ) : (
-              <Button 
-                onClick={() => lockMutation.mutate()} 
-                disabled={!canEdit || lockMutation.isPending}
-                data-testid="button-edit"
-              >
-                {prompt.isLocked && prompt.lockedBy !== user?.id ? (
-                  <>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Locked
-                  </>
-                ) : (
-                  "Edit"
-                )}
-              </Button>
-            )}
+              )}
             </div>
           </div>
         </div>
@@ -358,8 +363,8 @@ export default function PromptEditor() {
                         {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </Button>
                     )}
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       onClick={handleOptimize}
                       disabled={isOptimizing || !content.trim()}
                       data-testid="button-optimize"
@@ -395,8 +400,8 @@ export default function PromptEditor() {
                     onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
                     data-testid="input-comment"
                   />
-                  <Button 
-                    size="icon" 
+                  <Button
+                    size="icon"
                     onClick={handleAddComment}
                     disabled={isAdding || !newComment.trim()}
                     data-testid="button-add-comment"
@@ -420,7 +425,7 @@ export default function PromptEditor() {
                     {comments.map(comment => (
                       <div key={comment.id} className="flex gap-3" data-testid={`comment-${comment.id}`}>
                         <Avatar className="h-7 w-7 shrink-0">
-                          <AvatarFallback 
+                          <AvatarFallback
                             style={{ backgroundColor: getAvatarColor(comment.userId, comment.user.avatarColor) }}
                             className="text-white text-xs"
                           >

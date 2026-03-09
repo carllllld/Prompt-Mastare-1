@@ -105,8 +105,14 @@ export const optimizeResponseSchema = z.object({
     strengths: z.array(z.string()).optional(),
     text_improvements: z.array(z.string()).optional(),
   }).optional(),
+  broker_audit: z.object({
+    publish_ready: z.boolean().optional(),
+    broker_quality_score: z.number().optional().nullable(),
+    verdict: z.string().optional().nullable(),
+  }).optional(),
   factCheck: z.object({
-    fact_check_passed: z.boolean().optional(),
+    fact_check_passed: z.boolean().optional().nullable(),
+    local_text_clear: z.boolean().optional(),
     issues: z.array(z.object({
       quote: z.string(),
       type: z.string().optional(),
@@ -114,6 +120,8 @@ export const optimizeResponseSchema = z.object({
     })).optional(),
     quality_score: z.number().optional().nullable(),
     broker_tips: z.array(z.string()).optional(),
+    executed: z.boolean().optional(),
+    metadata_matches_final_text: z.boolean().optional(),
   }).optional().nullable(),
   suggestions: z.array(z.string()).optional(),
   improvements: z.array(z.string()).optional(),
@@ -124,6 +132,23 @@ export const optimizeResponseSchema = z.object({
   socialCopy: z.string().optional(),
   wordCount: z.number().optional(),
   model: z.string().optional(),
+});
+
+export const optimizeErrorSchema = z.object({
+  message: z.string(),
+  code: z.string().nullable().optional(),
+  upstreamQuota: z.boolean().optional(),
+  limitReached: z.boolean().optional(),
+  upgradeRequired: z.boolean().optional(),
+  currentPlan: z.enum(["free", "pro", "premium"]).optional(),
+  usage: z.object({
+    textsUsed: z.number(),
+    textsLimit: z.number(),
+  }).optional(),
+  upgradeOptions: z.object({
+    pro: z.object({ texts: z.number(), price: z.string() }).optional(),
+    premium: z.object({ texts: z.number(), price: z.string() }).optional(),
+  }).optional(),
 });
 
 export const userStatusSchema = z.object({

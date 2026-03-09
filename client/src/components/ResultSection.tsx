@@ -103,6 +103,9 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
   const wordCount = result.wordCount || result.improvedPrompt.split(/\s+/).filter(Boolean).length;
   const qualityScore = result.factCheck?.quality_score;
   const factPassed = result.factCheck?.fact_check_passed;
+  const localTextClear = result.factCheck?.local_text_clear;
+  const factCheckExecuted = result.factCheck?.executed;
+  const factCheckMatchesFinalText = result.factCheck?.metadata_matches_final_text;
 
   const hasExtraTexts = result.headline || result.instagramCaption || result.showingInvitation || result.shortAd;
 
@@ -144,6 +147,13 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
             style={{ background: factPassed ? "#ECFDF5" : "#FEF2F2", color: factPassed ? "#065F46" : "#991B1B" }}>
             {factPassed ? <ShieldCheck className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
             {factPassed ? "Faktagranskad" : "Fakta-problem"}
+          </div>
+        )}
+        {factPassed == null && localTextClear != null && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+            style={{ background: localTextClear ? "#F3F4F6" : "#FEF2F2", color: localTextClear ? "#4B5563" : "#991B1B" }}>
+            {localTextClear ? <ShieldCheck className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
+            {localTextClear ? "Lokalt kvalitetskontrollerad" : "Kvarvarande textproblem"}
           </div>
         )}
       </div>
@@ -252,8 +262,11 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
         <div className="rounded-xl border p-5" style={{ background: "#FEF2F2", borderColor: "#FECACA" }}>
           <div className="flex items-center gap-2 mb-3">
             <ShieldAlert className="w-3.5 h-3.5" style={{ color: "#DC2626" }} />
-            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#991B1B" }}>Faktagranskning — problem hittade</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#991B1B" }}>
+              {factCheckExecuted && factCheckMatchesFinalText ? "Faktagranskning — problem hittade" : "Kvalitetskontroll — problem hittade"}
+            </span>
           </div>
+
           <ul className="space-y-2">
             {result.factCheck.issues.map((issue, i) => (
               <li key={i} className="text-xs" style={{ color: "#7F1D1D" }}>

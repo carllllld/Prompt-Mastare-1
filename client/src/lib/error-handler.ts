@@ -9,7 +9,18 @@ export interface AppError {
 export class ErrorHandler {
   static classifyError(error: Error | string): AppError {
     const message = typeof error === 'string' ? error : error.message;
+    const upstreamQuota = typeof error !== 'string' && Boolean((error as any).upstreamQuota);
     const lowerMessage = message.toLowerCase();
+
+    if (upstreamQuota || lowerMessage.includes('insufficient_quota') || lowerMessage.includes('openai-kvoten är slut uppströms')) {
+      return {
+        code: 'OPENAI_UPSTREAM_QUOTA',
+        message,
+        userMessage: 'OpenAI-kvoten är tillfälligt slut uppströms. Detta är inte samma sak som dina återstående genereringar i appen. Försök igen lite senare.',
+        retryable: true,
+        severity: 'high'
+      };
+    }
 
     // Network errors
     if (lowerMessage.includes('network') || lowerMessage.includes('fetch')) {
@@ -172,6 +183,8 @@ export class ErrorHandler {
         return 'Serverfel';
       case 'AI_ERROR':
         return 'AI-fel';
+      case 'OPENAI_UPSTREAM_QUOTA':
+        return 'AI-kvot uppströms';
       default:
         return 'Fel';
     }

@@ -4,18 +4,24 @@ async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = await res.text();
     let message = text || res.statusText;
-    
+    let parsed: any = null;
+
     // Try to parse JSON error response
     try {
-      const json = JSON.parse(text);
-      if (json.message) {
-        message = json.message;
+      parsed = JSON.parse(text);
+      if (parsed.message) {
+        message = parsed.message;
       }
     } catch {
       // Not JSON, use raw text
     }
-    
-    throw new Error(message);
+
+    const error: any = new Error(message);
+    if (parsed?.limitReached) error.limitReached = true;
+    if (parsed?.upgradeRequired) error.upgradeRequired = true;
+    if (parsed?.code) error.code = parsed.code;
+    if (parsed?.upstreamQuota) error.upstreamQuota = true;
+    throw error;
   }
 }
 
@@ -40,18 +46,18 @@ export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
-      credentials: "include",
-    });
+    async ({ queryKey }) => {
+      const res = await fetch(queryKey.join("/") as string, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        return null;
+      }
 
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+      await throwIfResNotOk(res);
+      return await res.json();
+    };
 
 export const queryClient = new QueryClient({
   defaultOptions: {

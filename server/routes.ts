@@ -124,12 +124,31 @@ function extractFirstJsonObject(text: string): string {
 
 function safeJsonParse(rawText: string): any {
   const extracted = extractFirstJsonObject(rawText || "{}");
-  // Common model slip: trailing commas before } or ]
-  const sanitized = extracted
-    .replace(/,\s*([}\]])/g, "$1")
-    .replace(/\u0000/g, "")
-    .trim();
-  return JSON.parse(sanitized);
+  const attempts = [
+    extracted,
+    extracted
+      .replace(/,\s*([}\]])/g, "$1")
+      .replace(/\u0000/g, "")
+      .trim(),
+    extracted
+      .replace(/,\s*([}\]])/g, "$1")
+      .replace(/([}\]"0-9a-zA-Z])\s*(?="[^"]+"\s*:)/g, "$1,")
+      .replace(/([}\]"])\s*(?=\{)/g, "$1,")
+      .replace(/([}\]"])\s*(?=\[)/g, "$1,")
+      .replace(/\u0000/g, "")
+      .trim(),
+  ];
+
+  let lastError: unknown = null;
+  for (const attempt of attempts) {
+    try {
+      return JSON.parse(attempt);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 function extractGeneratedMarketingText(payload: any): string | null {
@@ -1115,6 +1134,8 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["som ger en", "med"],
   ["vilket bidrar till", "med"],
   ["vilket underlättar", "med"],
+  ["gör det enkelt att", "underlättar att"],
+  ["gör det möjligt att", "möjliggör att"],
   ["vilket passar", "för"],
   ["vilket är", "och är"],
   ["som gör det", "som"],
@@ -1509,6 +1530,14 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   if (options?.allowParagraphs) {
     cleaned = addParagraphs(cleaned);
   }
+
+  cleaned = repairEmbeddedForAttArtifacts(cleaned);
+  cleaned = repairMechanicalBrokerArtifacts(cleaned);
+  cleaned = replaceWholePhrase(cleaned, "gör det enkelt att", "underlättar att");
+  cleaned = replaceWholePhrase(cleaned, "gör det möjligt att", "möjliggör att");
+  cleaned = cleaned.replace(/\bunderlättar att ta sig till och från\b/gi, "ger smidiga resvägar");
+  cleaned = cleaned.replace(/\bmöjliggör att ta sig till och från\b/gi, "ger smidiga resvägar");
+  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
 
   return cleaned.trim() || null;
 }
@@ -2948,12 +2977,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Optimize endpoint
   app.post("/api/optimize", requireAuth, async (req, res) => {
     // Streaming support: if client accepts text/event-stream, send NDJSON progress events
-    const wantsStream = req.headers.accept?.includes("text/event-stream");
+    const wantsStream = req.headers.accept?.includes("text/event-stream") || req.headers.accept?.includes("application/x-ndjson");
+    const bufferedProgressEvents: Array<{ type: string; step: number; total: number; message: string }> = [];
     const sendProgress = wantsStream
       ? (step: number, total: number, message: string) => {
-        try { res.write(JSON.stringify({ type: "progress", step, total, message }) + "\n"); } catch { }
+        bufferedProgressEvents.push({ type: "progress", step, total, message });
       }
-      : (_s: number, _t: number, _m: string) => { };
+      : (_step: number, _total: number, _message: string) => { };
 
     try {
       // Validate input with Zod schema
@@ -3002,16 +3032,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             pro: { texts: 10, price: "299 kr/mån" },
             premium: { texts: 25, price: "599 kr/mån" }
           }
-        });
-      }
-
-      // All validation passed — NOW start streaming if requested
-      if (wantsStream) {
-        res.writeHead(200, {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive",
-          "X-Accel-Buffering": "no",
         });
       }
 
@@ -4544,6 +4564,15 @@ Svara med JSON i formatet:
       });
 
       if (wantsStream) {
+        res.writeHead(200, {
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+          "X-Accel-Buffering": "no",
+        });
+        for (const event of bufferedProgressEvents) {
+          res.write(JSON.stringify(event) + "\n");
+        }
         successfulDeliverySent = true;
         res.write(JSON.stringify({ type: "complete", data: responseData }) + "\n");
         res.end();
@@ -4555,6 +4584,17 @@ Svara med JSON i formatet:
       console.error("Optimize error:", err);
       if (wantsStream) {
         try {
+          if (!res.headersSent) {
+            res.writeHead(err.statusCode || 500, {
+              "Content-Type": "application/x-ndjson; charset=utf-8",
+              "Cache-Control": "no-cache",
+              "Connection": "keep-alive",
+              "X-Accel-Buffering": "no",
+            });
+          }
+          for (const event of bufferedProgressEvents) {
+            res.write(JSON.stringify(event) + "\n");
+          }
           res.write(JSON.stringify({ type: "error", message: err.message || "Optimering misslyckades", code: err.code || null, upstreamQuota: Boolean(err.upstreamQuota) }) + "\n");
           res.end();
         } catch { res.end(); }
@@ -4658,7 +4698,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
 
       const raw = rewriteCompletion.output_text || "{}";
       let parsed: any;
-      try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+      try { parsed = safeJsonParse(raw); } catch { parsed = {}; }
 
       const rewritten = sanitizeGeneratedMarketingField(parsed.rewritten, personalStyle?.styleProfile, style) || selectedText;
 
@@ -5628,6 +5668,7 @@ export {
   buildDispositionFromStructuredData,
   finalizeMainMarketingText,
   isStrongPublishableCandidate,
+  safeJsonParse,
   sanitizeGeneratedMarketingField,
   validateOptimizationResult,
 };

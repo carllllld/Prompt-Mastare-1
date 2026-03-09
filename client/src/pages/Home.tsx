@@ -192,20 +192,8 @@ export default function Home() {
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       },
-      onError: (error: any) => {
+      onError: () => {
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
-        if (error.limitReached) {
-          toast({
-            title: "Månadskvot uppnådd",
-            description: error?.message || "Du har nått din månadsgräns för beskrivningar.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Något gick fel",
-            description: error?.message || "Kunde inte generera text.",
-          });
-        }
       },
     });
   };
