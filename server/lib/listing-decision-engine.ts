@@ -103,13 +103,23 @@ export function decideRewriteAcceptance(input: RewriteAcceptanceInput): RewriteA
   }
 
   if (improvementKind === "expansion") {
+    // For expansion, we prioritize word count over minor violations
+    // The goal is to reach minimum publishable word count
     if (proposed.wordCount <= current.wordCount) {
       return { accept: false, reason: "expansion did not increase text length" };
     }
-    if (proposedViolationCount > currentViolationCount) {
-      return { accept: false, reason: "expansion introduced more violations" };
+    // Accept expansion if it adds words, even if it adds 1-2 minor violations
+    // This is critical for short texts that need to reach publishable minimum
+    const wordGain = proposed.wordCount - current.wordCount;
+    const violationIncrease = proposedViolationCount - currentViolationCount;
+
+    if (wordGain >= 20 && violationIncrease <= 2) {
+      return { accept: true, reason: "expansion added significant length with acceptable violation increase" };
     }
-    return { accept: true, reason: "expansion improved length without worsening quality" };
+    if (violationIncrease > 2) {
+      return { accept: false, reason: "expansion introduced too many violations" };
+    }
+    return { accept: true, reason: "expansion improved length without worsening quality significantly" };
   }
 
   if (improvementKind === "surgical") {
@@ -130,13 +140,16 @@ export function decideRewriteAcceptance(input: RewriteAcceptanceInput): RewriteA
   }
 
   if (improvementKind === "rescue") {
-    if (proposedViolationCount > currentViolationCount) {
-      return { accept: false, reason: "rescue rewrite worsened violations" };
+    // For rescue, we accept if quality improves significantly, even with minor artifacts
+    // The rescue is a last-ditch effort to save a failing text
+    if (proposedViolationCount > currentViolationCount + 1) {
+      return { accept: false, reason: "rescue rewrite significantly worsened violations" };
     }
-    if (proposed.qualityScore < current.qualityScore) {
-      return { accept: false, reason: "rescue rewrite lowered quality score" };
+    // Accept if violations are same or better, or if score improves meaningfully
+    if (proposedViolationCount <= currentViolationCount || proposed.qualityScore > current.qualityScore + 0.05) {
+      return { accept: true, reason: "rescue rewrite improved or preserved deliverability" };
     }
-    return { accept: true, reason: "rescue rewrite improved or preserved deliverability" };
+    return { accept: false, reason: "rescue rewrite did not improve enough to justify keeping" };
   }
 
   if (improvesViolations || (keepsViolationsFlat && improvesScoreMeaningfully)) {

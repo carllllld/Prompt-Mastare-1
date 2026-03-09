@@ -1007,7 +1007,8 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
   const corruptedPatterns: Array<[RegExp, string]> = [
     [/\b[a-zåäö]+för att[a-zåäö]*\b/gi, 'Trasigt ord med inbakad "för att"-artefakt'],
     [/\bsödterass\b/gi, 'Felstavat/trasigt ord: "södterass"'],
-    [/\bterass\b/gi, 'Felstavat ord: "terass" ska vara "terrass"'],
+    // Only match standalone "terass" (not part of "terrass")
+    [/\bterass\b(?![a-zåäö])/gi, 'Felstavat ord: "terass" ska vara "terrass"'],
     [/\bvälsköför att\b/gi, 'Trasigt ord: "välsköför att"'],
     [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
   ];
@@ -1800,7 +1801,8 @@ function hasCorruptedWordArtifacts(text: string): boolean {
   const corruptedPatterns = [
     /\b[a-zåäö]+för att[a-zåäö]*\b/gi,
     /\bsödterass\b/gi,
-    /\bterass\b/gi,
+    // Only match standalone "terass" (not part of "terrass")
+    /\bterass\b(?![a-zåäö])/gi,
     /\bvälsköför att\b/gi,
     /\banvändningssäför att\b/gi,
   ];
@@ -4332,7 +4334,10 @@ ${expansionRepairAddendum}`,
                       improvementKind: "expansion",
                     });
                     const expansionCoordination = coordinateExpansionAcceptance({
-                      accepted: expansionEvaluation.acceptance.accept && (expandedViolations.length === 0 || expandedViolations.length <= originalNonWordViolations.length),
+                      // Accept expansion if: evaluation passes AND (no new violations OR word count improved significantly)
+                      accepted: expansionEvaluation.acceptance.accept &&
+                        (expandedViolations.length <= originalNonWordViolations.length + 1 || // Allow 1 new violation
+                          sanitizedExpandedWordCount >= currentWordCount + 20), // Or if we gained 20+ words
                       currentWordCount,
                       nextWordCount: sanitizedExpandedWordCount,
                       minimumPublishableWordMin,
