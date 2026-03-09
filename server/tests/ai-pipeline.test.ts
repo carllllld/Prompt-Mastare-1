@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
+  countGenericBrokerPhrases,
+  detectNarrativeIntegrityIssues,
   isStrongPublishableCandidate,
   safeJsonParse,
   sanitizeGeneratedMarketingField,
@@ -156,6 +158,28 @@ describe('AI Pipeline Tests', () => {
       const longButGenericText = 'Storgatan 12, 3 tr, Linköping. En trea om 76 kvm med gott om plats för vardagens behov. Köket renoverades 2022 och badrummet uppdaterades i samband med detta. Planlösningen är praktisk och vardagsrummet har plats för både soffgrupp och matbord. Sovrummen ligger i den inre delen av bostaden och förvaring finns i flera garderober. Läget ger närhet till service och kommunikationer, vilket gör vardagen smidig. ICA, resecentrum och centrum finns i närheten och området passar många olika köpare. Bostaden håller ett gott skick och ger ett välordnat helhetsintryck utan att sticka ut på något särskilt sätt.';
 
       expect(isStrongPublishableCandidate(longButGenericText, 'hemnet', 195, 450, 'balanced', 'pro')).toBe(false);
+    });
+
+    it('should detect broken narrative integrity artifacts from the live failure pattern', () => {
+      const issues = detectNarrativeIntegrityIssues(
+        'Fönster har bytts och tilläggsisolering har gjorts. Läget gör det lätt att börja Värmepumpen är ny och uteplatsen ger bra förutsättningar för sol.'
+      );
+
+      expect(issues.length).toBeGreaterThan(0);
+    });
+
+    it('should flag generic broker abstractions that lack concrete evidentiary density', () => {
+      const genericCount = countGenericBrokerPhrases(
+        'Planlösningen skapar naturliga flöden och ger flexibla användningsmöjligheter. Helheten känns lättmöblerad och väl placerad för ett vardagsliv med trevligt umgänge.'
+      );
+
+      expect(genericCount).toBeGreaterThan(1);
+    });
+
+    it('should reject a borderline long text from strong fast-path when it is generic despite some concrete facts', () => {
+      const borderlineText = 'Tallstigen 4, Värmdö. Villa med uteplats i söderläge och trädgård. Köket renoverades 2021 och badrummet uppdaterades 2020. Planlösningen skapar naturliga flöden mellan rummen och ger flexibla användningsmöjligheter för familjen. Vardagsrummet har plats för både soffgrupp och matbord medan sovrummen ligger samlade i den mer privata delen av huset. Uteplatsen blir en självklar del av huset under sommarhalvåret och tomten ger bra förutsättningar för sol. Läget är väl placerat för ett vardagsliv där skola, service och kommunikationer gör det lätt att kombinera pendling, ärenden och fritid. Fiber finns installerat och parkering finns på tomten.';
+
+      expect(isStrongPublishableCandidate(borderlineText, 'hemnet', 195, 450, 'balanced', 'pro')).toBe(false);
     });
   });
 

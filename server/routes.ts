@@ -292,6 +292,69 @@ function isTooThinForDelivery(text: string, minimumPublishableWordMin: number): 
   return shortLineCount >= 2 || rawListPattern.test(text);
 }
 
+function countGenericBrokerPhrases(text: string): number {
+  if (!text) return 0;
+
+  const genericPatterns = [
+    /\bflexibla användningsmöjligheter\b/gi,
+    /\bnaturliga flöden\b/gi,
+    /\btrevligt umgänge\b/gi,
+    /\bhelheten känns lättmöblerad\b/gi,
+    /\bsjälvklar del av huset\b/gi,
+    /\bbra förutsättningar för sol\b/gi,
+    /\bkombinera pendling, ärenden och fritid\b/gi,
+    /\bväl placerat för ett vardagsliv\b/gi,
+    /\bsamlade för en enkel vardag\b/gi,
+    /\bgenomgående välhållet\b/gi,
+    /\bligger bra placerat\b/gi,
+  ];
+
+  return genericPatterns.reduce((count, pattern) => count + ((text.match(pattern) || []).length > 0 ? 1 : 0), 0);
+}
+
+function countConcreteEvidenceSignals(text: string): number {
+  if (!text) return 0;
+
+  const evidenceSignals = [
+    /\b20\d{2}\b/g,
+    /\b\d+\s*kvm\b/gi,
+    /\b\d+\s*(?:meter|minuter|min)\b/gi,
+    /\b(ballingslöv|marbodal|ikea|hth|kvik|noblessa|siemens|bosch|miele|electrolux|gaggenau)\b/gi,
+    /\b(ekparkett|mörkoljad ekparkett|klinker|stenskiva|granit|helkaklat|golvvärme|dubbla handfat|luft-luftvärmepump|fiber|laddplats|jacuzzi|tilläggsisolerats?|nya fönster)\b/gi,
+    /\b(uteplats|terrass|altan|trädgård|förråd|garage|carport|skjutdörrar|matplats|köksö)\b/gi,
+  ];
+
+  return evidenceSignals.reduce((count, pattern) => count + ((text.match(pattern) || []).length > 0 ? 1 : 0), 0);
+}
+
+function detectNarrativeIntegrityIssues(text: string): string[] {
+  if (!text) return [];
+
+  const issues: string[] = [];
+  const integrityPatterns: Array<[RegExp, string]> = [
+    [/\b(börja|fortsätta|avsluta|skapa|leva|njuta|använda|samla)\s+[A-ZÅÄÖ][a-zåäö]+(?:en|et|ar|or)?\s+(?:är|har|ger|blir|finns)\b/g, 'Avhuggen eller felaktigt sammanfogad mening'],
+    [/\b[A-ZÅÄÖ][a-zåäö]+\s+Den\s+[a-zåäö]+\b/g, 'Felaktig satsövergång i löptext'],
+  ];
+
+  for (const [pattern, message] of integrityPatterns) {
+    if (pattern.test(text)) {
+      issues.push(message);
+    }
+  }
+
+  return issues;
+}
+
+function getStrongPublishableWordFloor(minimumPublishableWordMin: number, plan: PlanType): number {
+  if (plan === "premium") {
+    return Math.max(minimumPublishableWordMin + 55, Math.round(minimumPublishableWordMin * 1.28));
+  }
+  if (plan === "pro") {
+    return Math.max(minimumPublishableWordMin + 35, Math.round(minimumPublishableWordMin * 1.18));
+  }
+  return minimumPublishableWordMin;
+}
+
 function buildDeterministicFallbackDescription(disposition: any, style: WritingStyle): string {
   const property = disposition?.property || {};
   const location = disposition?.location || {};
@@ -933,11 +996,22 @@ function findRuleViolations(text: string, platform: string = "hemnet", style: Wr
     [/\bparkering\s+har\s+(?:laddplats|garage|carport|plats)\b/i, 'Mekanisk parkeringsfras: "Parkering har ..."'],
     [/\bnär det passar med en måltid\s+buss\s+tar\b/i, 'Saknad meningsgräns före kommunikationsmening'],
     [/\b(kikka|come 2 eat|chopchop asian express värmdö)[^.!?\n]{0,90}när det passar med en måltid\b/i, 'Svag servicefras i lägesstycke'],
+    [/\bbörja\s+[A-ZÅÄÖ][a-zåäö]+\b/i, 'Avhuggen mening efter "börja"'],
   ];
   for (const [pattern, message] of mechanicalQualityPatterns) {
     if (pattern.test(text)) {
       violations.push(message);
     }
+  }
+
+  const narrativeIntegrityIssues = detectNarrativeIntegrityIssues(text);
+  for (const issue of narrativeIntegrityIssues) {
+    violations.push(issue);
+  }
+
+  const genericBrokerPhraseCount = countGenericBrokerPhrases(text);
+  if (genericBrokerPhraseCount >= 2) {
+    violations.push(`För många generiska mäklarabstraktioner i huvudtexten (${genericBrokerPhraseCount} träffar)`);
   }
 
   // 1. Check forbidden phrases (filtered by writing style)
@@ -1451,6 +1525,23 @@ function analyzeTextQuality(text: string): number {
     score -= Math.min(0.12, rawAmenityCount * 0.05);
   }
 
+  const genericBrokerPhraseCount = countGenericBrokerPhrases(text);
+  if (genericBrokerPhraseCount > 0) {
+    score -= Math.min(0.18, genericBrokerPhraseCount * 0.06);
+  }
+
+  const concreteEvidenceSignals = countConcreteEvidenceSignals(text);
+  if (concreteEvidenceSignals >= 5) {
+    score += Math.min(0.1, concreteEvidenceSignals * 0.015);
+  } else if (concreteEvidenceSignals <= 2) {
+    score -= 0.08;
+  }
+
+  const integrityIssueCount = detectNarrativeIntegrityIssues(text).length;
+  if (integrityIssueCount > 0) {
+    score -= Math.min(0.35, integrityIssueCount * 0.16);
+  }
+
   const lastSentence = sentences[sentences.length - 1]?.trim() || '';
   if (lastSentence) {
     const weakLocationEndingPatterns = [
@@ -1599,12 +1690,23 @@ function isStrongPublishableCandidate(
   const mainViolations = validateMainMarketingText({ improvedPrompt: text }, platform, minimumPublishableWordMin, targetWordMax, style);
   const nonWordCountViolations = getNonWordCountViolations(mainViolations);
   const wordCount = text.split(/\s+/).filter(Boolean).length;
-  const publishableEnough = wordCount >= minimumPublishableWordMin;
+  const strongWordFloor = getStrongPublishableWordFloor(minimumPublishableWordMin, plan);
+  const publishableEnough = wordCount >= strongWordFloor;
   const qualityScore = analyzeTextQuality(text);
-  const threshold = plan === "premium" ? 0.85 : plan === "pro" ? 0.8 : 0.77;
+  const threshold = plan === "premium" ? 0.88 : plan === "pro" ? 0.84 : 0.79;
   const firstSentence = text.split(/[.!?]+/).find((sentence) => sentence.trim().length > 0)?.trim() || "";
   const strongOpening = /(söderläge|västerläge|uteplats|terrass|balkong|gård|utsikt|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence);
-  return nonWordCountViolations.length === 0 && publishableEnough && !isTooThinForDelivery(text, minimumPublishableWordMin) && qualityScore >= threshold && strongOpening;
+  const concreteEvidenceSignals = countConcreteEvidenceSignals(text);
+  const genericBrokerPhraseCount = countGenericBrokerPhrases(text);
+  const integrityIssueCount = detectNarrativeIntegrityIssues(text).length;
+  return nonWordCountViolations.length === 0
+    && publishableEnough
+    && !isTooThinForDelivery(text, minimumPublishableWordMin)
+    && qualityScore >= threshold
+    && strongOpening
+    && concreteEvidenceSignals >= 4
+    && genericBrokerPhraseCount === 0
+    && integrityIssueCount === 0;
 }
 
 function countWeakHemnetDetailSignals(text: string, platform: string): number {
@@ -3400,23 +3502,31 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const cleanDisposition = deepClean(disposition) || disposition;
       const cleanToneAnalysis = deepClean(toneAnalysis) || toneAnalysis;
       const cleanWritingPlan = deepClean(writingPlan) || writingPlan;
+      const compactDispositionJson = JSON.stringify(cleanDisposition);
+      const compactToneAnalysisJson = JSON.stringify(cleanToneAnalysis);
+      const compactWritingPlanJson = JSON.stringify(cleanWritingPlan);
 
       // Build content strings once — reused for primary generation and quality gate retry
       const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`;
-      const userContent = `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nTONALITET:\n${JSON.stringify(cleanToneAnalysis, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: "", effort: reasoningEffort },
-        { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta. Lägesstycket ska kännas som publicerad Hemnet-/Booli-prosa, aldrig som uppräkning.", effort: "medium" as const },
-        { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism. Ovidkommande teknik- eller standardfakta ska få minimalt utrymme.", effort: "medium" as const },
-        { label: "broker", developerSuffix: "\n\nVARIANTMÅL: Skriv som en toppresterande svensk mäklare. Första stycket ska bära annonsen direkt med rätt detaljprioritering. Välj aktivt bort svagare fakta om de stör öppning, rytm eller lägesprosa.", effort: "medium" as const },
+        { label: "primary", developerSuffix: "", effort: reasoningEffort, exampleCount: 2, minimalFields: true },
+        { label: "flow", developerSuffix: "\n\nVARIANTMÅL: Prioritera rytm, levande svensk mäklarprosa, stark öppning och naturliga övergångar utan att tappa fakta. Lägesstycket ska kännas som publicerad Hemnet-/Booli-prosa, aldrig som uppräkning.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
+        { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism. Ovidkommande teknik- eller standardfakta ska få minimalt utrymme.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
+        { label: "broker", developerSuffix: "\n\nVARIANTMÅL: Skriv som en toppresterande svensk mäklare. Första stycket ska bära annonsen direkt med rätt detaljprioritering. Välj aktivt bort svagare fakta om de stör öppning, rytm eller lägesprosa.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
       ];
 
-      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high") => {
+      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
+        const candidateExamples = matchedExamples.slice(0, Math.max(1, exampleCount));
+        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+        const fieldMinimizationInstruction = minimalFields
+          ? '\n- Returnera endast fälten "headline" och "improvedPrompt". Uteslut alla övriga fält helt för att undvika trunkering.'
+          : '';
         const completion = await openai.responses.create({
           model: "gpt-5.2",
           reasoning: { effort },
@@ -3432,6 +3542,7 @@ SVARSFORMAT:
 - improvedPrompt måste inledas direkt med bostaden eller dess starkaste konkreta kvalitet, aldrig med meta-kommentarer.
 - Returnera aldrig markdown, kodblock eller förklaringar före eller efter JSON.
 - Om du blir osäker: skriv ändå en publicerbar objektsbeskrivning i improvedPrompt och lämna övriga fält tomma eller utelämnade.
+${fieldMinimizationInstruction}
 
 KRITISKA KVALITETSKRAV FÖR improvedPrompt:
 - Öppningen får inte kännas administrativ eller som en objektspecifikation.
@@ -3449,7 +3560,7 @@ OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
 - rå JSON i improvedPrompt
 - listor eller kolonrader
 - tom improvedPrompt` },
-            { role: "user", content: userContent }
+            { role: "user", content: candidateUserContent }
           ],
           max_output_tokens: 8000,
           text: { format: { type: "json_object" } }
@@ -3510,6 +3621,15 @@ OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
           const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
           if (lastPeriod > text.length * 0.5) {
             candidateResult.improvedPrompt = text.substring(0, lastPeriod + 1);
+          }
+        }
+
+        if (completion.status === "incomplete") {
+          const incompleteRecoveredText = typeof candidateResult?.improvedPrompt === "string" ? candidateResult.improvedPrompt.trim() : "";
+          const incompleteWordCount = incompleteRecoveredText.split(/\s+/).filter(Boolean).length;
+          const looksPrematurelyCut = incompleteRecoveredText.length > 0 && !/[.!?]$/.test(incompleteRecoveredText);
+          if (incompleteWordCount < minimumPublishableWordMin || looksPrematurelyCut) {
+            throw new Error(`[Step 3:${label}] Kandidaten trunkerades innan publicerbar huvudtext kunde återvinnas.`);
           }
         }
 
@@ -3637,7 +3757,7 @@ KANDIDATRÄDDNING:
 
       for (const config of candidateConfigs) {
         try {
-          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort);
+          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
           candidatePool.push(candidate);
           console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
         } catch (e) {
@@ -4006,7 +4126,7 @@ REGLER:
 1. Du FÅR skriva om lokala partier för bättre rytm, men ska bevara alla korrekta fakta
 2. Förbättra särskilt svag öppning, upprepade fakta, mekaniska faktarader och listig närområdestext om sådant finns
 3. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
-4. Varje ny mening = nytt faktum eller en tydlig förbättring av flödet med samma fakta
+4. Varje ny mening = nytt faktum eller en tydlig förbättring av flödet med samma fakta 
 5. Infoga eller skriv om på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
 6. Hitta ALDRIG på fakta — använd BARA dispositionen
 7. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
@@ -4165,13 +4285,21 @@ REGLER:
       let finalBrokerAudit: any = null;
       const brokerQualityThreshold = plan === "premium" ? 0.82 : plan === "pro" ? 0.78 : 0.75;
       const currentLocalTopBrokerReady = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
+      const finalMainWordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
+      const finalStrongWordFloor = getStrongPublishableWordFloor(minimumPublishableWordMin, plan);
+      const finalGenericBrokerPhraseCount = countGenericBrokerPhrases(result.improvedPrompt || "");
+      const finalNarrativeIntegrityIssues = detectNarrativeIntegrityIssues(result.improvedPrompt || "");
       const buildLocalBrokerAuditFallback = (reason: string, issues?: string[]) => ({
         publish_ready: currentLocalTopBrokerReady,
         broker_quality_score: Number(analyzeTextQuality(result?.improvedPrompt || "").toFixed(3)),
         issues: Array.isArray(issues) ? issues.slice(0, 5) : [],
         verdict: reason,
       });
-      if (strongCandidateFastPath) {
+      const canSkipFinalBrokerAudit = strongCandidateFastPath
+        && finalMainWordCount >= finalStrongWordFloor
+        && finalGenericBrokerPhraseCount === 0
+        && finalNarrativeIntegrityIssues.length === 0;
+      if (canSkipFinalBrokerAudit) {
         console.log("[Final Broker Audit] Skipped — strong candidate already satisfies local top-broker threshold.");
         finalBrokerAudit = buildLocalBrokerAuditFallback("Stark kandidat klarade lokal toppnivågrind; extern slutgranskning hoppades över för snabbare och billigare leverans.");
       } else {
@@ -4361,6 +4489,10 @@ Svara med JSON:
       if (isDispositionLikeOutput(result.improvedPrompt)) {
         throw new Error("[Final Gate] Huvudtexten är fortfarande dispositionslik vid slutsvaret.");
       }
+      const finalNarrativeIssues = detectNarrativeIntegrityIssues(result.improvedPrompt);
+      if (finalNarrativeIssues.length > 0) {
+        throw new Error(`[Final Gate] Huvudtexten har fortfarande trasig berättelseintegritet: ${finalNarrativeIssues.slice(0, 5).join(" | ")}`);
+      }
       if (finalNonWordCountViolations.length > 0) {
         throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i huvudtexten: ${finalNonWordCountViolations.slice(0, 5).join(" | ")}`);
       }
@@ -4389,19 +4521,11 @@ Svara med JSON:
       }
       if (finalBrokerAudit && finalBrokerAudit.publish_ready === false) {
         const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
-        if (!finalLocalTopBrokerReady) {
-          throw new Error(`[Final Gate] AI-audit underkände texten och lokal toppmäklargrind godkände inte texten: ${auditIssues}`);
-        }
-        console.warn(`[Final Broker Audit] AI-audit underkände texten men stark lokal toppmäklargrind godkände huvudtexten. Levererar. Detalj: ${auditIssues}`);
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit var striktare än den starka lokala toppmäklargrinden; huvudtexten levererades ändå.", Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues : []);
+        throw new Error(`[Final Gate] AI-audit underkände texten efter slutgranskning: ${auditIssues}`);
       }
       if (finalBrokerAudit.broker_quality_score < brokerQualityThreshold) {
         const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
-        if (!finalLocalTopBrokerReady) {
-          throw new Error(`[Final Gate] Broker quality score låg under tröskeln och lokal toppmäklargrind godkände inte texten. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
-        }
-        console.warn(`[Final Broker Audit] Broker quality score låg under tröskeln men stark lokal toppmäklargrind godkände huvudtexten. Levererar. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
-        finalBrokerAudit = buildLocalBrokerAuditFallback(`AI-audit gav lägre betyg än tröskeln för ${plan}; stark lokal toppmäklargrind användes i stället.`, Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues : []);
+        throw new Error(`[Final Gate] Broker quality score låg under tröskeln efter slutgranskning. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
       }
 
       // AI-förbättringsanalys (körs efter textgenerering)
@@ -5666,6 +5790,8 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
 export {
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
+  countGenericBrokerPhrases,
+  detectNarrativeIntegrityIssues,
   finalizeMainMarketingText,
   isStrongPublishableCandidate,
   safeJsonParse,
