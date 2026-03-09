@@ -4063,7 +4063,7 @@ Svara med JSON:
               cleanWritingPlan,
               result,
               // NEW: Pass full context so Polish knows what was important
-              intelligence: enrichedIntelligence,
+              intelligence: cleanToneAnalysis,
               positioning: competitorAnalysis,
               violations: nonWordCountViolations,
               currentScore: selectedCandidate.qualityScore,
@@ -4196,7 +4196,7 @@ TEXTSTIL: ${style === "factual" ? "Faktabaserad — INGA beskrivande adjektiv al
 
 KONTEXT:
 ${cleanWritingPlan ? `WRITING PLAN: ${JSON.stringify(cleanWritingPlan)}` : ''}
-${enrichedIntelligence ? `MÅLGRUPP: ${JSON.stringify(enrichedIntelligence)}` : ''}
+${cleanToneAnalysis ? `MÅLGRUPP: ${JSON.stringify(cleanToneAnalysis)}` : ''}
 
 DITT JOBB: Ersätt EXAKT de felaktiga fraserna med korrekta ersättningar. Ändra INGET annat.
 
@@ -4321,7 +4321,7 @@ TEXTSTIL: ${style === "factual" ? "Faktabaserad — bara fakta, inga adjektiv, k
 
 KONTEXT:
 ${cleanWritingPlan ? `WRITING PLAN: ${JSON.stringify(cleanWritingPlan)}` : ''}
-${enrichedIntelligence ? `MÅLGRUPP: ${JSON.stringify(enrichedIntelligence)}` : ''}
+${cleanToneAnalysis ? `MÅLGRUPP: ${JSON.stringify(cleanToneAnalysis)}` : ''}
 
 REGLER:
 1. Du FÅR skriva om lokala partier för bättre rytm, men ska bevara alla korrekta fakta
@@ -4738,6 +4738,7 @@ Svara med JSON:
               input: buildFinalAuditRescueRequestInput({
                 cleanDisposition,
                 cleanWritingPlan,
+                cleanToneAnalysis,
                 plan,
                 rescueIssues,
                 result,

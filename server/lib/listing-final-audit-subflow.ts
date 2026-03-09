@@ -83,6 +83,7 @@ export function buildRescueRewriteEvaluationInput(params: {
 export function buildFinalAuditRescueRequestInput(params: {
   cleanDisposition: unknown;
   cleanWritingPlan: unknown;
+  cleanToneAnalysis?: unknown; // Add tone analysis for context
   plan: string;
   rescueIssues: string[];
   result: unknown;
@@ -121,7 +122,7 @@ ${params.rescueRepairAddendum}`
     },
     {
       role: "user" as const,
-      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n\nLEVEL: ${params.plan}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${params.rescueIssues.map((issue, index) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(params.result, null, 2)}`
+      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n${params.cleanToneAnalysis ? `\n\nTONALITET/MÅLGRUPP:\n${JSON.stringify(params.cleanToneAnalysis, null, 2)}` : ''}\n\nLEVEL: ${params.plan}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${params.rescueIssues.map((issue, index) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(params.result, null, 2)}`
     }
   ];
 }
