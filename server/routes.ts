@@ -3080,10 +3080,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/optimize", requireAuth, async (req, res) => {
     // Streaming support: if client accepts text/event-stream, send NDJSON progress events
     const wantsStream = req.headers.accept?.includes("text/event-stream") || req.headers.accept?.includes("application/x-ndjson");
-    const bufferedProgressEvents: Array<{ type: string; step: number; total: number; message: string }> = [];
+    let streamInitialized = false;
+    const ensureStreamStarted = () => {
+      if (!wantsStream || streamInitialized || res.headersSent) return;
+      res.writeHead(200, {
+        "Content-Type": "application/x-ndjson; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      streamInitialized = true;
+    };
     const sendProgress = wantsStream
       ? (step: number, total: number, message: string) => {
-        bufferedProgressEvents.push({ type: "progress", step, total, message });
+        ensureStreamStarted();
+        res.write(JSON.stringify({ type: "progress", step, total, message }) + "\n");
       }
       : (_step: number, _total: number, _message: string) => { };
 
@@ -4688,15 +4699,7 @@ Svara med JSON i formatet:
       });
 
       if (wantsStream) {
-        res.writeHead(200, {
-          "Content-Type": "application/x-ndjson; charset=utf-8",
-          "Cache-Control": "no-cache",
-          "Connection": "keep-alive",
-          "X-Accel-Buffering": "no",
-        });
-        for (const event of bufferedProgressEvents) {
-          res.write(JSON.stringify(event) + "\n");
-        }
+        ensureStreamStarted();
         successfulDeliverySent = true;
         res.write(JSON.stringify({ type: "complete", data: responseData }) + "\n");
         res.end();
@@ -4708,17 +4711,7 @@ Svara med JSON i formatet:
       console.error("Optimize error:", err);
       if (wantsStream) {
         try {
-          if (!res.headersSent) {
-            res.writeHead(err.statusCode || 500, {
-              "Content-Type": "application/x-ndjson; charset=utf-8",
-              "Cache-Control": "no-cache",
-              "Connection": "keep-alive",
-              "X-Accel-Buffering": "no",
-            });
-          }
-          for (const event of bufferedProgressEvents) {
-            res.write(JSON.stringify(event) + "\n");
-          }
+          ensureStreamStarted();
           res.write(JSON.stringify({ type: "error", message: err.message || "Optimering misslyckades", code: err.code || null, upstreamQuota: Boolean(err.upstreamQuota) }) + "\n");
           res.end();
         } catch { res.end(); }

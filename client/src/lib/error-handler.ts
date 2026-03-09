@@ -147,17 +147,6 @@ export class ErrorHandler {
       variant: error.severity === 'critical' || error.severity === 'high' ? 'destructive' : 'default'
     } as const;
 
-    // Add retry action for retryable errors
-    if (error.retryable && error.severity !== 'critical') {
-      return {
-        ...baseConfig,
-        action: {
-          label: 'Försök igen',
-          onClick: () => window.location.reload()
-        }
-      };
-    }
-
     return baseConfig;
   }
 

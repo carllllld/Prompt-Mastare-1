@@ -185,6 +185,9 @@ export default function Home() {
       return;
     }
 
+    setResult(null);
+    setLoadingStep(0);
+    setLoadingMessage("Förbereder generering...");
     setLastSubmitData(data);
     mutate(data, {
       onSuccess: (res: OptimizeResponse) => {
@@ -193,6 +196,8 @@ export default function Home() {
         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       },
       onError: () => {
+        setLoadingStep(0);
+        setLoadingMessage("Förbereder generering...");
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
       },
     });
