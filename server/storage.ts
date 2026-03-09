@@ -9,7 +9,8 @@
   teamInvites, type TeamInvite,
   emailRateLimits, type EmailRateLimit,
   personalStyles, type PersonalStyle, type InsertPersonalStyle,
-  usageTracking, type UsageTracking, type InsertUsageTracking
+  usageTracking, type UsageTracking, type InsertUsageTracking,
+  pipelineMetrics, experimentResults, experimentAssignments
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gt, gte, lt } from "drizzle-orm";
@@ -705,6 +706,190 @@ export class DatabaseStorage implements IStorage {
   async resetMonthlyUsage(userId: string): Promise<void> {
     await db.delete(usageTracking)
       .where(eq(usageTracking.userId, userId));
+  }
+
+  // ==========================================
+  // ENTERPRISE: Pipeline Observability
+  // ==========================================
+
+  async savePipelineMetrics(metrics: {
+    runId: string;
+    userId: string;
+    plan: string;
+    success: boolean;
+    totalDurationMs: number;
+    totalAiCalls: number;
+    totalTokensUsed?: number;
+    totalCostUsd?: number;
+    finalQualityScore?: number;
+    finalWordCount?: number;
+    rescueAttempts: number;
+    polishAttempts: number;
+    fastPathTaken: boolean;
+    structuredDataUsed: boolean;
+    featuresUsed: string[];
+    errorCount: number;
+    steps: any[];
+    createdAt: Date;
+  }): Promise<void> {
+    await db.insert(pipelineMetrics).values({
+      ...metrics,
+      totalCostUsd: metrics.totalCostUsd?.toString() || null,
+      steps: sql`${JSON.stringify(metrics.steps)}::jsonb`,
+      featuresUsed: sql`${JSON.stringify(metrics.featuresUsed)}::jsonb`,
+    } as any);
+  }
+
+  async getPipelineMetrics(
+    userId?: string,
+    limit: number = 100,
+    since?: Date
+  ): Promise<any[]> {
+    let query: any = db.select().from(pipelineMetrics);
+
+    if (userId) {
+      query = query.where(eq(pipelineMetrics.userId, userId));
+    }
+
+    if (since) {
+      query = query.where(gte(pipelineMetrics.createdAt, since));
+    }
+
+    const results: any[] = await query
+      .orderBy(desc(pipelineMetrics.createdAt))
+      .limit(limit);
+
+    return results.map((r: any) => ({
+      ...r,
+      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
+      featuresUsed: typeof r.featuresUsed === 'string' ? JSON.parse(r.featuresUsed) : r.featuresUsed,
+    }));
+  }
+
+  async getPipelineStats(since?: Date): Promise<{
+    totalRuns: number;
+    successRate: number;
+    avgDurationMs: number;
+    avgCostUsd: number;
+    totalCostUsd: number;
+    avgQualityScore: number;
+  }> {
+    let query: any = db.select().from(pipelineMetrics);
+
+    if (since) {
+      query = query.where(gte(pipelineMetrics.createdAt, since));
+    }
+
+    const results: any[] = await query;
+
+    if (results.length === 0) {
+      return {
+        totalRuns: 0,
+        successRate: 0,
+        avgDurationMs: 0,
+        avgCostUsd: 0,
+        totalCostUsd: 0,
+        avgQualityScore: 0,
+      };
+    }
+
+    const successful = results.filter(r => r.success).length;
+    const totalCost = results.reduce((sum, r) => sum + (parseFloat(r.totalCostUsd || '0') || 0), 0);
+    const avgQuality = results
+      .filter(r => r.finalQualityScore !== null)
+      .reduce((sum, r) => sum + (r.finalQualityScore || 0), 0) /
+      results.filter(r => r.finalQualityScore !== null).length || 0;
+
+    return {
+      totalRuns: results.length,
+      successRate: successful / results.length,
+      avgDurationMs: results.reduce((sum, r) => sum + r.totalDurationMs, 0) / results.length,
+      avgCostUsd: totalCost / results.length,
+      totalCostUsd: totalCost,
+      avgQualityScore: avgQuality,
+    };
+  }
+
+  // ==========================================
+  // ENTERPRISE: A/B Testing
+  // ==========================================
+
+  async saveExperimentResult(result: {
+    experimentId: string;
+    variantId: string;
+    userId: string;
+    metrics: Record<string, number>;
+    timestamp: Date;
+  }): Promise<void> {
+    await db.insert(experimentResults).values({
+      ...result,
+      metrics: sql`${JSON.stringify(result.metrics)}::jsonb`,
+    } as any);
+  }
+
+  async getExperimentResults(
+    experimentId: string,
+    since?: Date
+  ): Promise<any[]> {
+    let query: any = db.select()
+      .from(experimentResults)
+      .where(eq(experimentResults.experimentId, experimentId));
+
+    if (since) {
+      query = query.where(gte(experimentResults.timestamp, since));
+    }
+
+    const results: any[] = await query.orderBy(experimentResults.timestamp);
+
+    return results.map((r: any) => ({
+      ...r,
+      metrics: typeof r.metrics === 'string' ? JSON.parse(r.metrics) : r.metrics,
+    }));
+  }
+
+  async saveUserExperimentAssignment(
+    userId: string,
+    experimentId: string,
+    variantId: string
+  ): Promise<void> {
+    await db.insert(experimentAssignments)
+      .values({
+        userId,
+        experimentId,
+        variantId,
+        assignedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [experimentAssignments.userId, experimentAssignments.experimentId],
+        set: { variantId, assignedAt: new Date() },
+      });
+  }
+
+  async getUserExperimentAssignment(
+    userId: string,
+    experimentId: string
+  ): Promise<string | null> {
+    const result = await db.select()
+      .from(experimentAssignments)
+      .where(and(
+        eq(experimentAssignments.userId, userId),
+        eq(experimentAssignments.experimentId, experimentId)
+      ))
+      .limit(1);
+
+    return result[0]?.variantId || null;
+  }
+
+  async getAllUserAssignments(userId: string): Promise<Record<string, string>> {
+    const results = await db.select()
+      .from(experimentAssignments)
+      .where(eq(experimentAssignments.userId, userId));
+
+    const assignments: Record<string, string> = {};
+    for (const r of results) {
+      assignments[r.experimentId] = r.variantId;
+    }
+    return assignments;
   }
 }
 

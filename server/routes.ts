@@ -8,6 +8,21 @@ import { analyzeArchitecturalValue } from "./architectural-intelligence";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, MODEL_TEXT_EDIT_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
+import { chooseBestCandidate, decideBrokerAuditStrategy, decideRewriteAcceptance, summarizeAgentStageDecision } from "./lib/listing-decision-engine";
+import { buildLocalBrokerAuditFallback, evaluateBrokerAuditGate, evaluateCandidatePolishGate, evaluateCandidateRecoveryGate, evaluateCandidateSelectionGate, evaluateFinalAuditRescueGate } from "./lib/listing-agent-gates";
+import { buildAgentCheckpointEvent, summarizeAgentRun } from "./lib/listing-agent-observability";
+import type { AgentLoopDecision } from "./lib/listing-agent-loop";
+import { runAgentIteration } from "./lib/listing-agent-iteration";
+import { evaluateLoopCheckpoint } from "./lib/listing-loop-coordinator";
+import { buildBlueprintDeveloperAddendum, buildBlueprintUserAddendum, buildListingGenerationBlueprint } from "./lib/listing-orchestrator";
+import { buildFinalAuditRescueOutcome, buildFinalAuditRescueRequestInput, buildFinalAuditRescueResponseArtifacts, buildFinalAuditRescueSettlement, buildFinalBrokerAuditRetryRequestInput, buildFinalBrokerAuditRetryResponseArtifacts, finalizeBrokerAuditReadiness, finalizeFinalMainValidation } from "./lib/listing-final-audit-subflow";
+import { coordinateExpansionAcceptance, coordinateFactCheckAcceptance, coordinatePolishAcceptance, coordinateRescueAcceptance } from "./lib/listing-refinement-coordinator";
+import { decideRecoveryAction } from "./lib/listing-recovery-policy";
+import { buildCandidatePolishOutcome, buildCandidatePolishRequestInput, buildCandidatePolishResponseArtifacts, buildCandidatePolishSettlement, buildStep3CandidateSnapshot } from "./lib/listing-selection-subflow";
+import { decidePostRefinementGuard } from "./lib/listing-refinement-subflow";
+import { buildRepairPromptAddendum, selectRepairStrategy } from "./lib/listing-repair-strategies";
+import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
+import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate } from "./lib/listing-run-state";
 import OpenAI from "openai";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
@@ -582,6 +597,16 @@ function generatePersonalizedPrompt(referenceTexts: string[], styleProfile: any)
   if (styleProfile.tonePriorities?.focusFacts) toneInstructions.push('Fokusera på konkreta fakta och mått');
   if (styleProfile.tonePriorities?.personalTouch) toneInstructions.push('Lägg till personliga, mänskliga detaljer');
   const toneString = toneInstructions.length > 0 ? `\nTON-PRIORITERINGAR: ${toneInstructions.join('. ')}.` : '';
+  const labeledExamples = referenceTexts
+    .map((text, index) => {
+      const label = index === 0
+        ? "EXEMPEL 1 - ÖPPNING OCH TONALITET"
+        : index === 1
+          ? "EXEMPEL 2 - MITTPARTI OCH RUMSFLÖDE"
+          : "EXEMPEL 3 - LÄGE OCH AVSLUT";
+      return `${label}:\n${text}`;
+    })
+    .join('\n\n---\n\n');
 
   return `Du är en erfaren svensk mäklare med denna unika skrivstil:
 
@@ -595,11 +620,13 @@ STILPROFIL:
 - Adjektivanvändning: ${styleProfile.adjectiveUsage}/10
 - Faktafokus: ${styleProfile.factFocus}/10${toneString}${allowedInstructions}${customForbidden}
 
-REFERENSTEXTER (imitera EXAKT denna stil och ton):
-${referenceTexts.join('\n\n---\n\n')}
+REFERENSEXEMPEL (använd dem som olika stilprover, inte som fakta att kopiera):
+${labeledExamples}
 
 VIKTIGT OM PRIORITET:
 - Skriv som denna specifika mäklare: samma meningsrytm, styckeindelning och ordval.
+- Om flera exempel finns ska du lära dig deras gemensamma stilkärna. Behandla dem som kompletterande prover för öppning, mittparti och läges-/avslutsstil.
+- Kopiera aldrig fakta, adressuppgifter eller formuleringar ordagrant från referensexemplen. Lär dig stil, inte innehåll.
 - Om din personliga stil krockar med TEXTSTIL-sektionen nedan: textstilen har PRIORITET för ton och adjektivanvändning.
 - Din personliga stil styr MENINGSRYTM, STYCKELÄNGD och PERSPEKTIV — men inom textsstilens tillåtna ramar.
 - Undvik ALLTID universella AI-klyschor: "erbjuder generösa ytor", "andas lugn", "perfekt för den som", "välkommen till".
@@ -1765,6 +1792,20 @@ function repairEmbeddedForAttArtifacts(text: string): string {
   return text
     .replace(/\b([A-Za-zÅÄÖåäö]{3,})för att([A-Za-zÅÄÖåäö]{2,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`)
     .replace(/\b([A-Za-zÅÄÖåäö]{2,})för att([A-Za-zÅÄÖåäö]{3,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`);
+}
+
+function hasCorruptedWordArtifacts(text: string): boolean {
+  if (!text) return false;
+
+  const corruptedPatterns = [
+    /\b[a-zåäö]+för att[a-zåäö]*\b/gi,
+    /\bsödterass\b/gi,
+    /\bterass\b/gi,
+    /\bvälsköför att\b/gi,
+    /\banvändningssäför att\b/gi,
+  ];
+
+  return corruptedPatterns.some((pattern) => pattern.test(text));
 }
 
 function repairMechanicalBrokerArtifacts(text: string): string {
@@ -3227,6 +3268,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       const minimumPublishableWordMin = getMinimumPublishableWordCount(targetWordMin, style);
+      const orchestrationBlueprint = buildListingGenerationBlueprint({
+        plan,
+        platform,
+        style,
+        targetWordMin,
+        targetWordMax,
+        disposition: {},
+      });
 
       console.log(`[Config] Plan: ${plan}, Model: ${aiModel}, Words: ${targetWordMin}-${targetWordMax}`);
       console.log(`[Config] Publishable min words for style ${style}: ${minimumPublishableWordMin}`);
@@ -3513,13 +3562,25 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const cleanDisposition = deepClean(disposition) || disposition;
       const cleanToneAnalysis = deepClean(toneAnalysis) || toneAnalysis;
       const cleanWritingPlan = deepClean(writingPlan) || writingPlan;
+      const resolvedBlueprint = buildListingGenerationBlueprint({
+        plan,
+        platform,
+        style,
+        targetWordMin,
+        targetWordMax,
+        disposition: cleanDisposition,
+        toneAnalysis: cleanToneAnalysis,
+        writingPlan: cleanWritingPlan,
+      });
+      const blueprintDeveloperAddendum = buildBlueprintDeveloperAddendum(resolvedBlueprint);
+      const blueprintUserAddendum = buildBlueprintUserAddendum(resolvedBlueprint);
       const compactDispositionJson = JSON.stringify(cleanDisposition);
       const compactToneAnalysisJson = JSON.stringify(cleanToneAnalysis);
       const compactWritingPlanJson = JSON.stringify(cleanWritingPlan);
 
       // Build content strings once — reused for primary generation and quality gate retry
-      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}`;
-      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
@@ -3531,10 +3592,11 @@ Fakta i fokus med naturlig rytm och professionell ton.
         { label: "precision", developerSuffix: "\n\nVARIANTMÅL: Prioritera precision, selektiv betoning, strikt faktadisciplin och publiceringsklar professionalism. Ovidkommande teknik- eller standardfakta ska få minimalt utrymme.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
         { label: "broker", developerSuffix: "\n\nVARIANTMÅL: Skriv som en toppresterande svensk mäklare. Första stycket ska bära annonsen direkt med rätt detaljprioritering. Välj aktivt bort svagare fakta om de stör öppning, rytm eller lägesprosa.", effort: "medium" as const, exampleCount: 3, minimalFields: false },
       ];
+      const runState = createListingRunState();
 
       const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
         const candidateExamples = matchedExamples.slice(0, Math.max(1, exampleCount));
-        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
         const fieldMinimizationInstruction = minimalFields
           ? '\n- Returnera endast fälten "headline" och "improvedPrompt". Uteslut alla övriga fält helt för att undvika trunkering.'
           : '';
@@ -3770,6 +3832,7 @@ KANDIDATRÄDDNING:
         try {
           const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
           candidatePool.push(candidate);
+          addCandidateToRunState(runState, candidate);
           console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
         } catch (e) {
           if (isOpenAIInsufficientQuotaError(e)) {
@@ -3784,6 +3847,13 @@ KANDIDATRÄDDNING:
       if (candidatePool.length === 0) {
         if (upstreamQuotaFailure) {
           throw upstreamQuotaFailure;
+        }
+        const candidateRecoveryDecision = evaluateCandidateRecoveryGate({
+          runState,
+          hasUsableText: false,
+        }).recoveryDecision;
+        if (candidateRecoveryDecision.action === "stop") {
+          throw new Error(`[Step 3] Candidate generation stopped: ${candidateRecoveryDecision.reason}`);
         }
         console.warn("[Step 3] All candidate variants failed. Entering emergency fallback generation.");
 
@@ -3833,6 +3903,14 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
         }
 
         if (!emergencyResult) {
+          const emergencyFailureDecision = evaluateCandidateRecoveryGate({
+            runState,
+            hasUsableText: false,
+            lastAttemptFailed: true,
+          }).recoveryDecision;
+          if (emergencyFailureDecision.action === "stop") {
+            throw new Error(`[Step 3 Emergency] ${emergencyFailureDecision.reason}`);
+          }
           throw new Error("[Step 3 Emergency] Alla AI-kandidater misslyckades och ingen emergency-text kunde genereras. Lokal fallback är inte tillåten här.");
         }
 
@@ -3853,6 +3931,7 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
           weakHemnetDetailCount: emergencyWeakHemnetDetailCount,
           totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22) - (emergencyWeakHemnetDetailCount * 0.05),
         });
+        addCandidateToRunState(runState, candidatePool[candidatePool.length - 1]);
       }
 
       let judgeChoiceLabel: string | null = null;
@@ -3900,90 +3979,92 @@ Svara med JSON:
         }
       }
 
-      const selectedCandidate = [...candidatePool]
-        .sort((a, b) => {
-          const aStrongPublishable = isStrongPublishableCandidate(a.result?.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
-          const bStrongPublishable = isStrongPublishableCandidate(b.result?.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
-          const aScore = a.totalScore
-            + (aStrongPublishable ? 0.18 : 0)
-            + (a.label === judgeChoiceLabel ? 0.12 : 0)
-            + (a.wordCount >= minimumPublishableWordMin ? 0.06 : 0)
-            - (a.weakHemnetDetailCount * 0.03)
-            + (a.qualityScore >= 0.82 ? 0.04 : 0);
-          const bScore = b.totalScore
-            + (bStrongPublishable ? 0.18 : 0)
-            + (b.label === judgeChoiceLabel ? 0.12 : 0)
-            + (b.wordCount >= minimumPublishableWordMin ? 0.06 : 0)
-            - (b.weakHemnetDetailCount * 0.03)
-            + (b.qualityScore >= 0.82 ? 0.04 : 0);
-          return bScore - aScore;
-        })[0];
+      const candidateDecision = chooseBestCandidate(candidatePool, plan, resolvedBlueprint, judgeChoiceLabel);
+      const selectedCandidate = candidatePool.find((candidate) => candidate.label === candidateDecision.selectedLabel) || candidatePool[0];
+      console.log(summarizeAgentStageDecision({
+        stage: "candidate-selection",
+        action: `selected ${selectedCandidate.label}`,
+        reason: candidateDecision.strategy === "accept"
+          ? "candidate already satisfies local publishability threshold"
+          : "candidate chosen as best base for further refinement",
+      }));
 
       let result: any = selectedCandidate.result;
       let strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
+      setSelectedCandidate(runState, selectedCandidate.label, result, strongCandidateFastPath);
+      const candidateSelectionGate = evaluateCandidateSelectionGate({
+        minimumPublishableWordMin,
+        candidateWordCount: selectedCandidate.wordCount,
+        hasUsableText: !!(result.improvedPrompt || "").trim(),
+      });
+      const candidateSelectionIteration = runAgentIteration({
+        runState,
+        stage: "candidate-selection",
+        actionLabel: `selected ${selectedCandidate.label}`,
+        currentViolations: selectedCandidate.nonWordCountViolations,
+        wordShortfall: candidateSelectionGate.wordShortfall,
+        factCheckAvailable: plan !== "free",
+        recoveryStage: "local_repair",
+        hasUsableText: candidateSelectionGate.hasUsableText,
+      });
+      const initialLoopDecision: AgentLoopDecision = candidateSelectionIteration.checkpoint.loopDecision;
+      console.log("[Agent Checkpoint]", candidateSelectionIteration.checkpointEvent);
 
-      if (!strongCandidateFastPath) {
+      const candidatePolishGate = evaluateCandidatePolishGate({
+        shouldTryPolish: candidateDecision.shouldTryPolish,
+        loopNextAction: initialLoopDecision.nextAction,
+        strongCandidateFastPath,
+      });
+
+      if (candidatePolishGate.shouldRunPolish) {
         try {
           const polishCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
-            input: [
-              {
-                role: "developer",
-                content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör.
-
-UPPGIFT:
-Förfina en redan bra objektbeskrivning till publiceringsklar toppnivå.
-
-DU MÅSTE:
-- behålla ALLA fakta korrekta
-- inte hitta på något nytt
-- inte göra texten mer klyschig
-- inte skriva om till disposition, lista eller rubrikformat
-- förbättra öppning, rytm, selektiv betoning och övergångar
-- låta texten kännas skriven av en mycket skicklig svensk mäklare
-
-FÖRBÄTTRA SÄRSKILT:
-- första stycket
-- naturligt styckeflöde
-- mikro-rytm mellan meningar
-- att de starkaste detaljerna får rätt plats tidigt
-
-Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
-              },
-              {
-                role: "user",
-                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(result, null, 2)}`
-              }
-            ],
+            input: buildCandidatePolishRequestInput({
+              cleanDisposition,
+              cleanWritingPlan,
+              result,
+            }),
             max_output_tokens: 5000,
             text: { format: { type: "json_object" } }
           });
 
-          const polishedRaw = safeJsonParse(polishCompletion.output_text || "{}");
-          const polishedText = finalizeMainMarketingText(extractGeneratedMarketingText(polishedRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+          const { polishedRaw, polishedText } = buildCandidatePolishResponseArtifacts({
+            outputText: polishCompletion.output_text,
+            parseJson: safeJsonParse,
+            extractMarketingText: extractGeneratedMarketingText,
+            finalizeText: (value) => finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }),
+          });
           if (polishedText) {
-            const polishedResult = {
-              ...result,
-              ...polishedRaw,
-              improvedPrompt: polishedText,
-            };
-            for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
-              polishedResult[field] = sanitizeGeneratedMarketingField(polishedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
-            }
+            const { polishedResult, polishAttemptSnapshot, polishEvaluationInput } = buildCandidatePolishOutcome({
+              currentResult: result,
+              polishedRaw,
+              polishedText,
+              sanitizeField: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { nullIfInvalid: true }),
+              validateResult: (value) => validateOptimizationResult(value, platform, minimumPublishableWordMin, targetWordMax, style),
+              getNonWordCountViolations,
+              analyzeTextQuality,
+              countWords: (text) => text.split(/\s+/).filter(Boolean).length,
+              isStrongCandidate: (text) => isStrongPublishableCandidate(text, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+              hasCorruptedArtifacts: hasCorruptedWordArtifacts,
+              minimumPublishableWordMin,
+            });
 
-            const currentAllViolations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
-            const polishedAllViolations = validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style);
-            const currentViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
-            const polishedViolations = getNonWordCountViolations(validateOptimizationResult(polishedResult, platform, minimumPublishableWordMin, targetWordMax, style));
-            const currentScore = analyzeTextQuality(result.improvedPrompt || "");
-            const polishedScore = analyzeTextQuality(polishedText);
+            const { polishDecisionArtifacts } = buildCandidatePolishSettlement({
+              polishEvaluationInput,
+              polishAttemptSnapshot,
+              evaluateCandidate: evaluateRewriteCandidate,
+              coordinateAcceptance: coordinatePolishAcceptance,
+            });
 
-            if (polishedAllViolations.length <= currentAllViolations.length && (polishedViolations.length < currentViolations.length || polishedScore > currentScore + 0.03)) {
+            if (polishDecisionArtifacts.shouldApplyPolish) {
               result = polishedResult;
-              console.log(`[Step 3 Polish] Accepted polished winner. Score ${currentScore.toFixed(2)} -> ${polishedScore.toFixed(2)}, violations ${currentViolations.length} -> ${polishedViolations.length}`);
+              setSelectedCandidate(runState, selectedCandidate.label, result, strongCandidateFastPath);
+              setLastRepairKind(runState, "polish");
+              console.log(polishDecisionArtifacts.logMessage);
             } else {
-              console.log(`[Step 3 Polish] Kept selected candidate. Score ${currentScore.toFixed(2)} vs ${polishedScore.toFixed(2)}, violations ${currentViolations.length} vs ${polishedViolations.length}`);
+              console.log(polishDecisionArtifacts.logMessage);
             }
           }
         } catch (e) {
@@ -3994,10 +4075,14 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
       }
 
       sendProgress(5, 7, "Kontrollerar textkvalitet...");
-      const currentStep3WordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
-      const currentStep3Violations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
-      const currentStep3Score = analyzeTextQuality(result.improvedPrompt || "");
-      console.log(`[Step 3] Candidate entering validation: ${selectedCandidate.label}. Current score ${currentStep3Score.toFixed(2)}, violations ${currentStep3Violations.length}, words ${currentStep3WordCount}`);
+      const step3CandidateSnapshot = buildStep3CandidateSnapshot({
+        result,
+        validateResult: (value) => validateOptimizationResult(value, platform, minimumPublishableWordMin, targetWordMax, style),
+        getNonWordCountViolations,
+        analyzeTextQuality,
+        countWords: (text) => text.split(/\s+/).filter(Boolean).length,
+      });
+      console.log(`[Step 3] Candidate entering validation: ${selectedCandidate.label}. Current score ${step3CandidateSnapshot.score.toFixed(2)}, violations ${step3CandidateSnapshot.violations.length}, words ${step3CandidateSnapshot.wordCount}`);
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
@@ -4016,6 +4101,14 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
       const protectedBaselineScore = analyzeTextQuality(protectedBaselineText);
       const protectedBaselineWordCount = protectedBaselineText.split(/\s+/).filter(Boolean).length;
       const protectedBaselineIsStrong = isStrongPublishableCandidate(protectedBaselineText, platform, minimumPublishableWordMin, targetWordMax, style, plan);
+      setRunBaseline(runState, {
+        text: protectedBaselineText,
+        auxFields: protectedBaselineAuxFields,
+        nonWordCountViolations: protectedBaselineNonWordViolations,
+        qualityScore: protectedBaselineScore,
+        wordCount: protectedBaselineWordCount,
+        isStrong: protectedBaselineIsStrong,
+      });
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
@@ -4025,6 +4118,20 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
 
       // STEG 5: Validering + kirurgisk korrigering
       const violations = validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style);
+      const preRepairIteration = runAgentIteration({
+        runState,
+        stage: "pre-repair",
+        actionLabel: "evaluate issues before local repair",
+        currentViolations: getNonWordCountViolations(violations),
+        wordShortfall: Math.max(0, minimumPublishableWordMin - ((result.improvedPrompt || "").split(/\s+/).filter(Boolean).length)),
+        genericBrokerPhraseCount: countGenericBrokerPhrases(result.improvedPrompt || ""),
+        narrativeIntegrityIssues: detectNarrativeIntegrityIssues(result.improvedPrompt || ""),
+        factCheckAvailable: plan !== "free",
+        recoveryStage: "local_repair",
+        hasUsableText: !!(result.improvedPrompt || "").trim(),
+        syncRunState: true,
+      });
+      console.log("[Agent Checkpoint]", preRepairIteration.checkpointEvent);
       if (violations.length > 0) {
         console.log(`[Step 5] Found ${violations.length} violations, attempting surgical correction...`);
 
@@ -4033,6 +4140,11 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
           const textViolations = getNonWordCountViolations(violations);
 
           if (textViolations.length > 0) {
+            const surgicalRepairStrategy = selectRepairStrategy({
+              violations: textViolations,
+              text: result.improvedPrompt || "",
+            });
+            const surgicalRepairAddendum = buildRepairPromptAddendum(surgicalRepairStrategy);
             const correctionMessages = [
               {
                 role: "system" as const,
@@ -4063,7 +4175,9 @@ ERSÄTTNINGSTABELL:
 - "stilrent och modernt" → "modernt"
 - Alla "X och Y"-adjektivpar → behåll bara det första
 - "Det finns även/också" → börja med vad som finns istället
-- Trasiga ord som "södterass", "välsköför att", "användningssäför att" måste korrigeras till korrekt svenska ord`,
+- Trasiga ord som "södterass", "välsköför att", "användningssäför att" måste korrigeras till korrekt svenska ord
+
+${surgicalRepairAddendum}`,
               },
               {
                 role: "user" as const,
@@ -4094,11 +4208,30 @@ ERSÄTTNINGSTABELL:
                   const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
                   const sanitizedCorrectedWordCount = sanitizedCorrected.split(/\s+/).filter(Boolean).length;
                   const correctedDropsBelowUsableFloor = isNearPublishableMinimum && sanitizedCorrectedWordCount < minimumPublishableWordMin - 10;
-                  if (correctedViolations.length < textViolations.length && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
+                  const correctedHasCorruption = hasCorruptedWordArtifacts(sanitizedCorrected);
+                  const surgicalEvaluation = evaluateRewriteCandidate({
+                    current: {
+                      qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+                      nonWordCountViolations: textViolations,
+                      wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+                      isStrongPublishableCandidate: isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                    },
+                    proposed: {
+                      qualityScore: analyzeTextQuality(sanitizedCorrected),
+                      nonWordCountViolations: correctedViolations,
+                      wordCount: sanitizedCorrectedWordCount,
+                      isStrongPublishableCandidate: isStrongPublishableCandidate(sanitizedCorrected, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                      hasCorruptedArtifacts: correctedHasCorruption,
+                    },
+                    minimumPublishableWordMin,
+                    improvementKind: "surgical",
+                  });
+                  if (surgicalEvaluation.acceptance.accept && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
                     result.improvedPrompt = sanitizedCorrected;
+                    setLastRepairKind(runState, "surgical");
                     console.log(`[Step 5] Surgical correction applied (${textViolations.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
                   } else {
-                    console.warn(`[Step 5] Correction reduced quality headroom too much or did not improve enough (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount}), keeping original`);
+                    console.warn(`[Step 5] Correction rejected: ${surgicalEvaluation.acceptance.reason} (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount})`);
                   }
                 }
               } else {
@@ -4121,6 +4254,12 @@ ERSÄTTNINGSTABELL:
         if (shortfall > 0) {
           const originalNonWordViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
           const maxAttempts = shortfall > 30 ? 2 : 1;
+          const expansionRepairStrategy = selectRepairStrategy({
+            violations: originalNonWordViolations,
+            text: result.improvedPrompt || "",
+            shortfallWords: shortfall,
+          });
+          const expansionRepairAddendum = buildRepairPromptAddendum(expansionRepairStrategy);
 
           for (let attempt = 1; attempt <= maxAttempts && shortfall > 0; attempt++) {
             console.log(`[Step 5b] Text too short: ${currentWordCount} words, publishable min ${minimumPublishableWordMin}, requested min ${targetWordMin}. Expanding (attempt ${attempt}/${maxAttempts})...`);
@@ -4148,7 +4287,9 @@ REGLER:
 12. Undvik att upprepa boarea, antal rum eller andra nyckeltal i onödan
 13. Ersätt kantiga eller administrativa formuleringar med naturlig mäklarprosa. Skriv till exempel inte "fungerande vardagslogistik", "är registrerad" eller liknande tekniska formuleringar
 14. Om underlaget har stark uteplats-, solläges- eller lugn/läges-kvalitet ska dessa gärna lyftas mer konkret och sammanhållet, särskilt i öppningen eller tidigt i texten
-13. Svara med JSON: {"expanded_text": "hela den förbättrade och utökade texten med \n\n mellan stycken"}`,
+15. Svara med JSON: {"expanded_text": "hela den förbättrade och utökade texten med \n\n mellan stycken"}
+
+${expansionRepairAddendum}`,
                 },
                 {
                   role: "user" as const,
@@ -4172,13 +4313,39 @@ REGLER:
                   if (sanitizedExpanded) {
                     const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, minimumPublishableWordMin, targetWordMax, style));
                     const sanitizedExpandedWordCount = sanitizedExpanded.split(/\s+/).filter(Boolean).length;
-                    if ((expandedViolations.length === 0 || expandedViolations.length <= originalNonWordViolations.length) && sanitizedExpandedWordCount > currentWordCount) {
+                    const expandedHasCorruption = hasCorruptedWordArtifacts(sanitizedExpanded);
+                    const expansionEvaluation = evaluateRewriteCandidate({
+                      current: {
+                        qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+                        nonWordCountViolations: originalNonWordViolations,
+                        wordCount: currentWordCount,
+                        isStrongPublishableCandidate: isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                      },
+                      proposed: {
+                        qualityScore: analyzeTextQuality(sanitizedExpanded),
+                        nonWordCountViolations: expandedViolations,
+                        wordCount: sanitizedExpandedWordCount,
+                        isStrongPublishableCandidate: isStrongPublishableCandidate(sanitizedExpanded, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                        hasCorruptedArtifacts: expandedHasCorruption,
+                      },
+                      minimumPublishableWordMin,
+                      improvementKind: "expansion",
+                    });
+                    const expansionCoordination = coordinateExpansionAcceptance({
+                      accepted: expansionEvaluation.acceptance.accept && (expandedViolations.length === 0 || expandedViolations.length <= originalNonWordViolations.length),
+                      currentWordCount,
+                      nextWordCount: sanitizedExpandedWordCount,
+                      minimumPublishableWordMin,
+                      rejectionReason: expansionEvaluation.acceptance.reason,
+                    });
+                    if (expansionCoordination.accepted) {
                       result.improvedPrompt = sanitizedExpanded;
+                      setLastRepairKind(runState, "expansion");
                       console.log(`[Step 5b] Expanded from ${currentWordCount} to ${sanitizedExpandedWordCount} words`);
-                      currentWordCount = sanitizedExpandedWordCount;
-                      shortfall = minimumPublishableWordMin - currentWordCount;
+                      currentWordCount = expansionCoordination.nextWordCount;
+                      shortfall = expansionCoordination.nextShortfall;
                     } else {
-                      console.warn(`[Step 5b] Expansion introduced more violations or no real length gain, keeping original`);
+                      console.warn(`[Step 5b] Expansion rejected: ${expansionCoordination.reason}`);
                       break;
                     }
                   }
@@ -4196,6 +4363,20 @@ REGLER:
           if (shortfall > 0) {
             console.warn(`[Step 5b] Kunde inte nå publicerbar miniminivå. Stannade på ${currentWordCount} ord. Publishable min är ${minimumPublishableWordMin}, requested min är ${targetWordMin}.`);
           }
+          const postExpansionIteration = runAgentIteration({
+            runState,
+            stage: "post-expansion",
+            actionLabel: "evaluate issues after expansion attempt",
+            currentViolations: getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)),
+            wordShortfall: Math.max(0, minimumPublishableWordMin - currentWordCount),
+            genericBrokerPhraseCount: countGenericBrokerPhrases(result.improvedPrompt || ""),
+            narrativeIntegrityIssues: detectNarrativeIntegrityIssues(result.improvedPrompt || ""),
+            factCheckAvailable: plan !== "free",
+            recoveryStage: "local_repair",
+            hasUsableText: !!(result.improvedPrompt || "").trim(),
+            syncRunState: true,
+          });
+          console.log("[Agent Checkpoint]", postExpansionIteration.checkpointEvent);
         }
       }
 
@@ -4204,7 +4385,22 @@ REGLER:
       // STEG 6: Faktagranskning (Pro/Premium)
       let factCheckResult: any = null;
       let factCheckTextBasis: string | null = null;
-      if (plan !== "free" && result.improvedPrompt && !strongCandidateFastPath) {
+      const preFactCheckIteration = runAgentIteration({
+        runState,
+        stage: "pre-fact-check",
+        actionLabel: "evaluate whether fact-check should run",
+        currentViolations: runState.openIssues,
+        wordShortfall: Math.max(0, minimumPublishableWordMin - ((result.improvedPrompt || "").split(/\s+/).filter(Boolean).length)),
+        genericBrokerPhraseCount: countGenericBrokerPhrases(result.improvedPrompt || ""),
+        narrativeIntegrityIssues: detectNarrativeIntegrityIssues(result.improvedPrompt || ""),
+        factCheckAvailable: plan !== "free",
+        recoveryStage: "local_repair",
+        hasUsableText: !!(result.improvedPrompt || "").trim(),
+        syncRunState: true,
+      });
+      const preFactCheckLoopDecision = preFactCheckIteration.checkpoint.loopDecision;
+      console.log("[Agent Checkpoint]", preFactCheckIteration.checkpointEvent);
+      if (plan !== "free" && result.improvedPrompt && !strongCandidateFastPath && preFactCheckLoopDecision.nextAction === "fact_check") {
         try {
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
@@ -4225,6 +4421,7 @@ REGLER:
 
           factCheckResult = safeJsonParse(factCheckCompletion.output_text || "{}");
           factCheckTextBasis = result.improvedPrompt;
+          setFactCheckState(runState, factCheckResult, factCheckTextBasis);
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
             const sanitizedFactChecked = finalizeMainMarketingText(factCheckResult.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
@@ -4232,12 +4429,41 @@ REGLER:
               const currentWordCountBeforeFactCheck = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
               const factCheckedWordCount = sanitizedFactChecked.split(/\s+/).filter(Boolean).length;
               const factCheckedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedFactChecked }, platform, minimumPublishableWordMin, targetWordMax, style));
-              if ((factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)).length) && !(currentWordCountBeforeFactCheck >= minimumPublishableWordMin && factCheckedWordCount < minimumPublishableWordMin)) {
+              const factCheckedHasCorruption = hasCorruptedWordArtifacts(sanitizedFactChecked);
+              const factCheckEvaluation = evaluateRewriteCandidate({
+                current: {
+                  qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+                  nonWordCountViolations: getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)),
+                  wordCount: currentWordCountBeforeFactCheck,
+                  isStrongPublishableCandidate: isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                },
+                proposed: {
+                  qualityScore: analyzeTextQuality(sanitizedFactChecked),
+                  nonWordCountViolations: factCheckedViolations,
+                  wordCount: factCheckedWordCount,
+                  isStrongPublishableCandidate: isStrongPublishableCandidate(sanitizedFactChecked, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                  hasCorruptedArtifacts: factCheckedHasCorruption,
+                },
+                minimumPublishableWordMin,
+                improvementKind: "fact_check",
+              });
+              const factCheckCoordination = coordinateFactCheckAcceptance({
+                accepted: factCheckEvaluation.acceptance.accept,
+                currentWordCount: currentWordCountBeforeFactCheck,
+                nextWordCount: factCheckedWordCount,
+                minimumPublishableWordMin,
+                currentTextBasis: factCheckTextBasis,
+                correctedText: sanitizedFactChecked,
+                rejectionReason: factCheckEvaluation.acceptance.reason,
+              });
+              if (factCheckCoordination.accepted) {
                 result.improvedPrompt = sanitizedFactChecked;
-                factCheckTextBasis = sanitizedFactChecked;
+                factCheckTextBasis = factCheckCoordination.nextTextBasis;
+                setFactCheckState(runState, factCheckResult, factCheckTextBasis);
+                setLastRepairKind(runState, "fact_check");
                 console.log("[Step 6] Fact-check corrections applied");
               } else {
-                console.warn("[Step 6] Fact-check correction introduced new issues or shortened text below minimum, keeping original");
+                console.warn(`[Step 6] Fact-check correction rejected: ${factCheckCoordination.reason}`);
               }
             }
           }
@@ -4255,21 +4481,43 @@ REGLER:
         const postRefinementScore = analyzeTextQuality(postRefinementText);
         const postRefinementWordCount = postRefinementText.split(/\s+/).filter(Boolean).length;
         const postRefinementIsStrong = isStrongPublishableCandidate(postRefinementText, platform, minimumPublishableWordMin, targetWordMax, style, plan);
-        const droppedBelowPublishableMin = protectedBaselineWordCount >= minimumPublishableWordMin && postRefinementWordCount < minimumPublishableWordMin;
-        const addedViolations = postRefinementNonWordViolations.length > protectedBaselineNonWordViolations.length;
-        const meaningfulScoreDrop = postRefinementScore < protectedBaselineScore - 0.04;
-        const lostStrongStatus = protectedBaselineIsStrong && !postRefinementIsStrong;
+        const postRefinementGuard = decidePostRefinementGuard({
+          baselineWordCount: protectedBaselineWordCount,
+          baselineViolationCount: protectedBaselineNonWordViolations.length,
+          baselineScore: protectedBaselineScore,
+          baselineIsStrong: protectedBaselineIsStrong,
+          refinedWordCount: postRefinementWordCount,
+          refinedViolationCount: postRefinementNonWordViolations.length,
+          refinedScore: postRefinementScore,
+          refinedIsStrong: postRefinementIsStrong,
+          minimumPublishableWordMin,
+        });
 
-        if (droppedBelowPublishableMin || addedViolations || meaningfulScoreDrop || lostStrongStatus) {
+        if (postRefinementGuard.shouldRevert) {
           result.improvedPrompt = protectedBaselineText;
           result.socialCopy = protectedBaselineAuxFields.socialCopy;
           result.instagramCaption = protectedBaselineAuxFields.instagramCaption;
           result.showingInvitation = protectedBaselineAuxFields.showingInvitation;
           result.shortAd = protectedBaselineAuxFields.shortAd;
           result.headline = protectedBaselineAuxFields.headline;
-          console.warn(`[Pipeline Guard] Reverted degraded post-step text. Score ${postRefinementScore.toFixed(2)} -> ${protectedBaselineScore.toFixed(2)}, violations ${postRefinementNonWordViolations.length} -> ${protectedBaselineNonWordViolations.length}, words ${postRefinementWordCount} -> ${protectedBaselineWordCount}`);
+          console.warn(`[Pipeline Guard] Reverted degraded post-step text. Reason: ${postRefinementGuard.reason}. Score ${postRefinementScore.toFixed(2)} -> ${protectedBaselineScore.toFixed(2)}, violations ${postRefinementNonWordViolations.length} -> ${protectedBaselineNonWordViolations.length}, words ${postRefinementWordCount} -> ${protectedBaselineWordCount}`);
         }
       }
+      const preAuditIteration = runAgentIteration({
+        runState,
+        stage: "pre-audit",
+        actionLabel: "evaluate readiness before broker audit stage",
+        currentViolations: getNonWordCountViolations(validateMainMarketingText({ improvedPrompt: result.improvedPrompt || "" }, platform, minimumPublishableWordMin, targetWordMax, style)),
+        wordShortfall: Math.max(0, minimumPublishableWordMin - ((result.improvedPrompt || "").split(/\s+/).filter(Boolean).length)),
+        genericBrokerPhraseCount: countGenericBrokerPhrases(result.improvedPrompt || ""),
+        narrativeIntegrityIssues: detectNarrativeIntegrityIssues(result.improvedPrompt || ""),
+        requiresBrokerAudit: !strongCandidateFastPath,
+        factCheckAvailable: false,
+        recoveryStage: "local_repair",
+        hasUsableText: !!(result.improvedPrompt || "").trim(),
+        syncRunState: true,
+      });
+      console.log("[Agent Checkpoint]", preAuditIteration.checkpointEvent);
       strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
 
       // Auto-fill [TID] and [KONTAKT] placeholders in showing invitation
@@ -4289,6 +4537,19 @@ REGLER:
       }
 
       result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+      if (hasCorruptedWordArtifacts(result.improvedPrompt || "")) {
+        const repairedFinalText = finalizeMainMarketingText(
+          repairMechanicalBrokerArtifacts(repairEmbeddedForAttArtifacts(result.improvedPrompt || "")),
+          platform,
+          personalStyle?.styleProfile,
+          style,
+          { allowParagraphs: true }
+        );
+        if (repairedFinalText && !hasCorruptedWordArtifacts(repairedFinalText)) {
+          result.improvedPrompt = repairedFinalText;
+          console.log("[Final Pre-Gate Repair] Removed late corrupted-word artifacts before final broker audit.");
+        }
+      }
       strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
 
       sendProgress(7, 7, "Slutgranskar mäklarkvalitet...");
@@ -4300,19 +4561,37 @@ REGLER:
       const finalStrongWordFloor = getStrongPublishableWordFloor(minimumPublishableWordMin, plan);
       const finalGenericBrokerPhraseCount = countGenericBrokerPhrases(result.improvedPrompt || "");
       const finalNarrativeIntegrityIssues = detectNarrativeIntegrityIssues(result.improvedPrompt || "");
-      const buildLocalBrokerAuditFallback = (reason: string, issues?: string[]) => ({
-        publish_ready: currentLocalTopBrokerReady,
-        broker_quality_score: Number(analyzeTextQuality(result?.improvedPrompt || "").toFixed(3)),
-        issues: Array.isArray(issues) ? issues.slice(0, 5) : [],
-        verdict: reason,
+      const brokerAuditDecision = evaluateBrokerAuditGate({
+        strongCandidateFastPath,
+        finalMainWordCount,
+        finalStrongWordFloor,
+        finalGenericBrokerPhraseCount,
+        finalNarrativeIntegrityIssueCount: finalNarrativeIntegrityIssues.length,
+      }).brokerAuditDecision;
+      const finalAuditIteration = runAgentIteration({
+        runState,
+        stage: "broker-audit-gate",
+        actionLabel: "evaluate whether broker audit can be skipped",
+        currentViolations: getNonWordCountViolations(validateMainMarketingText({ improvedPrompt: result.improvedPrompt || "" }, platform, minimumPublishableWordMin, targetWordMax, style)),
+        wordShortfall: Math.max(0, minimumPublishableWordMin - finalMainWordCount),
+        genericBrokerPhraseCount: finalGenericBrokerPhraseCount,
+        narrativeIntegrityIssues: finalNarrativeIntegrityIssues,
+        requiresBrokerAudit: !brokerAuditDecision.canSkipExternalAudit,
+        factCheckAvailable: false,
+        recoveryStage: "final_audit",
+        hasUsableText: !!(result.improvedPrompt || "").trim(),
+        syncRunState: true,
       });
-      const canSkipFinalBrokerAudit = strongCandidateFastPath
-        && finalMainWordCount >= finalStrongWordFloor
-        && finalGenericBrokerPhraseCount === 0
-        && finalNarrativeIntegrityIssues.length === 0;
-      if (canSkipFinalBrokerAudit) {
+      const preBrokerAuditLoopDecision = finalAuditIteration.checkpoint.loopDecision;
+      console.log("[Agent Checkpoint]", finalAuditIteration.checkpointEvent);
+      if (brokerAuditDecision.canSkipExternalAudit && preBrokerAuditLoopDecision.nextAction !== "broker_audit") {
         console.log("[Final Broker Audit] Skipped — strong candidate already satisfies local top-broker threshold.");
-        finalBrokerAudit = buildLocalBrokerAuditFallback("Stark kandidat klarade lokal toppnivågrind; extern slutgranskning hoppades över för snabbare och billigare leverans.");
+        finalBrokerAudit = buildLocalBrokerAuditFallback({
+          publishReady: currentLocalTopBrokerReady,
+          brokerQualityScore: analyzeTextQuality(result?.improvedPrompt || ""),
+          reason: "Stark kandidat klarade lokal toppnivågrind; extern slutgranskning hoppades över för snabbare och billigare leverans.",
+        });
+        setFinalBrokerAudit(runState, finalBrokerAudit);
       } else {
         try {
           const brokerAuditCompletion = await openai.responses.create({
@@ -4357,127 +4636,118 @@ Svara med JSON:
           });
 
           finalBrokerAudit = safeJsonParse(brokerAuditCompletion.output_text || "{}");
+          setFinalBrokerAudit(runState, finalBrokerAudit);
         } catch (e) {
           if (isOpenAIInsufficientQuotaError(e)) {
             throw createUpstreamQuotaError("slutlig mäklargranskning", e);
           }
           console.warn("[Final Broker Audit] Slutlig mäklargranskning misslyckades, använder lokal fallback:", e);
-          finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit misslyckades; lokal kvalitetsgranskning användes i stället.");
+          finalBrokerAudit = buildLocalBrokerAuditFallback({
+            publishReady: currentLocalTopBrokerReady,
+            brokerQualityScore: analyzeTextQuality(result?.improvedPrompt || ""),
+            reason: "AI-audit misslyckades; lokal kvalitetsgranskning användes i stället.",
+          });
+          setFinalBrokerAudit(runState, finalBrokerAudit);
         }
       }
 
       if (finalBrokerAudit?.publish_ready === false && typeof result?.improvedPrompt === "string" && result.improvedPrompt.trim()) {
         try {
-          const rescueIssues = Array.isArray(finalBrokerAudit.issues)
-            ? finalBrokerAudit.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0).slice(0, 5)
-            : [];
+          const finalAuditRescueGate = evaluateFinalAuditRescueGate({
+            publishReady: finalBrokerAudit?.publish_ready,
+            issues: finalBrokerAudit?.issues,
+            hasUsableText: !!(result?.improvedPrompt && result.improvedPrompt.trim()),
+          });
+          const rescueIssues = finalAuditRescueGate.rescueIssues;
+          const finalAuditRescueIteration = runAgentIteration({
+            runState,
+            stage: "final-audit-rescue-gate",
+            actionLabel: "evaluate whether rescue rewrite should run",
+            currentViolations: rescueIssues,
+            narrativeIntegrityIssues: detectNarrativeIntegrityIssues(result.improvedPrompt || ""),
+            recoveryStage: "final_audit",
+            hasUsableText: !!(result?.improvedPrompt && result.improvedPrompt.trim()),
+            overrideEventNextAction: "rescue_rewrite",
+          });
+          const finalAuditRecoveryDecision = finalAuditRescueIteration.recoveryDecision;
+          console.log("[Agent Checkpoint]", finalAuditRescueIteration.checkpointEvent);
 
-          if (rescueIssues.length > 0) {
+          if (finalAuditRescueGate.canAttemptRescue && finalAuditRecoveryDecision.action === "rescue") {
+            const rescueRepairStrategy = selectRepairStrategy({
+              violations: rescueIssues,
+              text: result.improvedPrompt || "",
+            });
+            const rescueRepairAddendum = buildRepairPromptAddendum(rescueRepairStrategy);
             const rescueCompletion = await openai.responses.create({
               model: "gpt-5.2",
               reasoning: { effort: "medium" },
-              input: [
-                {
-                  role: "developer",
-                  content: `Du är senior kvalitetsredaktör för svenska bostadsannonser inom fastighetsförmedling.
-
-UPPGIFT:
-Skriv om objektbeskrivningen så att den blir publiceringsklar på rätt mäklarnivå utifrån auditens konkreta invändningar.
-
-DU MÅSTE:
-- behålla alla korrekta fakta
-- inte hitta på något nytt
-- inte skriva disposition, rubriker eller punktlista
-- förbättra öppning, rytm, prioritering och lägesprosa
-- ta bort repetition och rådata-känsla
-- skriva naturlig svensk mäklarprosa
-
-SÄRSKILT VIKTIGT:
-- öppningen får inte kännas administrativ
-- boarea och andra nyckelfakta får inte upprepas i onödan
-- närområde ska skrivas som selektiv, naturlig prosa — aldrig lista
-- mekaniska faktarader ska vävas in naturligt eller utelämnas om de inte lyfter texten
-- om audit nämner uteplats, solläge, lugn eller centrum närhet ska de vävas in elegant i löpande prosa, inte punktvis
-
-NIVÅANPASSNING:
-- premium = mycket hög finish och säljtryck
-- pro = tydligt publiceringsklar mäklarnivå utan krav på lyxig premiumton
-
-Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
-                },
-                {
-                  role: "user",
-                  content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(cleanWritingPlan, null, 2)}\n\nLEVEL: ${plan}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${rescueIssues.map((issue: string, index: number) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(result, null, 2)}`
-                }
-              ],
+              input: buildFinalAuditRescueRequestInput({
+                cleanDisposition,
+                cleanWritingPlan,
+                plan,
+                rescueIssues,
+                result,
+                rescueRepairAddendum,
+              }),
               max_output_tokens: 5000,
               text: { format: { type: "json_object" } }
             });
 
-            const rescueRaw = safeJsonParse(rescueCompletion.output_text || "{}");
-            const rescuedText = finalizeMainMarketingText(extractGeneratedMarketingText(rescueRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+            const { rescueRaw, rescuedText } = buildFinalAuditRescueResponseArtifacts({
+              outputText: rescueCompletion.output_text,
+              parseJson: safeJsonParse,
+              extractMarketingText: extractGeneratedMarketingText,
+              finalizeText: (value) => finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }),
+            });
             if (rescuedText) {
-              const rescuedResult = {
-                ...result,
-                ...rescueRaw,
-                improvedPrompt: rescuedText,
-              };
-              for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
-                rescuedResult[field] = sanitizeGeneratedMarketingField(rescuedResult[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
-              }
+              const { rescuedResult, rescueAttemptSnapshot, rescueEvaluationInput } = buildFinalAuditRescueOutcome({
+                currentResult: result,
+                rescueRaw,
+                rescuedText,
+                sanitizeField: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { nullIfInvalid: true }),
+                validateResult: (value) => validateMainMarketingText(value, platform, minimumPublishableWordMin, targetWordMax, style),
+                getNonWordCountViolations,
+                analyzeTextQuality,
+                countWords: (text) => text.split(/\s+/).filter(Boolean).length,
+                isStrongCandidate: (text) => isStrongPublishableCandidate(text, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                hasCorruptedArtifacts: hasCorruptedWordArtifacts,
+                minimumPublishableWordMin,
+              });
 
-              const rescuedMainViolations = validateMainMarketingText(rescuedResult, platform, minimumPublishableWordMin, targetWordMax, style);
-              const currentMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
-              const rescuedScore = analyzeTextQuality(rescuedText);
-              const currentScore = analyzeTextQuality(result.improvedPrompt || "");
-              const currentWordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
-              const rescuedWordCount = rescuedText.split(/\s+/).filter(Boolean).length;
+              const { rescueDecisionArtifacts } = buildFinalAuditRescueSettlement({
+                rescueEvaluationInput,
+                rescueAttemptSnapshot,
+                minimumPublishableWordMin,
+                evaluateCandidate: evaluateRewriteCandidate,
+                coordinateAcceptance: coordinateRescueAcceptance,
+              });
 
-              if (getNonWordCountViolations(rescuedMainViolations).length <= getNonWordCountViolations(currentMainViolations).length && rescuedScore >= currentScore && rescuedWordCount >= Math.max(currentWordCount - 5, minimumPublishableWordMin)) {
+              if (rescueDecisionArtifacts.shouldApplyRescue) {
                 result = rescuedResult;
-                console.log(`[Final Broker Audit Rescue] Accepted rescue rewrite. Score ${currentScore.toFixed(2)} -> ${rescuedScore.toFixed(2)}, words ${currentWordCount} -> ${rescuedWordCount}`);
+                setLastRepairKind(runState, "rescue");
+                console.log(rescueDecisionArtifacts.logMessage);
 
                 const brokerAuditRetry = await openai.responses.create({
                   model: "gpt-5.2",
                   reasoning: { effort: "medium" },
-                  input: [
-                    {
-                      role: "developer",
-                      content: `Du är kvalitetschef för svenska bostadsannonser inom fastighetsförmedling.
-
-Bedöm ENDAST om texten är publiceringsklar på hög mäklarnivå för angiven nivå.
-
-Krav:
-- naturlig svensk mäklarprosa
-- stark och konkret öppning
-- selektiv betoning av rätt detaljer
-- trovärdig, mänsklig, professionell ton
-- inga AI-klyschor eller mekaniskt språk
-- inga dispositionstendenser eller råfaktakänsla
-- bra styckeflöde och tydlig prioritering
-
-NIVÅANPASSNING:
-- premium = toppnivå
-- pro = tydligt publiceringsklar mäklarnivå utan premiumkrav
-
-Svara med JSON:
-{
-  "publish_ready": true,
-  "broker_quality_score": 0.0,
-  "issues": ["kort lista över återstående problem"],
-  "verdict": "kort sammanfattning"
-}`
-                    },
-                    {
-                      role: "user",
-                      content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nSLUTTEXT:\n${result.improvedPrompt}\n\nPLATTFORM: ${platform}\nSTIL: ${style}\nLEVEL: ${plan}`
-                    }
-                  ],
+                  input: buildFinalBrokerAuditRetryRequestInput({
+                    cleanDisposition,
+                    resultText: result.improvedPrompt,
+                    platform,
+                    style,
+                    plan,
+                  }),
                   max_output_tokens: 1200,
                   text: { format: { type: "json_object" } }
                 });
 
-                finalBrokerAudit = safeJsonParse(brokerAuditRetry.output_text || "{}");
+                finalBrokerAudit = buildFinalBrokerAuditRetryResponseArtifacts({
+                  outputText: brokerAuditRetry.output_text,
+                  parseJson: safeJsonParse,
+                }).finalBrokerAudit;
+                setFinalBrokerAudit(runState, finalBrokerAudit);
+              } else {
+                console.warn(rescueDecisionArtifacts.logMessage);
               }
             }
           }
@@ -4494,49 +4764,33 @@ Svara med JSON:
         validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
           .filter((v) => v.startsWith("["))
       );
-      if (typeof result?.improvedPrompt !== "string" || !result.improvedPrompt.trim()) {
-        throw new Error("[Final Gate] Huvudtext saknas efter pipelinebearbetning.");
-      }
-      if (isDispositionLikeOutput(result.improvedPrompt)) {
-        throw new Error("[Final Gate] Huvudtexten är fortfarande dispositionslik vid slutsvaret.");
-      }
       const finalNarrativeIssues = detectNarrativeIntegrityIssues(result.improvedPrompt);
-      if (finalNarrativeIssues.length > 0) {
-        throw new Error(`[Final Gate] Huvudtexten har fortfarande trasig berättelseintegritet: ${finalNarrativeIssues.slice(0, 5).join(" | ")}`);
+      const finalMainValidation = finalizeFinalMainValidation({
+        resultText: result?.improvedPrompt,
+        finalNonWordCountViolations,
+        finalWordCountViolations,
+        finalExtraFieldViolations,
+        finalNarrativeIssues,
+        minimumPublishableWordMin,
+        targetWordMin,
+        targetWordMax,
+        isDispositionLikeOutput,
+        isTooThinForDelivery,
+        countWords: (text) => text.split(/\s+/).filter(Boolean).length,
+      });
+      for (const warning of finalMainValidation.warnings) {
+        console.warn(warning);
       }
-      if (finalNonWordCountViolations.length > 0) {
-        throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i huvudtexten: ${finalNonWordCountViolations.slice(0, 5).join(" | ")}`);
-      }
-      if (finalWordCountViolations.length > 0) {
-        console.warn(`[Final Gate] Texten missade önskat ordmål men klarade inte-förbjudna-regler. Requested ${targetWordMin}-${targetWordMax}, publishable min ${minimumPublishableWordMin}. Detalj: ${finalWordCountViolations.join(" | ")}`);
-      }
-      if (isTooThinForDelivery(result.improvedPrompt, minimumPublishableWordMin)) {
-        throw new Error(`[Final Gate] Huvudtexten är fortfarande för tunn eller listig för leverans. Words ${(result.improvedPrompt || "").split(/\s+/).filter(Boolean).length}.`);
-      }
-      if (finalExtraFieldViolations.length > 0) {
-        console.warn(`[Final Gate] Extratexter har kvarvarande kvalitetsanmärkningar men blockerar inte huvudtexten: ${finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
-      }
-      if (typeof finalBrokerAudit?.publish_ready !== "boolean") {
-        console.warn("[Final Broker Audit] Slutgranskningen returnerade inte giltigt publish_ready. Faller tillbaka till lokal audit.");
-        if (!finalLocalTopBrokerReady) {
-          throw new Error("[Final Gate] Slutgranskningen returnerade ogiltigt publish_ready och lokal toppmäklargrind godkände inte texten.");
-        }
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit returnerade ogiltigt publish_ready; stark lokal kvalitetsgranskning användes i stället.");
-      }
-      if (typeof finalBrokerAudit?.broker_quality_score !== "number") {
-        console.warn("[Final Broker Audit] Slutgranskningen returnerade inte giltigt broker_quality_score. Faller tillbaka till lokal audit.");
-        if (!finalLocalTopBrokerReady) {
-          throw new Error("[Final Gate] Slutgranskningen returnerade ogiltigt kvalitetsbetyg och lokal toppmäklargrind godkände inte texten.");
-        }
-        finalBrokerAudit = buildLocalBrokerAuditFallback("AI-audit returnerade ogiltigt kvalitetsbetyg; stark lokal kvalitetsgranskning användes i stället.", finalBrokerAudit?.issues);
-      }
-      if (finalBrokerAudit && finalBrokerAudit.publish_ready === false) {
-        const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
-        throw new Error(`[Final Gate] AI-audit underkände texten efter slutgranskning: ${auditIssues}`);
-      }
-      if (finalBrokerAudit.broker_quality_score < brokerQualityThreshold) {
-        const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
-        throw new Error(`[Final Gate] Broker quality score låg under tröskeln efter slutgranskning. Score ${finalBrokerAudit.broker_quality_score}, krav ${brokerQualityThreshold}. ${auditIssues}`);
+      const finalBrokerAuditReadiness = finalizeBrokerAuditReadiness({
+        finalBrokerAudit,
+        finalLocalTopBrokerReady,
+        analyzedScore: analyzeTextQuality(result?.improvedPrompt || ""),
+        brokerQualityThreshold,
+        buildLocalFallback: buildLocalBrokerAuditFallback,
+      });
+      finalBrokerAudit = finalBrokerAuditReadiness.finalBrokerAudit;
+      for (const warning of finalBrokerAuditReadiness.warnings) {
+        console.warn(warning);
       }
 
       // AI-förbättringsanalys (körs efter textgenerering)
@@ -4663,6 +4917,7 @@ Svara med JSON i formatet:
         wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
         model: aiModel,
       };
+      console.log("[Agent Run Summary]", summarizeAgentRun(runState));
 
       let responseSettled = false;
       let successfulDeliverySent = false;

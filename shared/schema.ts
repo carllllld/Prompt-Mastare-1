@@ -206,3 +206,63 @@ export const PLAN_PRICES = {
 
 export type PlanType = "free" | "pro" | "premium";
 export type FeatureAccess = typeof FEATURE_ACCESS[PlanType];
+
+// ==========================================
+// ENTERPRISE: Observability Tables
+// ==========================================
+
+export const pipelineMetrics = pgTable("pipeline_metrics", {
+  id: serial("id").primaryKey(),
+  runId: text("run_id").notNull(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  plan: text("plan").notNull(),
+  success: boolean("success").notNull(),
+  totalDurationMs: integer("total_duration_ms").notNull(),
+  totalAiCalls: integer("total_ai_calls").notNull(),
+  totalTokensUsed: integer("total_tokens_used"),
+  totalCostUsd: text("total_cost_usd"), // Store as text to avoid precision issues
+  finalQualityScore: integer("final_quality_score"),
+  finalWordCount: integer("final_word_count"),
+  rescueAttempts: integer("rescue_attempts").default(0).notNull(),
+  polishAttempts: integer("polish_attempts").default(0).notNull(),
+  fastPathTaken: boolean("fast_path_taken").default(false).notNull(),
+  structuredDataUsed: boolean("structured_data_used").default(false).notNull(),
+  featuresUsed: jsonb("features_used").$type<string[]>().default([]).notNull(),
+  errorCount: integer("error_count").default(0).notNull(),
+  steps: jsonb("steps").$type<any[]>().default([]).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const experimentResults = pgTable("experiment_results", {
+  id: serial("id").primaryKey(),
+  experimentId: text("experiment_id").notNull(),
+  variantId: text("variant_id").notNull(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  metrics: jsonb("metrics").$type<Record<string, number>>().notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const experimentAssignments = pgTable("experiment_assignments", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  experimentId: text("experiment_id").notNull(),
+  variantId: text("variant_id").notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+}, (table) => ({
+  uniqueUserExperiment: {
+    unique: true,
+    columns: [table.userId, table.experimentId],
+  },
+}));
+
+export const insertPipelineMetricsSchema = createInsertSchema(pipelineMetrics).omit({ id: true, createdAt: true });
+export type PipelineMetrics = typeof pipelineMetrics.$inferSelect;
+export type InsertPipelineMetrics = z.infer<typeof insertPipelineMetricsSchema>;
+
+export const insertExperimentResultSchema = createInsertSchema(experimentResults).omit({ id: true, timestamp: true });
+export type ExperimentResult = typeof experimentResults.$inferSelect;
+export type InsertExperimentResult = z.infer<typeof insertExperimentResultSchema>;
+
+export const insertExperimentAssignmentSchema = createInsertSchema(experimentAssignments).omit({ id: true, assignedAt: true });
+export type ExperimentAssignment = typeof experimentAssignments.$inferSelect;
+export type InsertExperimentAssignment = z.infer<typeof insertExperimentAssignmentSchema>;

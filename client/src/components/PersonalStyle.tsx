@@ -82,11 +82,11 @@ export function PersonalStyle() {
 
       if (res.ok) {
         const data = await res.json();
-        setPersonalStyle(prev => ({ 
-          ...prev, 
-          hasStyle: true, 
+        setPersonalStyle(prev => ({
+          ...prev,
+          hasStyle: true,
           styleProfile: data.styleProfile,
-          isActive: true 
+          isActive: true
         }));
         toast({
           title: "Personlig stil sparad!",
@@ -170,7 +170,7 @@ export function PersonalStyle() {
       adjectiveUsage: ["Få adjektiv", "Sparsamt", "Normalt", "Många adjektiv", "Mycket adjektiv"],
       factFocus: ["Känslomässig", "Berättande", "Balanserad", "Fakta-fokuserad", "Ren fakta"],
     };
-    
+
     const index = Math.min(Math.floor((value - 1) / 2), 4);
     return labels[type as keyof typeof labels]?.[index] || "Okänd";
   };
@@ -196,10 +196,10 @@ export function PersonalStyle() {
             Personlig Skrivstil
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Lär AI:n din unika skrivstil med 1–3 exempeltexter
+            Lär AI:n din unika skrivstil med 1–3 stilprover från olika delar av en bra objektbeskrivning
           </p>
         </div>
-        
+
         {personalStyle?.hasStyle && (
           <div className="flex items-center gap-2">
             <Switch
@@ -218,7 +218,7 @@ export function PersonalStyle() {
         <Alert>
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
-            Din personliga stil är {personalStyle.isActive ? "aktiv" : "inaktiv"}. 
+            Din personliga stil är {personalStyle.isActive ? "aktiv" : "inaktiv"}.
             AI:n anpassar texterna efter din skrivstil när den är aktiv.
           </AlertDescription>
         </Alert>
@@ -239,8 +239,8 @@ export function PersonalStyle() {
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
                         style={{ width: `${(value as number) * 10}%` }}
                       />
                     </div>
@@ -279,8 +279,8 @@ export function PersonalStyle() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Klistra in 1–3 av dina bästa objektbeskrivningar (minst 100 tecken vardera).
-              Fler exempel ger AI:n bättre förståelse för din skrivstil.
+              Klistra in 1–3 korta stilprover från texter som verkligen låter som du (minst 100 tecken vardera).
+              Använd helst exempel 1 för öppning och tonalitet, exempel 2 för mittparti och rumsflöde, och exempel 3 för läge och avslut.
             </AlertDescription>
           </Alert>
 
@@ -301,7 +301,11 @@ export function PersonalStyle() {
                   newTexts[index] = e.target.value;
                   setReferenceTexts(newTexts);
                 }}
-                placeholder={`Klistra in din ${index + 1}:a objektbeskrivning här...`}
+                placeholder={index === 0
+                  ? "Klistra in ett utdrag som visar hur du brukar öppna en objektbeskrivning och sätta tonen..."
+                  : index === 1
+                    ? "Klistra in ett utdrag som visar hur du beskriver planlösning, rum och flöde..."
+                    : "Klistra in ett utdrag som visar hur du skriver om läge, vardagsnytta och avslut..."}
                 className="min-h-[120px]"
               />
             </div>
@@ -320,7 +324,7 @@ export function PersonalStyle() {
               )}
               {personalStyle?.hasStyle ? "Uppdatera Stil" : "Spara Stil"}
             </Button>
-            
+
             <Button
               variant="outline"
               onClick={() => setShowPreview(!showPreview)}
