@@ -292,10 +292,22 @@ function buildFallbackLocationSentence(area: string | null, municipality: string
   return locationSentences.join(" ").trim();
 }
 
-function isTooThinForDelivery(text: string, minimumPublishableWordMin: number): boolean {
+function isTooThinForDelivery(text: string, minimumPublishableWordMin: number, qualityScore?: number, violations?: string[]): boolean {
   const wordCount = text.split(/\s+/).filter(Boolean).length;
-  // More lenient: require at least 90 words OR 70% of minimum, whichever is lower
+
+  // Smart logic: if quality is high, be more lenient on length
+  const hasHighQuality = qualityScore && qualityScore >= 0.80;
+  const hasFewViolations = violations && violations.length <= 2;
+
+  // Base minimum: 90 words OR 70% of target, whichever is lower
   const minRequired = Math.min(90, Math.floor(minimumPublishableWordMin * 0.7));
+
+  // If high quality AND few violations, allow shorter text
+  if (hasHighQuality && hasFewViolations) {
+    const lenientMin = Math.min(75, Math.floor(minimumPublishableWordMin * 0.6));
+    if (wordCount >= lenientMin) return false;
+  }
+
   if (wordCount < minRequired) return true;
 
   const shortLineCount = text
@@ -304,8 +316,9 @@ function isTooThinForDelivery(text: string, minimumPublishableWordMin: number): 
     .filter(Boolean)
     .filter((line) => line.split(/\s+/).filter(Boolean).length <= 6).length;
 
-  // More lenient: require 3+ short lines instead of 2
-  if (shortLineCount >= 3) return true;
+  // If high quality, allow more short lines
+  const shortLineThreshold = hasHighQuality ? 4 : 3;
+  if (shortLineCount >= shortLineThreshold) return true;
 
   // Only check list pattern if word count is very low (<150)
   if (wordCount < 150) {
@@ -1743,7 +1756,7 @@ function isStrongPublishableCandidate(
   const integrityIssueCount = detectNarrativeIntegrityIssues(text).length;
   return nonWordCountViolations.length === 0
     && publishableEnough
-    && !isTooThinForDelivery(text, minimumPublishableWordMin)
+    && !isTooThinForDelivery(text, minimumPublishableWordMin, qualityScore, nonWordCountViolations)
     && qualityScore >= threshold
     && strongOpening
     && concreteEvidenceSignals >= 4
@@ -1751,6 +1764,7 @@ function isStrongPublishableCandidate(
     && integrityIssueCount === 0;
 }
 
+// ... (rest of the code remains the same)
 function countWeakHemnetDetailSignals(text: string, platform: string): number {
   if (platform !== "hemnet" || !text) return 0;
 
@@ -4049,7 +4063,10 @@ Svara med JSON:
               cleanDisposition,
               cleanWritingPlan,
               result,
-              violations: selectedCandidate.nonWordCountViolations,
+              // NEW: Pass full context so Polish knows what was important
+              intelligence: enrichedIntelligence,
+              positioning: competitorAnalysis,
+              violations: nonWordCountViolations,
               currentScore: selectedCandidate.qualityScore,
               targetMinWords: Math.max(selectedCandidate.wordCount, minimumPublishableWordMin),
             }),
@@ -4178,6 +4195,10 @@ Svara med JSON:
                 content: `Du är en kirurgisk korrekturläsare för svenska fastighetstexter.
 TEXTSTIL: ${style === "factual" ? "Faktabaserad — INGA beskrivande adjektiv alls" : style === "selling" ? "Säljande — beskrivande ord OK om de stöds av fakta (genomtänkt, smakfullt, elegant etc)" : "Balanserad — milda beskrivningar OK om de stöds av fakta"}
 
+KONTEXT:
+${cleanWritingPlan ? `WRITING PLAN: ${JSON.stringify(cleanWritingPlan)}` : ''}
+${enrichedIntelligence ? `MÅLGRUPP: ${JSON.stringify(enrichedIntelligence)}` : ''}
+
 DITT JOBB: Ersätt EXAKT de felaktiga fraserna med korrekta ersättningar. Ändra INGET annat.
 
 REGLER:
@@ -4298,6 +4319,10 @@ ${surgicalRepairAddendum}`,
                   content: `Du är en erfaren svensk mäklare. Du ska FÖRBÄTTRA OCH UTÖKA en befintlig objektbeskrivning så den når rätt längd och blir mer publiceringsklar.
 
 TEXTSTIL: ${style === "factual" ? "Faktabaserad — bara fakta, inga adjektiv, korta meningar" : style === "selling" ? "Säljande — lyft styrkor med konkreta fakta, beskrivande ord OK om de stöds av fakta" : "Balanserad — professionell ton, fakta i fokus med naturlig rytm"}
+
+KONTEXT:
+${cleanWritingPlan ? `WRITING PLAN: ${JSON.stringify(cleanWritingPlan)}` : ''}
+${enrichedIntelligence ? `MÅLGRUPP: ${JSON.stringify(enrichedIntelligence)}` : ''}
 
 REGLER:
 1. Du FÅR skriva om lokala partier för bättre rytm, men ska bevara alla korrekta fakta

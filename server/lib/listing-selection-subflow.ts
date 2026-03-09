@@ -100,38 +100,55 @@ export function buildPolishRewriteEvaluationInput(params: {
     minimumPublishableWordMin: params.minimumPublishableWordMin,
     improvementKind: "polish" as const,
   };
-}
+  export function buildCandidatePolishRequestInput(params: {
+    cleanDisposition: unknown;
+    cleanWritingPlan: unknown;
+    result: unknown;
+    intelligence?: unknown;
+    positioning?: string;
+    violations?: string[];
+    currentScore?: number;
+    targetMinWords?: number;
+  }) {
+    // Build comprehensive context for Polish
+    const contextParts: string[] = [];
 
-export function buildCandidatePolishRequestInput(params: {
-  cleanDisposition: unknown;
-  cleanWritingPlan: unknown;
-  result: unknown;
-  violations?: string[]; // Specific violations to fix
-  currentScore?: number; // Current quality score
-  targetMinWords?: number; // Minimum word count to maintain
-}) {
-  const violationContext = params.violations && params.violations.length > 0
-    ? `\n\nSPECIFIKA PROBLEM ATT FIXA:\n${params.violations.map(v => `- ${v}`).join('\n')}`
-    : '';
+    if (params.intelligence) {
+      contextParts.push(`MÅLGRUPP: ${JSON.stringify(params.intelligence)}`);
+    }
 
-  const scoreContext = params.currentScore
-    ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.9).toFixed(2)}.`
-    : '';
+    if (params.positioning) {
+      contextParts.push(`POSITIONERING: ${params.positioning}`);
+    }
 
-  const wordContext = params.targetMinWords
-    ? `\n\nORDANTAL: Behåll minst ${params.targetMinWords} ord. Om texten är kort, utveckla stycken mer istället för att korta.`
-    : '';
+    if (params.cleanWritingPlan) {
+      contextParts.push(`WRITING PLAN (original strategi): ${JSON.stringify(params.cleanWritingPlan)}`);
+    }
 
-  return [
-    {
-      role: "developer" as const,
-      content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer.
+    const violationContext = params.violations && params.violations.length > 0
+      ? `\n\nSPECIFIKA PROBLEM ATT FIXA:\n${params.violations.map(v => `- ${v}`).join('\n')}`
+      : '';
+
+    const scoreContext = params.currentScore
+      ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.9).toFixed(2)}.`
+      : '';
+
+    const wordContext = params.targetMinWords
+      ? `\n\nORDANTAL: Behåll minst ${params.targetMinWords} ord. Om texten är kort, utveckla stycken mer istället för att korta.`
+      : '';
+
+    return [
+      {
+        role: "developer" as const,
+        content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer.
+
+${contextParts.join('\n\n')}
 
 UPPGIFT:
 Förbättra specifika delar av objektbeskrivningen - behåll det som funkar, skriv om det som är svagt.
 
 ANALYSMETOD:
-1. Läs igenom texten och identifiera svaga stycken/meningar
+1. Läs igenom texten och JÄMFÖR med writing plan (är intentionen uppfylld?)
 2. Bevara starka stycken exakt som de är
 3. Skriv om svaga delar för att höja kvaliteten
 4. Behåll alla fakta korrekta
@@ -144,19 +161,28 @@ FÖRBÄTTRA SÅ HÄR:
 - Gör svaga meningar mer mänskliga och mindre som listor
 - Selektiv betoning - ge de bästa detaljerna mer utrymme
 - Behåll naturligt styckeflöde
+- Ta hänsyn till målgruppen från intelligence
 
 DU FÅR INTE:
 - Ändra fakta eller hitta på nya detaljer
 - Göra texten mer klyschig
 - Förkorta om det inte behövs (behåll eller öka ordantal)
 - Skriva om hela texten - bara de svaga delarna
+- Förlora de viktigaste säljargumenten från positioning
 
 Svara med JSON: { "improvedPrompt": "...", "headline": "...", "changesMade": "kort beskrivning av vad som ändrades" }`
-    },
-    {
-      role: "user" as const,
-      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(params.result, null, 2)}`
-    }
+      },
+      {
+        role: "user" as const,
+        content: `TEXT ATT FÖRBÄTTRA:\n${(params.result as any)?.improvedPrompt || ''}`
+      }
+    ];
+  }
+},
+{
+  role: "user" as const,
+    content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(params.result, null, 2)}`
+}
   ];
 }
 
