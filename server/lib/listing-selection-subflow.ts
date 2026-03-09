@@ -100,47 +100,49 @@ export function buildPolishRewriteEvaluationInput(params: {
     minimumPublishableWordMin: params.minimumPublishableWordMin,
     improvementKind: "polish" as const,
   };
-  export function buildCandidatePolishRequestInput(params: {
-    cleanDisposition: unknown;
-    cleanWritingPlan: unknown;
-    result: unknown;
-    intelligence?: unknown;
-    positioning?: string;
-    violations?: string[];
-    currentScore?: number;
-    targetMinWords?: number;
-  }) {
-    // Build comprehensive context for Polish
-    const contextParts: string[] = [];
+}
 
-    if (params.intelligence) {
-      contextParts.push(`MÅLGRUPP: ${JSON.stringify(params.intelligence)}`);
-    }
+export function buildCandidatePolishRequestInput(params: {
+  cleanDisposition: unknown;
+  cleanWritingPlan: unknown;
+  result: unknown;
+  intelligence?: unknown;
+  positioning?: string;
+  violations?: string[];
+  currentScore?: number;
+  targetMinWords?: number;
+}) {
+  // Build comprehensive context for Polish
+  const contextParts: string[] = [];
 
-    if (params.positioning) {
-      contextParts.push(`POSITIONERING: ${params.positioning}`);
-    }
+  if (params.intelligence) {
+    contextParts.push(`MÅLGRUPP: ${JSON.stringify(params.intelligence)}`);
+  }
 
-    if (params.cleanWritingPlan) {
-      contextParts.push(`WRITING PLAN (original strategi): ${JSON.stringify(params.cleanWritingPlan)}`);
-    }
+  if (params.positioning) {
+    contextParts.push(`POSITIONERING: ${params.positioning}`);
+  }
 
-    const violationContext = params.violations && params.violations.length > 0
-      ? `\n\nSPECIFIKA PROBLEM ATT FIXA:\n${params.violations.map(v => `- ${v}`).join('\n')}`
-      : '';
+  if (params.cleanWritingPlan) {
+    contextParts.push(`WRITING PLAN (original strategi): ${JSON.stringify(params.cleanWritingPlan)}`);
+  }
 
-    const scoreContext = params.currentScore
-      ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.9).toFixed(2)}.`
-      : '';
+  const violationContext = params.violations && params.violations.length > 0
+    ? `\n\nSPECIFIKA PROBLEM ATT FIXA:\n${params.violations.map(v => `- ${v}`).join('\n')}`
+    : '';
 
-    const wordContext = params.targetMinWords
-      ? `\n\nORDANTAL: Behåll minst ${params.targetMinWords} ord. Om texten är kort, utveckla stycken mer istället för att korta.`
-      : '';
+  const scoreContext = params.currentScore
+    ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.9).toFixed(2)}.`
+    : '';
 
-    return [
-      {
-        role: "developer" as const,
-        content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer.
+  const wordContext = params.targetMinWords
+    ? `\n\nORDANTAL: Behåll minst ${params.targetMinWords} ord. Om texten är kort, utveckla stycken mer istället för att korta.`
+    : '';
+
+  return [
+    {
+      role: "developer" as const,
+      content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer.
 
 ${contextParts.join('\n\n')}
 
@@ -171,18 +173,11 @@ DU FÅR INTE:
 - Förlora de viktigaste säljargumenten från positioning
 
 Svara med JSON: { "improvedPrompt": "...", "headline": "...", "changesMade": "kort beskrivning av vad som ändrades" }`
-      },
-      {
-        role: "user" as const,
-        content: `TEXT ATT FÖRBÄTTRA:\n${(params.result as any)?.improvedPrompt || ''}`
-      }
-    ];
-  }
-},
-{
-  role: "user" as const,
-    content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${JSON.stringify(params.result, null, 2)}`
-}
+    },
+    {
+      role: "user" as const,
+      content: `TEXT ATT FÖRBÄTTRA:\n${(params.result as any)?.improvedPrompt || ''}`
+    }
   ];
 }
 

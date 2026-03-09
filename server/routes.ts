@@ -3672,7 +3672,6 @@ OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
 - tom improvedPrompt` },
             { role: "user", content: candidateUserContent }
           ],
-          max_output_tokens: 8000,
           text: { format: { type: "json_object" } }
         });
 
