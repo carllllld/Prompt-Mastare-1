@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
+  isStrongPublishableCandidate,
   sanitizeGeneratedMarketingField,
   validateOptimizationResult,
 } from '../routes';
@@ -127,6 +128,18 @@ describe('AI Pipeline Tests', () => {
       }, 'hemnet', 1, 500, 'balanced');
 
       expect(violations.some((v) => v.includes('Svagt lägesslut'))).toBe(true);
+    });
+
+    it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {
+      const genericThinText = 'En trea om 76 kvm. Kök renoverat 2022. ICA nära.';
+
+      expect(isStrongPublishableCandidate(genericThinText, 'hemnet', 195, 450, 'balanced', 'pro')).toBe(false);
+    });
+
+    it('should reject text that is long enough but still reads too generically for the local top-broker gate', () => {
+      const longButGenericText = 'Storgatan 12, 3 tr, Linköping. En trea om 76 kvm med gott om plats för vardagens behov. Köket renoverades 2022 och badrummet uppdaterades i samband med detta. Planlösningen är praktisk och vardagsrummet har plats för både soffgrupp och matbord. Sovrummen ligger i den inre delen av bostaden och förvaring finns i flera garderober. Läget ger närhet till service och kommunikationer, vilket gör vardagen smidig. ICA, resecentrum och centrum finns i närheten och området passar många olika köpare. Bostaden håller ett gott skick och ger ett välordnat helhetsintryck utan att sticka ut på något särskilt sätt.';
+
+      expect(isStrongPublishableCandidate(longButGenericText, 'hemnet', 195, 450, 'balanced', 'pro')).toBe(false);
     });
   });
 

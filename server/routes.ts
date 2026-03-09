@@ -3691,6 +3691,7 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
         const emergencyWordCount = emergencyPrompt.split(/\s+/).filter(Boolean).length;
         const emergencyShortfallPenalty = Math.max(0, minimumPublishableWordMin - emergencyWordCount) / Math.max(minimumPublishableWordMin, 1);
         const emergencyWordDistancePenalty = Math.abs(emergencyWordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
+        const emergencyWeakHemnetDetailCount = countWeakHemnetDetailSignals(emergencyPrompt, platform);
 
         candidatePool.push({
           label: "emergency",
@@ -3698,8 +3699,8 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
           qualityScore: emergencyQualityScore,
           nonWordCountViolations: emergencyViolations,
           wordCount: emergencyWordCount,
-          weakHemnetDetailCount: countWeakHemnetDetailSignals(emergencyPrompt, platform),
-          totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22) - (countWeakHemnetDetailSignals(emergencyPrompt, platform) * 0.05),
+          weakHemnetDetailCount: emergencyWeakHemnetDetailCount,
+          totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22) - (emergencyWeakHemnetDetailCount * 0.05),
         });
       }
 
@@ -3750,8 +3751,20 @@ Svara med JSON:
 
       const selectedCandidate = [...candidatePool]
         .sort((a, b) => {
-          const aScore = a.totalScore + (a.label === judgeChoiceLabel ? 0.15 : 0) + (a.wordCount >= minimumPublishableWordMin ? 0.06 : 0) - (a.weakHemnetDetailCount * 0.03) + (a.qualityScore >= 0.82 ? 0.04 : 0);
-          const bScore = b.totalScore + (b.label === judgeChoiceLabel ? 0.15 : 0) + (b.wordCount >= minimumPublishableWordMin ? 0.06 : 0) - (b.weakHemnetDetailCount * 0.03) + (b.qualityScore >= 0.82 ? 0.04 : 0);
+          const aStrongPublishable = isStrongPublishableCandidate(a.result?.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
+          const bStrongPublishable = isStrongPublishableCandidate(b.result?.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
+          const aScore = a.totalScore
+            + (aStrongPublishable ? 0.18 : 0)
+            + (a.label === judgeChoiceLabel ? 0.12 : 0)
+            + (a.wordCount >= minimumPublishableWordMin ? 0.06 : 0)
+            - (a.weakHemnetDetailCount * 0.03)
+            + (a.qualityScore >= 0.82 ? 0.04 : 0);
+          const bScore = b.totalScore
+            + (bStrongPublishable ? 0.18 : 0)
+            + (b.label === judgeChoiceLabel ? 0.12 : 0)
+            + (b.wordCount >= minimumPublishableWordMin ? 0.06 : 0)
+            - (b.weakHemnetDetailCount * 0.03)
+            + (b.qualityScore >= 0.82 ? 0.04 : 0);
           return bScore - aScore;
         })[0];
 
@@ -3830,13 +3843,28 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
       }
 
       sendProgress(5, 7, "Kontrollerar textkvalitet...");
-      console.log(`[Step 3] Selected candidate: ${selectedCandidate.label}. Score ${selectedCandidate.qualityScore.toFixed(2)}, violations ${selectedCandidate.nonWordCountViolations.length}, words ${selectedCandidate.wordCount}`);
+      const currentStep3WordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
+      const currentStep3Violations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
+      const currentStep3Score = analyzeTextQuality(result.improvedPrompt || "");
+      console.log(`[Step 3] Candidate entering validation: ${selectedCandidate.label}. Current score ${currentStep3Score.toFixed(2)}, violations ${currentStep3Violations.length}, words ${currentStep3WordCount}`);
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
         result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
         strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       }
+      const protectedBaselineText = result.improvedPrompt || "";
+      const protectedBaselineAuxFields = {
+        socialCopy: result.socialCopy || null,
+        instagramCaption: result.instagramCaption || null,
+        showingInvitation: result.showingInvitation || null,
+        shortAd: result.shortAd || null,
+        headline: result.headline || null,
+      };
+      const protectedBaselineNonWordViolations = getNonWordCountViolations(validateMainMarketingText({ improvedPrompt: protectedBaselineText }, platform, minimumPublishableWordMin, targetWordMax, style));
+      const protectedBaselineScore = analyzeTextQuality(protectedBaselineText);
+      const protectedBaselineWordCount = protectedBaselineText.split(/\s+/).filter(Boolean).length;
+      const protectedBaselineIsStrong = isStrongPublishableCandidate(protectedBaselineText, platform, minimumPublishableWordMin, targetWordMax, style, plan);
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
@@ -3906,16 +3934,20 @@ ERSÄTTNINGSTABELL:
               const originalWords = result.improvedPrompt.split(/\s+/).length;
               const correctedWords = corrected.corrected_text.split(/\s+/).length;
               const wordDiff = Math.abs(originalWords - correctedWords);
+              const isNearPublishableMinimum = originalWords >= minimumPublishableWordMin - 20;
+              const correctionShortensTooMuchNearMinimum = correctedWords < originalWords - 8 && isNearPublishableMinimum;
 
               if (wordDiff / originalWords < 0.3) {
                 const sanitizedCorrected = finalizeMainMarketingText(corrected.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
                 if (sanitizedCorrected) {
                   const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
-                  if (correctedViolations.length < textViolations.length) {
+                  const sanitizedCorrectedWordCount = sanitizedCorrected.split(/\s+/).filter(Boolean).length;
+                  const correctedDropsBelowUsableFloor = isNearPublishableMinimum && sanitizedCorrectedWordCount < minimumPublishableWordMin - 10;
+                  if (correctedViolations.length < textViolations.length && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
                     result.improvedPrompt = sanitizedCorrected;
                     console.log(`[Step 5] Surgical correction applied (${textViolations.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
                   } else {
-                    console.warn(`[Step 5] Correction did not reduce violations (${textViolations.length} -> ${correctedViolations.length}), keeping original`);
+                    console.warn(`[Step 5] Correction reduced quality headroom too much or did not improve enough (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount}), keeping original`);
                   }
                 }
               } else {
@@ -3935,11 +3967,12 @@ ERSÄTTNINGSTABELL:
         let currentWordCount = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
         let shortfall = minimumPublishableWordMin - currentWordCount;
 
-        if (shortfall > 30) {
+        if (shortfall > 0) {
           const originalNonWordViolations = getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style));
+          const maxAttempts = shortfall > 30 ? 2 : 1;
 
-          for (let attempt = 1; attempt <= 2 && shortfall > 30; attempt++) {
-            console.log(`[Step 5b] Text too short: ${currentWordCount} words, publishable min ${minimumPublishableWordMin}, requested min ${targetWordMin}. Expanding (attempt ${attempt}/2)...`);
+          for (let attempt = 1; attempt <= maxAttempts && shortfall > 0; attempt++) {
+            console.log(`[Step 5b] Text too short: ${currentWordCount} words, publishable min ${minimumPublishableWordMin}, requested min ${targetWordMin}. Expanding (attempt ${attempt}/${maxAttempts})...`);
 
             try {
               const expandMessages = [
@@ -4009,11 +4042,9 @@ REGLER:
             }
           }
 
-          if (shortfall > 30) {
-            console.warn(`[Step 5b] Kunde inte nå requested min. Stannade på ${currentWordCount} ord. Publishable min är ${minimumPublishableWordMin}, requested min är ${targetWordMin}.`);
+          if (shortfall > 0) {
+            console.warn(`[Step 5b] Kunde inte nå publicerbar miniminivå. Stannade på ${currentWordCount} ord. Publishable min är ${minimumPublishableWordMin}, requested min är ${targetWordMin}.`);
           }
-        } else if (shortfall > 0) {
-          console.log(`[Step 5b] Text slightly short vs publishable min: ${currentWordCount}/${minimumPublishableWordMin} words (within tolerance)`);
         }
       }
 
@@ -4021,6 +4052,7 @@ REGLER:
 
       // STEG 6: Faktagranskning (Pro/Premium)
       let factCheckResult: any = null;
+      let factCheckTextBasis: string | null = null;
       if (plan !== "free" && result.improvedPrompt && !strongCandidateFastPath) {
         try {
           const factCheckCompletion = await openai.responses.create({
@@ -4041,6 +4073,7 @@ REGLER:
           });
 
           factCheckResult = safeJsonParse(factCheckCompletion.output_text || "{}");
+          factCheckTextBasis = result.improvedPrompt;
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
             const sanitizedFactChecked = finalizeMainMarketingText(factCheckResult.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
@@ -4050,6 +4083,7 @@ REGLER:
               const factCheckedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedFactChecked }, platform, minimumPublishableWordMin, targetWordMax, style));
               if ((factCheckedViolations.length === 0 || factCheckedViolations.length <= getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)).length) && !(currentWordCountBeforeFactCheck >= minimumPublishableWordMin && factCheckedWordCount < minimumPublishableWordMin)) {
                 result.improvedPrompt = sanitizedFactChecked;
+                factCheckTextBasis = sanitizedFactChecked;
                 console.log("[Step 6] Fact-check corrections applied");
               } else {
                 console.warn("[Step 6] Fact-check correction introduced new issues or shortened text below minimum, keeping original");
@@ -4063,6 +4097,29 @@ REGLER:
           console.warn("[Step 6] Fact-check failed, continuing:", e);
         }
       }
+
+      if (result.improvedPrompt && protectedBaselineText) {
+        const postRefinementText = result.improvedPrompt;
+        const postRefinementNonWordViolations = getNonWordCountViolations(validateMainMarketingText({ improvedPrompt: postRefinementText }, platform, minimumPublishableWordMin, targetWordMax, style));
+        const postRefinementScore = analyzeTextQuality(postRefinementText);
+        const postRefinementWordCount = postRefinementText.split(/\s+/).filter(Boolean).length;
+        const postRefinementIsStrong = isStrongPublishableCandidate(postRefinementText, platform, minimumPublishableWordMin, targetWordMax, style, plan);
+        const droppedBelowPublishableMin = protectedBaselineWordCount >= minimumPublishableWordMin && postRefinementWordCount < minimumPublishableWordMin;
+        const addedViolations = postRefinementNonWordViolations.length > protectedBaselineNonWordViolations.length;
+        const meaningfulScoreDrop = postRefinementScore < protectedBaselineScore - 0.04;
+        const lostStrongStatus = protectedBaselineIsStrong && !postRefinementIsStrong;
+
+        if (droppedBelowPublishableMin || addedViolations || meaningfulScoreDrop || lostStrongStatus) {
+          result.improvedPrompt = protectedBaselineText;
+          result.socialCopy = protectedBaselineAuxFields.socialCopy;
+          result.instagramCaption = protectedBaselineAuxFields.instagramCaption;
+          result.showingInvitation = protectedBaselineAuxFields.showingInvitation;
+          result.shortAd = protectedBaselineAuxFields.shortAd;
+          result.headline = protectedBaselineAuxFields.headline;
+          console.warn(`[Pipeline Guard] Reverted degraded post-step text. Score ${postRefinementScore.toFixed(2)} -> ${protectedBaselineScore.toFixed(2)}, violations ${postRefinementNonWordViolations.length} -> ${protectedBaselineNonWordViolations.length}, words ${postRefinementWordCount} -> ${protectedBaselineWordCount}`);
+        }
+      }
+      strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
 
       // Auto-fill [TID] and [KONTAKT] placeholders in showing invitation
       let finalShowingInvitation = result.showingInvitation || null;
@@ -4081,6 +4138,7 @@ REGLER:
       }
 
       result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+      strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
 
       sendProgress(7, 7, "Slutgranskar mäklarkvalitet...");
 
@@ -4216,7 +4274,7 @@ Svara med JSON med samma fält som input. improvedPrompt måste vara färdig lö
               const currentWordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
               const rescuedWordCount = rescuedText.split(/\s+/).filter(Boolean).length;
 
-              if (getNonWordCountViolations(rescuedMainViolations).length <= getNonWordCountViolations(currentMainViolations).length && rescuedScore >= currentScore && rescuedWordCount >= Math.min(currentWordCount, minimumPublishableWordMin)) {
+              if (getNonWordCountViolations(rescuedMainViolations).length <= getNonWordCountViolations(currentMainViolations).length && rescuedScore >= currentScore && rescuedWordCount >= Math.max(currentWordCount - 5, minimumPublishableWordMin)) {
                 result = rescuedResult;
                 console.log(`[Final Broker Audit Rescue] Accepted rescue rewrite. Score ${currentScore.toFixed(2)} -> ${rescuedScore.toFixed(2)}, words ${currentWordCount} -> ${rescuedWordCount}`);
 
@@ -4390,8 +4448,10 @@ Svara med JSON i formatet:
       const tips = result.text_tips || result.pro_tips || [];
       const finalFactCheckPassed = finalNonWordCountViolations.length === 0;
       const finalFactCheckIssues = finalNonWordCountViolations.map((issue) => ({ quote: issue, reason: "" }));
-      const finalQualityScore = factCheckResult?.quality_score ?? null;
-      const finalBrokerTips = factCheckResult?.broker_tips || [];
+      const factCheckExecuted = factCheckResult !== null;
+      const factCheckMetadataMatchesFinalText = typeof factCheckTextBasis === "string" && factCheckTextBasis.trim().length > 0 && factCheckTextBasis.trim() === (result.improvedPrompt || "").trim();
+      const finalQualityScore = factCheckMetadataMatchesFinalText ? factCheckResult?.quality_score ?? null : null;
+      const finalBrokerTips = factCheckMetadataMatchesFinalText ? (factCheckResult?.broker_tips || []) : [];
       const finalBrokerAuditScore = typeof finalBrokerAudit?.broker_quality_score === "number" ? finalBrokerAudit.broker_quality_score : null;
       const finalBrokerAuditVerdict = typeof finalBrokerAudit?.verdict === "string" ? finalBrokerAudit.verdict : null;
       const optimizationRecord = {
@@ -4435,16 +4495,22 @@ Svara med JSON i formatet:
           verdict: finalBrokerAuditVerdict,
         },
         factCheck: {
-          fact_check_passed: finalFactCheckPassed,
+          fact_check_passed: factCheckMetadataMatchesFinalText && factCheckExecuted
+            ? (factCheckResult?.fact_check_passed !== false && finalFactCheckPassed)
+            : null,
+          local_text_clear: finalFactCheckPassed,
           issues: finalFactCheckIssues,
           quality_score: finalQualityScore,
           broker_tips: finalBrokerTips,
+          executed: factCheckExecuted,
+          metadata_matches_final_text: factCheckMetadataMatchesFinalText,
         },
         wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
         model: aiModel,
       };
 
       let responseSettled = false;
+      let successfulDeliverySent = false;
       const persistSuccessfulDelivery = async () => {
         if (responseSettled) return;
         responseSettled = true;
@@ -4464,7 +4530,7 @@ Svara med JSON i formatet:
       };
 
       res.once("finish", () => {
-        if (res.statusCode < 400) {
+        if (successfulDeliverySent) {
           void persistSuccessfulDelivery();
         } else {
           cancelPersistence();
@@ -4478,9 +4544,11 @@ Svara med JSON i formatet:
       });
 
       if (wantsStream) {
+        successfulDeliverySent = true;
         res.write(JSON.stringify({ type: "complete", data: responseData }) + "\n");
         res.end();
       } else {
+        successfulDeliverySent = true;
         res.json(responseData);
       }
     } catch (err: any) {
@@ -5559,6 +5627,7 @@ export {
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
   finalizeMainMarketingText,
+  isStrongPublishableCandidate,
   sanitizeGeneratedMarketingField,
   validateOptimizationResult,
 };
