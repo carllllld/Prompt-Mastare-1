@@ -106,30 +106,52 @@ export function buildCandidatePolishRequestInput(params: {
   cleanDisposition: unknown;
   cleanWritingPlan: unknown;
   result: unknown;
+  violations?: string[]; // Specific violations to fix
+  currentScore?: number; // Current quality score
+  targetMinWords?: number; // Minimum word count to maintain
 }) {
+  const violationContext = params.violations && params.violations.length > 0
+    ? `\n\nSPECIFIKA PROBLEM ATT FIXA:\n${params.violations.map(v => `- ${v}`).join('\n')}`
+    : '';
+
+  const scoreContext = params.currentScore
+    ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.9).toFixed(2)}.`
+    : '';
+
+  const wordContext = params.targetMinWords
+    ? `\n\nORDANTAL: Behåll minst ${params.targetMinWords} ord. Om texten är kort, utveckla stycken mer istället för att korta.`
+    : '';
+
   return [
     {
       role: "developer" as const,
-      content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör.
+      content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer.
 
 UPPGIFT:
-Förfina en redan bra objektbeskrivning till publiceringsklar toppnivå.
+Förbättra specifika delar av objektbeskrivningen - behåll det som funkar, skriv om det som är svagt.
 
-DU MÅSTE:
-- behålla ALLA fakta korrekta
-- inte hitta på något nytt
-- inte göra texten mer klyschig
-- inte skriva om till disposition, lista eller rubrikformat
-- förbättra öppning, rytm, selektiv betoning och övergångar
-- låta texten kännas skriven av en mycket skicklig svensk mäklare
+ANALYSMETOD:
+1. Läs igenom texten och identifiera svaga stycken/meningar
+2. Bevara starka stycken exakt som de är
+3. Skriv om svaga delar för att höja kvaliteten
+4. Behåll alla fakta korrekta
 
-FÖRBÄTTRA SÄRSKILT:
-- första stycket
-- naturligt styckeflöde
-- mikro-rytm mellan meningar
-- att de starkaste detaljerna får rätt plats tidigt
+VAD SOM ÄR SVAGT (prioritet):${violationContext}${scoreContext}${wordContext}
 
-Svara med JSON med samma fält som input. improvedPrompt måste vara färdig löpande objektbeskrivning.`
+FÖRBÄTTRA SÅ HÄR:
+- Första stycket ska vara starkt och konkret (inte generiskt)
+- Fixa mekanisk rytm - variera meningslängd och struktur
+- Gör svaga meningar mer mänskliga och mindre som listor
+- Selektiv betoning - ge de bästa detaljerna mer utrymme
+- Behåll naturligt styckeflöde
+
+DU FÅR INTE:
+- Ändra fakta eller hitta på nya detaljer
+- Göra texten mer klyschig
+- Förkorta om det inte behövs (behåll eller öka ordantal)
+- Skriva om hela texten - bara de svaga delarna
+
+Svara med JSON: { "improvedPrompt": "...", "headline": "...", "changesMade": "kort beskrivning av vad som ändrades" }`
     },
     {
       role: "user" as const,

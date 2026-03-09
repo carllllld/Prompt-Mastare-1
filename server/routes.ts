@@ -3603,16 +3603,16 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const compactWritingPlanJson = JSON.stringify(cleanWritingPlan);
 
       // Build content strings once — reused for primary generation and quality gate retry
-      const systemContent = `${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
-      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (FÖLJ):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}EXEMPEL (bra stil):\n${matchedExamples.slice(0, 2).join("\n\n---\n\n")}\n\nALDRIG SÅ HÄR:\n${negativeExample}\n\nSKRIV SÅ HÄR:\n${positiveExample}`;
+      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - varje stycke ska utvecklas fullt ut):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: "\n\nVARIANTMÅL: Skriv en excellent, fullständig text på 350-400 ord. Första stycket ska bära annonsen. Undvik onödiga detaljer - fokusera på rytm och substans.", effort: reasoningEffort, exampleCount: 2, minimalFields: true },
-        { label: "alternative", developerSuffix: "\n\nVARIANTMÅL: Skriv som en erfaren mäklare. Prioritera flöde och konkreta säljpunkter.", effort: "medium" as const, exampleCount: 2, minimalFields: true },
+        { label: "primary", developerSuffix: "\n\nVARIANTMÅL: Skriv en excellent, fullständig text på 350-400 ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.", effort: reasoningEffort, exampleCount: 3, minimalFields: false },
+        { label: "alternative", developerSuffix: "\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta.", effort: "medium" as const, exampleCount: 2, minimalFields: false },
       ];
       const runState = createListingRunState();
 
@@ -3625,6 +3625,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
         const completion = await openai.responses.create({
           model: "gpt-5.2",
           reasoning: { effort },
+          max_output_tokens: 12000, // Prevent truncation
           input: [
             {
               role: "developer", content: `${systemContent}${developerSuffix}
@@ -4048,6 +4049,9 @@ Svara med JSON:
               cleanDisposition,
               cleanWritingPlan,
               result,
+              violations: selectedCandidate.nonWordCountViolations,
+              currentScore: selectedCandidate.qualityScore,
+              targetMinWords: Math.max(selectedCandidate.wordCount, minimumPublishableWordMin),
             }),
             max_output_tokens: 5000,
             text: { format: { type: "json_object" } }
