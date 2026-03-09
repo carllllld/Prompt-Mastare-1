@@ -98,12 +98,19 @@ UPPGIFT:
 Skriv om objektbeskrivningen så att den blir publiceringsklar på rätt mäklarnivå utifrån auditens konkreta invändningar.
 
 DU MÅSTE:
-- behålla alla korrekta fakta
+- behålla alla korrekta fakta EXAKT som de står
 - inte hitta på något nytt
 - inte skriva disposition, rubriker eller punktlista
 - förbättra öppning, rytm, prioritering och lägesprosa
 - ta bort repetition och rådata-känsla
 - skriva naturlig svensk mäklarprosa
+
+KRITISKA REGLER - FÖLJ EXAKT:
+1. OM disposition säger "gott skick" OCH text säger "gott skick" - ÄNDRA INTE
+2. OM disposition säger "mycket gott skick" OCH text säger "gott skick" - ändra till "mycket gott skick"
+3. OM disposition säger X OCH text säger X - ÄNDRA INTE
+4. Ändra BARA om det är en verklig motsägelse mellan disposition och text
+5. Lita ALLTID på dispositionens fakta framför textens formulering
 
 SÄRSKILT VIKTIGT:
 - öppningen får inte kännas administrativ
@@ -122,7 +129,7 @@ ${params.rescueRepairAddendum}`
     },
     {
       role: "user" as const,
-      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n${params.cleanToneAnalysis ? `\n\nTONALITET/MÅLGRUPP:\n${JSON.stringify(params.cleanToneAnalysis, null, 2)}` : ''}\n\nLEVEL: ${params.plan}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${params.rescueIssues.map((issue, index) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(params.result, null, 2)}`
+      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n${params.cleanToneAnalysis ? `\n\nTONALITET/MÅLGRUPP:\n${JSON.stringify(params.cleanToneAnalysis, null, 2)}` : ''}\n\nLEVEL: ${params.plan}\n\nAUDITENS INVÄNDNINGAR SOM MÅSTE LÖSAS:\n${params.rescueIssues.map((issue, index) => `${index + 1}. ${issue}`).join("\n")}\n\nTEXT ATT RÄDDA:\n${JSON.stringify(params.result, null, 2)}\n\nPRECISION: Fixa ENDAST de ovanstående ${params.rescueIssues.length} specifika felen. Ändra inget annat. Behåll resten av texten exakt som den är.`
     }
   ];
 }

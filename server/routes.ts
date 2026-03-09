@@ -3625,8 +3625,8 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: "\n\nVARIANTMÅL: Skriv en excellent, fullständig text på 350-400 ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.", effort: reasoningEffort, exampleCount: 3, minimalFields: false },
-        { label: "alternative", developerSuffix: "\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta.", effort: "medium" as const, exampleCount: 2, minimalFields: false },
+        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, effort: "high" as const, exampleCount: 3, minimalFields: false },
+        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, effort: "high" as const, exampleCount: 2, minimalFields: false },
       ];
       const runState = createListingRunState();
 
