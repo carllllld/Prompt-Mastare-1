@@ -294,7 +294,9 @@ function buildFallbackLocationSentence(area: string | null, municipality: string
 
 function isTooThinForDelivery(text: string, minimumPublishableWordMin: number): boolean {
   const wordCount = text.split(/\s+/).filter(Boolean).length;
-  if (wordCount < Math.max(90, Math.min(minimumPublishableWordMin, 130))) return true;
+  // More lenient: require at least 90 words OR 70% of minimum, whichever is lower
+  const minRequired = Math.min(90, Math.floor(minimumPublishableWordMin * 0.7));
+  if (wordCount < minRequired) return true;
 
   const shortLineCount = text
     .split(/\n+/)
@@ -302,9 +304,16 @@ function isTooThinForDelivery(text: string, minimumPublishableWordMin: number): 
     .filter(Boolean)
     .filter((line) => line.split(/\s+/).filter(Boolean).length <= 6).length;
 
-  const rawListPattern = /(?:^|[.!?]\s+)(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)\s*(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)\s*(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)/u;
+  // More lenient: require 3+ short lines instead of 2
+  if (shortLineCount >= 3) return true;
 
-  return shortLineCount >= 2 || rawListPattern.test(text);
+  // Only check list pattern if word count is very low (<150)
+  if (wordCount < 150) {
+    const rawListPattern = /(?:^|[.!?]\s+)(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)\s*(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)\s*(?:[A-ZÅÄÖ][^.!?\n]{1,60}\([^)]*\)|[A-ZÅÄÖ][^.!?\n]{1,60}\.)/u;
+    if (rawListPattern.test(text)) return true;
+  }
+
+  return false;
 }
 
 function countGenericBrokerPhrases(text: string): number {
@@ -3594,16 +3603,16 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const compactWritingPlanJson = JSON.stringify(cleanWritingPlan);
 
       // Build content strings once — reused for primary generation and quality gate retry
-      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
-      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - varje stycke ska utvecklas fullt ut):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      const systemContent = `${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (FÖLJ):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}EXEMPEL (bra stil):\n${matchedExamples.slice(0, 2).join("\n\n---\n\n")}\n\nALDRIG SÅ HÄR:\n${negativeExample}\n\nSKRIV SÅ HÄR:\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: "\n\nVARIANTMÅL: Skriv en excellent, fullständig text på 350-400 ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.", effort: reasoningEffort, exampleCount: 3, minimalFields: false },
-        { label: "alternative", developerSuffix: "\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta.", effort: "medium" as const, exampleCount: 2, minimalFields: false },
+        { label: "primary", developerSuffix: "\n\nVARIANTMÅL: Skriv en excellent, fullständig text på 350-400 ord. Första stycket ska bära annonsen. Undvik onödiga detaljer - fokusera på rytm och substans.", effort: reasoningEffort, exampleCount: 2, minimalFields: true },
+        { label: "alternative", developerSuffix: "\n\nVARIANTMÅL: Skriv som en erfaren mäklare. Prioritera flöde och konkreta säljpunkter.", effort: "medium" as const, exampleCount: 2, minimalFields: true },
       ];
       const runState = createListingRunState();
 
@@ -4027,6 +4036,7 @@ Svara med JSON:
         shouldTryPolish: candidateDecision.shouldTryPolish,
         loopNextAction: initialLoopDecision.nextAction,
         strongCandidateFastPath,
+        qualityScore: selectedCandidate.qualityScore, // Skip polish if already good (>0.80)
       });
 
       if (candidatePolishGate.shouldRunPolish) {
