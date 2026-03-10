@@ -334,7 +334,7 @@ export function finalizeBrokerAuditReadiness(params: {
   if (finalBrokerAudit.broker_quality_score < params.brokerQualityThreshold) {
     const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
     
-    if (params.finalLocalTopBrokerReady || finalBrokerAudit.broker_quality_score > 0.70) {
+    if ((params.finalLocalTopBrokerReady && finalBrokerAudit.broker_quality_score >= 0.75) || finalBrokerAudit.broker_quality_score > 0.70) {
       warnings.push(`[Final Gate] Broker quality score låg under tröskeln (${finalBrokerAudit.broker_quality_score}), men texten bedöms ändå leveransbar.`);
     } else {
       throw new Error(`[Final Gate] Broker quality score låg under tröskeln efter slutgranskning. Score ${finalBrokerAudit.broker_quality_score}, krav ${params.brokerQualityThreshold}. ${auditIssues}`);

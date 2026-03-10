@@ -153,7 +153,7 @@ export function buildCandidatePolishRequestInput(params: {
 ${contextParts.join('\n\n')}
 
 UPPGIFT:
-Förbättra specifika delar av objektbeskrivningen - behåll det som funkar, skriv om det som är svagt eller kan bli ännu vassare.
+Förfina en redan bra objektbeskrivning - behåll det som funkar, skriv om det som är svagt eller kan bli ännu vassare.
 
 ANALYSMETOD:
 1. Läs igenom texten och JÄMFÖR med writing plan och de specifika förbättringsförslagen.
@@ -182,7 +182,7 @@ Svara med JSON: { "improvedPrompt": "...", "headline": "...", "changesMade": "ko
     },
     {
       role: "user" as const,
-      content: `TEXT ATT FÖRBÄTTRA:\n${(params.result as any)?.improvedPrompt || ''}`
+      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${(params.result as any)?.improvedPrompt || ''}`
     }
   ];
 }

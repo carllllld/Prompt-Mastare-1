@@ -186,6 +186,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+import { SESSION_COOKIE_NAME } from "./config";
+
 app.use(session({
   store: new PgStore({
     pool,
@@ -198,7 +200,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: false,
-  name: "maklartexter.sid",
+  name: SESSION_COOKIE_NAME,
   proxy: true,
   cookie: {
     secure: isProduction,

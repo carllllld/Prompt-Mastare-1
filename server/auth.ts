@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import { storage } from "./storage";
 import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
+import { SESSION_COOKIE_NAME } from "./config";
 
 const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 
@@ -236,7 +237,7 @@ export function setupAuth(app: Express) {
         console.error("Logout error:", err);
         return res.status(500).json({ message: "Utloggning misslyckades" });
       }
-      res.clearCookie("maklartexter.sid");
+      res.clearCookie(SESSION_COOKIE_NAME);
       res.json({ message: "Utloggad" });
     });
   });

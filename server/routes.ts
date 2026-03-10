@@ -24,214 +24,20 @@ import { buildRepairPromptAddendum, buildSpecializedRepairPrompt, selectRepairSt
 import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
 import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
 import OpenAI from "openai";
+import { FORBIDDEN_PHRASES, getExemptPhrases, type WritingStyle } from "./lib/text-rules";
+import { findRuleViolations, validateOptimizationResult } from "./lib/text-validation";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
 // Rate limiting for /api/optimize (per user, per minute)
-const optimizeRateMap = new Map<string, { count: number; resetAt: number }>();
-const OPTIMIZE_RATE_LIMIT = (() => {
-  const n = Number.parseInt(process.env.OPTIMIZE_RATE_LIMIT || "", 10);
-  return Number.isFinite(n) && n > 0 ? n : 10;
-})(); // max requests per minute
-const OPTIMIZE_RATE_WINDOW = (() => {
-  const n = Number.parseInt(process.env.OPTIMIZE_RATE_WINDOW_MS || "", 10);
-  return Number.isFinite(n) && n > 0 ? n : 60 * 1000;
-})(); // 1 minute
-const REDIS_CONNECT_COOLDOWN_MS = (() => {
-  const n = Number.parseInt(process.env.REDIS_CONNECT_COOLDOWN_MS || "", 10);
-  return Number.isFinite(n) && n >= 0 ? n : 30_000;
-})();
-
-function checkOptimizeRateLimitInMemory(userId: string): boolean {
-  const now = Date.now();
-  const entry = optimizeRateMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    optimizeRateMap.set(userId, { count: 1, resetAt: now + OPTIMIZE_RATE_WINDOW });
-    return true;
-  }
-  if (entry.count >= OPTIMIZE_RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
-const optimizeRateLuaScript =
-  "local current = redis.call('INCR', KEYS[1])\n" +
-  "if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end\n" +
-  "return current";
-
-let redisClient: RedisClientType | null = null;
-let redisInitPromise: Promise<RedisClientType | null> | null = null;
-let redisDisabledUntil = 0;
-
-async function getRedisClient(): Promise<RedisClientType | null> {
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) return null;
-  if (Date.now() < redisDisabledUntil) return null;
-  if (redisClient?.isReady) return redisClient;
-  if (redisInitPromise) return redisInitPromise;
-
-  redisInitPromise = (async () => {
-    let client: RedisClientType | null = null;
-    try {
-      client = createClient({ url: redisUrl });
-      client.on("error", (err: unknown) => {
-        console.warn("[Redis] error:", err);
-      });
-
-      await client.connect();
-      redisClient = client;
-      console.log("[Redis] connected");
-      return client;
-    } catch (err) {
-      console.warn("[Redis] connect failed, falling back to in-memory rate limiting:", err);
-      redisDisabledUntil = Date.now() + REDIS_CONNECT_COOLDOWN_MS;
-      try {
-        await client?.disconnect();
-      } catch {
-      }
-      redisClient = null;
-      return null;
-    } finally {
-      redisInitPromise = null;
-    }
-  })();
-
-  return redisInitPromise;
-}
-
-async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
-  const client = await getRedisClient();
-  if (!client) return checkOptimizeRateLimitInMemory(userId);
-
-  const key = `rl:optimize:${userId}`;
-  try {
-    const count = (await client.eval(optimizeRateLuaScript, {
-      keys: [key],
-      arguments: [String(OPTIMIZE_RATE_WINDOW)],
-    })) as number;
-
-    return count <= OPTIMIZE_RATE_LIMIT;
-  } catch (err) {
-    console.warn("[Rate Limit] Redis error, falling back to in-memory:", err);
-    return checkOptimizeRateLimitInMemory(userId);
-  }
-}
-
-// Cleanup stale rate limit entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of Array.from(optimizeRateMap)) {
-    if (now > entry.resetAt) optimizeRateMap.delete(key);
-  }
-}, 5 * 60 * 1000);
+import { checkOptimizeRateLimit } from "./lib/rate-limiter";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-function extractFirstJsonObject(text: string): string {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return "{}";
-  return text.slice(start, end + 1);
-}
-
-function safeJsonParse(rawText: string): any {
-  const extracted = extractFirstJsonObject(rawText || "{}");
-  const attempts = [
-    extracted,
-    extracted
-      .replace(/,\s*([}\]])/g, "$1")
-      .replace(/\u0000/g, "")
-      .trim(),
-    extracted
-      .replace(/,\s*([}\]])/g, "$1")
-      .replace(/([}\]"0-9a-zA-Z])\s*(?="[^"]+"\s*:)/g, "$1,")
-      .replace(/([}\]"])\s*(?=\{)/g, "$1,")
-      .replace(/([}\]"])\s*(?=\[)/g, "$1,")
-      .replace(/\u0000/g, "")
-      .trim(),
-  ];
-
-  let lastError: unknown = null;
-  for (const attempt of attempts) {
-    try {
-      return JSON.parse(attempt);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError;
-}
-
-function extractGeneratedMarketingText(payload: any): string | null {
-  if (typeof payload === "string" && payload.trim()) {
-    return payload.trim();
-  }
-
-  const candidateKeys = [
-    "improvedPrompt",
-    "hemnetText",
-    "improvedText",
-    "text",
-    "rewritten",
-    "corrected_text",
-    "expanded_text",
-    "content",
-    "output",
-  ];
-
-  for (const key of candidateKeys) {
-    if (typeof payload?.[key] === "string" && payload[key].trim()) {
-      return payload[key].trim();
-    }
-  }
-
-  return null;
-}
-
-function isOpenAIInsufficientQuotaError(error: unknown): boolean {
-  const candidate = error as any;
-  return candidate?.status === 429 && (candidate?.code === "insufficient_quota" || candidate?.type === "insufficient_quota" || candidate?.error?.code === "insufficient_quota" || candidate?.error?.type === "insufficient_quota");
-}
-
-function createUpstreamQuotaError(stage: string, error?: unknown): Error & { statusCode: number; code: string; upstreamQuota: boolean; stage: string } {
-  const message = `OpenAI-kvoten är slut uppströms under ${stage}. Detta är inte samma sak som användarens återstående texter i appen.`;
-  const wrapped = new Error(message) as Error & { statusCode: number; code: string; upstreamQuota: boolean; stage: string; cause?: unknown };
-  wrapped.statusCode = 503;
-  wrapped.code = "openai_upstream_quota_exceeded";
-  wrapped.upstreamQuota = true;
-  wrapped.stage = stage;
-  if (error) wrapped.cause = error;
-  return wrapped;
-}
-
-function extractImprovedPromptFromLooseJson(raw: string): string | null {
-  if (!raw) return null;
-
-  const patterns = [
-    /"improvedPrompt"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
-    /"hemnetText"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
-    /"improvedText"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
-    /"text"\s*:\s*"([\s\S]*?)"\s*(?:,|})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = raw.match(pattern);
-    if (!match?.[1]) continue;
-    const recovered = match[1]
-      .replace(/\\n/g, "\n")
-      .replace(/\\r/g, "")
-      .replace(/\\t/g, " ")
-      .replace(/\\"/g, '"')
-      .trim();
-    if (recovered) return recovered;
-  }
-
-  return null;
-}
+import { extractFirstJsonObject, safeJsonParse, extractGeneratedMarketingText, extractImprovedPromptFromLooseJson } from "./lib/json-guards";
 
 function formatFallbackValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
@@ -527,7 +333,6 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
       model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
       max_completion_tokens: 1000,
-      temperature: 0.3,
       response_format: { type: "json_object" },
     });
 
@@ -653,576 +458,6 @@ VIKTIGT OM PRIORITET:
 - Din personliga stil styr MENINGSRYTM, STYCKELÄNGD och PERSPEKTIV — men inom textsstilens tillåtna ramar.
 - Undvik ALLTID universella AI-klyschor: "erbjuder generösa ytor", "andas lugn", "perfekt för den som", "välkommen till".
 - Universellt förbjudna fraser gäller ALLTID — oavsett vad referenstexterna innehåller.`;
-}
-
-// Förbjudna fraser - AI-fraser som avslöjar genererad text
-// VIKTIGT: Använd KORTA fraser för att fånga alla varianter
-const FORBIDDEN_PHRASES = [
-  // Generiska AI-öppningar - KRITISKT
-  "välkommen till",
-  "välkommen hem",
-  "här möts du",
-  "här erbjuds",
-  "nu finns chansen",
-  "missa inte",
-  "unik möjlighet",
-  "unik chans",
-  "sällsynt tillfälle",
-  "finner du",
-  "utmärkt möjlighet",
-  "stor potential",
-  "kontakta oss",
-  "för mer information",
-  "och visning",
-  "i hjärtat av",
-  "hjärtat av",
-  "vilket gör det enkelt",
-  "vilket gör det smidigt",
-  "vilket gör det lätt",
-  "vilket ger en",
-  "ger en rymlig",
-  "ger en härlig",
-  "ger en luftig",
-  "rymlig känsla",
-  "härlig plats för",
-  "plats för avkoppling",
-  "njutning av",
-  "möjlighet att påverka",
-  "forma framtiden",
-  "för den som",
-  "vilket säkerställer",
-
-  // "erbjuder" i alla former
-  " erbjuder ",
-  " erbjuds ",
-
-  // NYA AI-KLYSCHOR FRÅN OUTPUT-ANALYS
-  "erbjuder en bra plats",
-  "erbjuder en perfekt",
-  "erbjuder en fantastisk",
-  "skapar en",
-  "skapar en miljö",
-  "skapar en avkopplande",
-  "är ett bra val",
-  "är ett bra val för",
-  "är en perfekt plats",
-  "är en bra plats",
-  "är en bra plats för",
-  "vilket ger ytterligare",
-  "vilket ger ytterligare utrymme",
-  "den södervända placeringen",
-  "den södervända placeringen ger",
-
-  // Atmosfär/luftig-fraser
-  "trivsam atmosfär",
-  "härlig atmosfär",
-  "mysig atmosfär",
-  "inbjudande atmosfär",
-  "luftig atmosfär",
-  "luftig och",
-
-  // Rofylld/lugn klyschor
-  "rofyllt",
-  "rofylld",
-
-  // Trygg-fraser
-  "trygg boendemiljö",
-  "trygg boendeekonomi",
-  "tryggt boende",
-
-  // Sociala klyschor
-  "sociala sammanhang",
-  "sociala tillställningar",
-  "socialt umgänge",
-
-  // Komfort-fraser
-  "extra komfort",
-  "maximal komfort",
-
-  // Överdrivna adjektiv
-  "fantastisk",
-  "underbar",
-  "magisk",
-  "otrolig",
-  "drömboende",
-  "drömlägenhet",
-  "drömhem",
-  "en sann pärla",
-
-  // Vardags-klyschor
-  "underlättar vardagen",
-  "bekvämlighet i vardagen",
-  "den matlagningsintresserade",
-  "god natts sömn",
-
-  // Läges-klyschor
-  "eftertraktat boendealternativ",
-  "attraktivt läge",
-  "attraktivt med närhet",
-  "inom räckhåll",
-  "stadens puls",
-
-  // Hjärta-klyschor
-  "hjärtat i hemmet",
-  "husets hjärta",
-  "hemmets hjärta",
-
-  // Andra
-  "inte bara ett hem",
-  "stark efterfrågan",
-  "goda arbetsytor",
-
-  // AI-fraser som riktiga mäklare ALDRIG använder
-  "generösa ytor",
-  "generös takhöjd",
-  "generöst tilltaget",
-  "generöst med",
-  "bjuder på",
-  "präglas av",
-  "genomsyras av",
-  "andas lugn",
-  "andas charm",
-  "andas historia",
-  "präglad av",
-  "stor charm",
-  "med sin charm",
-  "med mycket charm",
-  "trivsamt boende",
-  "trivsam bostad",
-  "en bostad som",
-  "en lägenhet som",
-  "ett hem som",
-  "här finns",
-  "här kan du",
-  "här bor du",
-  "strategiskt placerad",
-  "strategiskt läge",
-
-  // NYA FRASER FRÅN OUTPUT-TEST 2026-02
-  "skapa minnen",
-  "utmärkt val",
-  "gott om utrymme",
-  "lek och avkoppling",
-  "natur och stadsliv",
-  "bekvämt boende",
-  "rymligt intryck",
-  "gör det enkelt att",
-  "gör det möjligt att",
-  "ett område för familjer",
-  "i mycket gott skick",
-  "ligger centralt i",
-
-  // NYA FRASER FRÅN OUTPUT-TEST 2026-02 v2 (Ekorrvägen-analys)
-  "faciliteter",
-  "nyrenoverade faciliteter",
-  "njut av",
-  "förvaringsmöjligheter inkluderar",
-  "förvaringsmöjligheter",
-  "odlingsmöjligheter",
-  "boendmöjligheter",
-  "parkeringsmöjligheter",
-  "det finns även",
-  "det finns också",
-
-  // === MEGA-EXPANSION: Alla AI-klyschor som aldrig förekommer i riktiga mäklartexter ===
-
-  // Emotionella verb/frasmönster
-  "inbjuder till",
-  "bjuder in till",
-  "lockar till",
-  "inspirerar till",
-  "andas modernitet",
-  "andas stil",
-  "utstrålar",
-  "ger en känsla av",
-  "skapar en känsla av",
-  "ger ett intryck av",
-  "skapar en harmonisk",
-  "skapar en inbjudande",
-  "ger ett lyxigt intryck",
-  "bidrar till en",
-  "förstärker känslan",
-  "adderar en touch",
-  "ger en touch",
-
-  // Sammanfattnings-/värderings-fraser
-  "sammanfattningsvis",
-  "med andra ord",
-  "kort sagt",
-  "allt sammantaget",
-  "detta gör bostaden till",
-  "detta gör lägenheten till",
-  "detta gör villan till",
-  "allt detta gör",
-  "det bästa av",
-  "inte bara ett hem",
-  "mer än bara ett hem",
-  "mer än bara en bostad",
-  "ett hem för alla",
-  "ett hem att trivas i",
-
-  // "Inte bara... utan också" (AI-signatur)
-  "inte bara",
-  "utan också",
-
-  // Compound adjektiv-par (AI-markör)
-  "ljus och luftig",
-  "ljust och luftigt",
-  "stilrent och modernt",
-  "stilren och modern",
-  "modernt och stilrent",
-  "elegant och tidlös",
-  "tidlös och elegant",
-  "mysigt och ombonat",
-  "charmigt och välplanerat",
-  "praktiskt och snyggt",
-  "fräscht och modernt",
-
-  // Abstrakt livsstil/känsla
-  "livsstil",
-  "livsföring",
-  "livskvalitet",
-  "hög standard",
-  "hög kvalitet",
-  "stor potential",
-  "stor möjlighet",
-  "drömmar",
-  "vision",
-  "med en vision",
-  "ett smart val",
-  "klok investering",
-
-  // Överdrivna adverb
-  "noggrant utvalt",
-  "noggrant utvalda",
-  "omsorgsfullt",
-  "genomtänkt",
-  "smakfullt",
-  "stilfullt",
-  "elegant",
-  "exklusivt",
-  "lyxigt",
-  "imponerande",
-  "magnifikt",
-  "praktfullt",
-
-  // "-möjligheter" suffix (alla varianter)
-  "utemöjligheter",
-  "lagringsmöjligheter",
-  "rekreationsmöjligheter",
-  "fritidsmöjligheter",
-  "aktivitetsmöjligheter",
-  "umgängesmöjligheter",
-  "utvecklingsmöjligheter",
-  "utbyggnadsmöjligheter",
-
-  // Passiva/byråkratiska konstruktioner
-  "det kan konstateras",
-  "det bör nämnas",
-  "det ska tilläggas",
-  "värt att nämna",
-  "värt att notera",
-  "som en bonus",
-  "en extra fördel",
-  "en stor fördel",
-  "en klar fördel",
-
-  // Överdrivna plats-beskrivningar
-  "eftertraktat område",
-  "populärt område",
-  "omtyckt område",
-  "familjevänligt område",
-  "barnvänligt område",
-  "naturskönt läge",
-  "natursköna omgivningar",
-  "grön oas",
-  "en oas",
-  "en fristad",
-  "en pärla",
-  "ett stenkast från",
-];
-
-// === STIL-BEROENDE FRASFILTRERING ===
-// Factual: alla fraser förbjudna (striktast — ren faktabeskrivning)
-// Balanced: milda adjektiv/beskrivningar tillåtna
-// Selling: expressiva adjektiv, atmosfär, livsstil tillåtna (mest kreativ frihet)
-
-const BALANCED_EXEMPT = new Set([
-  // Milda adjektiv som riktiga mäklare faktiskt använder
-  "genomtänkt", "smakfullt", "stilfullt", "elegant",
-  // Plats-beskrivningar (standard mäklarspråk)
-  "attraktivt läge", "naturskönt läge", "populärt område", "familjevänligt område",
-  // Standard/kvalitet
-  "hög standard",
-  // Vanliga mäklaruttryck
-  "ljus och luftig", "ljust och luftigt",
-  "trivsamt boende", "trivsam bostad",
-  "rofyllt", "rofylld",
-  // Compound (vanliga i mäklartexter)
-  "genomtänkt planlösning", "smakfullt renoverat", "stilfullt renoverat",
-]);
-
-const SELLING_EXEMPT = new Set([
-  // ── Allt från balanced ──
-  ...Array.from(BALANCED_EXEMPT),
-
-  // ── Expressiva adjektiv — legitimt i säljande text ──
-  "fantastisk", "fantastiskt", "underbar", "imponerande",
-  "exklusivt", "lyxigt", "magnifikt", "praktfullt",
-  "stilren", "noggrant utvalt", "noggrant utvalda", "omsorgsfullt",
-  "en sann pärla",
-
-  // ── Compound adjektiv-par ──
-  "stilrent och modernt", "stilren och modern",
-  "modernt och stilrent", "elegant och tidlös", "tidlös och elegant",
-  "mysigt och ombonat", "charmigt och välplanerat",
-  "praktiskt och snyggt", "fräscht och modernt",
-
-  // ── Atmosfär-fraser (säljtexter ska skapa känsla) ──
-  "trivsam atmosfär", "härlig atmosfär", "mysig atmosfär",
-  "inbjudande atmosfär", "luftig atmosfär", "luftig och",
-
-  // ── Charm/karaktär ──
-  "stor charm", "med sin charm", "med mycket charm", "charm",
-
-  // ── Drömboende (OK i säljande) ──
-  "drömboende", "drömlägenhet", "drömhem",
-
-  // ── Plats (utökad) ──
-  "eftertraktat område", "barnvänligt område",
-  "natursköna omgivningar", "en pärla",
-  "attraktivt med närhet",
-
-  // ── Livsstil/standard ──
-  "hög kvalitet", "livsstil", "livskvalitet",
-
-  // ── Komfort/trygghet ──
-  "extra komfort", "maximal komfort",
-  "trygg boendemiljö", "trygg boendeekonomi", "tryggt boende",
-
-  // ── Milda emotionella (OK i säljande) ──
-  "inbjuder till", "bjuder in till", "inspirerar till",
-  "sociala sammanhang", "sociala tillställningar",
-
-  // ── Compound PHRASE_REPLACEMENTS som ska bevaras i säljande ──
-  "omsorgsfullt renoverat", "smakfullt inrett",
-  "exklusivt utförande", "lyxigt badrum", "imponerande takhöjd",
-]);
-
-type WritingStyle = "factual" | "balanced" | "selling";
-
-function getExemptPhrases(style: WritingStyle): Set<string> {
-  switch (style) {
-    case "selling": return SELLING_EXEMPT;
-    case "balanced": return BALANCED_EXEMPT;
-    case "factual": return new Set(); // Inget undantag — striktast
-  }
-}
-
-function findRuleViolations(text: string, platform: string = "hemnet", style: WritingStyle = "balanced"): string[] {
-  const violations: string[] = [];
-  const lowerText = text.toLowerCase().trim();
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  const firstSentence = sentences[0]?.trim() || "";
-  const lastSentence = sentences[sentences.length - 1]?.trim() || "";
-
-  const corruptedPatterns: Array<[RegExp, string]> = [
-    // Specific fused words from AI glitches - room names + "för att"
-    [/\bköketför att\b/gi, 'Trasigt ord: "köketför att"'],
-    [/\bvardagsrummetför att\b/gi, 'Trasigt ord: "vardagsrummetför att"'],
-    [/\bsovrumetför att\b/gi, 'Trasigt ord: "sovrumetför att"'],
-    [/\bbadrummetför att\b/gi, 'Trasigt ord: "badrummetför att"'],
-    [/\bhallenför att\b/gi, 'Trasigt ord: "hallenför att"'],
-    // Specific known typos
-    [/\bsödterass\b/gi, 'Felstavat ord: "södterass"'],
-    [/\bvälsköför att\b/gi, 'Trasigt ord: "välsköför att"'],
-    [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
-  ];
-  for (const [pattern, message] of corruptedPatterns) {
-    if (pattern.test(text)) {
-      violations.push(message);
-    }
-  }
-
-  const mechanicalQualityPatterns: Array<[RegExp, string]> = [
-    [/\benergiklass(?:en)?\s+är\s+(?:fiber|installerat|parkering|buss)\b/i, 'Trasig energiklass-/teknikmening'],
-    [/\benergiklass\s+[A-G]\.\s+fiber\s+är\s+installerat\b/i, 'Mekanisk teknikrad efter energiklass'],
-    [/\bparkering\s+har\s+(?:laddplats|garage|carport|plats)\b/i, 'Mekanisk parkeringsfras: "Parkering har ..."'],
-    [/\bnär det passar med en måltid\s+buss\s+tar\b/i, 'Saknad meningsgräns före kommunikationsmening'],
-    [/\b(kikka|come 2 eat|chopchop asian express värmdö)[^.!?\n]{0,90}när det passar med en måltid\b/i, 'Svag servicefras i lägesstycke'],
-    [/\bbörja\s+[A-ZÅÄÖ][a-zåäö]+\b/i, 'Avhuggen mening efter "börja"'],
-  ];
-  for (const [pattern, message] of mechanicalQualityPatterns) {
-    if (pattern.test(text)) {
-      violations.push(message);
-    }
-  }
-
-  const narrativeIntegrityIssues = detectNarrativeIntegrityIssues(text);
-  for (const issue of narrativeIntegrityIssues) {
-    violations.push(issue);
-  }
-
-  const genericBrokerPhraseCount = countGenericBrokerPhrases(text);
-  if (genericBrokerPhraseCount >= 2) {
-    violations.push(`För många generiska mäklarabstraktioner i huvudtexten (${genericBrokerPhraseCount} träffar)`);
-  }
-
-  // 1. Check forbidden phrases (filtered by writing style)
-  const exempt = getExemptPhrases(style);
-  for (const phrase of FORBIDDEN_PHRASES) {
-    if (exempt.has(phrase.toLowerCase())) continue;
-    if (lowerText.includes(phrase.toLowerCase())) {
-      violations.push(`Förbjuden fras: "${phrase}"`);
-    }
-  }
-
-  // 2. Check forbidden openings
-  if (lowerText.startsWith('välkommen')) {
-    violations.push('Börjar med "Välkommen" — börja med gatuadress');
-  }
-  if (lowerText.startsWith('här ')) {
-    violations.push('Börjar med "Här" — börja med gatuadress');
-  }
-  if (lowerText.startsWith('denna ') || lowerText.startsWith('dette ')) {
-    violations.push('Börjar med "Denna" — börja med gatuadress');
-  }
-  if (lowerText.startsWith('i ') && !lowerText.match(/^i [a-zåäö]+(gatan|vägen|stigen|gränd)/)) {
-    violations.push('Börjar med "I" — börja med gatuadress');
-  }
-
-  if (platform === 'hemnet') {
-    if (/^en\s+(etta|tvåa|trea|fyra|femma|villa|radhus|lägenhet)\s+om\s+\d+/i.test(firstSentence) && !/(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence)) {
-      violations.push('Generisk öppning utan tydlig stark detalj — första meningen måste kännas som publicerad mäklartext.');
-    }
-
-    if (lastSentence && /^\b(ica|coop|willys|hemköp|centrum|skola|förskola|resecentrum|centralstationen?)\b/i.test(lastSentence) && !/(promenad|buss|pendling|vardag|nära|runt hörnet|i kvarteret|på cykel)/i.test(lastSentence)) {
-      violations.push('Svagt lägesslut — sista meningen känns som uppräkning i stället för selektiv lägesprosa.');
-    }
-  }
-
-  // 3. "Det finns" / "Den har" repetition (max 1 allowed)
-  const detFinnsCount = (lowerText.match(/\bdet finns\b/g) || []).length;
-  const denHarCount = (lowerText.match(/\bden har\b/g) || []).length;
-  if (detFinnsCount > 1) {
-    violations.push(`"Det finns" upprepas ${detFinnsCount} gånger (max 1). Variera meningsstarter.`);
-  }
-  if (denHarCount > 2) {
-    violations.push(`"Den har" upprepas ${denHarCount} gånger (max 2). Variera meningsstarter.`);
-  }
-
-  // 4. "ligger X bort/meter/km" repetition (max 1 allowed)
-  const liggerCount = (lowerText.match(/\bligger\s+\d+/g) || []).length;
-  if (liggerCount > 1) {
-    violations.push(`"ligger [avstånd]" upprepas ${liggerCount} gånger (max 1). Variera avståndsformat.`);
-  }
-
-  // 5. Sentence start monotony: check if 3+ sentences start with same word
-  if (sentences.length >= 5) {
-    const starters: Record<string, number> = {};
-    for (const s of sentences) {
-      const firstWord = s.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-zåäö]/g, '');
-      if (firstWord && firstWord.length > 1) {
-        starters[firstWord] = (starters[firstWord] || 0) + 1;
-      }
-    }
-    for (const [word, count] of Object.entries(starters)) {
-      if (count >= 3 && !['brf', 'avgift'].includes(word)) {
-        violations.push(`Monoton meningsstart: "${word}" börjar ${count} meningar. Variera.`);
-      }
-    }
-  }
-
-  // 6. Emotional/summary ending detection
-  const last200 = lowerText.slice(-200);
-  const emotionalEndings = [
-    'kontakta oss', 'boka visning', 'tveka inte', 'hör av dig', 'för mer information',
-    'skapa minnen', 'drömboende', 'drömhem', 'välkommen hem',
-    'allt du behöver', 'allt man kan önska', 'ett hem att trivas i',
-    'detta gör bostaden', 'detta gör lägenheten', 'detta gör villan',
-    'sammanfattningsvis', 'kort sagt', 'allt sammantaget',
-  ];
-  for (const ending of emotionalEndings) {
-    if (last200.includes(ending)) {
-      violations.push(`Emotionellt/CTA-slut: "${ending}" — avsluta med LÄGE eller PRIS`);
-    }
-  }
-
-  // 7. "vilket" connector check (AI signature - max 1 allowed)
-  const vilketCount = (lowerText.match(/\bvilket\b/g) || []).length;
-  if (vilketCount > 1) {
-    violations.push(`"vilket" upprepas ${vilketCount} gånger (max 1). Dela upp i korta meningar.`);
-  }
-
-  const slashTerms = (text.match(/\b[A-Za-zÅÄÖåäö]+\s*\/\s*[A-Za-zÅÄÖåäö]+\b/g) || []).slice(0, 3);
-  for (const term of slashTerms) {
-    violations.push(`Osäker slash-terminologi i löptext: "${term}" — välj en konsekvent term.`);
-  }
-
-  return violations;
-}
-
-// Separat funktion för ordräkning (endast för improvedPrompt)
-function checkWordCount(text: string, platform: string, targetMin?: number, targetMax?: number): string[] {
-  const violations: string[] = [];
-  const wordCount = text.split(/\s+/).length;
-
-  // Använd användarens valda längd om den finns, annars plattformens standard
-  const minWords = targetMin || (platform === "hemnet" ? 180 : 200);
-  const maxWords = targetMax || (platform === "hemnet" ? 500 : 600);
-
-  if (wordCount < minWords) {
-    violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
-  }
-  if (wordCount > maxWords) {
-    violations.push(`För många ord: ${wordCount}/${maxWords} max`);
-  }
-  return violations;
-}
-
-function validateOptimizationResult(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number, style: WritingStyle = "balanced"): string[] {
-  const violations: string[] = [];
-  if (typeof result?.improvedPrompt === "string") {
-    if (isDispositionLikeOutput(result.improvedPrompt)) {
-      violations.push("Huvudtexten är en objektdisposition eller rå faktalista i stället för en löpande objektbeskrivning.");
-    }
-    violations.push(...findRuleViolations(result.improvedPrompt, platform, style));
-    violations.push(...checkWordCount(result.improvedPrompt, platform, targetMin, targetMax));
-  }
-  // Validera ALLA textfält för förbjudna fraser (inte ordräkning)
-  const extraFields = ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline'];
-  for (const field of extraFields) {
-    if (typeof result?.[field] === "string" && result[field].length > 0) {
-      const fieldViolations = findRuleViolations(result[field], platform, style);
-      for (const v of fieldViolations) {
-        violations.push(`[${field}] ${v}`);
-      }
-    }
-  }
-
-  for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
-    if (typeof result?.[field] === "string" && isDispositionLikeOutput(result[field])) {
-      violations.push(`[${field}] Är en disposition/faktalista i stället för färdig marknadstext.`);
-    }
-  }
-
-  const textFields = [result?.improvedPrompt, result?.socialCopy, result?.instagramCaption, result?.showingInvitation, result?.shortAd, result?.headline]
-    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-
-  const joinedText = textFields.join("\n").toLowerCase();
-  const outdoorTerms = ["balkong", "terrass", "altan", "uteplats"].filter((term) => joinedText.includes(term));
-  if (outdoorTerms.length > 1) {
-    violations.push(`Blandad uteplatsterminologi mellan textfält: ${outdoorTerms.join(", ")}`);
-  }
-
-  const riskNotes = Array.isArray(result?.analysis?.risk_notes)
-    ? result.analysis.risk_notes.join(" ").toLowerCase()
-    : "";
-  if (riskNotes.includes("oklar") && /\b(exakt|garanterat|säkerställt)\b/i.test(joinedText)) {
-    violations.push("Texten uttrycker för hög säkerhet trots markerad osäkerhet i analys/risk_notes.");
-  }
-
-  return violations;
 }
 
 // Post-processing: Rensa bort de 50 VANLIGASTA förbjudna fraser
@@ -1746,7 +981,6 @@ REGLER:
                 model: "gpt-5.2",
                 messages: [integrationPrompt, userPrompt],
                 max_completion_tokens: 4000,
-                temperature: 0.1, // Lower temperature for fact-safety
             });
             const integratedText = integrationCompletion.choices[0]?.message?.content;
             if (integratedText) {
@@ -1812,6 +1046,22 @@ function countWeakHemnetDetailSignals(text: string, platform: string): number {
 
 function getNonWordCountViolations(violations: string[]): string[] {
   return violations.filter((v) => !v.startsWith("För få ord") && !v.startsWith("För många ord"));
+}
+
+function checkWordCount(text: string, platform: string, targetMin?: number, targetMax?: number): string[] {
+  const violations: string[] = [];
+  const wordCount = text.split(/\s+/).length;
+  const minWords = targetMin || (platform === "hemnet" ? 180 : 200);
+  const maxWords = targetMax || (platform === "hemnet" ? 500 : 600);
+
+  if (wordCount < minWords) {
+    violations.push(`För få ord: ${wordCount}/${minWords} krävs`);
+  }
+  if (wordCount > maxWords) {
+    violations.push(`För många ord: ${wordCount}/${maxWords} max`);
+  }
+
+  return violations;
 }
 
 function validateMainMarketingText(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number, style: WritingStyle = "balanced"): string[] {
@@ -3278,16 +2528,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       console.log(`[Style] ${style} — ${FORBIDDEN_PHRASES.length - exemptCount} aktiva förbjudna fraser (${exemptCount} undantagna)`);
 
       // === REASONING EFFORT PER STIL ===
-      // Responses API med reasoning stödjer INTE temperature.
+      // Responses API med reasoning (o1/o3-modeller) stödjer INTE temperature.
       // Enda kontrollen är reasoning.effort: "low" | "medium" | "high"
-      // Alla stilar använder "high" för primär generering (mer tänkande = bättre resultat)
-      // Quality gate retry använder "medium" för att få annorlunda output
       const reasoningEffort: "low" | "medium" | "high" = "high";
 
-      // Temperature används BARA av sekundära steg (chat.completions.create):
-      // - Quality gate retry, expansion, surgical correction, improvement analysis
-      const secondaryTemperature = style === "factual" ? 0.2 : style === "selling" ? 0.45 : 0.4;
-      console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Reasoning effort: ${reasoningEffort}, Secondary temp: ${secondaryTemperature}`);
+      console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Reasoning effort: ${reasoningEffort}`);
 
       // Bildanalys om bilder finns
       let imageAnalysis = "";
@@ -3316,7 +2561,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             model: "gpt-5.2",
             messages: imageMessages,
             max_completion_tokens: 1000,
-            temperature: 0.3,
           });
 
           imageAnalysis = imageCompletion.choices[0]?.message?.content || "";
@@ -3500,7 +2744,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             model: "gpt-5.2",
             messages: planMessages,
             max_completion_tokens: 1500,
-            temperature: 0.2,
             response_format: { type: "json_object" },
           });
 
@@ -3667,12 +2910,12 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, temperature: 0.35, effort: "high" as const, exampleCount: 3, minimalFields: false },
-        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, temperature: 0.5, effort: "high" as const, exampleCount: 2, minimalFields: false },
+        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, effort: "high" as const, exampleCount: 3, minimalFields: false },
+        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, effort: "high" as const, exampleCount: 2, minimalFields: false },
       ];
       const runState = createListingRunState();
 
-      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean, temperature: number) => {
+      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
         const candidateExamples = matchedExamples.slice(0, Math.max(1, exampleCount));
         const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
         const fieldMinimizationInstruction = minimalFields
@@ -3681,7 +2924,6 @@ Fakta i fokus med naturlig rytm och professionell ton.
         const completion = await openai.responses.create({
           model: "gpt-5.2",
           reasoning: { effort },
-          temperature,
           max_output_tokens: 12000, // Prevent truncation
           input: [
             {
@@ -3767,7 +3009,6 @@ OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
           const retryAfterDispositionCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
-            temperature: 0.2, // Lower temp for factual retry
             input: [
               {
                 role: "developer",
@@ -3882,7 +3123,7 @@ KANDIDATRÄDDNING:
 
       for (const config of candidateConfigs) {
         try {
-          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields, config.temperature);
+          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
           candidatePool.push(candidate);
           addCandidateToRunState(runState, candidate);
           console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
@@ -3915,8 +3156,7 @@ KANDIDATRÄDDNING:
             "\n\nNÖDLÄGE:\n- Du måste nu leverera en färdig svensk objektsbeskrivning även om tidigare försök har misslyckats.\n- Prioritera robust leverans över perfektion.\n- Returnera ENDAST giltig JSON.\n- improvedPrompt måste innehålla 3-5 stycken sammanhängande löpande prosa.\n- Skriv aldrig disposition, lista, rådata, rubriker eller kolonrader.\n- Om underlaget är tunt ska du ändå skriva en trygg, saklig och publicerbar objektsbeskrivning utan att hitta på fakta.",
             "low",
             0,
-            true, // minimalFields för maximal stabilitet i nödläge
-            0.65
+            true // minimalFields för maximal stabilitet i nödläge
           );
 
           if (emergencyCandidate) {
@@ -4035,7 +3275,6 @@ Svara med JSON:
           const polishCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
-            temperature: 0.4, // Slightly higher temp for creative polish
             input: buildCandidatePolishRequestInput({
               cleanDisposition,
               cleanWritingPlan,
@@ -4192,7 +3431,6 @@ Svara med JSON:
               model: "gpt-5.2",
               messages: correctionMessages,
               max_completion_tokens: 4500,
-              temperature: 0.1, // Low temp for surgical precision
               response_format: { type: "json_object" },
             });
 
@@ -4293,7 +3531,6 @@ Svara med JSON:
                   { role: "user" as const, content: expansionUser },
                 ],
                 max_completion_tokens: 3000,
-                temperature: 0.5, // Balanced temp for creative but factual expansion
                 response_format: { type: "json_object" },
               });
 
@@ -4400,7 +3637,6 @@ Svara med JSON:
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
-            temperature: 0.1, // Very low temp for factual accuracy
             input: [
               {
                 role: "developer",
@@ -4594,7 +3830,6 @@ Svara med JSON:
           const brokerAuditCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
-            temperature: 0.2, // Low temp for consistent, high-quality audit
             input: [
               {
                 role: "developer",
@@ -4693,7 +3928,6 @@ Svara med JSON:
                 { role: "user" as const, content: rescueUser },
               ],
               max_completion_tokens: 5000,
-              temperature: 0.6, // Higher temp for creative rescue
               response_format: { type: "json_object" },
             });
 
@@ -4734,7 +3968,6 @@ Svara med JSON:
                 const brokerAuditRetry = await openai.responses.create({
                   model: "gpt-5.2",
                   reasoning: { effort: "medium" },
-                  temperature: 0.3, // Balanced temp for fair retry audit
                   input: buildFinalBrokerAuditRetryRequestInput({
                     cleanDisposition,
                     resultText: result.improvedPrompt,
@@ -4842,7 +4075,6 @@ Svara med JSON i formatet:
             model: "gpt-5.2",
             messages: improvementMessages,
             max_completion_tokens: 800,
-            temperature: 0.6, // Higher temp for insightful analysis
             response_format: { type: "json_object" },
           });
 
@@ -5024,7 +4256,6 @@ Svara med JSON i formatet:
 
       const rewriteCompletion = await openai.responses.create({
         model: "gpt-5.2",
-        temperature: 0.4, // Balanced temp for creative but controlled rewrite
         input: [
           {
             role: "developer",
@@ -5977,7 +5208,6 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       const completion = await openai.responses.create({
         model: "gpt-5.2",
         reasoning: { effort: "medium" },
-        temperature: 0.5, // Balanced temp for creative and relevant improvements
         input: [
           {
             role: "developer",
