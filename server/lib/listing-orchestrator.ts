@@ -2,15 +2,16 @@ import type { PlanType } from "@shared/schema";
 
 export type WritingStyle = "factual" | "balanced" | "selling";
 
-interface BlueprintInput {
+export interface BlueprintInput {
   plan: PlanType;
   platform: string;
   style: WritingStyle;
   targetWordMin: number;
   targetWordMax: number;
-  disposition: any;
+  disposition?: any;
   toneAnalysis?: any;
   writingPlan?: any;
+  personalStylePrompt?: string;
 }
 
 interface PlatformDirective {
@@ -226,9 +227,11 @@ export function buildListingGenerationBlueprint(input: BlueprintInput): ListingG
     platformDirective.closingStrategy,
     audience ? `Tänk på sannolik köpare: ${audience}.` : "Skriv för en bred svensk bostadsköpare utan att bli generisk.",
     "Varje stycke måste bära egen köparnytta eller konkret fakta; upprepning av kärnfakta är inte tillåten.",
+    "SPRÅKLIG INTEGRITET: Skriv alltid fullständiga och grammatiskt korrekta meningar. Undvik avhuggna ord, felaktiga radbrytningar eller korrupta tecken.",
     "Om underlaget är oklart ska texten bli försiktigare, inte mer fantasifull.",
+    input.personalStylePrompt ? `PERSONLIG STIL:\n${input.personalStylePrompt}` : "",
     collaborationModel.framing,
-  ];
+  ].filter(Boolean);
 
   return {
     plan: input.plan,

@@ -111,28 +111,34 @@ export function buildCandidatePolishRequestInput(params: {
   violations?: string[];
   currentScore?: number;
   targetMinWords?: number;
+  personalStylePrompt?: string;
+  propertyType?: string;
 }) {
   // Build comprehensive context for Polish
   const contextParts: string[] = [];
 
+  if (params.personalStylePrompt) {
+    contextParts.push(`ANVÄNDARENS PERSONLIGA STIL:\n${params.personalStylePrompt}`);
+  }
+
   if (params.intelligence) {
-    contextParts.push(`MÅLGRUPP: ${JSON.stringify(params.intelligence)}`);
+    contextParts.push(`MÅLGRUPP OCH KONTEXT:\n${JSON.stringify(params.intelligence)}`);
   }
 
   if (params.positioning) {
-    contextParts.push(`POSITIONERING: ${params.positioning}`);
+    contextParts.push(`POSITIONERING:\n${params.positioning}`);
   }
 
   if (params.cleanWritingPlan) {
-    contextParts.push(`WRITING PLAN (original strategi): ${JSON.stringify(params.cleanWritingPlan)}`);
+    contextParts.push(`WRITING PLAN (original strategi):\n${JSON.stringify(params.cleanWritingPlan)}`);
   }
 
   const violationContext = params.violations && params.violations.length > 0
-    ? `\n\nSPECIFIKA PROBLEM ATT FIXA:\n${params.violations.map(v => `- ${v}`).join('\n')}`
+    ? `\n\nSPECIFIKA FÖRBÄTTRINGSFÖRSLAG OCH PROBLEM:\n${params.violations.map(v => `- ${v}`).join('\n')}`
     : '';
 
   const scoreContext = params.currentScore
-    ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.9).toFixed(2)}.`
+    ? `\n\nNUVARANDE KVALITET: ${params.currentScore.toFixed(2)}/1.0. Mål: höja till minst ${Math.min(params.currentScore + 0.05, 0.95).toFixed(2)}.`
     : '';
 
   const wordContext = params.targetMinWords
@@ -142,35 +148,35 @@ export function buildCandidatePolishRequestInput(params: {
   return [
     {
       role: "developer" as const,
-      content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer.
+      content: `Du är en av Sveriges skickligaste fastighetsmäklare och språkredaktör med öga för detaljer för ${params.propertyType || "bostaden"}.
 
 ${contextParts.join('\n\n')}
 
 UPPGIFT:
-Förbättra specifika delar av objektbeskrivningen - behåll det som funkar, skriv om det som är svagt.
+Förbättra specifika delar av objektbeskrivningen - behåll det som funkar, skriv om det som är svagt eller kan bli ännu vassare.
 
 ANALYSMETOD:
-1. Läs igenom texten och JÄMFÖR med writing plan (är intentionen uppfylld?)
-2. Bevara starka stycken exakt som de är
-3. Skriv om svaga delar för att höja kvaliteten
-4. Behåll alla fakta korrekta
+1. Läs igenom texten och JÄMFÖR med writing plan och de specifika förbättringsförslagen.
+2. Bevara starka stycken exakt som de är.
+3. Skriv om svaga delar eller implementera smarta förbättringar från feedbacken.
+4. Behåll alla fakta korrekta.
+5. VIKTIGT: Bibehåll och förstärk användarens personliga stil.
 
-VAD SOM ÄR SVAGT (prioritet):${violationContext}${scoreContext}${wordContext}
+VAD SOM SKA FÖRBÄTTRAS:${violationContext}${scoreContext}${wordContext}
 
 FÖRBÄTTRA SÅ HÄR:
-- Första stycket ska vara starkt och konkret (inte generiskt)
-- Fixa mekanisk rytm - variera meningslängd och struktur
-- Gör svaga meningar mer mänskliga och mindre som listor
-- Selektiv betoning - ge de bästa detaljerna mer utrymme
-- Behåll naturligt styckeflöde
-- Ta hänsyn till målgruppen från intelligence
+- Första stycket ska vara oemotståndligt, konkret och personligt.
+- Fixa mekanisk rytm - variera meningslängd och struktur.
+- Gör svaga meningar mer mänskliga och mindre som listor.
+- Selektiv betoning - ge de bästa detaljerna mer utrymme.
+- Behåll naturligt styckeflöde.
+- REPARERA SPRÅKET: Fixa avhuggna meningar, trasiga ord och konstiga teckenföljder.
 
 DU FÅR INTE:
-- Ändra fakta eller hitta på nya detaljer
-- Göra texten mer klyschig
-- Förkorta om det inte behövs (behåll eller öka ordantal)
-- Skriva om hela texten - bara de svaga delarna
-- Förlora de viktigaste säljargumenten från positioning
+- Ändra fakta eller hitta på nya detaljer.
+- Göra texten mer klyschig (undvik AI-ord).
+- Förkorta om det inte behövs.
+- Skriva om hela texten - gör kirurgiska, men effektiva förbättringar.
 
 Svara med JSON: { "improvedPrompt": "...", "headline": "...", "changesMade": "kort beskrivning av vad som ändrades" }`
     },

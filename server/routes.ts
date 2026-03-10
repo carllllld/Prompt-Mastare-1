@@ -1,4 +1,4 @@
-﻿import type { Express } from "express";
+import type { Express } from "express";
 import type { Server } from "http";
 import Stripe from "stripe";
 import { createClient, type RedisClientType } from "redis";
@@ -1687,47 +1687,66 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   return cleaned.trim() || null;
 }
 
-function finalizeMainMarketingText(
+async function finalizeMainMarketingText(
   text: unknown,
   platform: string,
   styleProfile?: any,
   style: WritingStyle = "balanced",
-  options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean }
-): string | null {
+  options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean },
+  disposition?: any
+): Promise<string | null> {
   const sanitized = sanitizeGeneratedMarketingField(text, styleProfile, style, options);
   if (!sanitized) return null;
 
   let finalized = sanitized;
 
   if (platform === "hemnet") {
-    const filteredSentences = finalized
-      .split(/(?<=[.!?])\s+/)
-      .map((sentence) => sentence.trim())
-      .filter(Boolean)
-      .filter((sentence) => {
+    const sentences = finalized.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    const technicalSentences = sentences.filter(sentence => {
         const lower = sentence.toLowerCase();
+        return /^bostaden har energiklass\s+[a-g]/i.test(lower) || 
+               /^energiklass(?:en)?\s+[a-g]/i.test(lower) || 
+               /^fiber\s+är\s+installerat/i.test(lower) ||
+               (/^uppvärmning sker via/i.test(lower) && sentence.split(/\s+/).length <= 8);
+    });
 
-        if (/^bostaden har energiklass\s+[a-g](?:\s+och\s+fiber\s+är\s+installerat)?\.?$/i.test(sentence)) {
-          return false;
-        }
-        if (/^energiklass(?:en)?\s+[a-g]\.?$/i.test(sentence)) {
-          return false;
-        }
-        if (/^fiber\s+är\s+installerat\.?$/i.test(sentence)) {
-          return false;
-        }
-        if (/^parkering med laddplats för elbil\.?$/i.test(sentence)) {
-          return false;
-        }
-        if (/^uppvärmning sker via\s+/i.test(lower) && sentence.split(/\s+/).length <= 8) {
-          return false;
-        }
-        return true;
-      });
+    if (technicalSentences.length > 0) {
+        const mainTextSentences = sentences.filter(s => !technicalSentences.includes(s));
+        const mainText = mainTextSentences.join(" ");
 
-    finalized = filteredSentences.join(" ").replace(/\s{2,}/g, " ").trim();
-    if (!finalized) return null;
-    finalized = sanitizeGeneratedMarketingField(finalized, styleProfile, style, options) || finalized;
+        const integrationPrompt = {
+            role: "system" as const,
+            content: `Du är en expert på att väva in tekniska detaljer i en befintlig text. Ditt jobb är att på ett naturligt och smidigt sätt infoga informationen nedan i huvudtexten. Ändra så lite som möjligt i den befintliga texten.
+
+REGLER:
+- Infoga informationen där den passar bäst tematiskt (t.ex. vid teknisk beskrivning eller mot slutet).
+- Omformulera informationen så att den smälter in i textens ton och stil.
+- Ändra inte i texten i övrigt.
+- SÄKERSTÄLL FAKTA: Använd endast den information som tillhandahålls.`
+        };
+        const userPrompt = {
+            role: "user" as const,
+            content: `HUVUDTEXT:\n${mainText}\n\nTEKNISK INFORMATION ATT VÄVA IN:\n- ${technicalSentences.join("\n- ")}${disposition ? `\n\nDISPOSITION FÖR KONTROLL:\n${JSON.stringify(disposition)}` : ""}`
+        };
+
+        try {
+            const integrationCompletion = await openai.chat.completions.create({
+                model: "gpt-5.2",
+                messages: [integrationPrompt, userPrompt],
+                max_completion_tokens: 4000,
+                temperature: 0.1, // Lower temperature for fact-safety
+            });
+            const integratedText = integrationCompletion.choices[0]?.message?.content;
+            if (integratedText) {
+                finalized = sanitizeGeneratedMarketingField(integratedText, styleProfile, style, options) || finalized;
+            }
+        } catch (e) {
+            console.warn("[Hemnet Finalize] AI integration failed, falling back to filtering:", e);
+            finalized = mainText;
+        }
+    } else {
+        finalized = sentences.join(" ");
+    }
   }
 
   return finalized.trim() || null;
@@ -1842,17 +1861,27 @@ function hasCorruptedWordArtifacts(text: string): boolean {
 function repairMechanicalBrokerArtifacts(text: string): string {
   if (!text) return text;
 
-  return text
-    .replace(/\b[Ee]nergiklass(?:en)?\s+är\s+([A-G])\.\s*Fiber\s+är\s+installerat\b/g, 'Bostaden har energiklass $1 och fiber är installerat')
-    .replace(/\b[Ee]nergiklass(?:en)?\s+är\s+Fiber\s+är\s+installerat\b/g, 'Fiber är installerat')
-    .replace(/\b[Pp]arkering\s+har\s+laddplats\s+för\s+elbil\b/g, 'Parkering med laddplats för elbil')
-    .replace(/\b[Pp]arkering\s+har\s+(garage|carport|plats)\b/g, 'Parkering med $1')
-    .replace(/(^|[.!?]\s+)([A-ZÅÄÖ][A-Za-zÅÄÖåäö0-9&' -]{1,60})\s+ligger\s+nära\s+när\s+det\s+passar\s+med\s+en\s+måltid\b/g, '$1I samma riktning finns $2 när det passar att äta ute')
-    .replace(/(när det passar med en måltid)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2')
-    .replace(/(när det passar med en måltid)\s+(Buss\s+tar)/g, '$1. $2')
-    .replace(/(när det passar att äta ute)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2')
-    .replace(/(när det passar att äta ute)\s+(Buss\s+tar)/g, '$1. $2')
-    .replace(/\bBuss\s+tar\s+cirka\s+(\d+\s+minuter[^.!?\n]*)/g, 'Med buss tar det cirka $1');
+  let repaired = text;
+
+  // Combine energy class and fiber into a single, more natural sentence.
+  repaired = repaired.replace(/\b[Ee]nergiklass(?:en)?\s+är\s+([A-G])\.\s*Fiber\s+är\s+installerat\b/g, 'Bostaden har energiklass $1 och fiber är installerat');
+  
+  // Handle standalone energy class sentences.
+  repaired = repaired.replace(/\b[Ee]nergiklass(?:en)?\s+är\s+([A-G])\b/g, 'Bostaden har energiklass $1');
+
+  // Make parking descriptions more concise.
+  repaired = repaired.replace(/\b[Pp]arkering\s+har\s+laddplats\s+för\s+elbil\b/g, 'Parkering med laddplats för elbil');
+  repaired = repaired.replace(/\b[Pp]arkering\s+har\s+(garage|carport|plats)\b/g, 'Parkering med $1');
+
+  // Improve phrasing for nearby amenities.
+  repaired = repaired.replace(/(^|[.!?]\s+)([A-ZÅÄÖ][A-Za-zÅÄÖåäö0-9&' -]{1,60})\s+ligger\s+nära\s+när\s+det\s+passar\s+med\s+en\s+måltid\b/g, '$1I samma riktning finns $2 när det passar att äta ute');
+  
+  // Fix sentence fragments related to bus routes.
+  repaired = repaired.replace(/(när det passar med en måltid)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2');
+  repaired = repaired.replace(/(när det passar att äta ute)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2');
+  repaired = repaired.replace(/\bBuss\s+tar\s+cirka\s+(\d+\s+minuter[^.!?\n]*)/g, 'Med buss tar det cirka $1');
+
+  return repaired;
 }
 
 function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
@@ -2714,87 +2743,70 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
 };
 
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
-const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare. Skriv en Hemnet-text som är klyschfri, konkret, mänsklig och publiceringsnära.
+const HEMNET_TEXT_PROMPT = `Du är en av Sveriges absolut bästa fastighetsmäklare. Ditt uppdrag är att skriva en Hemnet-text som är så övertygande, professionell och klyschfri att den sätter en ny standard för branschen.
 
-HÅRDA LÄNGDKRAV (MÅSTE FÖLJAS):
-- MINIMUM 300 ord - aldrig kortare
-- MÅL: 350-400 ord för optimal annons
-- MAXIMUM 450 ord
-- Om du skriver färre än 300 ord är texten underkänd och måste skrivas om
-- Räkna orden: öppning ~80-100 ord, planlösning ~80-100 ord, kök/bad ~60-80 ord, uteplats ~40-60 ord, läge ~60-80 ord
+SHOW, DON'T TELL (KRITISKT):
+- Istället för "fint ljusinsläpp", skriv: "Solen flödar in från tre stora fönster i söderläge och speglar sig i den nyslipade parketten."
+- Istället för "bra förvaring", skriv: "En hel garderobsvägg i sovrummet och ett källarförråd på 6 kvm löser alla förvaringsbehov."
+- Omvandla ALLA adjektiv till konkreta, verifierbara observationer.
+
+LEVANDE BESKRIVNING:
+- Beskriv bostaden ur perspektivet av någon som bor där. Hur känns det att dricka morgonkaffet på balkongen? Hur är arbetsflödet i köket?
+- Måla upp en bild av vardagslivet.
 
 KRAV:
-- Utgå bara från dispositionen och verifierbara fakta.
-- Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
-- Om dispositionen innehåller starka, sinnliga men verifierbara kvaliteter som söderläge, kvällssol, uteplats, terrass, lugnt läge, insynsskydd eller utsikt ska öppningen helst konkretisera minst en sådan kvalitet i faktisk situation i stället för att fastna i allmänna konstateranden.
-- Om stark uteplats, solläge, utsikt, takhöjd, köksrenovering eller lugnt läge finns ska öppningen kännas som början på en publicerad annons, inte som sammanställd fakta. Börja i upplevelsen eller den starkaste konkreta detaljen, väv därefter in bostadstyp/storlek naturligt.
-- För villor och radhus: prioritera uteplats, solläge, trädgård, sällskapsytor och kök före tekniska bihang. För lägenheter: prioritera ljus, balkong/uteplats, planlösning, kök och läge.
-- Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
-- Varje mening ska tillföra ny information.
-- Terminologi måste vara konsekvent genom hela texten.
-- Om underlaget är motsägelsefullt eller oklart: skriv neutralt eller utelämna hellre än att chansa.
-- Undvik AI-ton, checklistekänsla och mekanisk rumsuppräkning.
-- Ge mer utrymme åt 1-2 verkliga styrkor och mindre åt standarddetaljer.
-- Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
-- Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
-- I lägesstycket: välj hellre 2-3 relevanta närhetsfakta med köparnytta än att nämna många namn. Bind ihop service, kommunikation och vardag på naturlig svenska.
-- Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
-- Undvik kantiga formuleringar som låter tekniska eller interna, till exempel "fungerande vardagslogistik", "är registrerad" eller liknande administrativa konstruktioner.
-- Sista stycket ska handla om läge. Ingen uppmaning, ingen känsloklyscha.
+- Utgå ALLTID från dispositionen. Hitta aldrig på fakta.
+- Öppningen är A och O. De första två meningarna måste omedelbart fånga en stressad Hemnet-scrollare med den mest unika och attraktiva egenskapen hos bostaden.
+- Prioritera enligt följande: 1. Uteplats/Solläge/Utsikt, 2. Sociala ytor/Planlösning, 3. Kök/Badrum, 4. Läge.
+- Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
+- Undvik mekanisk uppräkning. Väv in tekniska detaljer (energiklass, fiber) i en naturlig mening, eller utelämna dem om de stör flödet.
+- Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
 
 UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, här kan du, präglas av, genomsyras av, plats för avkoppling, faciliteter.
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.
 
-SPRÅK:
-- Naturlig svensk mäklarprosa.
-- Variera meningslängd och meningsstarter.
-- Max 1 bisats per stycke.
-- Inga snedstreck för att dölja osäkerhet.
-- Inga trasiga ord eller halvfärdiga formuleringar.
-
-EXTRA TEXTER:
-- Generera också headline, instagramCaption, showingInvitation, shortAd och socialCopy.
-- De ska kännas som skrivna av samma mäklare men anpassade till respektive format.
+EXTRA TEXTER (anpassa för varje format):
+- headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
+- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Ställ en fråga på slutet för att uppmuntra till engagemang.
+- showingInvitation: Tydlig, informativ och professionell. Fokus på fakta och praktisk information om visningen.
+- shortAd: För kortare annonsformat som t.ex. tidningsannonser. Fokusera på de 2-3 starkaste säljargumenten.
+- socialCopy: Anpassad för delning på sociala medier. Lite mer säljande och med en tydlig call-to-action.
 
 OUTPUT:
-Svara med JSON och fyll alla fält.`;
+Svara med JSON och fyll alla fält.`;;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk fastighetsmäklare. Skriv en längre objektbeskrivning för Booli eller egen mäklarsida: konkret, trovärdig, mänsklig och detaljrik utan AI-klyschor.
+const BOOLI_TEXT_PROMPT_WRITER = `Du är en av Sveriges absolut bästa fastighetsmäklare. Ditt uppdrag är att skriva en objektbeskrivning som är så övertygande, professionell och klyschfri att den sätter en ny standard för branschen.
+
+SHOW, DON'T TELL (KRITISKT):
+- Istället för "fint ljusinsläpp", skriv: "Solen flödar in från tre stora fönster i söderläge och speglar sig i den nyslipade parketten."
+- Istället för "bra förvaring", skriv: "En hel garderobsvägg i sovrummet och ett källarförråd på 6 kvm löser alla förvaringsbehov."
+- Omvandla ALLA adjektiv till konkreta, verifierbara observationer.
+
+LEVANDE BESKRIVNING:
+- Beskriv bostaden ur perspektivet av någon som bor där. Hur känns det att dricka morgonkaffet på balkongen? Hur är arbetsflödet i köket?
+- Måla upp en bild av vardagslivet.
 
 KRAV:
-- Utgå bara från dispositionen och verifierbara fakta.
-- Öppna som en mäklare, inte som en objektrad: adress får gärna nämnas direkt men öppningen måste prioritera 1-2 starkaste konkreta säljpunkterna.
-- Om dispositionen innehåller starka, sinnliga men verifierbara kvaliteter som söderläge, kvällssol, uteplats, terrass, lugnt läge, insynsskydd eller utsikt ska öppningen helst konkretisera minst en sådan kvalitet i faktisk situation i stället för att fastna i allmänna konstateranden.
-- Öppningen ska kännas publicerad och selektiv: lyft det som faktiskt bär annonsen först och låt svagare detaljfakta komma senare eller falla bort om de stör rytmen.
-- Storlek, rum och andra grundfakta får vävas in naturligt i öppningen eller i mening två om det ger bättre rytm.
-- Varje mening ska tillföra ny information.
-- Terminologi måste vara konsekvent genom hela texten.
-- Om underlaget är motsägelsefullt eller oklart: skriv neutralt eller utelämna hellre än att chansa.
-- Undvik mekanisk rumsuppräkning. Ge mer utrymme åt verkliga styrkor.
-- Upprepa inte samma mått/fakta tätt inpå varandra. Boarea, antal rum och andra nyckeltal nämns normalt en gång om de inte behövs igen.
-- Skriv aldrig närområde som rå lista med verksamheter, parenteser eller radvisa punktfakta. Växla om till löpande prosa med 2-4 mest relevanta närhetsfakta.
-- Lägesstycket ska förklara hur vardagen fungerar i området, inte bara rada upp namn. Välj de mest relevanta platserna och bind ihop dem med transport eller service på naturligt sätt.
-- Enstaka faktarader som "Energiklass är B" eller "Fiber är installerat" ska vävas in naturligt i meningar eller utelämnas om de inte lyfter helheten.
-- Undvik kantiga formuleringar som låter tekniska eller interna, till exempel "fungerande vardagslogistik", "är registrerad" eller liknande administrativa konstruktioner.
-- Avsluta med läge och pris om pris finns.
+- Utgå ALLTID från dispositionen. Hitta aldrig på fakta.
+- Öppningen är A och O. De första två meningarna måste omedelbart fånga en stressad scrollare med den mest unika och attraktiva egenskapen hos bostaden.
+- Prioritera enligt följande: 1. Uteplats/Solläge/Utsikt, 2. Sociala ytor/Planlösning, 3. Kök/Badrum, 4. Läge.
+- Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
+- Undvik mekanisk uppräkning. Väv in tekniska detaljer (energiklass, fiber) i en naturlig mening, eller utelämna dem om de stör flödet.
+- Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
 
 UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, här kan du, präglas av, genomsyras av, plats för avkoppling, faciliteter.
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.
 
-SPRÅK:
-- Naturlig svensk mäklarprosa.
-- Variera meningslängd och meningsstarter.
-- Max 1 bisats per stycke.
-- Inga snedstreck för att dölja osäkerhet.
-- Inga trasiga ord eller halvfärdiga formuleringar.
-
-EXTRA TEXTER:
-- Generera också headline, instagramCaption, showingInvitation, shortAd och socialCopy.
-- De ska kännas som skrivna av samma mäklare men anpassade till respektive format.
+EXTRA TEXTER (anpassa för varje format):
+- headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
+- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Ställ en fråga på slutet för att uppmuntra till engagemang.
+- showingInvitation: Tydlig, informativ och professionell. Fokus på fakta och praktisk information om visningen.
+- shortAd: För kortare annonsformat som t.ex. tidningsannonser. Fokusera på de 2-3 starkaste säljargumenten.
+- socialCopy: Anpassad för delning på sociala medier. Lite mer säljande och med en tydlig call-to-action.
 
 OUTPUT:
-Svara med JSON och fyll alla fält.`;
+Svara med JSON och fyll alla fält.`;;
 
 // Faktagranskning med kirurgisk korrigering — fixa BARA felen, bevara allt rätt
 const FACT_CHECK_PROMPT = `
@@ -3609,6 +3621,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
         disposition: cleanDisposition,
         toneAnalysis: cleanToneAnalysis,
         writingPlan: cleanWritingPlan,
+        personalStylePrompt,
       });
       const blueprintDeveloperAddendum = buildBlueprintDeveloperAddendum(resolvedBlueprint);
       const blueprintUserAddendum = buildBlueprintUserAddendum(resolvedBlueprint);
@@ -3661,8 +3674,9 @@ KRITISKA KVALITETSKRAV FÖR improvedPrompt:
 - Nämn inte samma boarea eller annan nyckelfakta två gånger tätt inpå varandra.
 - Skriv aldrig restauranger, butiker, skolor eller kommunikationer som rå lista, parentesrad eller staplade kortmeningar. Omvandla till naturlig mäklarprosa.
 - Lägesstycket ska kännas selektivt: välj de mest relevanta platserna och koppla dem till vardag, pendling eller närservice i naturlig prosa.
-- Undvik mekaniska meningar som "Energiklass är B". Skriv naturligare eller utelämna svaga detaljfakta om de stör rytmen.
+- Undvik mekaniska meningar som "Energiklass är B". Skriv naturlugare eller utelämna svaga detaljfakta om de stör rytmen.
 - Texten måste låta som publicerad svensk mäklare, inte som sammanställd rådata.
+- NARRATIV INTEGRITET: Skriv alltid fullständiga och grammatiskt korrekta meningar. Undvik avhuggna ord, felaktiga radbrytningar eller korrupta tecken. Om du märker att du håller på att bryta en mening, avsluta den ordentligt innan du fortsätter.
 
 OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
 - disposition
@@ -3792,7 +3806,7 @@ KRAV FÖR DETTA FÖRSÖK:
           }
         }
 
-        let sanitizedPrompt = finalizeMainMarketingText(candidateResult.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+        let sanitizedPrompt = await finalizeMainMarketingText(candidateResult.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
         if (!sanitizedPrompt || isDispositionLikeOutput(sanitizedPrompt)) {
           try {
             const rescueCandidateCompletion = await openai.responses.create({
@@ -3807,6 +3821,7 @@ KANDIDATRÄDDNING:
 - Du får nu en nästan användbar text som måste räddas.
 - Skriv om den till färdig svensk objektsbeskrivning i löpande prosa.
 - Behåll fakta, ta bort disposition/listkänsla, gör öppningen mänsklig och konkret.
+- REPARERA SPRÅKET: Fixa avhuggna meningar, trasiga ord och konstiga teckenföljder. Se till att texten flyter naturligt.
 - Returnera endast JSON med improvedPrompt.`
                 },
                 {
@@ -3819,7 +3834,7 @@ KANDIDATRÄDDNING:
             });
 
             const rescuedRaw = safeJsonParse(rescueCandidateCompletion.output_text || "{}");
-            const rescuedText = finalizeMainMarketingText(extractGeneratedMarketingText(rescuedRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+            const rescuedText = await finalizeMainMarketingText(extractGeneratedMarketingText(rescuedRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
             if (rescuedText && !isDispositionLikeOutput(rescuedText)) {
               candidateResult = { ...candidateResult, ...rescuedRaw, improvedPrompt: rescuedText };
               sanitizedPrompt = rescuedText;
@@ -3924,7 +3939,7 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
           });
 
           const emergencyRaw = safeJsonParse(emergencyCompletion.output_text || "{}");
-          const emergencyText = finalizeMainMarketingText(extractGeneratedMarketingText(emergencyRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+          const emergencyText = await finalizeMainMarketingText(extractGeneratedMarketingText(emergencyRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
           if (emergencyText && !isDispositionLikeOutput(emergencyText)) {
             emergencyResult = {
               ...emergencyRaw,
@@ -3971,6 +3986,7 @@ Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivni
       }
 
       let judgeChoiceLabel: string | null = null;
+      let judgeSuggestions: string[] = [];
       if (candidatePool.length > 1) {
         try {
           const judgeCompletion = await openai.responses.create({
@@ -3990,7 +4006,7 @@ Välj den text som bäst uppfyller ALLT nedan:
 - innehåller inga AI-klyschor eller faktalistekänsla
 
 Svara med JSON:
-{"chosen_label":"label","reason":"kort motivering"}`
+{"chosen_label":"label", "reason":"kort motivering", "improvement_suggestions": ["vad kan göras ännu bättre?"]}`
               },
               {
                 role: "user",
@@ -4004,12 +4020,13 @@ Svara med JSON:
                 })), null, 2)
               }
             ],
-            max_output_tokens: 800,
+            max_output_tokens: 1000,
             text: { format: { type: "json_object" } }
           });
 
           const judged = safeJsonParse(judgeCompletion.output_text || "{}");
           judgeChoiceLabel = typeof judged?.chosen_label === "string" ? judged.chosen_label : null;
+          judgeSuggestions = Array.isArray(judged?.improvement_suggestions) ? judged.improvement_suggestions : [];
         } catch (e) {
           console.warn("[Step 3 Judge] Candidate ranking failed, using local scoring:", e);
         }
@@ -4062,12 +4079,15 @@ Svara med JSON:
               cleanDisposition,
               cleanWritingPlan,
               result,
-              // NEW: Pass full context so Polish knows what was important
               intelligence: cleanToneAnalysis,
               positioning: competitorAnalysis,
-              violations: nonWordCountViolations,
+              // Combine automatic violations with judge's smart feedback
+              violations: [...nonWordCountViolations, ...judgeSuggestions],
               currentScore: selectedCandidate.qualityScore,
               targetMinWords: Math.max(selectedCandidate.wordCount, minimumPublishableWordMin),
+              // NEW: Pass style context
+              personalStylePrompt,
+              propertyType: resolvedBlueprint.propertyType,
             }),
             max_output_tokens: 5000,
             text: { format: { type: "json_object" } }
@@ -4077,7 +4097,7 @@ Svara med JSON:
             outputText: polishCompletion.output_text,
             parseJson: safeJsonParse,
             extractMarketingText: extractGeneratedMarketingText,
-            finalizeText: (value) => finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }),
+            finalizeText: async (value) => await finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition),
           });
           if (polishedText) {
             const { polishedResult, polishAttemptSnapshot, polishEvaluationInput } = buildCandidatePolishOutcome({
@@ -4129,7 +4149,7 @@ Svara med JSON:
 
       // STEG 4: Post-processing — rensa förbjudna fraser + lägg till stycken
       if (result.improvedPrompt) {
-        result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+        result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
         strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       }
       const protectedBaselineText = result.improvedPrompt || "";
@@ -4187,49 +4207,20 @@ Svara med JSON:
               violations: textViolations,
               text: result.improvedPrompt || "",
             });
-            const surgicalRepairAddendum = buildRepairPromptAddendum(surgicalRepairStrategy);
+            const { system: surgicalSystem, user: surgicalUser } = buildSpecializedRepairPrompt(
+              surgicalRepairStrategy.primary, 
+              result.improvedPrompt || "", 
+              textViolations,
+              {
+                styleProfile: personalStyle?.styleProfile,
+                writingStyle: style,
+                propertyType: resolvedBlueprint.propertyType,
+                personalStylePrompt
+              }
+            );
             const correctionMessages = [
-              {
-                role: "system" as const,
-                content: `Du är en kirurgisk korrekturläsare för svenska fastighetstexter.
-TEXTSTIL: ${style === "factual" ? "Faktabaserad — INGA beskrivande adjektiv alls" : style === "selling" ? "Säljande — beskrivande ord OK om de stöds av fakta (genomtänkt, smakfullt, elegant etc)" : "Balanserad — milda beskrivningar OK om de stöds av fakta"}
-
-KONTEXT:
-${cleanWritingPlan ? `WRITING PLAN: ${JSON.stringify(cleanWritingPlan)}` : ''}
-${cleanToneAnalysis ? `MÅLGRUPP: ${JSON.stringify(cleanToneAnalysis)}` : ''}
-
-DITT JOBB: Ersätt EXAKT de felaktiga fraserna med korrekta ersättningar. Ändra INGET annat.
-
-REGLER:
-1. Kopiera HELA texten exakt som den är
-2. Byt BARA ut de markerade felen — rör INTE resten
-3. Om en fras ska tas bort: ta bort den och städa meningen grammatiskt
-4. Om en fras ska ersättas: byt ut den och behåll meningsstrukturen
-5. Behåll ALLA styckebrytningar (\n\n) exakt som de är
-6. Lägg ALDRIG till nya meningar eller information
-7. Om texten innehåller trasiga ord eller avhuggna svenska ordformer måste du återställa dem till korrekt svenska
-8. Svara med JSON: {"corrected_text": "hela texten med bara felen fixade"}
-
-ERSÄTTNINGSTABELL:
-- "erbjuder" → "har"
-- "bjuder på" → "har"
-- "generös/generösa/generöst" → ta bort ordet, använd exakt mått om det finns
-- "vilket" → dela meningen i två vid "vilket": "X, vilket Y" → "X. Y"
-- "för den som" → ta bort hela frasen
-- "fantastisk/fantastiskt" → ta bort
-- "perfekt" → "passar bra" eller ta bort
-- "ljus och luftig" → "ljus"
-- "stilrent och modernt" → "modernt"
-- Alla "X och Y"-adjektivpar → behåll bara det första
-- "Det finns även/också" → börja med vad som finns istället
-- Trasiga ord som "södterass", "välsköför att", "användningssäför att" måste korrigeras till korrekt svenska ord
-
-${surgicalRepairAddendum}`,
-              },
-              {
-                role: "user" as const,
-                content: `ORIGINALTEXT (ändra BARA de markerade felen, behåll allt annat exakt):\n\n${result.improvedPrompt}\n\nFEL SOM MÅSTE FIXAS (${textViolations.length} st):\n${textViolations.map((v, i) => `${i + 1}. ${v}`).join("\n")}`,
-              },
+              { role: "system" as const, content: surgicalSystem },
+              { role: "user" as const, content: surgicalUser },
             ];
 
             const correctionCompletion = await openai.chat.completions.create({
@@ -4250,7 +4241,7 @@ ${surgicalRepairAddendum}`,
               const correctionShortensTooMuchNearMinimum = correctedWords < originalWords - 8 && isNearPublishableMinimum;
 
               if (wordDiff / originalWords < 0.3) {
-                const sanitizedCorrected = finalizeMainMarketingText(corrected.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                const sanitizedCorrected = await finalizeMainMarketingText(corrected.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
                 if (sanitizedCorrected) {
                   const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
                   const sanitizedCorrectedWordCount = sanitizedCorrected.split(/\s+/).filter(Boolean).length;
@@ -4284,7 +4275,7 @@ ${surgicalRepairAddendum}`,
               } else {
                 console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
                 // Kör ändå cleanForbiddenPhrases som fallback
-                result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+                result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
               }
             }
           }
@@ -4306,51 +4297,28 @@ ${surgicalRepairAddendum}`,
             text: result.improvedPrompt || "",
             shortfallWords: shortfall,
           });
-          const expansionRepairAddendum = buildRepairPromptAddendum(expansionRepairStrategy);
+          const { system: expansionSystem, user: expansionUser } = buildSpecializedRepairPrompt(
+            expansionRepairStrategy.primary, 
+            result.improvedPrompt || "", 
+            originalNonWordViolations,
+            {
+              styleProfile: personalStyle?.styleProfile,
+              writingStyle: style,
+              propertyType: resolvedBlueprint.propertyType,
+              personalStylePrompt
+            }
+          );
 
           for (let attempt = 1; attempt <= maxAttempts && shortfall > 0; attempt++) {
             console.log(`[Step 5b] Text too short: ${currentWordCount} words, publishable min ${minimumPublishableWordMin}, requested min ${targetWordMin}. Expanding (attempt ${attempt}/${maxAttempts})...`);
 
             try {
-              const expandMessages = [
-                {
-                  role: "system" as const,
-                  content: `Du är en erfaren svensk mäklare. Du ska FÖRBÄTTRA OCH UTÖKA en befintlig objektbeskrivning så den når rätt längd och blir mer publiceringsklar.
-
-TEXTSTIL: ${style === "factual" ? "Faktabaserad — bara fakta, inga adjektiv, korta meningar" : style === "selling" ? "Säljande — lyft styrkor med konkreta fakta, beskrivande ord OK om de stöds av fakta" : "Balanserad — professionell ton, fakta i fokus med naturlig rytm"}
-
-KONTEXT:
-${cleanWritingPlan ? `WRITING PLAN: ${JSON.stringify(cleanWritingPlan)}` : ''}
-${cleanToneAnalysis ? `MÅLGRUPP: ${JSON.stringify(cleanToneAnalysis)}` : ''}
-
-REGLER:
-1. Du FÅR skriva om lokala partier för bättre rytm, men ska bevara alla korrekta fakta
-2. Förbättra särskilt svag öppning, upprepade fakta, mekaniska faktarader och listig närområdestext om sådant finns
-3. LÄGG TILL nya meningar med FAKTA från dispositionen som saknas i texten
-4. Varje ny mening = nytt faktum eller en tydlig förbättring av flödet med samma fakta 
-5. Infoga eller skriv om på RÄTT plats i texten (kök-detaljer vid kök-stycket osv)
-6. Hitta ALDRIG på fakta — använd BARA dispositionen
-7. Inga förbjudna ord: erbjuder, bjuder på, generös, vilket, välkommen, präglas av, här finns
-8. Texten ska i första hand nå ${targetWordMin} ord, men MÅSTE minst nå ${minimumPublishableWordMin} ord om dispositionen inte räcker längre
-9. Om nuvarande text är kraftigt för kort ska du lägga till flera nya faktameningar och nya stycken tills miniminivån nås
-10. Nya meningar ska matcha TEXTSTILEN ovan
-11. Skriv närområde som naturlig prosa, inte som rå lista med butiker/restauranger i parentes eller egna korta rader
-12. Undvik att upprepa boarea, antal rum eller andra nyckeltal i onödan
-13. Ersätt kantiga eller administrativa formuleringar med naturlig mäklarprosa. Skriv till exempel inte "fungerande vardagslogistik", "är registrerad" eller liknande tekniska formuleringar
-14. Om underlaget har stark uteplats-, solläges- eller lugn/läges-kvalitet ska dessa gärna lyftas mer konkret och sammanhållet, särskilt i öppningen eller tidigt i texten
-15. Svara med JSON: {"expanded_text": "hela den förbättrade och utökade texten med \n\n mellan stycken"}
-
-${expansionRepairAddendum}`,
-                },
-                {
-                  role: "user" as const,
-                  content: `NUVARANDE TEXT (${currentWordCount} ord — behöver helst nå ${targetWordMin} ord och minst ${minimumPublishableWordMin} ord):\n\n${result.improvedPrompt}\n\nSAKNADE ORD TILL PUBLICERBAR MINNIVÅ: ${shortfall}\n\nFÖRBÄTTRA SÄRSKILT OM DET FINNS I TEXTEN:\n- administrativ öppning\n- upprepade mått/fakta\n- rådata-listor om läge eller service\n- korta mekaniska faktarader\n\nDISPOSITION (använd fakta härifrån för att utöka):\n${JSON.stringify(cleanDisposition, null, 2)}`,
-                },
-              ];
-
               const expandCompletion = await openai.chat.completions.create({
                 model: "gpt-5.2",
-                messages: expandMessages,
+                messages: [
+                  { role: "system" as const, content: expansionSystem },
+                  { role: "user" as const, content: expansionUser },
+                ],
                 max_completion_tokens: 3000,
                 temperature: secondaryTemperature,
                 response_format: { type: "json_object" },
@@ -4360,7 +4328,7 @@ ${expansionRepairAddendum}`,
               if (expanded.expanded_text) {
                 const expandedWordCount = expanded.expanded_text.split(/\s+/).filter(Boolean).length;
                 if (expandedWordCount >= currentWordCount) {
-                  const sanitizedExpanded = finalizeMainMarketingText(expanded.expanded_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+                  const sanitizedExpanded = await finalizeMainMarketingText(expanded.expanded_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
                   if (sanitizedExpanded) {
                     const expandedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedExpanded }, platform, minimumPublishableWordMin, targetWordMax, style));
                     const sanitizedExpandedWordCount = sanitizedExpanded.split(/\s+/).filter(Boolean).length;
@@ -4478,7 +4446,7 @@ ${expansionRepairAddendum}`,
           setFactCheckState(runState, factCheckResult, factCheckTextBasis);
 
           if (factCheckResult.corrected_text && !factCheckResult.fact_check_passed) {
-            const sanitizedFactChecked = finalizeMainMarketingText(factCheckResult.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true });
+            const sanitizedFactChecked = await finalizeMainMarketingText(factCheckResult.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
             if (sanitizedFactChecked) {
               const currentWordCountBeforeFactCheck = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
               const factCheckedWordCount = sanitizedFactChecked.split(/\s+/).filter(Boolean).length;
@@ -4590,14 +4558,15 @@ ${expansionRepairAddendum}`,
         result[field] = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
       }
 
-      result.improvedPrompt = finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }) || result.improvedPrompt;
+      result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
       if (hasCorruptedWordArtifacts(result.improvedPrompt || "")) {
-        const repairedFinalText = finalizeMainMarketingText(
+        const repairedFinalText = await finalizeMainMarketingText(
           repairMechanicalBrokerArtifacts(repairEmbeddedForAttArtifacts(result.improvedPrompt || "")),
           platform,
           personalStyle?.styleProfile,
           style,
-          { allowParagraphs: true }
+          { allowParagraphs: true },
+          cleanDisposition
         );
         if (repairedFinalText && !hasCorruptedWordArtifacts(repairedFinalText)) {
           result.improvedPrompt = repairedFinalText;
@@ -4731,28 +4700,33 @@ Svara med JSON:
               violations: rescueIssues,
               text: result.improvedPrompt || "",
             });
-            const rescueRepairAddendum = buildRepairPromptAddendum(rescueRepairStrategy);
-            const rescueCompletion = await openai.responses.create({
+            const { system: rescueSystem, user: rescueUser } = buildSpecializedRepairPrompt(
+              rescueRepairStrategy.primary, 
+              result.improvedPrompt || "", 
+              rescueIssues,
+              {
+                styleProfile: personalStyle?.styleProfile,
+                writingStyle: style,
+                propertyType: resolvedBlueprint.propertyType,
+                personalStylePrompt
+              }
+            );
+            const rescueCompletion = await openai.chat.completions.create({
               model: "gpt-5.2",
-              reasoning: { effort: "medium" },
-              input: buildFinalAuditRescueRequestInput({
-                cleanDisposition,
-                cleanWritingPlan,
-                cleanToneAnalysis,
-                plan,
-                rescueIssues,
-                result,
-                rescueRepairAddendum,
-              }),
-              max_output_tokens: 5000,
-              text: { format: { type: "json_object" } }
+              messages: [
+                { role: "system" as const, content: rescueSystem },
+                { role: "user" as const, content: rescueUser },
+              ],
+              max_completion_tokens: 5000,
+              temperature: 0.2,
+              response_format: { type: "json_object" },
             });
 
             const { rescueRaw, rescuedText } = buildFinalAuditRescueResponseArtifacts({
               outputText: rescueCompletion.output_text,
               parseJson: safeJsonParse,
               extractMarketingText: extractGeneratedMarketingText,
-              finalizeText: (value) => finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }),
+              finalizeText: async (value) => await finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }),
             });
             if (rescuedText) {
               const { rescuedResult, rescueAttemptSnapshot, rescueEvaluationInput } = buildFinalAuditRescueOutcome({

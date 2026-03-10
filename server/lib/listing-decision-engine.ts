@@ -51,9 +51,9 @@ export interface BrokerAuditDecisionResult {
 }
 
 function getQualityThreshold(plan: PlanType): number {
-  if (plan === "premium") return 0.88;
-  if (plan === "pro") return 0.84;
-  return 0.79;
+  if (plan === "premium") return 0.92; // Increased from 0.88
+  if (plan === "pro") return 0.85; // Increased from 0.84
+  return 0.80; // Increased from 0.79
 }
 
 export function chooseBestCandidate(
@@ -71,7 +71,8 @@ export function chooseBestCandidate(
   const publishable = selected.wordCount >= blueprint.qualityThresholds.minimumPublishableWordMin;
   const cleanEnough = selected.nonWordCountViolations.length === 0;
   const highQuality = selected.qualityScore >= getQualityThreshold(plan);
-  const weakDetailPenalty = selected.weakHemnetDetailCount > 1;
+  // Stricter check: any weak detail is a penalty for premium
+  const weakDetailPenalty = plan === 'premium' ? selected.weakHemnetDetailCount > 0 : selected.weakHemnetDetailCount > 1;
   const canSkipPolish = publishable && cleanEnough && highQuality && !weakDetailPenalty;
 
   return {
@@ -84,10 +85,6 @@ export function chooseBestCandidate(
 
 export function decideRewriteAcceptance(input: RewriteAcceptanceInput): RewriteAcceptanceResult {
   const { current, proposed, minimumPublishableWordMin, improvementKind } = input;
-
-  // NOTE: hasCorruptedArtifacts check REMOVED - it was causing false positives
-  // Quality metrics (score, violations) are sufficient to judge text quality
-  // The regex patterns were flagging legitimate Swedish text as "corrupted"
 
   const currentViolationCount = current.nonWordCountViolations.length;
   const proposedViolationCount = proposed.nonWordCountViolations.length;
@@ -102,36 +99,40 @@ export function decideRewriteAcceptance(input: RewriteAcceptanceInput): RewriteA
     return { accept: false, reason: `${improvementKind} drops text below publishable floor` };
   }
 
+  // Expansion: More tolerant to minor issues if word count increases significantly.
   if (improvementKind === "expansion") {
-    // For expansion, we prioritize word count over minor violations
-    // The goal is to reach minimum publishable word count
     if (proposed.wordCount <= current.wordCount) {
       return { accept: false, reason: "expansion did not increase text length" };
     }
-    // Accept expansion if it adds words, even if it adds 1-2 minor violations
-    // This is critical for short texts that need to reach publishable minimum
     const wordGain = proposed.wordCount - current.wordCount;
     const violationIncrease = proposedViolationCount - currentViolationCount;
-
-    if (wordGain >= 20 && violationIncrease <= 2) {
+    if (wordGain >= 15 && violationIncrease <= 2) {
       return { accept: true, reason: "expansion added significant length with acceptable violation increase" };
     }
-    if (violationIncrease > 2) {
-      return { accept: false, reason: "expansion introduced too many violations" };
+    if (violationIncrease > 1) {
+      return { accept: false, reason: "expansion introduced too many new violations" };
     }
     return { accept: true, reason: "expansion improved length without worsening quality significantly" };
   }
 
-  if (improvementKind === "surgical") {
-    if (improvesViolations) {
-      return { accept: true, reason: "surgical rewrite removed violations" };
+  // Surgical/Polish: Must improve quality, but can tolerate a minor score drop if violations are fixed.
+  if (improvementKind === "surgical" || improvementKind === "polish") {
+    if (improvesViolations && doesNotHurtScore) {
+      return { accept: true, reason: `${improvementKind} removed violations without significant score drop` };
     }
-    return { accept: false, reason: "surgical rewrite did not improve violations enough" };
+    if (improvesViolations && proposed.qualityScore > 0.75) {
+        return { accept: true, reason: `${improvementKind} removed violations and score is still acceptable` };
+    }
+    if (keepsViolationsFlat && improvesScoreMeaningfully) {
+        return { accept: true, reason: `${improvementKind} improved score meaningfully without adding violations` };
+    }
+    return { accept: false, reason: `${improvementKind} did not provide enough quality improvement` };
   }
 
+  // Fact Check: High priority on not introducing new issues.
   if (improvementKind === "fact_check") {
     if (proposedViolationCount > currentViolationCount) {
-      return { accept: false, reason: "fact-check rewrite introduced more violations" };
+      return { accept: false, reason: "fact-check rewrite introduced new violations" };
     }
     if (keepsViolationsFlat && !doesNotHurtScore) {
       return { accept: false, reason: "fact-check rewrite lowered quality without improving violations" };
@@ -139,19 +140,18 @@ export function decideRewriteAcceptance(input: RewriteAcceptanceInput): RewriteA
     return { accept: true, reason: "fact-check rewrite preserved or improved quality" };
   }
 
+  // Rescue: Most lenient. The goal is to get *something* usable.
   if (improvementKind === "rescue") {
-    // For rescue, we accept if quality improves significantly, even with minor artifacts
-    // The rescue is a last-ditch effort to save a failing text
-    if (proposedViolationCount > currentViolationCount + 1) {
-      return { accept: false, reason: "rescue rewrite significantly worsened violations" };
+    if (proposed.qualityScore > current.qualityScore + 0.1) {
+        return { accept: true, reason: "rescue rewrite significantly improved quality score" };
     }
-    // Accept if violations are same or better, or if score improves meaningfully
-    if (proposedViolationCount <= currentViolationCount || proposed.qualityScore > current.qualityScore + 0.05) {
-      return { accept: true, reason: "rescue rewrite improved or preserved deliverability" };
+    if (proposedViolationCount <= currentViolationCount + 1 && proposed.wordCount >= minimumPublishableWordMin) {
+      return { accept: true, reason: "rescue rewrite produced a publishable text" };
     }
-    return { accept: false, reason: "rescue rewrite did not improve enough to justify keeping" };
+    return { accept: false, reason: "rescue rewrite did not produce a usable text" };
   }
 
+  // Default catch-all
   if (improvesViolations || (keepsViolationsFlat && improvesScoreMeaningfully)) {
     return { accept: true, reason: `${improvementKind} improved the text enough to keep` };
   }
