@@ -16,8 +16,11 @@ const alertVariants = ({
   return `${base} ${variants[variant]}`
 }
 
-const Alert = React.forwardRef<any>(
-  ({ className, variant, ...props }: any, ref: any) => (
+const Alert = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "destructive" }
+>(
+  ({ className, variant, ...props }, ref) => (
     <div
       ref={ref}
       role="alert"
@@ -28,8 +31,11 @@ const Alert = React.forwardRef<any>(
 )
 Alert.displayName = "Alert"
 
-const AlertTitle = React.forwardRef<any>(
-  ({ className, ...props }: any, ref: any) => (
+const AlertTitle = React.forwardRef<
+  HTMLHeadingElement,
+  React.HTMLAttributes<HTMLHeadingElement>
+>(
+  ({ className, ...props }, ref) => (
     <h5
       ref={ref}
       className={cn("mb-1 font-medium leading-none tracking-tight", className)}
@@ -39,8 +45,11 @@ const AlertTitle = React.forwardRef<any>(
 )
 AlertTitle.displayName = "AlertTitle"
 
-const AlertDescription = React.forwardRef<any>(
-  ({ className, ...props }: any, ref: any) => (
+const AlertDescription = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(
+  ({ className, ...props }, ref) => (
     <div
       ref={ref}
       className={cn("text-sm [&_p]:leading-relaxed", className)}

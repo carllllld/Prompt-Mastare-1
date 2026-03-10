@@ -113,7 +113,7 @@ async function streamOptimize(
 
 export function useOptimize() {
   const { toast } = useToast();
-  const progressCallbackRef = useRef<ProgressCallback | undefined>();
+  const progressCallbackRef = useRef<ProgressCallback | undefined>(undefined);
 
   const setProgressCallback = useCallback((cb: ProgressCallback | undefined) => {
     progressCallbackRef.current = cb;

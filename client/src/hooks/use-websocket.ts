@@ -6,7 +6,7 @@ export function useWebSocket(userId: string | undefined, teamId: number | null, 
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const handlersRef = useRef<Map<string, Set<MessageHandler>>>(new Map());
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const connect = useCallback(() => {
     if (!userId || wsRef.current?.readyState === WebSocket.OPEN) return;

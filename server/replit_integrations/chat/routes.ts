@@ -69,14 +69,14 @@ export function registerChatRoutes(app: Express): void {
 
       // Get conversation history for context
       const messages = await chatStorage.getMessagesByConversation(conversationId);
-      const chatMessages = messages.map((m) => ({
-        role: m.role as "user" | "assistant",
+      const chatMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = messages.map((m) => ({
+        role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
         content: m.content,
       }));
 
       // Convert messages for OpenAI format
-      const openaiMessages = [
-        { role: "system", content: "You are a helpful assistant." },
+      const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: "system", content: "You are a helpful assistant." } as const,
         ...chatMessages
       ];
 

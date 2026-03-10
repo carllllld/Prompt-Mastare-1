@@ -87,6 +87,10 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
 
   const exempt = getExemptPhrases(style);
   for (const phrase of FORBIDDEN_PHRASES) {
+    const normalizedPhrase = phrase.trim();
+    const isSingleWordPhrase = /^[A-Za-zÅÄÖåäö0-9-]+$/.test(normalizedPhrase);
+    const criticalSingleWordPhrases = new Set(["erbjuder", "erbjuds", "fantastisk", "underbar", "magisk", "otrolig"]);
+    if (style !== "factual" && isSingleWordPhrase && !criticalSingleWordPhrases.has(normalizedPhrase.toLowerCase())) continue;
     if (exempt.has(phrase.toLowerCase())) continue;
     if (lowerText.includes(phrase.toLowerCase())) {
       violations.push(`Förbjuden fras: "${phrase}"`);

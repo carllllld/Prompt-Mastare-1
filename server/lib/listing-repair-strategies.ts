@@ -133,7 +133,7 @@ ${styleNote}
 Din uppgift är att korrigera ett specifikt problem i texten nedan. Ändra bara det som är nödvändigt för att lösa problemet och behåll resten av texten intakt. Det är extremt viktigt att du bibehåller användarens personliga stil även under reparationen.`;
 
     let system = baseSystem;
-    let user = `ORIGINALTEXT:\n${text}\n\nPROBLEM ATT LÖSA:\n${violations.join("\n")}`;
+    let user = `ORIGINALTEXT:\n${text}\n\nPROBLEM ATT LÖSA:\n${violations.join("\n")}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
 
     switch (strategy) {
         case "opening_rewrite":
@@ -151,7 +151,7 @@ NEGATIVT EXEMPEL (SÅ HÄR SKA DU INTE SKRIVA):
 
 POSITIVT EXEMPEL (SÅ HÄR VILL DU SKRIVA):
 "Solen skiner in genom de tre fönstren i fil och landar på den nyslipade fiskbensparketten."`;
-            user = `SKRIV OM ÖPPNINGEN I DENNA TEXT:\n${text}`;
+            user = `SKRIV OM ÖPPNINGEN I DENNA TEXT:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
             break;
 
         case "location_rewrite":
@@ -169,7 +169,7 @@ NEGATIVT EXEMPEL:
 
 POSITIVT EXEMPEL:
 "Morgonkaffet är bara en kort promenad bort, och med både ICA och SATS runt hörnet blir vardagspusslet enkelt att lägga. När du vill in till stan, når du T-banan på fem minuter."`;
-            user = `SKRIV OM LÄGESBESKRIVNINGEN I DENNA TEXT:\n${text}`;
+            user = `SKRIV OM LÄGESBESKRIVNINGEN I DENNA TEXT:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
             break;
 
         case "mechanical_cleanup":
@@ -187,7 +187,7 @@ NEGATIVT EXEMPEL:
 
 POSITIVT EXEMPEL:
 "Bostaden är energieffektiv med energiklass C, och med fiber indraget är du redo för framtidens digitala behov."`;
-            user = `VÄV IN DE TEKNISKA DETALJERNA I DENNA TEXT ELLER TA BORT DEM OM DE STÖR FLÖDET:\n${text}`;
+            user = `VÄV IN DE TEKNISKA DETALJERNA I DENNA TEXT ELLER TA BORT DEM OM DE STÖR FLÖDET:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
             break;
 
         case "narrative_repair":
@@ -202,7 +202,7 @@ SPECIFIKA FEL ATT LAGA:
 - Avhuggna meningar som slutar tvärt eller saknar verb.
 
 Gör endast de nödvändiga korrigeringarna för att återställa språkets integritet. Ändra inget annat.`;
-            user = `LAGA SPRÅKET I DENNA TEXT:\n${text}`;
+            user = `LAGA SPRÅKET I DENNA TEXT:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
             break;
 
         case "length_expansion":
@@ -219,7 +219,7 @@ REGLER FÖR EXPANSION:
 POSITIVT EXEMPEL:
 Original: "Köket har vita luckor och bra arbetsytor."
 Expanderad: "Det välplanerade köket har vita, handtagslösa luckor som ger ett stilrent intryck, och de generösa arbetsytorna bjuder in till både vardagsmatlagning och större middagsbjudningar."`;
-            user = `EXPANDERA DENNA TEXT:\n${text}`;
+            user = `EXPANDERA DENNA TEXT:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"expanded_text":"..."} `;
             break;
 
         case "generic_densification":
@@ -237,7 +237,7 @@ NEGATIVT EXEMPEL:
 
 POSITIVT EXEMPEL:
 "Planlösningen är optimal med sovrummen vända mot den tysta innergården, och i hela lägenheten ligger en nylagd enstavig ekparkett."`;
-            user = `GÖR DENNA TEXT MER KONKRET OCH TA BORT KLYSCHOR:\n${text}`;
+            user = `GÖR DENNA TEXT MER KONKRET OCH TA BORT KLYSCHOR:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
             break;
 
         case "surgical_cleanup":
@@ -247,7 +247,10 @@ POSITIVT EXEMPEL:
 REGLER:
 - Ändra BARA det som står i fellistan.
 - Behåll textens ton och stil.
-- Om ett fel inte kan fixas utan att skriva om en hel mening, lämna det.`
+- Om ett fel inte kan fixas utan att skriva om en hel mening, lämna det.
+
+SVARSFORMAT:
+Svara endast med giltig json: {"corrected_text":"..."}`
             break;
     }
 

@@ -39,6 +39,34 @@ const openai = new OpenAI({
 
 import { extractFirstJsonObject, safeJsonParse, extractGeneratedMarketingText, extractImprovedPromptFromLooseJson } from "./lib/json-guards";
 
+function isOpenAIInsufficientQuotaError(error: unknown): boolean {
+  const err = error as any;
+  const code = String(err?.error?.code || err?.code || "").toLowerCase();
+  const type = String(err?.error?.type || err?.type || "").toLowerCase();
+  const message = String(err?.error?.message || err?.message || "").toLowerCase();
+  return (
+    code.includes("insufficient_quota") ||
+    message.includes("insufficient_quota") ||
+    message.includes("quota") ||
+    (type.includes("rate_limit") && (err?.status === 429 || err?.statusCode === 429))
+  );
+}
+
+function createUpstreamQuotaError(stage: string, cause: unknown): Error & { statusCode: number; code: string; upstreamQuota: true; stage: string } {
+  const error = new Error(`OpenAI-kvoten är slut uppströms under ${stage}. Försök igen om en stund.`) as Error & {
+    statusCode: number;
+    code: string;
+    upstreamQuota: true;
+    stage: string;
+  };
+  error.statusCode = 503;
+  error.code = "OPENAI_UPSTREAM_QUOTA";
+  error.upstreamQuota = true;
+  error.stage = stage;
+  (error as any).cause = cause;
+  return error;
+}
+
 function formatFallbackValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
@@ -667,6 +695,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
 
 // === QUALITY ANALYSIS FUNCTION ===
 function analyzeTextQuality(text: string): number {
+  if (typeof text !== "string") return 0;
   if (!text || text.trim().length < 50) return 0;
 
   let score = 0.5; // Base score
@@ -1215,6 +1244,12 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   // === STAGE 2: Replace forbidden phrases (filtered by writing style) ===
   const exempt = getExemptPhrases(style);
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
+    const normalizedPhrase = phrase.trim();
+    const isSingleWordPhrase = /^[A-Za-zÅÄÖåäö0-9-]+$/.test(normalizedPhrase);
+    const criticalSingleWordPhrases = new Set(["erbjuder", "erbjuds", "fantastisk", "underbar", "magisk", "otrolig"]);
+
+    if (style !== "factual" && isSingleWordPhrase && !criticalSingleWordPhrases.has(normalizedPhrase.toLowerCase())) continue;
+
     // Skip if phrase is exempt for this writing style
     if (exempt.has(phrase.toLowerCase())) continue;
     // Skip if phrase is in allowed phrases (respect broker's personal style)
@@ -2469,6 +2504,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       : (_step: number, _total: number, _message: string) => { };
 
     try {
+      const warnings: string[] = [];
       // Validate input with Zod schema
       const parseResult = optimizeRequestSchema.safeParse(req.body);
       if (!parseResult.success) {
@@ -3291,12 +3327,15 @@ Svara med JSON:
             text: { format: { type: "json_object" } }
           });
 
-          const { polishedRaw, polishedText } = buildCandidatePolishResponseArtifacts({
+          const { polishedRaw, polishedText: polishedDraftText } = buildCandidatePolishResponseArtifacts({
             outputText: polishCompletion.output_text,
             parseJson: safeJsonParse,
             extractMarketingText: extractGeneratedMarketingText,
-            finalizeText: async (value) => await finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition),
+            finalizeText: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }),
           });
+          const polishedText = polishedDraftText
+            ? await finalizeMainMarketingText(polishedDraftText, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition)
+            : null;
           if (polishedText) {
             const { polishedResult, polishAttemptSnapshot, polishEvaluationInput } = buildCandidatePolishOutcome({
               currentResult: result,
@@ -3931,12 +3970,15 @@ Svara med JSON:
               response_format: { type: "json_object" },
             });
 
-            const { rescueRaw, rescuedText } = buildFinalAuditRescueResponseArtifacts({
-              outputText: rescueCompletion.output_text,
+            const { rescueRaw, rescuedText: rescuedDraftText } = buildFinalAuditRescueResponseArtifacts({
+              outputText: rescueCompletion.choices[0]?.message?.content,
               parseJson: safeJsonParse,
               extractMarketingText: extractGeneratedMarketingText,
-              finalizeText: async (value) => await finalizeMainMarketingText(value, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }),
+              finalizeText: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }),
             });
+            const rescuedText = rescuedDraftText
+              ? await finalizeMainMarketingText(rescuedDraftText, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition)
+              : null;
             if (rescuedText) {
               const { rescuedResult, rescueAttemptSnapshot, rescueEvaluationInput } = buildFinalAuditRescueOutcome({
                 currentResult: result,
@@ -4050,7 +4092,7 @@ Ge feedback ENDAST på:
 VIKTIGT: INGA juridiska råd, INGA mäklartips, INGA prisrekommendationer.
 Fokusera ENDAST på textkvalitet och kommunikation.
 
-Svara med JSON i formatet:
+Svara med json i formatet:
 {
   "tone": "Beskrivning av textens ton och professionalitet",
   "structure_quality": "Hur väl strukturerad och lättläst texten är",

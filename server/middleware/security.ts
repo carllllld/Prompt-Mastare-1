@@ -228,7 +228,7 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction) 
   }
 
   const token = req.get('X-CSRF-Token');
-  const sessionToken = req.session?.csrfToken;
+  const sessionToken = (req.session as any)?.csrfToken;
 
   if (!token || !sessionToken || token !== sessionToken) {
     return res.status(403).json({ error: 'Invalid CSRF token' });
@@ -334,8 +334,8 @@ export const secureFileUpload = (req: Request, res: Response, next: NextFunction
   const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.txt'];
   const maxFileSize = 5 * 1024 * 1024; // 5MB
 
-  if (req.file) {
-    const file = req.file;
+  const file = (req as any).file as { size: number; mimetype: string; originalname: string } | undefined;
+  if (file) {
     
     // Check file size
     if (file.size > maxFileSize) {

@@ -3,8 +3,6 @@
  * Comprehensive system health monitoring for production
  */
 
-import type { db } from "../db";
-
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
@@ -82,9 +80,16 @@ class EnterpriseHealthChecker {
   /**
    * Check database health with actual query
    */
-  async checkDatabase(db: { execute: (query: string) => Promise<any> }): Promise<ComponentHealth> {
+  async checkDatabase(db?: { execute: (query: string) => Promise<any> }): Promise<ComponentHealth> {
     const start = Date.now();
     try {
+      if (!db) {
+        return {
+          status: 'degraded',
+          responseTimeMs: Date.now() - start,
+          message: 'Database client saknas för health check',
+        };
+      }
       // Actual health check query
       await db.execute("SELECT 1");
       return {
