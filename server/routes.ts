@@ -20,9 +20,9 @@ import { coordinateExpansionAcceptance, coordinateFactCheckAcceptance, coordinat
 import { decideRecoveryAction } from "./lib/listing-recovery-policy";
 import { buildCandidatePolishOutcome, buildCandidatePolishRequestInput, buildCandidatePolishResponseArtifacts, buildCandidatePolishSettlement, buildStep3CandidateSnapshot } from "./lib/listing-selection-subflow";
 import { decidePostRefinementGuard } from "./lib/listing-refinement-subflow";
-import { buildRepairPromptAddendum, selectRepairStrategy } from "./lib/listing-repair-strategies";
+import { buildRepairPromptAddendum, buildSpecializedRepairPrompt, selectRepairStrategy } from "./lib/listing-repair-strategies";
 import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
-import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate } from "./lib/listing-run-state";
+import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
 import OpenAI from "openai";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
@@ -1682,6 +1682,18 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   cleaned = replaceWholePhrase(cleaned, "gör det möjligt att", "möjliggör att");
   cleaned = cleaned.replace(/\bunderlättar att ta sig till och från\b/gi, "ger smidiga resvägar");
   cleaned = cleaned.replace(/\bmöjliggör att ta sig till och från\b/gi, "ger smidiga resvägar");
+
+  // NYA REGLER FÖR PERFEKTION:
+  // 1. Ta bort parentetiska förklaringar (t.ex. "ICA (matbutik)" -> "ICA")
+  cleaned = cleaned.replace(/\s*\((?:matbutik|livsmedelsbutik|affär|gym|skola|förskola|centrum|galleria|restaurang|cafe|station|busshållplats)\)/gi, "");
+  
+  // 2. Ersätt fega/hedging-formuleringar med direkta påståenden
+  cleaned = cleaned.replace(/\bupplevs (?:som )?tyst\b/gi, "är tyst");
+  cleaned = cleaned.replace(/\bupplevs (?:som )?ljust?\b/gi, "är ljus");
+  cleaned = cleaned.replace(/\bupplevs (?:som )?rymlig(?:t)?\b/gi, "är rymlig");
+  cleaned = cleaned.replace(/\bupplevs (?:som )?välplanerad\b/gi, "är välplanerad");
+  cleaned = cleaned.replace(/\bupplevs (?:som )?harmonisk\b/gi, "är harmonisk");
+  
   cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
 
   return cleaned.trim() || null;
@@ -2750,6 +2762,13 @@ SHOW, DON'T TELL (KRITISKT):
 - Istället för "bra förvaring", skriv: "En hel garderobsvägg i sovrummet och ett källarförråd på 6 kvm löser alla förvaringsbehov."
 - Omvandla ALLA adjektiv till konkreta, verifierbara observationer.
 
+SPRÅKLIGA REGLER (NOLLTOLERANS):
+- INGA PARENTESER för att förklara typ av service. Skriv "ICA Supermarket" istället för "ICA (matbutik)".
+- INGA "FEGA" FORMULERINGAR. Skriv "Läget är tyst" istället för "Läget upplevs tyst". Var självsäker men korrekt.
+- FULLSTÄNDIGA MENINGAR. Kontrollera att varje mening har subjekt, predikat och korrekt punktuering. Inga syftningsfel.
+- UNDVIK UPPREPNING. Om du nämnt jacuzzin i öppningen, fokusera på materialval eller känsla senare, inte bara att den finns.
+- INGA LISTOR. Omvandla alla fakta till naturlig, flytande prosa.
+
 LEVANDE BESKRIVNING:
 - Beskriv bostaden ur perspektivet av någon som bor där. Hur känns det att dricka morgonkaffet på balkongen? Hur är arbetsflödet i köket?
 - Måla upp en bild av vardagslivet.
@@ -2782,6 +2801,13 @@ SHOW, DON'T TELL (KRITISKT):
 - Istället för "fint ljusinsläpp", skriv: "Solen flödar in från tre stora fönster i söderläge och speglar sig i den nyslipade parketten."
 - Istället för "bra förvaring", skriv: "En hel garderobsvägg i sovrummet och ett källarförråd på 6 kvm löser alla förvaringsbehov."
 - Omvandla ALLA adjektiv till konkreta, verifierbara observationer.
+
+SPRÅKLIGA REGLER (NOLLTOLERANS):
+- INGA PARENTESER för att förklara typ av service. Skriv "ICA Supermarket" istället för "ICA (matbutik)".
+- INGA "FEGA" FORMULERINGAR. Skriv "Läget är tyst" istället för "Läget upplevs tyst". Var självsäker men korrekt.
+- FULLSTÄNDIGA MENINGAR. Kontrollera att varje mening har subjekt, predikat och korrekt punktuering. Inga syftningsfel.
+- UNDVIK UPPREPNING. Om du nämnt jacuzzin i öppningen, fokusera på materialval eller känsla senare, inte bara att den finns.
+- INGA LISTOR. Omvandla alla fakta till naturlig, flytande prosa.
 
 LEVANDE BESKRIVNING:
 - Beskriv bostaden ur perspektivet av någon som bor där. Hur känns det att dricka morgonkaffet på balkongen? Hur är arbetsflödet i köket?
@@ -2820,10 +2846,13 @@ Du är en noggrann granskare. Kontrollera objektbeskrivningen mot dispositionen 
 2. Identifiera och korrigera BARA: påhittade detaljer, felaktiga mått/år/märken
 3. Juridiskt känsliga påståenden utan stöd i dispositionen: ta bort eller neutralisera dem
 4. Identifiera förbjudna AI-fraser och ersätt dem kirurgiskt (se lista nedan)
-5. Behåll ALL korrekt text — meningsstruktur, stil och flöde ska INTE ändras
-6. KIRURGISK FIX: Byt ut bara de felaktiga fraserna. Kopiera resten av texten OFÖRÄNDRAT.
-7. Om inga fel hittas: sätt fact_check_passed=true och corrected_text=null — skriv INTE om en korrekt text
-8. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är
+5. Laga syftningsfel och punktueringsfel (t.ex. saknade punkter mellan meningar)
+6. TA BORT alla parenteser som förklarar typ av service (t.ex. "ICA (matbutik)" -> "ICA")
+7. ERSÄTT "fega" formuleringar (t.ex. "upplevs tyst") med mer självsäkra påståenden (t.ex. "är tyst") om det finns stöd för det
+8. Behåll ALL korrekt text — meningsstruktur, stil och flöde ska INTE ändras
+9. KIRURGISK FIX: Byt ut bara de felaktiga fraserna. Kopiera resten av texten OFÖRÄNDRAT.
+10. Om inga fel hittas: sätt fact_check_passed=true och corrected_text=null — skriv INTE om en korrekt text
+11. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är
 
 # UNIVERSELLT FÖRBJUDNA AI-FRASER (flagga ALLTID, oavsett stil)
 erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd,
@@ -3638,12 +3667,12 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
       const candidateConfigs = [
-        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, effort: "high" as const, exampleCount: 3, minimalFields: false },
-        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, effort: "high" as const, exampleCount: 2, minimalFields: false },
+        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, temperature: 0.35, effort: "high" as const, exampleCount: 3, minimalFields: false },
+        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, temperature: 0.5, effort: "high" as const, exampleCount: 2, minimalFields: false },
       ];
       const runState = createListingRunState();
 
-      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
+      const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean, temperature: number) => {
         const candidateExamples = matchedExamples.slice(0, Math.max(1, exampleCount));
         const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
         const fieldMinimizationInstruction = minimalFields
@@ -3652,6 +3681,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
         const completion = await openai.responses.create({
           model: "gpt-5.2",
           reasoning: { effort },
+          temperature,
           max_output_tokens: 12000, // Prevent truncation
           input: [
             {
@@ -3694,52 +3724,38 @@ OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
         }
 
         const rawOutput = (completion.output_text || "").trim();
-        let candidateResult: any;
+        let candidateResult: any = {};
+
+        // Robust JSON parsing and text extraction
         try {
-          candidateResult = safeJsonParse(rawOutput || "{}");
+          candidateResult = safeJsonParse(rawOutput);
         } catch (e) {
-          const raw = rawOutput;
-          const recoveredPrompt = extractImprovedPromptFromLooseJson(raw);
-          if (recoveredPrompt) {
-            candidateResult = { improvedPrompt: recoveredPrompt };
-          } else if (raw && !raw.startsWith("{") && !raw.startsWith("[")) {
-            candidateResult = { improvedPrompt: raw };
-          } else {
-            console.warn(`[Step 3:${label}] Could not parse candidate JSON. Raw length ${raw.length}. Preview: ${raw.slice(0, 500)}`);
-            throw new Error(`[Step 3:${label}] Modellen returnerade inte giltig JSON eller återvinningsbar improvedPrompt.`);
-          }
+          console.warn(`[Step 3:${label}] Initial JSON parsing failed. Attempting recovery.`);
         }
 
-        const extractedCandidateText = extractGeneratedMarketingText(candidateResult);
-        if (extractedCandidateText) {
-          candidateResult = { ...candidateResult, improvedPrompt: extractedCandidateText };
+        let extractedText = extractGeneratedMarketingText(candidateResult);
+
+        if (!extractedText) {
+            const recoveredFromLoose = extractImprovedPromptFromLooseJson(rawOutput);
+            if (recoveredFromLoose) {
+                extractedText = recoveredFromLoose;
+                console.warn(`[Step 3:${label}] Recovered text from loose JSON.`);
+            }
         }
 
-        if ((typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) && rawOutput) {
-          const strippedRawOutput = rawOutput
-            .replace(/^```(?:json|text)?\s*/i, "")
-            .replace(/```$/i, "")
-            .trim();
-
-          if (strippedRawOutput && !strippedRawOutput.startsWith("{") && !strippedRawOutput.startsWith("[")) {
-            candidateResult = { ...candidateResult, improvedPrompt: strippedRawOutput };
-            console.warn(`[Step 3:${label}] Recovered candidate from raw text fallback. Length ${strippedRawOutput.length}.`);
-          }
+        if (!extractedText && rawOutput && !rawOutput.startsWith("{") && !rawOutput.startsWith("[")) {
+            extractedText = rawOutput;
+            console.warn(`[Step 3:${label}] Recovered text from raw output.`);
         }
 
-        if ((typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) && rawOutput) {
-          const looseRecovered = extractImprovedPromptFromLooseJson(rawOutput.replace(/\n/g, " "));
-          if (looseRecovered) {
-            candidateResult = { ...candidateResult, improvedPrompt: looseRecovered };
-            console.warn(`[Step 3:${label}] Recovered candidate from loose JSON pattern fallback.`);
-          }
+        if (extractedText) {
+            candidateResult.improvedPrompt = extractedText;
+        } else {
+            console.warn(`[Step 3:${label}] Could not parse or recover any text. Raw length ${rawOutput.length}. Preview: ${rawOutput.slice(0, 500)}`);
+            throw new Error(`[Step 3:${label}] Modellen returnerade inte giltig JSON eller återvinningsbar text.`);
         }
 
-        if (typeof candidateResult === "object" && candidateResult !== null) {
-          console.log(`[Step 3:${label}] Candidate response keys: ${Object.keys(candidateResult).slice(0, 12).join(", ") || "<none>"}. Raw length ${rawOutput.length}.`);
-        }
-
-        if (candidateResult.improvedPrompt && completion.status === "incomplete") {
+        if (completion.status === "incomplete" && candidateResult.improvedPrompt) {
           const text = candidateResult.improvedPrompt;
           const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"));
           if (lastPeriod > text.length * 0.5) {
@@ -3747,24 +3763,11 @@ OGILTIGA SVAR SOM ALDRIG FÅR HÄNDA:
           }
         }
 
-        if (completion.status === "incomplete") {
-          const incompleteRecoveredText = typeof candidateResult?.improvedPrompt === "string" ? candidateResult.improvedPrompt.trim() : "";
-          const incompleteWordCount = incompleteRecoveredText.split(/\s+/).filter(Boolean).length;
-          const looksPrematurelyCut = incompleteRecoveredText.length > 0 && !/[.!?]$/.test(incompleteRecoveredText);
-          if (incompleteWordCount < minimumPublishableWordMin || looksPrematurelyCut) {
-            throw new Error(`[Step 3:${label}] Kandidaten trunkerades innan publicerbar huvudtext kunde återvinnas.`);
-          }
-        }
-
-        if (typeof candidateResult?.improvedPrompt !== "string" || !candidateResult.improvedPrompt.trim()) {
-          console.warn(`[Step 3:${label}] Empty improvedPrompt after parsing. Raw preview: ${rawOutput.slice(0, 500)}`);
-          throw new Error(`[Step 3:${label}] improvedPrompt saknas eller är tom.`);
-        }
-
         if (isDispositionLikeOutput(candidateResult.improvedPrompt)) {
           const retryAfterDispositionCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
+            temperature: 0.2, // Lower temp for factual retry
             input: [
               {
                 role: "developer",
@@ -3799,13 +3802,11 @@ KRAV FÖR DETTA FÖRSÖK:
           const retried = safeJsonParse(retryAfterDispositionCompletion.output_text || "{}");
           const retriedText = extractGeneratedMarketingText(retried);
           if (typeof retriedText === "string" && !isDispositionLikeOutput(retriedText)) {
-            retried.improvedPrompt = retriedText;
-            candidateResult = { ...candidateResult, ...retried };
+            candidateResult = { ...candidateResult, ...retried, improvedPrompt: retriedText };
           } else {
             throw new Error(`[Step 3:${label}] Disposition-like output även efter omgenerering.`);
           }
         }
-
         let sanitizedPrompt = await finalizeMainMarketingText(candidateResult.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
         if (!sanitizedPrompt || isDispositionLikeOutput(sanitizedPrompt)) {
           try {
@@ -3881,17 +3882,16 @@ KANDIDATRÄDDNING:
 
       for (const config of candidateConfigs) {
         try {
-          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
+          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields, config.temperature);
           candidatePool.push(candidate);
           addCandidateToRunState(runState, candidate);
           console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
-        } catch (e) {
+        } catch (e: any) {
           if (isOpenAIInsufficientQuotaError(e)) {
-            upstreamQuotaFailure = createUpstreamQuotaError(`steg 3 kandidat ${config.label}`, e);
-            console.warn(`[Step 3:${config.label}] Upstream quota exhausted, aborting remaining candidate generation.`);
-            break;
+            throw createUpstreamQuotaError("steg 3 kandidat ${config.label}", e);
           }
-          console.warn(`[Step 3:${config.label}] Candidate failed:`, e);
+          console.error(`[Step 3:${config.label}] Candidate failed catastrophically:`, e);
+          // Do not re-throw, just log and continue to next candidate
         }
       }
 
@@ -3908,81 +3908,34 @@ KANDIDATRÄDDNING:
         }
         console.warn("[Step 3] All candidate variants failed. Entering emergency fallback generation.");
 
-        let emergencyResult: any = null;
-
         try {
-          const emergencyCompletion = await openai.responses.create({
-            model: "gpt-5.2",
-            reasoning: { effort: "low" },
-            input: [
-              {
-                role: "developer",
-                content: `${systemContent}
+          // Robust nödfalls-generering som använder vår felsäkra guard-funktion
+          const emergencyCandidate = await generateCandidateWithGuard(
+            "emergency",
+            "\n\nNÖDLÄGE:\n- Du måste nu leverera en färdig svensk objektsbeskrivning även om tidigare försök har misslyckats.\n- Prioritera robust leverans över perfektion.\n- Returnera ENDAST giltig JSON.\n- improvedPrompt måste innehålla 3-5 stycken sammanhängande löpande prosa.\n- Skriv aldrig disposition, lista, rådata, rubriker eller kolonrader.\n- Om underlaget är tunt ska du ändå skriva en trygg, saklig och publicerbar objektsbeskrivning utan att hitta på fakta.",
+            "low",
+            0,
+            true, // minimalFields för maximal stabilitet i nödläge
+            0.65
+          );
 
-NÖDLÄGE:
-- Du måste nu leverera en färdig svensk objektsbeskrivning även om tidigare försök har misslyckats.
-- Prioritera robust leverans över perfektion.
-- Returnera ENDAST giltig JSON.
-- improvedPrompt måste innehålla 3-5 stycken sammanhängande löpande prosa.
-- Skriv aldrig disposition, lista, rådata, rubriker eller kolonrader.
-- Om underlaget är tunt ska du ändå skriva en trygg, saklig och publicerbar objektsbeskrivning utan att hitta på fakta.`
-              },
-              {
-                role: "user",
-                content: `${userContent}
-
-Tidigare kandidatspår misslyckades. Leverera nu en enda robust objektsbeskrivning i improvedPrompt.`
-              }
-            ],
-            max_output_tokens: 5000,
-            text: { format: { type: "json_object" } }
-          });
-
-          const emergencyRaw = safeJsonParse(emergencyCompletion.output_text || "{}");
-          const emergencyText = await finalizeMainMarketingText(extractGeneratedMarketingText(emergencyRaw), platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
-          if (emergencyText && !isDispositionLikeOutput(emergencyText)) {
-            emergencyResult = {
-              ...emergencyRaw,
-              improvedPrompt: emergencyText,
-            };
+          if (emergencyCandidate) {
+            candidatePool.push(emergencyCandidate);
+            addCandidateToRunState(runState, emergencyCandidate);
+            warnings.push("[Step 3:Emergency Fallback] Emergency fallback candidate was successfully generated.");
+          } else {
+            console.error("[Step 3:Emergency Fallback] generateCandidateWithGuard returnerade null.");
           }
-        } catch (e) {
-          if (isOpenAIInsufficientQuotaError(e)) {
-            throw createUpstreamQuotaError("steg 3 emergency rescue", e);
+        } catch (emergencyError: any) {
+          if (isOpenAIInsufficientQuotaError(emergencyError)) {
+            throw createUpstreamQuotaError("steg 3 emergency rescue", emergencyError);
           }
-          console.warn("[Step 3 Emergency] AI rescue generation failed:", e);
+          console.error("[Step 3:Emergency Fallback] Nödfalls-genereringen misslyckades katastrofalt:", emergencyError);
         }
 
-        if (!emergencyResult) {
-          const emergencyFailureDecision = evaluateCandidateRecoveryGate({
-            runState,
-            hasUsableText: false,
-            lastAttemptFailed: true,
-          }).recoveryDecision;
-          if (emergencyFailureDecision.action === "stop") {
-            throw new Error(`[Step 3 Emergency] ${emergencyFailureDecision.reason}`);
-          }
-          throw new Error("[Step 3 Emergency] Alla AI-kandidater misslyckades och ingen emergency-text kunde genereras. Lokal fallback är inte tillåten här.");
+        if (candidatePool.length === 0) {
+          throw new Error("[Step 3 Emergency] Alla AI-kandidater misslyckades och ingen nödfalls-text kunde genereras.");
         }
-
-        const emergencyPrompt = emergencyResult.improvedPrompt;
-        const emergencyViolations = getNonWordCountViolations(validateOptimizationResult(emergencyResult, platform, minimumPublishableWordMin, targetWordMax, style));
-        const emergencyQualityScore = analyzeTextQuality(emergencyPrompt);
-        const emergencyWordCount = emergencyPrompt.split(/\s+/).filter(Boolean).length;
-        const emergencyShortfallPenalty = Math.max(0, minimumPublishableWordMin - emergencyWordCount) / Math.max(minimumPublishableWordMin, 1);
-        const emergencyWordDistancePenalty = Math.abs(emergencyWordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
-        const emergencyWeakHemnetDetailCount = countWeakHemnetDetailSignals(emergencyPrompt, platform);
-
-        candidatePool.push({
-          label: "emergency",
-          result: emergencyResult,
-          qualityScore: emergencyQualityScore,
-          nonWordCountViolations: emergencyViolations,
-          wordCount: emergencyWordCount,
-          weakHemnetDetailCount: emergencyWeakHemnetDetailCount,
-          totalScore: emergencyQualityScore - (emergencyViolations.length * 0.08) - (emergencyWordDistancePenalty * 0.12) - (emergencyShortfallPenalty * 0.22) - (emergencyWeakHemnetDetailCount * 0.05),
-        });
-        addCandidateToRunState(runState, candidatePool[candidatePool.length - 1]);
       }
 
       let judgeChoiceLabel: string | null = null;
@@ -4034,6 +3987,13 @@ Svara med JSON:
 
       const candidateDecision = chooseBestCandidate(candidatePool, plan, resolvedBlueprint, judgeChoiceLabel);
       const selectedCandidate = candidatePool.find((candidate) => candidate.label === candidateDecision.selectedLabel) || candidatePool[0];
+      
+      // Spara agent-feedback (från domaren och valideraren) för framtida steg
+      setAgenticFeedback(runState, [
+        ...(selectedCandidate.nonWordCountViolations || []),
+        ...(judgeSuggestions || [])
+      ]);
+
       console.log(summarizeAgentStageDecision({
         stage: "candidate-selection",
         action: `selected ${selectedCandidate.label}`,
@@ -4075,17 +4035,16 @@ Svara med JSON:
           const polishCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
+            temperature: 0.4, // Slightly higher temp for creative polish
             input: buildCandidatePolishRequestInput({
               cleanDisposition,
               cleanWritingPlan,
               result,
               intelligence: cleanToneAnalysis,
               positioning: competitorAnalysis,
-              // Combine automatic violations with judge's smart feedback
-              violations: [...nonWordCountViolations, ...judgeSuggestions],
+              violations: [...selectedCandidate.nonWordCountViolations, ...judgeSuggestions],
               currentScore: selectedCandidate.qualityScore,
               targetMinWords: Math.max(selectedCandidate.wordCount, minimumPublishableWordMin),
-              // NEW: Pass style context
               personalStylePrompt,
               propertyType: resolvedBlueprint.propertyType,
             }),
@@ -4202,15 +4161,21 @@ Svara med JSON:
           // Filtrera bort ordräknings-violations (kan inte fixas genom textredigering)
           const textViolations = getNonWordCountViolations(violations);
 
-          if (textViolations.length > 0) {
+          if (textViolations.length > 0 || runState.agenticFeedback.length > 0) {
+            // Kombinera aktuella fel med feedback från tidigare steg (t.ex. Domaren)
+            const combinedFeedback = [
+              ...textViolations,
+              ...runState.agenticFeedback.filter(f => !textViolations.includes(f))
+            ];
+
             const surgicalRepairStrategy = selectRepairStrategy({
-              violations: textViolations,
+              violations: combinedFeedback,
               text: result.improvedPrompt || "",
             });
             const { system: surgicalSystem, user: surgicalUser } = buildSpecializedRepairPrompt(
               surgicalRepairStrategy.primary, 
               result.improvedPrompt || "", 
-              textViolations,
+              combinedFeedback,
               {
                 styleProfile: personalStyle?.styleProfile,
                 writingStyle: style,
@@ -4227,7 +4192,7 @@ Svara med JSON:
               model: "gpt-5.2",
               messages: correctionMessages,
               max_completion_tokens: 4500,
-              temperature: 0.05,
+              temperature: 0.1, // Low temp for surgical precision
               response_format: { type: "json_object" },
             });
 
@@ -4267,7 +4232,15 @@ Svara med JSON:
                   if (surgicalEvaluation.acceptance.accept && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
                     result.improvedPrompt = sanitizedCorrected;
                     setLastRepairKind(runState, "surgical");
-                    console.log(`[Step 5] Surgical correction applied (${textViolations.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
+                    
+                    // Uppdatera agent-feedback med de nya (förhoppningsvis färre) felen
+                    // men behåll domarens förslag om de fortfarande är relevanta
+                    setAgenticFeedback(runState, [
+                      ...correctedViolations,
+                      ...judgeSuggestions.filter(s => !correctedViolations.includes(s))
+                    ]);
+
+                    console.log(`[Step 5] Surgical correction applied (${combinedFeedback.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
                   } else {
                     console.warn(`[Step 5] Correction rejected: ${surgicalEvaluation.acceptance.reason} (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount})`);
                   }
@@ -4320,7 +4293,7 @@ Svara med JSON:
                   { role: "user" as const, content: expansionUser },
                 ],
                 max_completion_tokens: 3000,
-                temperature: secondaryTemperature,
+                temperature: 0.5, // Balanced temp for creative but factual expansion
                 response_format: { type: "json_object" },
               });
 
@@ -4427,6 +4400,7 @@ Svara med JSON:
           const factCheckCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
+            temperature: 0.1, // Very low temp for factual accuracy
             input: [
               {
                 role: "developer",
@@ -4620,6 +4594,7 @@ Svara med JSON:
           const brokerAuditCompletion = await openai.responses.create({
             model: "gpt-5.2",
             reasoning: { effort: "medium" },
+            temperature: 0.2, // Low temp for consistent, high-quality audit
             input: [
               {
                 role: "developer",
@@ -4718,7 +4693,7 @@ Svara med JSON:
                 { role: "user" as const, content: rescueUser },
               ],
               max_completion_tokens: 5000,
-              temperature: 0.2,
+              temperature: 0.6, // Higher temp for creative rescue
               response_format: { type: "json_object" },
             });
 
@@ -4759,6 +4734,7 @@ Svara med JSON:
                 const brokerAuditRetry = await openai.responses.create({
                   model: "gpt-5.2",
                   reasoning: { effort: "medium" },
+                  temperature: 0.3, // Balanced temp for fair retry audit
                   input: buildFinalBrokerAuditRetryRequestInput({
                     cleanDisposition,
                     resultText: result.improvedPrompt,
@@ -4866,7 +4842,7 @@ Svara med JSON i formatet:
             model: "gpt-5.2",
             messages: improvementMessages,
             max_completion_tokens: 800,
-            temperature: secondaryTemperature,
+            temperature: 0.6, // Higher temp for insightful analysis
             response_format: { type: "json_object" },
           });
 
@@ -5048,6 +5024,7 @@ Svara med JSON i formatet:
 
       const rewriteCompletion = await openai.responses.create({
         model: "gpt-5.2",
+        temperature: 0.4, // Balanced temp for creative but controlled rewrite
         input: [
           {
             role: "developer",
@@ -6000,6 +5977,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       const completion = await openai.responses.create({
         model: "gpt-5.2",
         reasoning: { effort: "medium" },
+        temperature: 0.5, // Balanced temp for creative and relevant improvements
         input: [
           {
             role: "developer",

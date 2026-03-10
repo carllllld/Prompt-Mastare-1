@@ -137,66 +137,107 @@ Din uppgift är att korrigera ett specifikt problem i texten nedan. Ändra bara 
 
     switch (strategy) {
         case "opening_rewrite":
-            system = `Du är en copywriter som specialiserat dig på att skriva oemotståndliga öppningar för bostadsannonser. Skriv om de första 1-2 meningarna i texten nedan för att omedelbart fånga läsarens intresse med en konkret och unik detalj. Undvik generiska fraser. Fokusera på det som gör bostaden speciell.
+            system = `${baseSystem}
 
-NEGATIVT EXEMPEL (så här ska du INTE skriva):
+Du är en copywriter som specialiserat dig på att skriva oemotståndliga öppningar för bostadsannonser. Skriv om de första 1-2 meningarna i texten nedan för att omedelbart fånga läsarens intresse med en konkret och unik detalj.
+
+REGLER FÖR ÖPPNINGEN:
+- Börja ALDRIG med "Välkommen", "Här", "Denna", "Letar du efter" eller liknande AI-fraser.
+- Börja direkt med gatuadressen eller en unik, konkret egenskap hos bostaden.
+- Skapa en visuell bild av boendet direkt.
+
+NEGATIVT EXEMPEL (SÅ HÄR SKA DU INTE SKRIVA):
 "Välkommen till denna fina lägenhet med bra läge."
 
-POSITIVT EXEMPEL (så här VILL du skriva):
-"Solen skiner in genom de tre fönstren i fil och landar på den nyslipade fiskbensparketten."`
+POSITIVT EXEMPEL (SÅ HÄR VILL DU SKRIVA):
+"Solen skiner in genom de tre fönstren i fil och landar på den nyslipade fiskbensparketten."`;
             user = `SKRIV OM ÖPPNINGEN I DENNA TEXT:\n${text}`;
             break;
 
         case "location_rewrite":
-            system = `Du är en expert på att skriva om läge och omgivning. Ditt jobb är att omvandla tråkiga listor med platser till en levande och naturlig beskrivning. Väv in platserna i en berättelse om vardagslivet. Fokusera på nytta för köparen.
+            system = `${baseSystem}
+
+Du är en expert på att skriva om läge och omgivning. Ditt jobb är att omvandla tråkiga listor med platser till en levande och naturlig beskrivning. 
+
+REGLER FÖR LÄGESBESKRIVNINGEN:
+- Undvik att lista avstånd i meter eller kilometer (t.ex. "200m bort").
+- Använd istället tidsmått eller beskrivningar som "runt hörnet", "en kort promenad" eller "fem minuter på cykel".
+- Väv in platserna i en berättelse om vardagslivet.
 
 NEGATIVT EXEMPEL:
 "Nära till ICA (200m), SATS (500m) och T-bana (300m)."
 
 POSITIVT EXEMPEL:
-"Morgonkaffet är bara en kort promenad bort, och med både ICA och SATS runt hörnet blir vardagspusslet enkelt att lägga. När du vill in till stan, når du T-banan på fem minuter."`
+"Morgonkaffet är bara en kort promenad bort, och med både ICA och SATS runt hörnet blir vardagspusslet enkelt att lägga. När du vill in till stan, når du T-banan på fem minuter."`;
             user = `SKRIV OM LÄGESBESKRIVNINGEN I DENNA TEXT:\n${text}`;
             break;
 
         case "mechanical_cleanup":
-            system = `Du är en teknisk skribent som är expert på att göra torra fakta läsvärda. Ditt jobb är att väva in tekniska detaljer (som energiklass, fiber, etc.) i den löpande texten på ett naturligt sätt. Undvik separata, mekaniska meningar.
+            system = `${baseSystem}
+
+Du är en teknisk skribent som är expert på att göra torra fakta läsvärda. Ditt jobb är att väva in tekniska detaljer (som energiklass, fiber, etc.) i den löpande texten på ett naturligt sätt. 
+
+REGLER FÖR TEKNISK STÄDNING:
+- Ta bort separata meningar som bara listar fakta (t.ex. "Parkering har laddplats").
+- Om en teknisk detalj inte passar in i flödet, ta bort den helt istället för att låta den stå kvar som en mekanisk rad.
+- Energiklass ska nämnas i förbigående, inte som en egen rubrik eller rad.
 
 NEGATIVT EXEMPEL:
 "Energiklass är C. Fiber är installerat."
 
 POSITIVT EXEMPEL:
-"Bostaden är energieffektiv med energiklass C, och med fiber indraget är du redo för framtidens digitala behov."`
-            user = `VÄV IN DE TEKNISKA DETALJERNA I DENNA TEXT:\n${text}`;
+"Bostaden är energieffektiv med energiklass C, och med fiber indraget är du redo för framtidens digitala behov."`;
+            user = `VÄV IN DE TEKNISKA DETALJERNA I DENNA TEXT ELLER TA BORT DEM OM DE STÖR FLÖDET:\n${text}`;
             break;
 
         case "narrative_repair":
-            system = `Du är en språkkirurg. Ditt jobb är att laga trasiga meningar och ord. Leta efter avhuggna ord, felaktiga sammansättningar och andra uppenbara språkfel. Korrigera dem så att texten blir grammatiskt korrekt och lättläst. Ändra inget annat.
+            system = `${baseSystem}
 
-EXEMPEL PÅ FEL:
-- "...ett välsköför att kök..." ska bli "...ett välskött kök..."
-- "...med en härlig södterass..." ska bli "...med en härlig söderterrass..."`
+Du är en språkkirurg specialiserad på att laga trasiga meningar och AI-genererade ordartefakter.
+
+SPECIFIKA FEL ATT LAGA:
+- Fuserade ord som "köketför att", "vardagsrummetför att", "sovrumetför att".
+- Trasiga ord som "välsköför att", "användningssäför att".
+- Felstavningar som "södterass" (ska vara söderterrass).
+- Avhuggna meningar som slutar tvärt eller saknar verb.
+
+Gör endast de nödvändiga korrigeringarna för att återställa språkets integritet. Ändra inget annat.`;
             user = `LAGA SPRÅKET I DENNA TEXT:\n${text}`;
             break;
 
         case "length_expansion":
-            system = `Du är en skicklig mäklarskribent som kan utveckla en text utan att lägga till nonsens. Ditt jobb är att expandera texten nedan så att den blir längre och mer detaljerad. Använd information som redan finns i texten och utveckla den. Lägg inte till ny fakta. Fokusera på att beskriva befintliga detaljer mer målande.
+            system = `${baseSystem}
 
-INSTRUKTION:
-- Hitta ett stycke i texten som är kortfattat.
-- Lägg till en eller två meningar som beskriver en detalj i det stycket mer ingående.
-- Exempel: Om texten säger "Kök med vita luckor", kan du lägga till "De vita, handtagslösa luckorna ger ett stilrent och modernt intryck."`
+Du är en skicklig mäklarskribent som kan utveckla en text utan att lägga till nonsens. Ditt jobb är att expandera texten nedan genom att fördjupa beskrivningen av bostadens existerande egenskaper.
+
+REGLER FÖR EXPANSION:
+- Lägg INTE till nya fakta som inte finns i texten.
+- Beskriv befintliga detaljer mer målande och målgruppsanpassat för en ${context.propertyType}.
+- Utöka texten med 20-50 ord per stycke där det känns naturligt.
+- Behåll den personliga stilen och tonaliteten.
+
+POSITIVT EXEMPEL:
+Original: "Köket har vita luckor och bra arbetsytor."
+Expanderad: "Det välplanerade köket har vita, handtagslösa luckor som ger ett stilrent intryck, och de generösa arbetsytorna bjuder in till både vardagsmatlagning och större middagsbjudningar."`;
             user = `EXPANDERA DENNA TEXT:\n${text}`;
             break;
 
         case "generic_densification":
-            system = `Du är en anti-klyscha-expert. Ditt jobb är att ersätta generiska mäklarfraser med konkreta och värdeskapande detaljer. Leta efter tomma ord och fyll dem med innehåll.
+            system = `${baseSystem}
+
+Du är en anti-klyscha-expert. Ditt jobb är att ersätta generiska mäklarfraser med konkreta och värdeskapande detaljer.
+
+REGLER FÖR KONKRETISERING:
+- Ersätt ord som "fina", "bra", "trevlig", "perfekt" med beskrivningar av material, ljusinsläpp eller funktion.
+- Undvik AI-markörer som "vilket ger en känsla av", "inbjuder till", "andas...".
+- Fokusera på bevis (evidens) istället för påståenden.
 
 NEGATIVT EXEMPEL:
 "Lägenheten har en bra planlösning och fina ytskikt."
 
 POSITIVT EXEMPEL:
-"Planlösningen är optimal med sovrummen vända mot den tysta innergården, och i hela lägenheten ligger en nylagd enstavig ekparkett."`
-            user = `GÖR DENNA TEXT MER KONKRET:\n${text}`;
+"Planlösningen är optimal med sovrummen vända mot den tysta innergården, och i hela lägenheten ligger en nylagd enstavig ekparkett."`;
+            user = `GÖR DENNA TEXT MER KONKRET OCH TA BORT KLYSCHOR:\n${text}`;
             break;
 
         case "surgical_cleanup":

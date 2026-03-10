@@ -37,6 +37,7 @@ export interface ListingRunState {
   factCheckTextBasis: string | null;
   finalBrokerAudit: any;
   issueSummary: ListingIssueSummary | null;
+  agenticFeedback: string[];
 }
 
 export function createListingRunState(): ListingRunState {
@@ -52,7 +53,16 @@ export function createListingRunState(): ListingRunState {
     factCheckTextBasis: null,
     finalBrokerAudit: null,
     issueSummary: null,
+    agenticFeedback: [],
   };
+}
+
+export function setAgenticFeedback(state: ListingRunState, feedback: string[]): void {
+  state.agenticFeedback = feedback.slice();
+}
+
+export function addAgenticFeedback(state: ListingRunState, feedback: string[]): void {
+  state.agenticFeedback = [...state.agenticFeedback, ...feedback];
 }
 
 export function addCandidateToRunState(state: ListingRunState, candidate: ListingCandidateState): void {
