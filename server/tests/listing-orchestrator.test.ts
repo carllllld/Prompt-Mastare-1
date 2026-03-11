@@ -114,6 +114,7 @@ describe("listing orchestrator", () => {
     expect(userAddendum).toContain("EXPERTBORD");
     expect(userAddendum).toContain("SAMARBETSSÄTT");
     expect(userAddendum).toContain("Kungsgatan 8, Uppsala");
+    expect(userAddendum).toContain("KONTEXTFAKTA");
     expect(userAddendum).toContain("Publicerbar miniminivå");
   });
 });

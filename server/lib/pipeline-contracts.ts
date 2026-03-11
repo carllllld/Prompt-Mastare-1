@@ -126,6 +126,7 @@ export interface BlueprintOutputContract {
     weakFactPolicy: string;
     closingStrategy: string;
     mustIncludeFacts: string[];
+    contextFacts: string[];
     emphasisPoints: string[];
     forbiddenPatterns: string[];
   };

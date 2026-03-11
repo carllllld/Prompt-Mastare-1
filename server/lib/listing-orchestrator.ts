@@ -58,6 +58,7 @@ export interface ListingGenerationBlueprint {
   audience: string | null;
   platformDirective: PlatformDirective;
   mustIncludeFacts: string[];
+  contextFacts: string[];
   emphasisPoints: string[];
   forbiddenPatterns: string[];
   repairPolicy: RepairPolicy;
@@ -187,17 +188,24 @@ export function buildListingGenerationBlueprint(input: BlueprintInput): ListingG
     audience,
   });
 
-  const mustIncludeFacts = takeStrings([
+  const primaryFacts = takeStrings([
     property.address,
     typeof property.size === "number" ? `${property.size} kvm` : property.size,
     typeof property.rooms === "number" ? `${property.rooms} rum` : property.rooms,
     property.layout,
+    property.preferred_outdoor_term,
+    Array.isArray(input.disposition?.unique_features) ? input.disposition.unique_features[0] : null,
+  ], 6);
+
+  const contextFacts = takeStrings([
     property.materials?.kitchen,
     property.materials?.bathroom,
-    property.preferred_outdoor_term,
     input.disposition?.location?.area,
     input.disposition?.location?.transport,
-  ], 8);
+    ...(Array.isArray(input.disposition?.location?.amenities) ? input.disposition.location.amenities : []),
+    ...(Array.isArray(input.disposition?.location?.services) ? input.disposition.location.services : []),
+    ...(Array.isArray(input.disposition?.property?.technical_details) ? input.disposition.property.technical_details : []),
+  ], 10).filter((fact) => !primaryFacts.some((primary) => primary.toLowerCase() === fact.toLowerCase()));
 
   const emphasisPoints = takeStrings([
     ...(Array.isArray(property.emphasis_notes) ? property.emphasis_notes : []),
@@ -227,6 +235,8 @@ export function buildListingGenerationBlueprint(input: BlueprintInput): ListingG
     platformDirective.closingStrategy,
     audience ? `Tänk på sannolik köpare: ${audience}.` : "Skriv för en bred svensk bostadsköpare utan att bli generisk.",
     "Varje stycke måste bära egen köparnytta eller konkret fakta; upprepning av kärnfakta är inte tillåten.",
+    "Styckesstruktur ska efterlikna svensk publicerad objektsbeskrivning: stark öppning, boendekvaliteter i mitten, selektivt läges- eller föreningsavslut.",
+    "Använd endast de starkaste kärnfakta i löptexten. Övriga datapunkter ska fungera som kontext och får utelämnas om de stör läsbarhet.",
     "SPRÅKLIG INTEGRITET: Skriv alltid fullständiga och grammatiskt korrekta meningar. Undvik avhuggna ord, felaktiga radbrytningar eller korrupta tecken.",
     "Om underlaget är oklart ska texten bli försiktigare, inte mer fantasifull.",
     input.personalStylePrompt ? `PERSONLIG STIL:\n${input.personalStylePrompt}` : "",
@@ -248,7 +258,8 @@ export function buildListingGenerationBlueprint(input: BlueprintInput): ListingG
     },
     audience,
     platformDirective,
-    mustIncludeFacts,
+    mustIncludeFacts: primaryFacts,
+    contextFacts,
     emphasisPoints,
     forbiddenPatterns,
     repairPolicy: {
@@ -283,7 +294,10 @@ export function buildBlueprintDeveloperAddendum(blueprint: ListingGenerationBlue
   ];
 
   if (blueprint.mustIncludeFacts.length > 0) {
-    lines.push(`- Måste in naturligt i texten: ${blueprint.mustIncludeFacts.join(" | ")}`);
+    lines.push(`- Prioritera i huvudtexten: ${blueprint.mustIncludeFacts.join(" | ")}`);
+  }
+  if (blueprint.contextFacts.length > 0) {
+    lines.push(`- Kontextfakta (nämn bara om de stärker flödet): ${blueprint.contextFacts.join(" | ")}`);
   }
   if (blueprint.emphasisPoints.length > 0) {
     lines.push(`- Betona helst: ${blueprint.emphasisPoints.join(" | ")}`);
@@ -303,7 +317,10 @@ export function buildBlueprintUserAddendum(blueprint: ListingGenerationBlueprint
   ];
 
   if (blueprint.mustIncludeFacts.length > 0) {
-    sections.push(`MÅSTE MED I HUVUDTEXTEN:\n- ${blueprint.mustIncludeFacts.join("\n- ")}`);
+    sections.push(`PRIORITERA I HUVUDTEXTEN (om relevant och naturligt):\n- ${blueprint.mustIncludeFacts.join("\n- ")}`);
+  }
+  if (blueprint.contextFacts.length > 0) {
+    sections.push(`KONTEXTFAKTA (använd selektivt, inte som checklista):\n- ${blueprint.contextFacts.join("\n- ")}`);
   }
   if (blueprint.emphasisPoints.length > 0) {
     sections.push(`BETONA GÄRNA TIDIGT:\n- ${blueprint.emphasisPoints.join("\n- ")}`);

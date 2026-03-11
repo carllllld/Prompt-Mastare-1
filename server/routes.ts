@@ -21,6 +21,7 @@ import { decideRecoveryAction } from "./lib/listing-recovery-policy";
 import { buildCandidatePolishOutcome, buildCandidatePolishRequestInput, buildCandidatePolishResponseArtifacts, buildCandidatePolishSettlement, buildStep3CandidateSnapshot } from "./lib/listing-selection-subflow";
 import { decidePostRefinementGuard } from "./lib/listing-refinement-subflow";
 import { buildRepairPromptAddendum, buildSpecializedRepairPrompt, selectRepairStrategy } from "./lib/listing-repair-strategies";
+import { applyStageQualityBudget, evaluateFinalGateAB } from "./lib/listing-quality-guards";
 import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
 import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
 import OpenAI from "openai";
@@ -929,6 +930,7 @@ function isDispositionLikeOutput(text: string): boolean {
 
 function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, style: WritingStyle = "balanced", options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean }): string | null {
   if (typeof text !== "string") return null;
+  const sourceHadParagraphBreaks = /\n\s*\n/.test(text);
 
   let cleaned = cleanForbiddenPhrases(text, styleProfile, style).trim();
   if (!cleaned) return null;
@@ -938,6 +940,13 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
 
   if (options?.allowParagraphs) {
     cleaned = addParagraphs(cleaned);
+    if (sourceHadParagraphBreaks && !/\n\s*\n/.test(cleaned)) {
+      const sentences = cleaned.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+      if (sentences.length >= 2) {
+        const cut = Math.ceil(sentences.length / 2);
+        cleaned = [sentences.slice(0, cut).join(" "), sentences.slice(cut).join(" ")].filter(Boolean).join("\n\n");
+      }
+    }
   }
 
   cleaned = repairEmbeddedForAttArtifacts(cleaned);
@@ -958,7 +967,7 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   cleaned = cleaned.replace(/\bupplevs (?:som )?välplanerad\b/gi, "är välplanerad");
   cleaned = cleaned.replace(/\bupplevs (?:som )?harmonisk\b/gi, "är harmonisk");
   
-  cleaned = cleaned.replace(/\s{2,}/g, " ").trim();
+  cleaned = cleaned.replace(/[^\S\r\n]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 
   return cleaned.trim() || null;
 }
@@ -1019,9 +1028,11 @@ REGLER:
             console.warn("[Hemnet Finalize] AI integration failed, falling back to filtering:", e);
             finalized = mainText;
         }
-    } else {
-        finalized = sentences.join(" ");
     }
+  }
+
+  if (options?.allowParagraphs) {
+    finalized = addParagraphs(finalized);
   }
 
   return finalized.trim() || null;
@@ -1340,45 +1351,55 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
 
 // Lägg till styckeindelning om texten saknar radbrytningar
 function addParagraphs(text: string): string {
-  if (!text || text.includes("\n\n")) return text; // Redan styckeindelad
+  if (!text) return text;
 
-  const sentences = text.split(/(?<=[.!?])\s+/);
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
+  const existingParagraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  if (existingParagraphs.length >= 2) return text;
+
+  const sentences = normalized.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   if (sentences.length < 4) return text;
 
-  // Ämnesord som indikerar nytt stycke (rumsnamn, sektioner)
-  const topicStarters = /^(Hallen|Hall\b|Vardagsrummet|Vardagsrum\b|Köket|Kök\b|Sovrummet|Sovrum\b|Huvudsovrummet|Badrummet|Badrum\b|Balkongen|Balkong\b|Altanen|Altan\b|Trädgården|Trädgård\b|Tomten|Tomt\b|Källaren|Källare\b|Övervåning|Entréplan|Bottenvåning|BRF\b|Förening|Avgift\b|Garage|Carport|Förråd|Tvättstuga|Gäst-wc)/i;
-  const locationStarters = /^(Centralstation|Resecentrum|Buss\b|Spårvagn|Tåg\b|Pendeltåg|Tunnelbana|ICA\b|Coop\b|Hemköp|Willys|Matbutik|Skola|Förskola|Centrum\b|Avstånd|Kommunikation)/i;
+  const roomOrFeatureStarters = /^(Hallen|Hall\b|Vardagsrummet|Vardagsrum\b|Köket|Kök\b|Sovrummet|Sovrum\b|Huvudsovrummet|Badrummet|Badrum\b|Balkongen|Balkong\b|Altanen|Altan\b|Trädgården|Trädgård\b|Tomten|Tomt\b|Källaren|Källare\b|Övervåning|Entréplan|Bottenvåning|Garage|Carport|Förråd|Tvättstuga|Gäst-wc)/i;
+  const locationOrAssociationStarters = /^(BRF\b|Förening|Avgift\b|Resecentrum|Centralstation|Buss\b|Spårvagn|Tåg\b|Pendeltåg|Tunnelbana|ICA\b|Coop\b|Hemköp|Willys|Matbutik|Skola|Förskola|Centrum\b|Kommunikation)/i;
 
   const paragraphs: string[] = [];
-  let currentParagraph: string[] = [];
-  let lastWasLocation = false;
+  let current: string[] = [];
+  let locationParagraphStarted = false;
+
+  const flush = () => {
+    if (current.length === 0) return;
+    paragraphs.push(current.join(" ").trim());
+    current = [];
+  };
 
   for (let i = 0; i < sentences.length; i++) {
     const sentence = sentences[i];
-    const isTopicStart = topicStarters.test(sentence);
-    const isLocationStart = locationStarters.test(sentence);
+    const isRoomOrFeature = roomOrFeatureStarters.test(sentence);
+    const isLocationOrAssociation = locationOrAssociationStarters.test(sentence);
 
-    // Bryt stycke vid ämnesbyte (men inte för första meningen)
-    if (i > 0 && currentParagraph.length >= 2) {
-      // Nytt ämne = nytt stycke
-      if (isTopicStart || (isLocationStart && !lastWasLocation)) {
-        paragraphs.push(currentParagraph.join(" "));
-        currentParagraph = [];
-      }
+    const shouldStartLocationParagraph = isLocationOrAssociation && !locationParagraphStarted && i > 0;
+    const shouldStartFeatureParagraph = isRoomOrFeature && current.length >= 2;
+    const shouldStartByLength = current.length >= 3 && i < sentences.length - 1;
+
+    if (shouldStartLocationParagraph || shouldStartFeatureParagraph || shouldStartByLength) {
+      flush();
     }
 
-    // Fallback: bryt efter 4 meningar om inga ämnesord hittas
-    if (currentParagraph.length >= 4 && i < sentences.length - 1) {
-      paragraphs.push(currentParagraph.join(" "));
-      currentParagraph = [];
-    }
+    current.push(sentence);
 
-    currentParagraph.push(sentence);
-    lastWasLocation = isLocationStart;
+    if (isLocationOrAssociation) {
+      locationParagraphStarted = true;
+    }
   }
 
-  if (currentParagraph.length > 0) {
-    paragraphs.push(currentParagraph.join(" "));
+  flush();
+
+  if (paragraphs.length < 3 && sentences.length >= 6) {
+    const opening = sentences.slice(0, 2).join(" ");
+    const body = sentences.slice(2, Math.max(4, sentences.length - 2)).join(" ");
+    const closing = sentences.slice(Math.max(4, sentences.length - 2)).join(" ");
+    return [opening, body, closing].filter(Boolean).join("\n\n");
   }
 
   return paragraphs.join("\n\n");
@@ -2939,7 +2960,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       // Build content strings once — reused for primary generation and quality gate retry
       const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
-      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - varje stycke ska utvecklas fullt ut):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - använd som struktur, inte som checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
@@ -2953,7 +2974,7 @@ Fakta i fokus med naturlig rytm och professionell ton.
 
       const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
         const candidateExamples = matchedExamples.slice(0, Math.max(1, exampleCount));
-        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN:\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
         const fieldMinimizationInstruction = minimalFields
           ? '\n- Returnera endast fälten "headline" och "improvedPrompt". Uteslut alla övriga fält helt för att undvika trunkering.'
           : '';
@@ -3458,7 +3479,9 @@ Svara med JSON:
                 styleProfile: personalStyle?.styleProfile,
                 writingStyle: style,
                 propertyType: resolvedBlueprint.propertyType,
-                personalStylePrompt
+                personalStylePrompt,
+                targetAudience: resolvedBlueprint.audience,
+                requiredFacts: resolvedBlueprint.mustIncludeFacts
               }
             );
             const correctionMessages = [
@@ -3506,7 +3529,22 @@ Svara med JSON:
                     minimumPublishableWordMin,
                     improvementKind: "surgical",
                   });
-                  if (surgicalEvaluation.acceptance.accept && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
+                  const surgicalQualityBudget = applyStageQualityBudget({
+                    improvementKind: "surgical",
+                    beforeText: result.improvedPrompt || "",
+                    afterText: sanitizedCorrected,
+                    beforeWordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+                    afterWordCount: sanitizedCorrectedWordCount,
+                    beforeViolations: textViolations,
+                    afterViolations: correctedViolations,
+                    hasCorruptedArtifactsAfter: correctedHasCorruption,
+                    minimumPublishableWordMin,
+                  });
+                  for (const warning of surgicalQualityBudget.warnings) {
+                    warnings.push(`[Step 5 Budget] ${warning}`);
+                  }
+
+                  if (surgicalEvaluation.acceptance.accept && surgicalQualityBudget.accept && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
                     result.improvedPrompt = sanitizedCorrected;
                     setLastRepairKind(runState, "surgical");
                     
@@ -3519,7 +3557,8 @@ Svara med JSON:
 
                     console.log(`[Step 5] Surgical correction applied (${combinedFeedback.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
                   } else {
-                    console.warn(`[Step 5] Correction rejected: ${surgicalEvaluation.acceptance.reason} (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount})`);
+                    const budgetReason = surgicalQualityBudget.blockingReasons.join(" | ");
+                    console.warn(`[Step 5] Correction rejected: ${surgicalEvaluation.acceptance.reason}${budgetReason ? ` | budget: ${budgetReason}` : ""} (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount})`);
                   }
                 }
               } else {
@@ -3555,7 +3594,9 @@ Svara med JSON:
               styleProfile: personalStyle?.styleProfile,
               writingStyle: style,
               propertyType: resolvedBlueprint.propertyType,
-              personalStylePrompt
+              personalStylePrompt,
+              targetAudience: resolvedBlueprint.audience,
+              requiredFacts: resolvedBlueprint.mustIncludeFacts
             }
           );
 
@@ -3609,14 +3650,30 @@ Svara med JSON:
                       minimumPublishableWordMin,
                       rejectionReason: expansionEvaluation.acceptance.reason,
                     });
-                    if (expansionCoordination.accepted) {
+                    const expansionQualityBudget = applyStageQualityBudget({
+                      improvementKind: "expansion",
+                      beforeText: result.improvedPrompt || "",
+                      afterText: sanitizedExpanded,
+                      beforeWordCount: currentWordCount,
+                      afterWordCount: sanitizedExpandedWordCount,
+                      beforeViolations: originalNonWordViolations,
+                      afterViolations: expandedViolations,
+                      hasCorruptedArtifactsAfter: expandedHasCorruption,
+                      minimumPublishableWordMin,
+                    });
+                    for (const warning of expansionQualityBudget.warnings) {
+                      warnings.push(`[Step 5b Budget] ${warning}`);
+                    }
+
+                    if (expansionCoordination.accepted && expansionQualityBudget.accept) {
                       result.improvedPrompt = sanitizedExpanded;
                       setLastRepairKind(runState, "expansion");
                       console.log(`[Step 5b] Expanded from ${currentWordCount} to ${sanitizedExpandedWordCount} words`);
                       currentWordCount = expansionCoordination.nextWordCount;
                       shortfall = expansionCoordination.nextShortfall;
                     } else {
-                      console.warn(`[Step 5b] Expansion rejected: ${expansionCoordination.reason}`);
+                      const budgetReason = expansionQualityBudget.blockingReasons.join(" | ");
+                      console.warn(`[Step 5b] Expansion rejected: ${expansionCoordination.reason}${budgetReason ? ` | budget: ${budgetReason}` : ""}`);
                       break;
                     }
                   }
@@ -3727,14 +3784,29 @@ Svara med JSON:
                 correctedText: sanitizedFactChecked,
                 rejectionReason: factCheckEvaluation.acceptance.reason,
               });
-              if (factCheckCoordination.accepted) {
+              const factCheckQualityBudget = applyStageQualityBudget({
+                improvementKind: "fact_check",
+                beforeText: result.improvedPrompt || "",
+                afterText: sanitizedFactChecked,
+                beforeWordCount: currentWordCountBeforeFactCheck,
+                afterWordCount: factCheckedWordCount,
+                beforeViolations: getNonWordCountViolations(validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)),
+                afterViolations: factCheckedViolations,
+                hasCorruptedArtifactsAfter: factCheckedHasCorruption,
+                minimumPublishableWordMin,
+              });
+              for (const warning of factCheckQualityBudget.warnings) {
+                warnings.push(`[Step 6 Budget] ${warning}`);
+              }
+              if (factCheckCoordination.accepted && factCheckQualityBudget.accept) {
                 result.improvedPrompt = sanitizedFactChecked;
                 factCheckTextBasis = factCheckCoordination.nextTextBasis;
                 setFactCheckState(runState, factCheckResult, factCheckTextBasis);
                 setLastRepairKind(runState, "fact_check");
                 console.log("[Step 6] Fact-check corrections applied");
               } else {
-                console.warn(`[Step 6] Fact-check correction rejected: ${factCheckCoordination.reason}`);
+                const budgetReason = factCheckQualityBudget.blockingReasons.join(" | ");
+                console.warn(`[Step 6] Fact-check correction rejected: ${factCheckCoordination.reason}${budgetReason ? ` | budget: ${budgetReason}` : ""}`);
               }
             }
           }
@@ -3957,7 +4029,9 @@ Svara med JSON:
                 styleProfile: personalStyle?.styleProfile,
                 writingStyle: style,
                 propertyType: resolvedBlueprint.propertyType,
-                personalStylePrompt
+                personalStylePrompt,
+                targetAudience: resolvedBlueprint.audience,
+                requiredFacts: resolvedBlueprint.mustIncludeFacts
               }
             );
             const rescueCompletion = await openai.chat.completions.create({
@@ -4002,7 +4076,22 @@ Svara med JSON:
                 coordinateAcceptance: coordinateRescueAcceptance,
               });
 
-              if (rescueDecisionArtifacts.shouldApplyRescue) {
+              const rescueQualityBudget = applyStageQualityBudget({
+                improvementKind: "rescue",
+                beforeText: result.improvedPrompt || "",
+                afterText: rescuedText,
+                beforeWordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+                afterWordCount: rescuedText.split(/\s+/).filter(Boolean).length,
+                beforeViolations: getNonWordCountViolations(validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style)),
+                afterViolations: rescueAttemptSnapshot.rescuedViolations,
+                hasCorruptedArtifactsAfter: rescueAttemptSnapshot.rescuedHasCorruptedArtifacts,
+                minimumPublishableWordMin,
+              });
+              for (const warning of rescueQualityBudget.warnings) {
+                warnings.push(`[Final Rescue Budget] ${warning}`);
+              }
+
+              if (rescueDecisionArtifacts.shouldApplyRescue && rescueQualityBudget.accept) {
                 result = rescuedResult;
                 setLastRepairKind(runState, "rescue");
                 console.log(rescueDecisionArtifacts.logMessage);
@@ -4027,12 +4116,31 @@ Svara med JSON:
                 }).finalBrokerAudit;
                 setFinalBrokerAudit(runState, finalBrokerAudit);
               } else {
-                console.warn(rescueDecisionArtifacts.logMessage);
+                const budgetReason = rescueQualityBudget.blockingReasons.join(" | ");
+                console.warn(`${rescueDecisionArtifacts.logMessage}${budgetReason ? ` | budget: ${budgetReason}` : ""}`);
               }
             }
           }
         } catch (e) {
           console.warn("[Final Broker Audit Rescue] Rescue rewrite failed, keeping pre-audit text:", e);
+        }
+      }
+
+      if (typeof result?.improvedPrompt === "string" && result.improvedPrompt.trim()) {
+        const finalWordCountBeforeGate = result.improvedPrompt.split(/\s+/).filter(Boolean).length;
+        const hasParagraphsBeforeGate = /\n\s*\n/.test(result.improvedPrompt);
+        if (finalWordCountBeforeGate >= 120 && !hasParagraphsBeforeGate) {
+          const paragraphizedFinalText = await finalizeMainMarketingText(
+            addParagraphs(result.improvedPrompt),
+            platform,
+            personalStyle?.styleProfile,
+            style,
+            { allowParagraphs: true },
+            cleanDisposition
+          );
+          if (paragraphizedFinalText && /\n\s*\n/.test(paragraphizedFinalText)) {
+            result.improvedPrompt = paragraphizedFinalText;
+          }
         }
       }
 
@@ -4060,6 +4168,7 @@ Svara med JSON:
       });
       for (const warning of finalMainValidation.warnings) {
         console.warn(warning);
+        warnings.push(warning);
       }
       const finalBrokerAuditReadiness = finalizeBrokerAuditReadiness({
         finalBrokerAudit,
@@ -4071,6 +4180,22 @@ Svara med JSON:
       finalBrokerAudit = finalBrokerAuditReadiness.finalBrokerAudit;
       for (const warning of finalBrokerAuditReadiness.warnings) {
         console.warn(warning);
+        warnings.push(warning);
+      }
+
+      const finalGateAB = evaluateFinalGateAB({
+        wordCount: finalMainValidation.wordCount,
+        minimumPublishableWordMin,
+        nonWordViolationCount: finalNonWordCountViolations.length,
+        narrativeIssueCount: finalNarrativeIssues.length,
+        hasParagraphs: /\n\s*\n/.test(result.improvedPrompt || ""),
+        brokerQualityScore: typeof finalBrokerAudit?.broker_quality_score === "number" ? finalBrokerAudit.broker_quality_score : 0,
+        analyzedQualityScore: analyzeTextQuality(result?.improvedPrompt || ""),
+      });
+      if (finalGateAB.recommendation === "manual_review") {
+        warnings.push(`[Final Gate A/B] Baseline och tolerant gate är underkända. Noteringar: ${finalGateAB.notes.join(" | ")}`);
+      } else if (!finalGateAB.strictPass) {
+        warnings.push(`[Final Gate A/B] Strikt gate underkände texten, baseline används. Noteringar: ${finalGateAB.notes.join(" | ")}`);
       }
 
       // AI-förbättringsanalys (körs efter textgenerering)
@@ -4195,7 +4320,11 @@ Svara med json i formatet:
         },
         wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
         model: aiModel,
+        pipelineWarnings: warnings,
       };
+      if (warnings.length > 0) {
+        console.warn("[Pipeline Warnings]", warnings);
+      }
       console.log("[Agent Run Summary]", summarizeAgentRun(runState));
 
       let responseSettled = false;

@@ -44,6 +44,11 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   const sentences = text.split(/(?<=[.!?])\s+/);
   const firstSentence = sentences[0]?.trim() || "";
   const lastSentence = sentences[sentences.length - 1]?.trim() || "";
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+  if (wordCount >= 120 && !/\n\s*\n/.test(text)) {
+    violations.push("Saknar tydlig styckeindelning i huvudtexten.");
+  }
 
   const corruptedPatterns: Array<[RegExp, string]> = [
     [/\bköketför att\b/gi, 'Trasigt ord: "köketför att"'],

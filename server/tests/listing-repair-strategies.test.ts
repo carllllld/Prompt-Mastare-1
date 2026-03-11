@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildRepairPromptAddendum,
+  buildSpecializedRepairPrompt,
   selectRepairStrategy,
 } from "../lib/listing-repair-strategies";
 
@@ -47,5 +48,23 @@ describe("listing repair strategies", () => {
     expect(addendum).toContain("REPARATIONSSTRATEGI");
     expect(addendum).toContain("mechanical_cleanup");
     expect(addendum).toContain("Väv in eller ta bort mekaniska teknik- och faktarader");
+  });
+
+  it("injects target audience context into specialized repair prompts", () => {
+    const prompt = buildSpecializedRepairPrompt(
+      "surgical_cleanup",
+      "Storgatan 12, Linköping. Kort text.",
+      ["Generisk öppning utan tydlig stark detalj"],
+      {
+        writingStyle: "balanced",
+        propertyType: "lägenhet",
+        targetAudience: "par eller liten familj",
+        requiredFacts: ["76 kvm", "3 rum"],
+      }
+    );
+
+    expect(prompt.system).toContain("TROLIG KÖPARE: par eller liten familj");
+    expect(prompt.system).toContain("FAKTA SOM MÅSTE BEVARAS");
+    expect(prompt.system).toContain("76 kvm");
   });
 });

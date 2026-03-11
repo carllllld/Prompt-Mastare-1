@@ -121,14 +121,22 @@ export function buildSpecializedRepairPrompt(
         writingStyle: string;
         propertyType: string;
         personalStylePrompt?: string;
+        targetAudience?: string | null;
+        requiredFacts?: string[];
     }
 ): { system: string, user: string } {
     const styleNote = context.styleProfile ? `ANVÄNDARENS PERSONLIGA STIL:\n${context.personalStylePrompt || "Följ användarens etablerade tonalitet."}` : "";
     const writingStyleNote = `VALD TEXTSTIL: ${context.writingStyle === "factual" ? "Strikt faktabaserad" : context.writingStyle === "selling" ? "Säljande men trovärdig" : "Balanserad mäklarprosa"}`;
+    const audienceNote = context.targetAudience ? `TROLIG KÖPARE: ${context.targetAudience}` : "";
+    const requiredFactsNote = Array.isArray(context.requiredFacts) && context.requiredFacts.length > 0
+        ? `FAKTA SOM MÅSTE BEVARAS:\n- ${context.requiredFacts.join("\n- ")}`
+        : "";
 
     const baseSystem = `Du är en expert på att förfina svenska fastighetstexter för ${context.propertyType}. 
 ${writingStyleNote}
 ${styleNote}
+${audienceNote}
+${requiredFactsNote}
 
 Din uppgift är att korrigera ett specifikt problem i texten nedan. Ändra bara det som är nödvändigt för att lösa problemet och behåll resten av texten intakt. Det är extremt viktigt att du bibehåller användarens personliga stil även under reparationen.`;
 
@@ -242,7 +250,9 @@ POSITIVT EXEMPEL:
 
         case "surgical_cleanup":
         default:
-            system = `Du är en noggrann korrekturläsare. Gör endast små, exakta korrigeringar av de specifika problemen som listas nedan. Rör ingenting annat i texten.
+            system = `${baseSystem}
+
+Du är en noggrann korrekturläsare. Gör endast små, exakta korrigeringar av de specifika problemen som listas nedan. Rör ingenting annat i texten.
 
 REGLER:
 - Ändra BARA det som står i fellistan.

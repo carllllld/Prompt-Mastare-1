@@ -256,6 +256,30 @@ describe('AI Pipeline Tests', () => {
       expect(sanitizeGeneratedMarketingField(undefined, undefined, 'balanced')).toBeNull();
     });
 
+    it('should add stycken when long broker text is delivered in one block', () => {
+      const cleaned = sanitizeGeneratedMarketingField(
+        'Storgatan 12, 3 tr, Linköping. En ljus trea om 76 kvm med balkong i söderläge och välplanerade ytor. Köket är renoverat med luckor från Ballingslöv och vitvaror från Siemens samt matplats vid fönstret. Vardagsrummet har stora fönster mot gården och plats för både soffgrupp och matbord. Sovrummen ligger avskilt från de sociala ytorna och badrummet är helkaklat med tvättmaskin. BRF Storgården är en stabil förening med låg belåning och avgiften inkluderar värme, vatten och kabel-tv. Resecentrum ligger fem minuter bort och i kvarteren finns både matbutiker och service.',
+        undefined,
+        'balanced',
+        { allowParagraphs: true }
+      );
+
+      expect(cleaned).toBeTruthy();
+      expect(cleaned?.includes('\n\n')).toBe(true);
+    });
+
+    it('should preserve existing two-paragraph layout during sanitization', () => {
+      const cleaned = sanitizeGeneratedMarketingField(
+        'Storgatan 12, 3 tr, Linköping. En ljus trea om 76 kvm med balkong i söderläge.\n\nKöket är renoverat med luckor från Ballingslöv och vardagsrummet har fönster mot gården.',
+        undefined,
+        'balanced',
+        { allowParagraphs: true }
+      );
+
+      expect(cleaned).toBeTruthy();
+      expect(cleaned?.split(/\n\s*\n/).length).toBeGreaterThanOrEqual(2);
+    });
+
     it('should flag disposition-like output as invalid', () => {
       const violations = validateOptimizationResult({
         improvedPrompt: 'OBJEKTDISPOSITION\nAdress: Testgatan 1\nBoarea: 75 kvm\nRum: 3\nAvgift: 2500 kr/mån\nKommunikationer: T-bana'
