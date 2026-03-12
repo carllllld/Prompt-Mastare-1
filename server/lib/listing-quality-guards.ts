@@ -47,6 +47,8 @@ export function applyStageQualityBudget(params: {
   afterWordCount: number;
   beforeViolations: string[];
   afterViolations: string[];
+  beforeQualityScore?: number;
+  afterQualityScore?: number;
   hasCorruptedArtifactsAfter: boolean;
   minimumPublishableWordMin: number;
 }): QualityBudgetDecision {
@@ -58,6 +60,8 @@ export function applyStageQualityBudget(params: {
   const afterHasParagraphs = /\n\s*\n/.test(params.afterText);
   const nearPublishableFloor = params.beforeWordCount >= params.minimumPublishableWordMin - 20;
   const violationDelta = params.afterViolations.length - params.beforeViolations.length;
+  const hasQualitySignals = typeof params.beforeQualityScore === "number" && typeof params.afterQualityScore === "number";
+  const qualityDrop = hasQualitySignals ? (params.beforeQualityScore! - params.afterQualityScore!) : 0;
 
   if (params.hasCorruptedArtifactsAfter) {
     blockingReasons.push("förslag innehåller korrupta ordartefakter");
@@ -77,6 +81,18 @@ export function applyStageQualityBudget(params: {
     }
     if (violationDelta > 1) {
       blockingReasons.push("surgical-förslag introducerade för många nya fel");
+    }
+  }
+
+  if (params.improvementKind === "polish") {
+    if (qualityDrop > 0.02) {
+      blockingReasons.push(`polish försämrade kvalitetspoängen för mycket (${qualityDrop.toFixed(3)})`);
+    }
+    if (violationDelta > 0) {
+      blockingReasons.push("polish introducerade nya kvalitetsfel");
+    }
+    if (changeRatio > 0.55) {
+      blockingReasons.push("polish skrev om för stor del av texten");
     }
   }
 

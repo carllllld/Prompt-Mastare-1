@@ -100,12 +100,13 @@ export function evaluateCandidatePolishGate(params: {
   shouldTryPolish: boolean;
   loopNextAction: string | null | undefined;
   strongCandidateFastPath: boolean;
-  qualityScore?: number; // Skip polish if already excellent
+  qualityScore?: number;
+  violationCount?: number;
 }): CandidatePolishGateResult {
-  // Skip polish only if:
-  // 1. Already on fast path (strong candidate)
-  // 2. Quality score is already excellent (>0.90) - no need to improve further
-  const skipPolish = params.strongCandidateFastPath || (params.qualityScore !== undefined && params.qualityScore >= 0.90);
+  const highQualityLowRisk = params.qualityScore !== undefined
+    && params.qualityScore >= 0.86
+    && (params.violationCount ?? 0) <= 1;
+  const skipPolish = params.strongCandidateFastPath || highQualityLowRisk;
 
   return {
     shouldRunPolish: (params.shouldTryPolish || params.loopNextAction === "polish") && !skipPolish,

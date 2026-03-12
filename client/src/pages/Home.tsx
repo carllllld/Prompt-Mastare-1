@@ -26,18 +26,18 @@ import { useToast } from "@/hooks/use-toast";
 const BEFORE_AFTER = [
   {
     label: "Objektbeskrivning",
-    before: `Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en ljus och luftig atmosfär. Bostaden präglas av en genomtänkt planlösning som bjuder på en harmonisk känsla. Köket är genomtänkt och stilfullt renoverat vilket gör det perfekt för den matlagningsintresserade. Kontakta oss för visning!`,
-    after: `Storgatan 12, 3 tr, Uppsala. Trea om 76 kvm med balkong i söderläge.\n\nHallen har garderob. Vardagsrummet med tre fönster och ekparkett, takhöjd 2,70 m.\n\nKöket renoverat 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplats för fyra.\n\nSovrummet rymmer dubbelsäng. Badrummet helkaklat med dusch, renoverat 2020.\n\nBalkong 4 kvm i söderläge. BRF Storgården, avgift 3 900 kr/mån.\n\nResecentrum 5 minuter. Coop 200 meter.`,
+    before: `Välkommen till denna fantastiska bostad med ljus och rymd. Här bor du i ett attraktivt område med närhet till det mesta och ett kök som passar både vardag och fest. Planlösningen är väl genomtänkt och hemmet erbjuder allt du kan önska för ett bekvämt boende. Kontakta mäklaren för mer information.`,
+    after: `På Storgatan 12, 3 tr väntar en välplanerad trea om 76 kvm med balkong i söderläge och ett lugnt gårdsläge. Vardagsrummet får fint ljus från tre fönsterpartier och har ekparkett samt plats för både soffgrupp och matbord. Köket renoverades 2022 med Ballingslöv-luckor, kvartskomposit och vitvaror från Siemens.\n\nSovrummen ligger avskilt mot gård, och badrummet är helkaklat samt uppdaterat 2020. Föreningen är stabil med avgift om 3 900 kr/mån. Läget gör vardagen enkel med Resecentrum på cirka fem minuter och service inom kort promenad.`,
   },
   {
     label: "Socialt inlägg",
-    before: `Fantastisk lägenhet i Uppsala! Ljus och luftig med generösa ytor och genomtänkt planlösning. Perfekt för den som söker ett modernt och stilrent boende i hjärtat av staden. Kontakta oss för mer info! ❤️ #Uppsala #Lägenhet #Drömboende`,
-    after: `Storgatan 12, Uppsala. Trea om 76 kvm med Ballingslöv-kök från 2022 och balkong i söderläge. Ekparkett och takhöjd 2,70 m. Badrum renoverat 2020. BRF Storgården, avgift 3 900 kr/mån.\nUppsala resecentrum 5 minuter — pendlingsavstånd till Stockholm.\n\n#Uppsala #Hemnet #Lägenhet #Balkong #TillSalu`,
+    before: `Nu finns en fin lägenhet till salu i ett bra område! Ljus bostad med öppen planlösning och bra känsla. Passar perfekt för dig som vill bo centralt och ha nära till allt. Hör av dig för mer information! #bostad #lägenhet #nytthem`,
+    after: `Storgatan 12, Uppsala — trea om 76 kvm med balkong i söderläge och kök renoverat 2022.\nEkparkett, lugnt gårdsläge och badrum uppdaterat 2020. Avgift 3 900 kr/mån.\nResecentrum ca 5 min bort.\n\n#Uppsala #lägenhet #balkong #tillsalu #hemnet`,
   },
   {
     label: "Visningsinbjudan",
-    before: `Välkommen på visning av denna underbara lägenhet! Missa inte chansen att se denna fantastiska bostad som erbjuder allt du kan önska dig. Vi ser fram emot att träffa dig!\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]`,
-    after: `Visning — Storgatan 12, 3 tr, Uppsala.\nTrea om 76 kvm med renoverat kök 2022 och balkong i söderläge. Ekparkett, takhöjd 2,70 m. Badrum 2020.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]`,
+    before: `Varmt välkommen på visning av denna fantastiska lägenhet! Här får du ett hem med härlig känsla och smart planlösning i ett attraktivt område.\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]`,
+    after: `Visning — Storgatan 12, 3 tr, Uppsala.\nTrea om 76 kvm med söderbalkong, kök renoverat 2022 och uppdaterat badrum från 2020.\nLugnt gårdsläge och kort gångavstånd till service och kommunikationer.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]`,
   },
 ];
 
@@ -212,7 +212,7 @@ export default function Home() {
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-8 h-16">
+        <div className="max-w-[2200px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-10 2xl:px-14 h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
@@ -314,7 +314,7 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-8 py-6 sm:py-8">
+      <main className="max-w-[2200px] mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-6 sm:py-8">
 
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
@@ -388,10 +388,10 @@ export default function Home() {
         )}
 
         {/* Main grid — 12 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-14 gap-6 xl:gap-8 items-start">
 
           {/* ── LEFT: Form ── */}
-          <div className={result ? "lg:col-span-6" : "lg:col-span-8 xl:col-span-9"}>
+          <div className={result ? "lg:col-span-8" : "lg:col-span-10"}>
             <div className="bg-white rounded-xl border p-5 sm:p-6" style={{ borderColor: "#E8E5DE" }}>
               <PromptFormProfessional
                 onSubmit={handleSubmit}
@@ -410,7 +410,7 @@ export default function Home() {
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}
-          <div ref={resultRef} className={result ? "lg:col-span-6" : "lg:col-span-4 xl:col-span-3"}>
+          <div ref={resultRef} className={result ? "lg:col-span-6" : "lg:col-span-4"}>
             {result ? (
               <div className="lg:sticky lg:top-24 animate-fade-in">
                 <ResultSection
@@ -589,7 +589,7 @@ export default function Home() {
 
       {/* ── FOOTER ── */}
       <footer className="border-t mt-12 py-6" style={{ borderColor: "#E8E5DE" }}>
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
+        <div className="max-w-[2200px] mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
           <span>© {new Date().getFullYear()} OptiPrompt</span>
           <div className="flex gap-4">
             <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>

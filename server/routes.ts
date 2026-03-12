@@ -3429,7 +3429,8 @@ Svara med JSON:
         shouldTryPolish: candidateDecision.shouldTryPolish,
         loopNextAction: initialLoopDecision.nextAction,
         strongCandidateFastPath,
-        qualityScore: selectedCandidate.qualityScore, // Skip polish if already good (>0.80)
+        qualityScore: selectedCandidate.qualityScore,
+        violationCount: selectedCandidate.nonWordCountViolations.length,
       });
 
       if (candidatePolishGate.shouldRunPolish) {
@@ -3484,13 +3485,32 @@ Svara med JSON:
               coordinateAcceptance: coordinatePolishAcceptance,
             });
 
-            if (polishDecisionArtifacts.shouldApplyPolish) {
+            const polishQualityBudget = applyStageQualityBudget({
+              improvementKind: "polish",
+              beforeText: result.improvedPrompt || "",
+              afterText: polishedText,
+              beforeWordCount: polishAttemptSnapshot.currentWordCount,
+              afterWordCount: polishAttemptSnapshot.polishedWordCount,
+              beforeViolations: polishAttemptSnapshot.currentViolations,
+              afterViolations: polishAttemptSnapshot.polishedViolations,
+              beforeQualityScore: polishAttemptSnapshot.currentScore,
+              afterQualityScore: polishAttemptSnapshot.polishedScore,
+              hasCorruptedArtifactsAfter: polishAttemptSnapshot.polishedHasCorruptedArtifacts,
+              minimumPublishableWordMin,
+            });
+            for (const warning of polishQualityBudget.warnings) {
+              warnings.push(`[Step 3 Polish Budget] ${warning}`);
+            }
+
+            if (polishDecisionArtifacts.shouldApplyPolish && polishQualityBudget.accept) {
               result = polishedResult;
+              strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
               setSelectedCandidate(runState, selectedCandidate.label, result, strongCandidateFastPath);
               setLastRepairKind(runState, "polish");
               console.log(polishDecisionArtifacts.logMessage);
             } else {
-              console.log(polishDecisionArtifacts.logMessage);
+              const budgetReason = polishQualityBudget.blockingReasons.join(" | ");
+              console.log(`${polishDecisionArtifacts.logMessage}${budgetReason ? ` | budget: ${budgetReason}` : ""}`);
             }
           }
         } catch (e) {
@@ -4508,6 +4528,57 @@ Svara med json i formatet:
           } catch { res.end(); }
         } else {
           res.json(safePayload);
+        }
+        return;
+      }
+      const fallbackStyle: WritingStyle = req.body?.writingStyle === "factual" || req.body?.writingStyle === "selling"
+        ? req.body.writingStyle
+        : "balanced";
+      const fallbackPrompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+      const fallbackPropertyData = req.body?.propertyData;
+      let emergencyText = "";
+      if (fallbackPropertyData && typeof fallbackPropertyData === "object" && typeof fallbackPropertyData.address === "string" && fallbackPropertyData.address.trim()) {
+        const structured = buildDispositionFromStructuredData(fallbackPropertyData);
+        emergencyText = buildDeterministicFallbackDescription(structured.disposition, fallbackStyle);
+      }
+      if (!emergencyText && fallbackPrompt) {
+        emergencyText = fallbackPrompt;
+      }
+      const sanitizedEmergencyText = emergencyText
+        ? (sanitizeGeneratedMarketingField(emergencyText, undefined, fallbackStyle, { allowParagraphs: true, nullIfInvalid: true }) || addParagraphs(emergencyText))
+        : "";
+      if (sanitizedEmergencyText && !res.headersSent) {
+        const emergencyPayload = {
+          originalPrompt: fallbackPrompt,
+          improvedPrompt: sanitizedEmergencyText,
+          analysis: {},
+          suggestions: [],
+          improvements: [],
+          headline: undefined,
+          instagramCaption: undefined,
+          showingInvitation: undefined,
+          shortAd: undefined,
+          socialCopy: undefined,
+          wordCount: sanitizedEmergencyText.split(/\s+/).filter(Boolean).length,
+          model: "gpt-5.2",
+          pipelineWarnings: [
+            "[Fail-Safe] Levererade deterministisk reservtext efter pipelinefel.",
+            `[Fail-Safe] Ursprungligt fel: ${err.message || "okänt fel"}`,
+          ],
+          broker_improvement_suggestions: [],
+          fail_safe_delivery: true,
+          fail_safe_stage: "emergency-reserve",
+          fail_safe_reason: err.message || "okänt fel",
+        };
+        console.warn("[Optimize Fail-Safe] Returning deterministic emergency reserve text.");
+        if (wantsStream) {
+          try {
+            ensureStreamStarted();
+            res.write(JSON.stringify({ type: "complete", data: emergencyPayload }) + "\n");
+            res.end();
+          } catch { res.end(); }
+        } else {
+          res.json(emergencyPayload);
         }
         return;
       }

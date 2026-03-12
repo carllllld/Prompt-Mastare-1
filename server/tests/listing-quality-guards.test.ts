@@ -45,6 +45,25 @@ describe("listing quality guards", () => {
     expect(decision.blockingReasons.some((reason) => reason.includes("fact-check"))).toBe(true);
   });
 
+  it("rejects polish proposals with quality regression", () => {
+    const decision = applyStageQualityBudget({
+      improvementKind: "polish",
+      beforeText: "Ljus fyra med genomgående parkett och balkong i söderläge.",
+      afterText: "Bostaden är trevlig och helt okej med olika material och planering.",
+      beforeWordCount: 10,
+      afterWordCount: 11,
+      beforeViolations: ["Generisk öppning"],
+      afterViolations: ["Generisk öppning"],
+      beforeQualityScore: 0.89,
+      afterQualityScore: 0.77,
+      hasCorruptedArtifactsAfter: false,
+      minimumPublishableWordMin: 195,
+    });
+
+    expect(decision.accept).toBe(false);
+    expect(decision.blockingReasons.some((reason) => reason.includes("polish försämrade kvalitetspoängen"))).toBe(true);
+  });
+
   it("reports final gate A/B recommendation for manual review when all gates fail", () => {
     const report = evaluateFinalGateAB({
       wordCount: 105,

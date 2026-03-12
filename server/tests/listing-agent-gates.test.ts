@@ -69,6 +69,18 @@ describe("listing agent gates", () => {
     expect(gate.shouldRunPolish).toBe(true);
   });
 
+  it("skips polish for high-quality low-risk candidates", () => {
+    const gate = evaluateCandidatePolishGate({
+      shouldTryPolish: true,
+      loopNextAction: "polish",
+      strongCandidateFastPath: false,
+      qualityScore: 0.89,
+      violationCount: 1,
+    });
+
+    expect(gate.shouldRunPolish).toBe(false);
+  });
+
   it("builds candidate selection checkpoint inputs", () => {
     const gate = evaluateCandidateSelectionGate({
       minimumPublishableWordMin: 195,
