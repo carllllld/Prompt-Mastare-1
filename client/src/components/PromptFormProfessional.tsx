@@ -61,13 +61,13 @@ interface PropertyFormData {
 
 // ── CHIP OPTIONS ──
 const KITCHEN_CHIPS = [
-  "Nytt kök", "Renoverat kök", "Köksö", "Stenbänk/komposit",
-  "Öppet till vardagsrum", "Integrerade vitvaror", "Platsbyggt kök",
-  "Matplats i kök", "Induktionshäll",
+  "Renoverat kök", "Köksö", "Stenbänk/komposit",
+  "Integrerade vitvaror", "Platsbyggt kök", "Matplats 4–6 pers",
+  "Öppen planlösning", "Vitvaror 2020+", "Fönster vid matplats",
 ];
 const BATHROOM_CHIPS = [
-  "Helkaklat", "Badkar", "Dubbla handfat", "Golvvärme",
-  "Handdukstork", "Renoverat", "Tvättmöjlighet",
+  "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
+  "Badkar", "Golvvärme", "Tvättmaskin", "Torktumlare",
 ];
 const FLOORING_CHIPS = [
   "Ekparkett", "Originalparkett", "Björkparkett",
@@ -75,25 +75,26 @@ const FLOORING_CHIPS = [
 ];
 const HEATING_CHIPS = [
   "Fjärrvärme", "Bergvärme", "Luft-vattenvärmepump", "Luft-luftvärmepump",
-  "Golvvärme", "Frånluftsvärmepump", "Vedpanna",
+  "Golvvärme", "Frånluftsvärmepump", "Vattenburen värme",
 ];
 const SPECIAL_CHIPS = [
-  "Öppen spis", "Kakelugn", "Braskamin", "Stuckatur", "Takbjälkar",
-  "Takhöjd 2.7m+", "Inglasad balkong", "Nya fönster",
-  "Nytt tak", "Stambyte genomfört", "Fiber",
+  "Stambyte genomfört", "Nya fönster", "Nytt tak",
+  "Dränering utförd", "Solceller", "Laddbox installerad",
+  "Braskamin", "Kakelugn", "Originaldetaljer",
 ];
 const GARDEN_CHIPS = [
   "Välskött trädgård", "Uteplats i söder", "Altan/trädäck",
   "Fruktträd", "Insynsskyddat", "Förråd/bod", "Pergola", "Eldstad ute",
 ];
 const USP_CHIPS = [
-  "Söderläge", "Tyst läge", "Sjöutsikt", "Havsutsikt", "Fri utsikt",
-  "Öppen planlösning", "Originaldetaljer", "Nära centrum",
-  "Gavellägenhet", "Genomgående", "Ingen insyn", "Hög standard",
+  "Söderläge", "Tyst läge", "Fri utsikt", "Ingen insyn",
+  "Genomgående planlösning", "Låg avgift", "Stabil BRF",
+  "Nära kommunikationer", "Nära service", "Barnvänligt läge",
+  "Hög standard", "Renoverat senaste 5 åren",
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
-  "Garageplats", "Laddplats elbil",
+  "Garageplats", "Boendeparkering", "Laddplats elbil",
 ];
 const ROOF_CHIPS = [
   "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak",
@@ -597,9 +598,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Fyll bara i det som faktiskt hjälper texten</p>
+                <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Skriv bara det som gör skillnad i en riktig objektsbeskrivning</p>
                 <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
-                  Prioritera skick, renoveringar, material, planlösning, läge och det som gör objektet speciellt. Alla exempel i fälten är just exempel och visas i kursiv stil när fältet är tomt.
+                  Prioritera skick, större renoveringar, planlösning, läge och det som avviker positivt från standard. Saker som oftast är standard ska bara nämnas om de faktiskt är särskiljande för objektet.
                 </p>
               </div>
             </div>
@@ -636,15 +637,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
 
             <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
-              <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Så undviker du dubbelinfo</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Skriv så här för mäklarkvalitet</p>
               <div className="space-y-2 text-xs" style={{ color: "#4B5563" }}>
                 <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
                   <span className="font-semibold" style={{ color: "#1D2939" }}>Kök / badrum</span>
                   <span> — skriv bara det som inte redan täcks av valda chips.</span>
                 </div>
                 <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Viktiga renoveringar</span>
-                  <span> — lägg bara till större åtgärder som inte redan syns i andra fält.</span>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Standard vs särskiljande</span>
+                  <span> — skriv inte självklarheter om de inte är ovanligt bra eller ovanligt svaga i objektet.</span>
                 </div>
                 <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
                   <span className="font-semibold" style={{ color: "#1D2939" }}>Planlösning</span>
@@ -1224,7 +1225,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <FormField control={form.control} name="otherInfo" render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
-                    <FormControl><Input placeholder="Ex: Fiber installerat, gemensam tvättstuga i huset och stambyte utfört 2015" {...field} className={exampleInputClass} /></FormControl>
+                      <FormControl><Input placeholder="Ex: Stambyte utfört 2015, nya 3-glasfönster 2021 och dokumenterat låg energiförbrukning senaste 12 månaderna" {...field} className={exampleInputClass} /></FormControl>
                   </FormItem>
                 )} />
               </div>

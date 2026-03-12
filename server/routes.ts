@@ -22,6 +22,8 @@ import { buildCandidatePolishOutcome, buildCandidatePolishRequestInput, buildCan
 import { decidePostRefinementGuard } from "./lib/listing-refinement-subflow";
 import { buildRepairPromptAddendum, buildSpecializedRepairPrompt, selectRepairStrategy } from "./lib/listing-repair-strategies";
 import { applyStageQualityBudget, evaluateFinalGateAB } from "./lib/listing-quality-guards";
+import { buildBrokerRealismScorecard } from "./lib/listing-broker-realism-scorecard";
+import { evaluateBlueprintCoverage } from "./lib/listing-blueprint-coverage";
 import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
 import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
 import OpenAI from "openai";
@@ -4029,7 +4031,7 @@ Svara med JSON:
       const currentLocalTopBrokerReady = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       const finalMainWordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
       const finalStrongWordFloor = getStrongPublishableWordFloor(minimumPublishableWordMin, plan);
-      const finalGenericBrokerPhraseCount = countGenericBrokerPhrases(result.improvedPrompt || "");
+      const finalGenericPhraseCountForScorecard = countGenericBrokerPhrases(result.improvedPrompt || "");
       const finalNarrativeIntegrityIssues = detectNarrativeIntegrityIssues(result.improvedPrompt || "");
       const brokerAuditDecision = evaluateBrokerAuditGate({
         strongCandidateFastPath,
@@ -4270,6 +4272,124 @@ Svara med JSON:
         }
       }
 
+      const brokerRealismGateMinScore = 78;
+      const preGateMainViolations = validateMainMarketingText({ improvedPrompt: result.improvedPrompt || "" }, platform, minimumPublishableWordMin, targetWordMax, style);
+      const preGateNonWordViolations = getNonWordCountViolations(preGateMainViolations);
+      const preGateNarrativeIssues = detectNarrativeIntegrityIssues(result.improvedPrompt || "");
+      const preGateBrokerRealismScorecard = buildBrokerRealismScorecard({
+        text: result.improvedPrompt || "",
+        propertyType: resolvedBlueprint.propertyType,
+        platform,
+        style,
+        inferredBuyer: resolvedBlueprint.audience,
+        minimumPublishableWordMin,
+        wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+        qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+        concreteEvidenceSignals: countConcreteEvidenceSignals(result.improvedPrompt || ""),
+        genericPhraseCount: countGenericBrokerPhrases(result.improvedPrompt || ""),
+        narrativeIssueCount: preGateNarrativeIssues.length,
+        nonWordViolationCount: preGateNonWordViolations.length,
+        hasParagraphs: /\n\s*\n/.test(result.improvedPrompt || ""),
+        brokerQualityScore: typeof finalBrokerAudit?.broker_quality_score === "number" ? finalBrokerAudit.broker_quality_score : null,
+      });
+      console.log("[Broker Realism Gate:Pre]", {
+        overall: preGateBrokerRealismScorecard.overall,
+        grade: preGateBrokerRealismScorecard.grade,
+      });
+      if (preGateBrokerRealismScorecard.overall < brokerRealismGateMinScore) {
+        const realismTargetedImprovements = preGateBrokerRealismScorecard.improvements.slice(0, 4);
+        try {
+          console.warn(`[Broker Realism Gate] Score ${preGateBrokerRealismScorecard.overall}/100 under floor ${brokerRealismGateMinScore}. Running targeted polish.`);
+          const targetedPolishCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "medium" },
+            input: [
+              {
+                role: "developer",
+                content: `Du är en senior svensk mäklarskribent. Förbättra improvedPrompt till mer publiceringsskarp nivå utan att tappa verifierbara fakta.
+- Behåll och prioritera dessa fakta: ${resolvedBlueprint.mustIncludeFacts.slice(0, 8).join(" | ")}
+- Målgrupp: ${resolvedBlueprint.audience || "bred svensk bostadsköpare"}
+- Förbättringsmål: ${realismTargetedImprovements.join(" | ")}
+- Ta bort generiska formuleringar och skriv naturlig mäklarprosa.
+- Returnera ENDAST giltig JSON: {"improvedPrompt":"..."}.`,
+              },
+              {
+                role: "user",
+                content: `DISPOSITION:\n${JSON.stringify(cleanDisposition)}\n\nNUVARANDE TEXT:\n${result.improvedPrompt}`,
+              },
+            ],
+            max_output_tokens: 2800,
+            text: { format: { type: "json_object" } },
+          });
+
+          const targetedRaw = extractGeneratedMarketingText(targetedPolishCompletion as any) || targetedPolishCompletion.output_text || "";
+          const targetedParsed = safeJsonParse(targetedRaw || "{}");
+          const targetedTextCandidateRaw = extractImprovedPromptFromLooseJson(targetedParsed)
+            || (typeof targetedParsed?.improvedPrompt === "string" ? targetedParsed.improvedPrompt : "")
+            || targetedRaw;
+          const targetedTextCandidateSanitized = sanitizeGeneratedMarketingField(targetedTextCandidateRaw, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true });
+          const targetedTextCandidate = targetedTextCandidateSanitized
+            ? await finalizeMainMarketingText(targetedTextCandidateSanitized, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition)
+            : null;
+
+          if (targetedTextCandidate) {
+            const currentWordCount = (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length;
+            const proposedWordCount = targetedTextCandidate.split(/\s+/).filter(Boolean).length;
+            const proposedViolations = getNonWordCountViolations(
+              validateMainMarketingText({ improvedPrompt: targetedTextCandidate }, platform, minimumPublishableWordMin, targetWordMax, style)
+            );
+            const rewriteDecision = decideRewriteAcceptance({
+              current: {
+                qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+                nonWordCountViolations: preGateNonWordViolations,
+                wordCount: currentWordCount,
+                isStrongPublishableCandidate: isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                hasCorruptedArtifacts: hasCorruptedWordArtifacts(result.improvedPrompt || ""),
+              },
+              proposed: {
+                qualityScore: analyzeTextQuality(targetedTextCandidate),
+                nonWordCountViolations: proposedViolations,
+                wordCount: proposedWordCount,
+                isStrongPublishableCandidate: isStrongPublishableCandidate(targetedTextCandidate, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                hasCorruptedArtifacts: hasCorruptedWordArtifacts(targetedTextCandidate),
+              },
+              minimumPublishableWordMin,
+              improvementKind: "polish",
+            });
+            const targetedBudgetDecision = applyStageQualityBudget({
+              improvementKind: "polish",
+              beforeText: result.improvedPrompt || "",
+              afterText: targetedTextCandidate,
+              beforeWordCount: currentWordCount,
+              afterWordCount: proposedWordCount,
+              beforeViolations: preGateNonWordViolations,
+              afterViolations: proposedViolations,
+              beforeQualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+              afterQualityScore: analyzeTextQuality(targetedTextCandidate),
+              hasCorruptedArtifactsAfter: hasCorruptedWordArtifacts(targetedTextCandidate),
+              minimumPublishableWordMin,
+            });
+            if (rewriteDecision.accept && targetedBudgetDecision.accept) {
+              result.improvedPrompt = targetedTextCandidate;
+              warnings.push(`[Broker Realism Gate] Targeted polish applied (${preGateBrokerRealismScorecard.overall}/100 -> förbättrad version).`);
+              console.log("[Broker Realism Gate] Targeted polish accepted.");
+            } else {
+              const budgetReason = targetedBudgetDecision.blockingReasons.join(" | ");
+              warnings.push(`[Broker Realism Gate] Targeted polish avvisades: ${rewriteDecision.reason}${budgetReason ? ` | ${budgetReason}` : ""}`);
+              console.warn(`[Broker Realism Gate] Targeted polish rejected: ${rewriteDecision.reason}${budgetReason ? ` | ${budgetReason}` : ""}`);
+            }
+          }
+        } catch (gateError) {
+          console.warn("[Broker Realism Gate] Targeted polish failed, continuing with current text:", gateError);
+        }
+      }
+
+      const blueprintCoverage = evaluateBlueprintCoverage(result.improvedPrompt || "", resolvedBlueprint.mustIncludeFacts);
+      console.log("[Blueprint Coverage]", blueprintCoverage);
+      if (blueprintCoverage.required > 0 && blueprintCoverage.ratio < 0.55) {
+        warnings.push(`[Blueprint Coverage] Endast ${blueprintCoverage.matched}/${blueprintCoverage.required} prioriterade fakta matchar tydligt sluttexten.`);
+      }
+
       const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
       const finalNonWordCountViolations = getNonWordCountViolations(finalMainViolations);
       const finalWordCountViolations = finalMainViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
@@ -4397,6 +4517,30 @@ Svara med json i formatet:
       const finalBrokerAuditIssues = Array.isArray(finalBrokerAudit?.issues)
         ? finalBrokerAudit.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0).slice(0, 8)
         : [];
+      const finalConcreteEvidenceSignals = countConcreteEvidenceSignals(result.improvedPrompt || "");
+      const finalGenericBrokerPhraseCount = countGenericBrokerPhrases(result.improvedPrompt || "");
+      const brokerRealismScorecard = buildBrokerRealismScorecard({
+        text: result.improvedPrompt || "",
+        propertyType: String(cleanDisposition?.property?.type || cleanDisposition?.propertyType || type || ""),
+        platform,
+        style,
+        inferredBuyer: typeof toneAnalysis?.inferred_buyer === "string" ? toneAnalysis.inferred_buyer : null,
+        minimumPublishableWordMin,
+        wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
+        qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+        concreteEvidenceSignals: finalConcreteEvidenceSignals,
+        genericPhraseCount: finalGenericPhraseCountForScorecard,
+        narrativeIssueCount: finalNarrativeIssues.length,
+        nonWordViolationCount: finalNonWordCountViolations.length,
+        hasParagraphs: /\n\s*\n/.test(result.improvedPrompt || ""),
+        brokerQualityScore: finalBrokerAuditScore,
+      });
+      console.log("[Broker Realism Scorecard]", {
+        overall: brokerRealismScorecard.overall,
+        grade: brokerRealismScorecard.grade,
+        dimensions: brokerRealismScorecard.dimensions,
+        improvements: brokerRealismScorecard.improvements,
+      });
       const optimizationRecord = {
         userId: user.id,
         originalPrompt: prompt,
@@ -4453,6 +4597,8 @@ Svara med json i formatet:
         model: aiModel,
         pipelineWarnings: warnings,
         broker_improvement_suggestions: finalBrokerAuditIssues,
+        broker_realism_scorecard: brokerRealismScorecard,
+        blueprint_coverage: blueprintCoverage,
       };
       failSafeResponseData = responseData;
       if (warnings.length > 0) {

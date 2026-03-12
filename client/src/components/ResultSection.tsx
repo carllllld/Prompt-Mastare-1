@@ -111,6 +111,8 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
     ? result.broker_improvement_suggestions
     : (Array.isArray(result.broker_audit?.issues) ? result.broker_audit.issues : []);
   const isFailSafeDelivery = result.fail_safe_delivery === true;
+  const realismScorecard = result.broker_realism_scorecard;
+  const blueprintCoverage = result.blueprint_coverage;
 
   const hasExtraTexts = result.headline || result.instagramCaption || result.showingInvitation || result.shortAd;
 
@@ -180,6 +182,64 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <p className="text-xs" style={{ color: "#7C2D12" }}>
             Du fick bästa tillgängliga objektbeskrivning även om ett sent kvalitetssteg underkände körningen.
             {result.fail_safe_stage ? ` Källa: ${result.fail_safe_stage}.` : ""}
+          </p>
+        </div>
+      )}
+
+      {realismScorecard && (
+        <div className="rounded-xl border p-5 animate-slide-up" style={{ background: "#F0F9FF", borderColor: "#BAE6FD" }}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-3.5 h-3.5" style={{ color: "#0369A1" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#0C4A6E" }}>
+                Mäklar-realism scorecard
+              </span>
+            </div>
+            <span className="px-2 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#E0F2FE", color: "#075985" }}>
+              {realismScorecard.overall}/100 · {realismScorecard.grade}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
+            {[
+              ["Evidens", realismScorecard.dimensions.evidens],
+              ["Struktur", realismScorecard.dimensions.struktur],
+              ["Språk", realismScorecard.dimensions.sprakNaturlighet],
+              ["Målgrupp", realismScorecard.dimensions.malgruppstraff],
+              ["Redo", realismScorecard.dimensions.marknadsredo],
+            ].map(([label, score]) => (
+              <div key={String(label)} className="rounded-lg px-2.5 py-2 border" style={{ background: "#FFFFFF", borderColor: "#E0F2FE" }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "#64748B" }}>{label}</p>
+                <p className="text-xs font-semibold mt-0.5" style={{ color: "#0C4A6E" }}>{Number(score)}/100</p>
+              </div>
+            ))}
+          </div>
+          {realismScorecard.improvements.length > 0 && (
+            <ul className="space-y-1.5">
+              {realismScorecard.improvements.map((item, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#0C4A6E" }}>
+                  <span style={{ color: "#0284C7" }}>•</span> {item}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {blueprintCoverage && blueprintCoverage.required > 0 && (
+        <div className="rounded-xl border p-5 animate-slide-up" style={{ background: "#FFFBEB", borderColor: "#FDE68A" }}>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <Info className="w-3.5 h-3.5" style={{ color: "#B45309" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#92400E" }}>
+                Faktatäckning mot skrivplan
+              </span>
+            </div>
+            <span className="px-2 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#FEF3C7", color: "#92400E" }}>
+              {blueprintCoverage.matched}/{blueprintCoverage.required}
+            </span>
+          </div>
+          <p className="text-xs" style={{ color: "#78350F" }}>
+            {Math.round((blueprintCoverage.ratio || 0) * 100)}% av prioriterade fakta hittades tydligt i sluttexten.
           </p>
         </div>
       )}
