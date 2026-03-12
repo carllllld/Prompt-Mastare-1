@@ -155,6 +155,16 @@ export const optimizeResponseSchema = z.object({
     ratio: z.number(),
     missing: z.array(z.string()),
   }).optional(),
+  input_signal_coverage: z.object({
+    totalSignals: z.number(),
+    usedSignals: z.number(),
+    ratio: z.number(),
+    critical: z.array(z.object({
+      path: z.string(),
+      used: z.boolean(),
+    })),
+    topMissing: z.array(z.string()),
+  }).optional(),
   fail_safe_delivery: z.boolean().optional(),
   fail_safe_stage: z.string().optional(),
   fail_safe_reason: z.string().optional(),

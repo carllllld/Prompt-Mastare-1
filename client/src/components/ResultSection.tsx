@@ -113,6 +113,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
   const isFailSafeDelivery = result.fail_safe_delivery === true;
   const realismScorecard = result.broker_realism_scorecard;
   const blueprintCoverage = result.blueprint_coverage;
+  const inputSignalCoverage = result.input_signal_coverage;
 
   const hasExtraTexts = result.headline || result.instagramCaption || result.showingInvitation || result.shortAd;
 
@@ -241,6 +242,39 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <p className="text-xs" style={{ color: "#78350F" }}>
             {Math.round((blueprintCoverage.ratio || 0) * 100)}% av prioriterade fakta hittades tydligt i sluttexten.
           </p>
+        </div>
+      )}
+
+      {inputSignalCoverage && inputSignalCoverage.totalSignals > 0 && (
+        <div className="rounded-xl border p-5 animate-slide-up" style={{ background: "#F8FAFC", borderColor: "#CBD5E1" }}>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <Info className="w-3.5 h-3.5" style={{ color: "#334155" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#334155" }}>
+                Input-signaltäckning
+              </span>
+            </div>
+            <span className="px-2 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#E2E8F0", color: "#334155" }}>
+              {inputSignalCoverage.usedSignals}/{inputSignalCoverage.totalSignals}
+            </span>
+          </div>
+          <p className="text-xs mb-2" style={{ color: "#475569" }}>
+            {Math.round((inputSignalCoverage.ratio || 0) * 100)}% av identifierade informationssignaler från underlaget återfinns i sluttexten.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {inputSignalCoverage.critical.slice(0, 6).map((signal, index) => (
+              <span
+                key={`${signal.path}-${index}`}
+                className="px-2 py-1 rounded-full text-[10px] font-semibold"
+                style={{
+                  background: signal.used ? "#DCFCE7" : "#FEE2E2",
+                  color: signal.used ? "#166534" : "#991B1B",
+                }}
+              >
+                {signal.used ? "✓" : "!"} {signal.path}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

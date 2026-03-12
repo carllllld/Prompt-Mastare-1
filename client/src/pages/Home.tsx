@@ -208,7 +208,7 @@ export default function Home() {
   const limit = userStatus?.monthlyTextLimit ?? 2;
   const used = userStatus?.textsUsedThisMonth ?? 0;
   return (
-    <div className="h-screen overflow-hidden flex flex-col" style={{ background: "#FAFAF7" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
@@ -314,7 +314,7 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-4 sm:py-5 flex-1 overflow-hidden">
+      <main className="max-w-[2200px] mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-6 sm:py-8">
 
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
@@ -388,19 +388,17 @@ export default function Home() {
         )}
 
         {/* Main grid — 12 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-14 gap-5 xl:gap-7 items-start lg:h-[calc(100vh-190px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-14 gap-6 xl:gap-8 items-start">
 
           {/* ── LEFT: Form ── */}
-          <div className={result ? "lg:col-span-8 lg:h-full" : "lg:col-span-10 lg:h-full"}>
-            <div className="bg-white rounded-xl border p-5 sm:p-6 lg:h-full lg:overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-              <div className="lg:h-full lg:overflow-y-auto lg:pr-2">
-                <PromptFormProfessional
-                  onSubmit={handleSubmit}
-                  isPending={isPending}
-                  disabled={isAuthenticated && remaining === 0}
-                  isPro={plan === "pro" || plan === "premium"}
-                />
-              </div>
+          <div className={result ? "lg:col-span-8" : "lg:col-span-10"}>
+            <div className="bg-white rounded-xl border p-5 sm:p-6" style={{ borderColor: "#E8E5DE" }}>
+              <PromptFormProfessional
+                onSubmit={handleSubmit}
+                isPending={isPending}
+                disabled={isAuthenticated && remaining === 0}
+                isPro={plan === "pro" || plan === "premium"}
+              />
             </div>
 
             {/* Loading progress with skeleton */}
@@ -412,20 +410,18 @@ export default function Home() {
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}
-          <div ref={resultRef} className={result ? "lg:col-span-6 lg:h-full" : "lg:col-span-4 lg:h-full"}>
+          <div ref={resultRef} className={result ? "lg:col-span-6" : "lg:col-span-4"}>
             {result ? (
-              <div className="animate-fade-in lg:h-full lg:overflow-y-auto lg:pr-1">
-                <div className="lg:pb-4">
-                  <ResultSection
-                    result={result}
-                    onNewPrompt={() => setResult(null)}
-                    onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
-                    isRegenerating={isPending}
-                  />
-                </div>
+              <div className="lg:sticky lg:top-24 animate-fade-in">
+                <ResultSection
+                  result={result}
+                  onNewPrompt={() => setResult(null)}
+                  onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
+                  isRegenerating={isPending}
+                />
               </div>
             ) : (
-              <div className="space-y-5 lg:h-full lg:overflow-y-auto lg:pr-1 lg:pb-4">
+              <div className="space-y-5 lg:sticky lg:top-24">
                 {/* Before/After demo */}
                 <BeforeAfterDemo />
 
@@ -592,7 +588,7 @@ export default function Home() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t mt-4 py-4 hidden lg:block" style={{ borderColor: "#E8E5DE" }}>
+      <footer className="border-t mt-12 py-6" style={{ borderColor: "#E8E5DE" }}>
         <div className="max-w-[2200px] mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
           <span>© {new Date().getFullYear()} OptiPrompt</span>
           <div className="flex gap-4">

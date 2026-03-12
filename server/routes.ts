@@ -24,6 +24,7 @@ import { buildRepairPromptAddendum, buildSpecializedRepairPrompt, selectRepairSt
 import { applyStageQualityBudget, evaluateFinalGateAB } from "./lib/listing-quality-guards";
 import { buildBrokerRealismScorecard } from "./lib/listing-broker-realism-scorecard";
 import { evaluateBlueprintCoverage } from "./lib/listing-blueprint-coverage";
+import { evaluateInputSignalCoverage } from "./lib/listing-input-signal-coverage";
 import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
 import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
 import OpenAI from "openai";
@@ -4389,6 +4390,11 @@ Svara med JSON:
       if (blueprintCoverage.required > 0 && blueprintCoverage.ratio < 0.55) {
         warnings.push(`[Blueprint Coverage] Endast ${blueprintCoverage.matched}/${blueprintCoverage.required} prioriterade fakta matchar tydligt sluttexten.`);
       }
+      const inputSignalCoverage = evaluateInputSignalCoverage(result.improvedPrompt || "", cleanDisposition);
+      console.log("[Input Signal Coverage]", inputSignalCoverage);
+      if (inputSignalCoverage.totalSignals >= 8 && inputSignalCoverage.ratio < 0.45) {
+        warnings.push(`[Input Signal Coverage] Endast ${inputSignalCoverage.usedSignals}/${inputSignalCoverage.totalSignals} signaler från underlaget syns tydligt i sluttexten.`);
+      }
 
       const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
       const finalNonWordCountViolations = getNonWordCountViolations(finalMainViolations);
@@ -4599,6 +4605,7 @@ Svara med json i formatet:
         broker_improvement_suggestions: finalBrokerAuditIssues,
         broker_realism_scorecard: brokerRealismScorecard,
         blueprint_coverage: blueprintCoverage,
+        input_signal_coverage: inputSignalCoverage,
       };
       failSafeResponseData = responseData;
       if (warnings.length > 0) {
