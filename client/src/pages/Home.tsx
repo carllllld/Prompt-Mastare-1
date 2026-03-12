@@ -208,7 +208,7 @@ export default function Home() {
   const limit = userStatus?.monthlyTextLimit ?? 2;
   const used = userStatus?.textsUsedThisMonth ?? 0;
   return (
-    <div className="min-h-screen md:h-screen md:overflow-hidden flex flex-col" style={{ background: "#FAFAF7" }}>
+    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
@@ -314,7 +314,7 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-4 sm:py-5 md:overflow-hidden flex-1 md:flex md:flex-col md:min-h-0">
+      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-5 sm:py-6">
 
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
@@ -388,19 +388,17 @@ export default function Home() {
         )}
 
         {/* Main grid — 12 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 xl:gap-6 items-start md:flex-1 md:min-h-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-7 items-start">
 
           {/* ── LEFT: Form ── */}
-          <div className={result ? "md:col-span-7 md:h-full" : "md:col-span-7 md:h-full"}>
-            <div className="bg-white rounded-xl border p-4 sm:p-5 md:h-full md:overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-              <div className="md:h-full md:overflow-y-auto md:pr-2">
-                <PromptFormProfessional
-                  onSubmit={handleSubmit}
-                  isPending={isPending}
-                  disabled={isAuthenticated && remaining === 0}
-                  isPro={plan === "pro" || plan === "premium"}
-                />
-              </div>
+          <div className="lg:col-span-7">
+            <div className="bg-white rounded-xl border p-5 sm:p-6" style={{ borderColor: "#E8E5DE" }}>
+              <PromptFormProfessional
+                onSubmit={handleSubmit}
+                isPending={isPending}
+                disabled={isAuthenticated && remaining === 0}
+                isPro={plan === "pro" || plan === "premium"}
+              />
             </div>
 
             {/* Loading progress with skeleton */}
@@ -412,10 +410,10 @@ export default function Home() {
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}
-          <div ref={resultRef} className={result ? "md:col-span-5 md:h-full" : "md:col-span-5 md:h-full"}>
-            {result ? (
-              <div className="animate-fade-in md:h-full md:overflow-y-auto md:pr-1">
-                <div className="md:pb-4">
+          <div ref={resultRef} className="lg:col-span-5">
+            <div className="space-y-5 lg:sticky lg:top-24">
+              {result ? (
+                <div className="animate-fade-in">
                   <ResultSection
                     result={result}
                     onNewPrompt={() => setResult(null)}
@@ -423,170 +421,167 @@ export default function Home() {
                     isRegenerating={isPending}
                   />
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4 md:h-full md:overflow-y-auto md:pr-1 md:pb-4">
-                {/* Before/After demo */}
+              ) : (
                 <BeforeAfterDemo />
+              )}
 
-                {/* Usage indicator */}
-                {isAuthenticated && (
-                  <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-                    <div className="px-5 py-3 border-b flex items-center justify-between" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Månadskvot</span>
-                      <span
-                        className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{
-                          background: plan === "premium" ? "#F5F3FF" : plan === "pro" ? "#ECFDF5" : "#F3F4F6",
-                          color: plan === "premium" ? "#7C3AED" : plan === "pro" ? "#2D6A4F" : "#4B5563",
-                        }}
-                      >
-                        {plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratis"}
-                      </span>
+              {/* Usage indicator */}
+              {isAuthenticated && (
+                <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                  <div className="px-5 py-3 border-b flex items-center justify-between" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Månadskvot</span>
+                    <span
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{
+                        background: plan === "premium" ? "#F5F3FF" : plan === "pro" ? "#ECFDF5" : "#F3F4F6",
+                        color: plan === "premium" ? "#7C3AED" : plan === "pro" ? "#2D6A4F" : "#4B5563",
+                      }}
+                    >
+                      {plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratis"}
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-end justify-between mb-3">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold" style={{ color: remaining === 0 ? "#EF4444" : "#1D2939" }}>{remaining}</span>
+                        <span className="text-sm" style={{ color: "#9CA3AF" }}>/ {limit} kvar</span>
+                      </div>
+                      <span className="text-xs" style={{ color: "#9CA3AF" }}>{used} använda</span>
                     </div>
-                    <div className="p-5">
-                      <div className="flex items-end justify-between mb-3">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-bold" style={{ color: remaining === 0 ? "#EF4444" : "#1D2939" }}>{remaining}</span>
-                          <span className="text-sm" style={{ color: "#9CA3AF" }}>/ {limit} kvar</span>
-                        </div>
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>{used} använda</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            background: remaining === 0 ? "#EF4444" : plan === "premium" ? "#8B5CF6" : "#2D6A4F",
-                            width: `${Math.min(100, (used / limit) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      {userStatus?.resetTime && (
-                        <p className="text-[11px] mt-2.5" style={{ color: "#9CA3AF" }}>
-                          Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
-                        </p>
-                      )}
-                      <div className="mt-4 rounded-lg border px-3 py-3 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#4B5563" }}>
-                        <p className="font-semibold mb-1" style={{ color: "#1D2939" }}>För bäst resultat</p>
-                        <p>Fyll först i adress, område, boarea, skick, planlösning och objektets starkaste säljpunkter. Resten är förfining.</p>
-                      </div>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          background: remaining === 0 ? "#EF4444" : plan === "premium" ? "#8B5CF6" : "#2D6A4F",
+                          width: `${Math.min(100, (used / limit) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    {userStatus?.resetTime && (
+                      <p className="text-[11px] mt-2.5" style={{ color: "#9CA3AF" }}>
+                        Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
+                      </p>
+                    )}
+                    <div className="mt-4 rounded-lg border px-3 py-3 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#4B5563" }}>
+                      <p className="font-semibold mb-1" style={{ color: "#1D2939" }}>För bäst resultat</p>
+                      <p>Fyll först i adress, område, boarea, skick, planlösning och objektets starkaste säljpunkter. Resten är förfining.</p>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Upgrade CTA */}
-                {isAuthenticated && plan !== "premium" && (
-                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-                    <div className="px-5 py-4 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
-                        {plan === "free" ? "Uppgradera" : "Uppgradera till Premium"}
-                      </p>
-                      <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                        {plan === "free" ? "Fler objekt per månad." : "Maximal kapacitet."}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-white space-y-3">
-                      {plan === "free" && (
-                        <div className="rounded-lg border p-4" style={{ borderColor: "#BBF7D0", background: "#F0FDF4" }}>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1.5">
-                                <span className="text-sm font-bold" style={{ color: "#2D6A4F" }}>Pro</span>
-                                <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>299 kr/mån</span>
-                              </div>
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
-                                <span>10 texter / mån</span>
-                                <span>40 AI-redigeringar</span>
-                                <span>Personlig skrivstil</span>
-                              </div>
-                            </div>
-                            <Button
-                              onClick={() => startCheckout("pro")}
-                              disabled={isCheckoutPending}
-                              size="sm"
-                              className="shrink-0 text-xs font-semibold h-8"
-                              style={{ background: "#2D6A4F", color: "#fff" }}
-                            >
-                              {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj Pro"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="rounded-lg border p-4" style={{ borderColor: "#DDD6FE", background: "#F5F3FF" }}>
+              {/* Upgrade CTA */}
+              {isAuthenticated && plan !== "premium" && (
+                <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                  <div className="px-5 py-4 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                      {plan === "free" ? "Uppgradera" : "Uppgradera till Premium"}
+                    </p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                      {plan === "free" ? "Fler objekt per månad." : "Maximal kapacitet."}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-white space-y-3">
+                    {plan === "free" && (
+                      <div className="rounded-lg border p-4" style={{ borderColor: "#BBF7D0", background: "#F0FDF4" }}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-sm font-bold" style={{ color: "#7C3AED" }}>Premium</span>
-                              <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>599 kr/mån</span>
+                              <span className="text-sm font-bold" style={{ color: "#2D6A4F" }}>Pro</span>
+                              <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>299 kr/mån</span>
                             </div>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
-                              <span>25 texter / mån</span>
-                              <span>120 AI-redigeringar</span>
-                              <span>800 ord / text</span>
+                              <span>10 texter / mån</span>
+                              <span>40 AI-redigeringar</span>
+                              <span>Personlig skrivstil</span>
                             </div>
                           </div>
                           <Button
-                            onClick={() => startCheckout("premium")}
+                            onClick={() => startCheckout("pro")}
                             disabled={isCheckoutPending}
                             size="sm"
                             className="shrink-0 text-xs font-semibold h-8"
-                            style={{ background: "#7C3AED", color: "#fff" }}
+                            style={{ background: "#2D6A4F", color: "#fff" }}
                           >
-                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj Premium"}
+                            {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj Pro"}
                           </Button>
                         </div>
                       </div>
-                      <p className="text-[10px] text-center pt-1" style={{ color: "#9CA3AF" }}>
-                        Ingen bindningstid · Avsluta när du vill
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* History panel — logged in users */}
-                {isAuthenticated && (
-                  <HistoryPanel />
-                )}
-
-                {/* Personal Style — Pro & Premium users */}
-                {isAuthenticated && (plan === "pro" || plan === "premium") && (
-                  <PersonalStyle />
-                )}
-
-                {/* Not logged in — sidebar CTA */}
-                {!isAuthenticated && (
-                  <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-                    <div className="px-5 py-4" style={{ background: "#2D6A4F" }}>
-                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A7F3D0" }}>Gratis konto</p>
-                      <p className="text-base font-semibold mt-0.5 text-white" style={{ fontFamily: "'Lora', Georgia, serif" }}>
-                        2 texter per månad, gratis
-                      </p>
-                    </div>
-                    <div className="p-5 bg-white space-y-2.5">
-                      {[
-                        "Objektbeskrivning, Hemnet & Booli",
-                        "Rubrik, Instagram & kortannons",
-                        "397+ klyschor filtreras bort",
-                        "Inget kreditkort krävs",
-                      ].map((f) => (
-                        <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
-                          <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
-                          {f}
+                    )}
+                    <div className="rounded-lg border p-4" style={{ borderColor: "#DDD6FE", background: "#F5F3FF" }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-sm font-bold" style={{ color: "#7C3AED" }}>Premium</span>
+                            <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>599 kr/mån</span>
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
+                            <span>25 texter / mån</span>
+                            <span>120 AI-redigeringar</span>
+                            <span>800 ord / text</span>
+                          </div>
                         </div>
-                      ))}
-                      <Button
-                        onClick={() => setAuthModalOpen(true)}
-                        className="w-full font-semibold mt-1"
-                        style={{ background: "#2D6A4F", color: "#fff" }}
-                      >
-                        Kom igång gratis
-                        <ChevronRight className="w-4 h-4 ml-1.5" />
-                      </Button>
+                        <Button
+                          onClick={() => startCheckout("premium")}
+                          disabled={isCheckoutPending}
+                          size="sm"
+                          className="shrink-0 text-xs font-semibold h-8"
+                          style={{ background: "#7C3AED", color: "#fff" }}
+                        >
+                          {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Välj Premium"}
+                        </Button>
+                      </div>
                     </div>
+                    <p className="text-[10px] text-center pt-1" style={{ color: "#9CA3AF" }}>
+                      Ingen bindningstid · Avsluta när du vill
+                    </p>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* History panel — logged in users */}
+              {isAuthenticated && (
+                <HistoryPanel />
+              )}
+
+              {/* Personal Style — Pro & Premium users */}
+              {isAuthenticated && (plan === "pro" || plan === "premium") && (
+                <PersonalStyle />
+              )}
+
+              {/* Not logged in — sidebar CTA */}
+              {!isAuthenticated && (
+                <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                  <div className="px-5 py-4" style={{ background: "#2D6A4F" }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A7F3D0" }}>Gratis konto</p>
+                    <p className="text-base font-semibold mt-0.5 text-white" style={{ fontFamily: "'Lora', Georgia, serif" }}>
+                      2 texter per månad, gratis
+                    </p>
+                  </div>
+                  <div className="p-5 bg-white space-y-2.5">
+                    {[
+                      "Objektbeskrivning, Hemnet & Booli",
+                      "Rubrik, Instagram & kortannons",
+                      "397+ klyschor filtreras bort",
+                      "Inget kreditkort krävs",
+                    ].map((f) => (
+                      <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>
+                        <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
+                        {f}
+                      </div>
+                    ))}
+                    <Button
+                      onClick={() => setAuthModalOpen(true)}
+                      className="w-full font-semibold mt-1"
+                      style={{ background: "#2D6A4F", color: "#fff" }}
+                    >
+                      Kom igång gratis
+                      <ChevronRight className="w-4 h-4 ml-1.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </main>
