@@ -27,13 +27,22 @@ export function coordinatePolishAcceptance(params: {
   accepted: boolean;
   currentViolationCount: number;
   nextViolationCount: number;
+  currentQualityScore?: number;
+  nextQualityScore?: number;
   rejectionReason?: string;
 }): PolishCoordinatorResult {
-  const accepted = params.accepted && params.nextViolationCount <= params.currentViolationCount;
+  const hasQualitySignals = typeof params.currentQualityScore === "number" && typeof params.nextQualityScore === "number";
+  const qualityDrop = hasQualitySignals ? (params.currentQualityScore! - params.nextQualityScore!) : 0;
+  const acceptsQualityDelta = !hasQualitySignals || qualityDrop <= 0.02;
+  const accepted = params.accepted && params.nextViolationCount <= params.currentViolationCount && acceptsQualityDelta;
 
   return {
     accepted,
-    reason: accepted ? "polish accepted" : params.rejectionReason || "polish rejected",
+    reason: accepted
+      ? "polish accepted"
+      : (!acceptsQualityDelta
+        ? "polish rejected due to quality regression"
+        : (params.rejectionReason || "polish rejected")),
   };
 }
 

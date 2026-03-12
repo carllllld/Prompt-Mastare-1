@@ -106,6 +106,11 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
   const localTextClear = result.factCheck?.local_text_clear;
   const factCheckExecuted = result.factCheck?.executed;
   const factCheckMatchesFinalText = result.factCheck?.metadata_matches_final_text;
+  const pipelineWarnings = Array.isArray(result.pipelineWarnings) ? result.pipelineWarnings : [];
+  const brokerImprovementSuggestions = Array.isArray(result.broker_improvement_suggestions)
+    ? result.broker_improvement_suggestions
+    : (Array.isArray(result.broker_audit?.issues) ? result.broker_audit.issues : []);
+  const isFailSafeDelivery = result.fail_safe_delivery === true;
 
   const hasExtraTexts = result.headline || result.instagramCaption || result.showingInvitation || result.shortAd;
 
@@ -156,7 +161,28 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
             {localTextClear ? "Lokalt kvalitetskontrollerad" : "Kvarvarande textproblem"}
           </div>
         )}
+        {isFailSafeDelivery && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ background: "#FFF7ED", color: "#9A3412" }}>
+            <AlertCircle className="w-3 h-3" />
+            Fail-safe leverans
+          </div>
+        )}
       </div>
+
+      {isFailSafeDelivery && (
+        <div className="rounded-xl border p-5 animate-slide-up" style={{ background: "#FFF7ED", borderColor: "#FED7AA" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-3.5 h-3.5" style={{ color: "#C2410C" }} />
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9A3412" }}>
+              Levererad via säker fallback
+            </span>
+          </div>
+          <p className="text-xs" style={{ color: "#7C2D12" }}>
+            Du fick bästa tillgängliga objektbeskrivning även om ett sent kvalitetssteg underkände körningen.
+            {result.fail_safe_stage ? ` Källa: ${result.fail_safe_stage}.` : ""}
+          </p>
+        </div>
+      )}
 
       {/* ── KOPIERA ALLT ── */}
       {hasExtraTexts && (
@@ -278,6 +304,24 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
         </div>
       )}
 
+      {pipelineWarnings.length > 0 && (
+        <div className="rounded-xl border p-5" style={{ background: "#FFF7ED", borderColor: "#FED7AA" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#C2410C" }} />
+            <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9A3412" }}>
+              Pipeline-varningar
+            </span>
+          </div>
+          <ul className="space-y-1.5">
+            {pipelineWarnings.map((warning, i) => (
+              <li key={i} className="text-xs flex gap-2" style={{ color: "#7C2D12" }}>
+                <span style={{ color: "#EA580C" }}>!</span> {warning}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* ── INFO CARDS GRID ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up" style={{ animationDelay: "0.25s" }}>
         {result.improvements && result.improvements.length > 0 && (
@@ -323,6 +367,22 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
               {result.factCheck.broker_tips.map((tip, i) => (
                 <li key={i} className="text-xs flex gap-2" style={{ color: "#064E3B" }}>
                   <span style={{ color: "#10B981" }}>✓</span> {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {brokerImprovementSuggestions.length > 0 && (
+          <div className="rounded-xl border p-5" style={{ background: "#F0F9FF", borderColor: "#BAE6FD" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="w-3.5 h-3.5" style={{ color: "#0284C7" }} />
+              <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#0C4A6E" }}>Mäklarens förbättringsfokus</span>
+            </div>
+            <ul className="space-y-1.5">
+              {brokerImprovementSuggestions.map((tip, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "#0C4A6E" }}>
+                  <span style={{ color: "#0EA5E9" }}>→</span> {tip}
                 </li>
               ))}
             </ul>

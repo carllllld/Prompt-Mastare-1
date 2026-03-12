@@ -4486,7 +4486,8 @@ Svara med json i formatet:
     } catch (err: any) {
       console.error("Optimize error:", err);
       const preferredFailSafePayload = choosePreferredFailSafePayload(failSafeResponseData, failSafeStrongCandidateData);
-      if (preferredFailSafePayload && !res.headersSent) {
+      const canReturnFailSafe = Boolean(preferredFailSafePayload) && (!res.headersSent || wantsStream);
+      if (canReturnFailSafe) {
         const selectedStrongBaseline = preferredFailSafePayload === failSafeStrongCandidateData && failSafeStrongCandidateData !== failSafeResponseData;
         const safeWarnings = Array.isArray(preferredFailSafePayload.pipelineWarnings) ? preferredFailSafePayload.pipelineWarnings : [];
         const safePayload = {

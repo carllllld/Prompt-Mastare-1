@@ -110,6 +110,7 @@ export const optimizeResponseSchema = z.object({
     publish_ready: z.boolean().optional(),
     broker_quality_score: z.number().optional().nullable(),
     verdict: z.string().optional().nullable(),
+    issues: z.array(z.string()).optional(),
   }).optional(),
   factCheck: z.object({
     fact_check_passed: z.boolean().optional().nullable(),
@@ -133,6 +134,16 @@ export const optimizeResponseSchema = z.object({
   socialCopy: z.string().optional(),
   wordCount: z.number().optional(),
   model: z.string().optional(),
+  pipelineWarnings: z.array(z.string()).optional(),
+  broker_improvement_suggestions: z.array(z.string()).optional(),
+  fail_safe_delivery: z.boolean().optional(),
+  fail_safe_stage: z.string().optional(),
+  fail_safe_reason: z.string().optional(),
+  fail_safe_meta: z.object({
+    qualityScore: z.number().nullable().optional(),
+    violationCount: z.number().nullable().optional(),
+    candidateLabel: z.string().nullable().optional(),
+  }).optional(),
 });
 
 export const optimizeErrorSchema = z.object({

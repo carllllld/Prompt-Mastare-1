@@ -284,6 +284,8 @@ export function buildCandidatePolishSettlement(params: {
     accepted: boolean;
     currentViolationCount: number;
     nextViolationCount: number;
+    currentQualityScore?: number;
+    nextQualityScore?: number;
     rejectionReason: string;
   }) => {
     accepted: boolean;
@@ -295,6 +297,8 @@ export function buildCandidatePolishSettlement(params: {
     accepted: polishEvaluation.acceptance.accept,
     currentViolationCount: params.polishAttemptSnapshot.currentAllViolations.length,
     nextViolationCount: params.polishAttemptSnapshot.polishedAllViolations.length,
+    currentQualityScore: params.polishAttemptSnapshot.currentScore,
+    nextQualityScore: params.polishAttemptSnapshot.polishedScore,
     rejectionReason: polishEvaluation.acceptance.reason,
   });
 

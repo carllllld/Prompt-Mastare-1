@@ -25,6 +25,20 @@ describe("listing refinement coordinator", () => {
     expect(result.reason).toContain("additional violations");
   });
 
+  it("rejects polish when quality drops too much despite flat violations", () => {
+    const result = coordinatePolishAcceptance({
+      accepted: true,
+      currentViolationCount: 2,
+      nextViolationCount: 2,
+      currentQualityScore: 0.89,
+      nextQualityScore: 0.77,
+      rejectionReason: "polish quality regressed",
+    });
+
+    expect(result.accepted).toBe(false);
+    expect(result.reason).toContain("quality regression");
+  });
+
   it("accepts expansion when the coordinated outcome is valid", () => {
     const result = coordinateExpansionAcceptance({
       accepted: true,
