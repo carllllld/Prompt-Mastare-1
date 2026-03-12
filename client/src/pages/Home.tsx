@@ -208,7 +208,7 @@ export default function Home() {
   const limit = userStatus?.monthlyTextLimit ?? 2;
   const used = userStatus?.textsUsedThisMonth ?? 0;
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col" style={{ background: "#FAFAF7" }}>
+    <div className="min-h-screen md:h-screen md:overflow-hidden flex flex-col" style={{ background: "#FAFAF7" }}>
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
@@ -314,7 +314,7 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-4 sm:py-5 lg:overflow-auto flex-1">
+      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-4 sm:py-5 md:overflow-hidden flex-1 md:flex md:flex-col md:min-h-0">
 
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
@@ -388,12 +388,12 @@ export default function Home() {
         )}
 
         {/* Main grid — 12 columns */}
-        <div className="grid grid-cols-1 lg:grid-cols-14 gap-5 xl:gap-7 items-start lg:h-[calc(100vh-180px)]">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 xl:gap-6 items-start md:flex-1 md:min-h-0">
 
           {/* ── LEFT: Form ── */}
-          <div className={result ? "lg:col-span-8 lg:h-full" : "lg:col-span-10 lg:h-full"}>
-            <div className="bg-white rounded-xl border p-5 sm:p-6 lg:h-full lg:overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-              <div className="lg:h-full lg:overflow-y-auto lg:pr-2">
+          <div className={result ? "md:col-span-7 md:h-full" : "md:col-span-7 md:h-full"}>
+            <div className="bg-white rounded-xl border p-4 sm:p-5 md:h-full md:overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+              <div className="md:h-full md:overflow-y-auto md:pr-2">
                 <PromptFormProfessional
                   onSubmit={handleSubmit}
                   isPending={isPending}
@@ -412,10 +412,10 @@ export default function Home() {
           </div>
 
           {/* ── RIGHT: Result or sidebar ── */}
-          <div ref={resultRef} className={result ? "lg:col-span-6 lg:h-full" : "lg:col-span-4 lg:h-full"}>
+          <div ref={resultRef} className={result ? "md:col-span-5 md:h-full" : "md:col-span-5 md:h-full"}>
             {result ? (
-              <div className="animate-fade-in lg:h-full lg:overflow-y-auto lg:pr-1">
-                <div className="lg:pb-4">
+              <div className="animate-fade-in md:h-full md:overflow-y-auto md:pr-1">
+                <div className="md:pb-4">
                   <ResultSection
                     result={result}
                     onNewPrompt={() => setResult(null)}
@@ -425,7 +425,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-5 lg:h-full lg:overflow-y-auto lg:pr-1 lg:pb-4">
+              <div className="space-y-4 md:h-full md:overflow-y-auto md:pr-1 md:pb-4">
                 {/* Before/After demo */}
                 <BeforeAfterDemo />
 
@@ -592,7 +592,7 @@ export default function Home() {
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t mt-4 py-4 hidden lg:block" style={{ borderColor: "#E8E5DE" }}>
+      <footer className="border-t mt-4 py-4 hidden xl:block" style={{ borderColor: "#E8E5DE" }}>
         <div className="max-w-[2200px] mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
           <span>© {new Date().getFullYear()} OptiPrompt</span>
           <div className="flex gap-4">

@@ -4038,7 +4038,7 @@ Svara med JSON:
         strongCandidateFastPath,
         finalMainWordCount,
         finalStrongWordFloor,
-        finalGenericBrokerPhraseCount,
+        finalGenericBrokerPhraseCount: finalGenericPhraseCountForScorecard,
         finalNarrativeIntegrityIssueCount: finalNarrativeIntegrityIssues.length,
       }).brokerAuditDecision;
       const finalAuditIteration = runAgentIteration({
@@ -4047,7 +4047,7 @@ Svara med JSON:
         actionLabel: "evaluate whether broker audit can be skipped",
         currentViolations: getNonWordCountViolations(validateMainMarketingText({ improvedPrompt: result.improvedPrompt || "" }, platform, minimumPublishableWordMin, targetWordMax, style)),
         wordShortfall: Math.max(0, minimumPublishableWordMin - finalMainWordCount),
-        genericBrokerPhraseCount: finalGenericBrokerPhraseCount,
+        genericBrokerPhraseCount: finalGenericPhraseCountForScorecard,
         narrativeIntegrityIssues: finalNarrativeIntegrityIssues,
         requiresBrokerAudit: !brokerAuditDecision.canSkipExternalAudit,
         factCheckAvailable: false,
@@ -4524,7 +4524,6 @@ Svara med json i formatet:
         ? finalBrokerAudit.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0).slice(0, 8)
         : [];
       const finalConcreteEvidenceSignals = countConcreteEvidenceSignals(result.improvedPrompt || "");
-      const finalGenericBrokerPhraseCount = countGenericBrokerPhrases(result.improvedPrompt || "");
       const brokerRealismScorecard = buildBrokerRealismScorecard({
         text: result.improvedPrompt || "",
         propertyType: String(cleanDisposition?.property?.type || cleanDisposition?.propertyType || type || ""),
