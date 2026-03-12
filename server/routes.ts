@@ -2524,6 +2524,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
       : (_step: number, _total: number, _message: string) => { };
 
+    let failSafeResponseData: any = null;
+    let failSafeStrongCandidateData: any = null;
+    const choosePreferredFailSafePayload = (latest: any, strongest: any) => {
+      if (!latest) return strongest;
+      if (!strongest) return latest;
+      const scorePayload = (payload: any) => {
+        const metaQuality = typeof payload?.fail_safe_meta?.qualityScore === "number" ? payload.fail_safe_meta.qualityScore : 0;
+        const metaViolations = typeof payload?.fail_safe_meta?.violationCount === "number" ? payload.fail_safe_meta.violationCount : 0;
+        const wordCount = typeof payload?.wordCount === "number" ? payload.wordCount : 0;
+        const stageBonus = typeof payload?.fail_safe_stage === "string" && payload.fail_safe_stage.includes("post-final-broker-audit") ? 0.03 : 0;
+        return metaQuality - metaViolations * 0.03 + Math.min(wordCount, 350) / 10000 + stageBonus;
+      };
+      return scorePayload(strongest) > scorePayload(latest) ? strongest : latest;
+    };
     try {
       const warnings: string[] = [];
       // Validate input with Zod schema
@@ -2588,6 +2602,72 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Responses API med reasoning (o1/o3-modeller) stödjer INTE temperature.
       // Enda kontrollen är reasoning.effort: "low" | "medium" | "high"
       const reasoningEffort: "low" | "medium" | "high" = "high";
+      const snapshotFailSafeResponse = (
+        stage: string,
+        currentResult: any,
+        extra?: {
+          brokerAudit?: any;
+          warnings?: string[];
+          brokerSuggestions?: string[];
+          meta?: { qualityScore?: number; violationCount?: number; candidateLabel?: string };
+          persistAsStrongBaseline?: boolean;
+        }
+      ) => {
+        const text = typeof currentResult?.improvedPrompt === "string" ? currentResult.improvedPrompt.trim() : "";
+        if (!text) return;
+        const brokerAuditIssues = Array.isArray(extra?.brokerAudit?.issues)
+          ? extra?.brokerAudit?.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0).slice(0, 8)
+          : (extra?.brokerSuggestions || []);
+        const snapshotData = {
+          originalPrompt: prompt,
+          improvedPrompt: text,
+          highlights: currentResult?.highlights || [],
+          analysis: currentResult?.analysis || {},
+          improvements: currentResult?.missing_info || [],
+          suggestions: currentResult?.text_tips || currentResult?.pro_tips || [],
+          text_tips: currentResult?.text_tips || currentResult?.pro_tips || [],
+          critical_gaps: currentResult?.critical_gaps || [],
+          socialCopy: currentResult?.socialCopy || null,
+          headline: currentResult?.headline || null,
+          instagramCaption: currentResult?.instagramCaption || null,
+          showingInvitation: currentResult?.showingInvitation || null,
+          shortAd: currentResult?.shortAd || null,
+          improvement_suggestions: null,
+          broker_audit: {
+            publish_ready: extra?.brokerAudit?.publish_ready !== false,
+            broker_quality_score: typeof extra?.brokerAudit?.broker_quality_score === "number" ? extra?.brokerAudit?.broker_quality_score : null,
+            verdict: typeof extra?.brokerAudit?.verdict === "string" ? extra?.brokerAudit?.verdict : null,
+            issues: brokerAuditIssues,
+          },
+          factCheck: {
+            fact_check_passed: null,
+            local_text_clear: null,
+            issues: [],
+            quality_score: null,
+            broker_tips: [],
+            executed: false,
+            metadata_matches_final_text: false,
+          },
+          wordCount: text.split(/\s+/).filter(Boolean).length,
+          model: aiModel,
+          pipelineWarnings: [
+            ...(extra?.warnings || []),
+            `[Fail-Safe] Levererade bästa tillgängliga objektbeskrivning från steg: ${stage}.`,
+          ],
+          broker_improvement_suggestions: brokerAuditIssues,
+          fail_safe_delivery: true,
+          fail_safe_stage: stage,
+          fail_safe_meta: {
+            qualityScore: typeof extra?.meta?.qualityScore === "number" ? Number(extra.meta.qualityScore.toFixed(3)) : null,
+            violationCount: typeof extra?.meta?.violationCount === "number" ? extra.meta.violationCount : null,
+            candidateLabel: extra?.meta?.candidateLabel || null,
+          },
+        };
+        failSafeResponseData = snapshotData;
+        if (extra?.persistAsStrongBaseline) {
+          failSafeStrongCandidateData = snapshotData;
+        }
+      };
 
       console.log(`[Config] Plan: ${plan}, Style: ${style}, Model: ${aiModel}, Reasoning effort: ${reasoningEffort}`);
 
@@ -3284,6 +3364,11 @@ Svara med JSON:
 
       const candidateDecision = chooseBestCandidate(candidatePool, plan, resolvedBlueprint, judgeChoiceLabel);
       const selectedCandidate = candidatePool.find((candidate) => candidate.label === candidateDecision.selectedLabel) || candidatePool[0];
+      const strongestCandidateBaseline = [...candidatePool].sort((a, b) => {
+        if (b.qualityScore !== a.qualityScore) return b.qualityScore - a.qualityScore;
+        if (a.nonWordCountViolations.length !== b.nonWordCountViolations.length) return a.nonWordCountViolations.length - b.nonWordCountViolations.length;
+        return b.wordCount - a.wordCount;
+      })[0];
       
       // Spara agent-feedback (från domaren och valideraren) för framtida steg
       setAgenticFeedback(runState, [
@@ -3300,6 +3385,26 @@ Svara med JSON:
       }));
 
       let result: any = selectedCandidate.result;
+      snapshotFailSafeResponse("candidate-selection", result, {
+        warnings,
+        meta: {
+          qualityScore: selectedCandidate.qualityScore,
+          violationCount: selectedCandidate.nonWordCountViolations.length,
+          candidateLabel: selectedCandidate.label,
+        },
+      });
+      if (strongestCandidateBaseline?.result?.improvedPrompt) {
+        snapshotFailSafeResponse("strong-candidate-baseline", strongestCandidateBaseline.result, {
+          warnings,
+          brokerSuggestions: judgeSuggestions,
+          meta: {
+            qualityScore: strongestCandidateBaseline.qualityScore,
+            violationCount: strongestCandidateBaseline.nonWordCountViolations.length,
+            candidateLabel: strongestCandidateBaseline.label,
+          },
+          persistAsStrongBaseline: true,
+        });
+      }
       let strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       setSelectedCandidate(runState, selectedCandidate.label, result, strongCandidateFastPath);
       const candidateSelectionGate = evaluateCandidateSelectionGate({
@@ -3880,6 +3985,7 @@ Svara med JSON:
       }
 
       result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
+      snapshotFailSafeResponse("pre-final-broker-audit", result, { warnings });
       if (hasCorruptedWordArtifacts(result.improvedPrompt || "")) {
         const repairedFinalText = await finalizeMainMarketingText(
           repairMechanicalBrokerArtifacts(repairEmbeddedForAttArtifacts(result.improvedPrompt || "")),
@@ -4178,6 +4284,7 @@ Svara med JSON:
         buildLocalFallback: buildLocalBrokerAuditFallback,
       });
       finalBrokerAudit = finalBrokerAuditReadiness.finalBrokerAudit;
+      snapshotFailSafeResponse("post-final-broker-audit", result, { warnings, brokerAudit: finalBrokerAudit });
       for (const warning of finalBrokerAuditReadiness.warnings) {
         console.warn(warning);
         warnings.push(warning);
@@ -4267,6 +4374,9 @@ Svara med json i formatet:
       const finalBrokerTips = factCheckMetadataMatchesFinalText ? (factCheckResult?.broker_tips || []) : [];
       const finalBrokerAuditScore = typeof finalBrokerAudit?.broker_quality_score === "number" ? finalBrokerAudit.broker_quality_score : null;
       const finalBrokerAuditVerdict = typeof finalBrokerAudit?.verdict === "string" ? finalBrokerAudit.verdict : null;
+      const finalBrokerAuditIssues = Array.isArray(finalBrokerAudit?.issues)
+        ? finalBrokerAudit.issues.filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0).slice(0, 8)
+        : [];
       const optimizationRecord = {
         userId: user.id,
         originalPrompt: prompt,
@@ -4306,6 +4416,7 @@ Svara med json i formatet:
           publish_ready: finalBrokerAudit?.publish_ready !== false,
           broker_quality_score: finalBrokerAuditScore,
           verdict: finalBrokerAuditVerdict,
+          issues: finalBrokerAuditIssues,
         },
         factCheck: {
           fact_check_passed: factCheckMetadataMatchesFinalText && factCheckExecuted
@@ -4321,7 +4432,9 @@ Svara med json i formatet:
         wordCount: result.improvedPrompt.split(/\s+/).filter(Boolean).length,
         model: aiModel,
         pipelineWarnings: warnings,
+        broker_improvement_suggestions: finalBrokerAuditIssues,
       };
+      failSafeResponseData = responseData;
       if (warnings.length > 0) {
         console.warn("[Pipeline Warnings]", warnings);
       }
@@ -4372,6 +4485,31 @@ Svara med json i formatet:
       }
     } catch (err: any) {
       console.error("Optimize error:", err);
+      const preferredFailSafePayload = choosePreferredFailSafePayload(failSafeResponseData, failSafeStrongCandidateData);
+      if (preferredFailSafePayload && !res.headersSent) {
+        const selectedStrongBaseline = preferredFailSafePayload === failSafeStrongCandidateData && failSafeStrongCandidateData !== failSafeResponseData;
+        const safeWarnings = Array.isArray(preferredFailSafePayload.pipelineWarnings) ? preferredFailSafePayload.pipelineWarnings : [];
+        const safePayload = {
+          ...preferredFailSafePayload,
+          pipelineWarnings: [
+            ...safeWarnings,
+            ...(selectedStrongBaseline ? ["[Fail-Safe] Valde starkaste kandidatbaseline i stället för senare version."] : []),
+            `[Fail-Safe] Ursprungligt fel fångades och ersattes av bästa tillgängliga leverans: ${err.message || "okänt fel"}`,
+          ],
+          fail_safe_reason: err.message || "okänt fel",
+        };
+        console.warn("[Optimize Fail-Safe] Returning best available draft instead of hard failure.");
+        if (wantsStream) {
+          try {
+            ensureStreamStarted();
+            res.write(JSON.stringify({ type: "complete", data: safePayload }) + "\n");
+            res.end();
+          } catch { res.end(); }
+        } else {
+          res.json(safePayload);
+        }
+        return;
+      }
       if (wantsStream) {
         try {
           ensureStreamStarted();

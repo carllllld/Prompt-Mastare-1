@@ -166,6 +166,52 @@ describe("listing final audit subflow", () => {
     })).toThrow("Broker quality score låg under tröskeln");
   });
 
+  it("accepts advisory-only broker audit rejection with strong local analyzed score", () => {
+    const readiness = finalizeBrokerAuditReadiness({
+      finalBrokerAudit: {
+        publish_ready: false,
+        broker_quality_score: 0.73,
+        issues: [
+          "Öppningen kunde vara mer direkt och säljande.",
+          "”Stambyte” kan väcka frågor; bra att precisera vad som avses för att undvika osäkerhet.",
+        ],
+      },
+      finalLocalTopBrokerReady: false,
+      analyzedScore: 0.89,
+      brokerQualityThreshold: 0.85,
+      buildLocalFallback: ({ publishReady, brokerQualityScore, reason, issues }) => ({
+        publish_ready: publishReady,
+        broker_quality_score: brokerQualityScore,
+        verdict: reason,
+        issues: issues ?? [],
+      }),
+    });
+
+    expect(readiness.finalBrokerAudit.publish_ready).toBe(true);
+    expect(readiness.finalBrokerAudit.broker_quality_score).toBeGreaterThanOrEqual(0.89);
+    expect(readiness.finalBrokerAudit.issues).toHaveLength(2);
+    expect(readiness.warnings.some((warning) => warning.includes("förbättringsråd"))).toBe(true);
+  });
+
+  it("still throws for non-advisory broker audit rejection when local gate is not ready", () => {
+    expect(() => finalizeBrokerAuditReadiness({
+      finalBrokerAudit: {
+        publish_ready: false,
+        broker_quality_score: 0.79,
+        issues: ["Fakta om avgift och boarea motsäger dispositionen."],
+      },
+      finalLocalTopBrokerReady: false,
+      analyzedScore: 0.9,
+      brokerQualityThreshold: 0.85,
+      buildLocalFallback: ({ publishReady, brokerQualityScore, reason, issues }) => ({
+        publish_ready: publishReady,
+        broker_quality_score: brokerQualityScore,
+        verdict: reason,
+        issues: issues ?? [],
+      }),
+    })).toThrow("AI-audit underkände texten efter slutgranskning");
+  });
+
   it("builds the final broker audit retry request payload without changing the prompt content shape", () => {
     const input = buildFinalBrokerAuditRetryRequestInput({
       cleanDisposition: { address: "Testgatan 1" },

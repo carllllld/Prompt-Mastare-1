@@ -279,6 +279,28 @@ export function finalizeFinalMainValidation(params: {
   };
 }
 
+function normalizeAuditIssues(issues: unknown): string[] {
+  return Array.isArray(issues)
+    ? issues.filter((issue): issue is string => typeof issue === "string" && issue.trim().length > 0).map((issue) => issue.trim()).slice(0, 8)
+    : [];
+}
+
+function isAdvisoryAuditIssue(issue: string): boolean {
+  const lower = issue.toLowerCase();
+  const advisoryPatterns = [
+    "kunde vara",
+    "kan slipas",
+    "kan väcka frågor",
+    "bra att precisera",
+    "mer direkt",
+    "mer säljande",
+    "drar åt det generiska",
+    "för att undvika osäkerhet",
+    "bör",
+  ];
+  return advisoryPatterns.some((pattern) => lower.includes(pattern));
+}
+
 export function finalizeBrokerAuditReadiness(params: {
   finalBrokerAudit: any;
   finalLocalTopBrokerReady: boolean;
@@ -293,6 +315,7 @@ export function finalizeBrokerAuditReadiness(params: {
 }) {
   let finalBrokerAudit = params.finalBrokerAudit;
   const warnings: string[] = [];
+  const auditIssues = normalizeAuditIssues(finalBrokerAudit?.issues);
 
   if (typeof finalBrokerAudit?.publish_ready !== "boolean") {
     warnings.push("[Final Broker Audit] Slutgranskningen returnerade inte giltigt publish_ready. Faller tillbaka till lokal audit.");
@@ -320,24 +343,32 @@ export function finalizeBrokerAuditReadiness(params: {
   }
 
   if (finalBrokerAudit && finalBrokerAudit.publish_ready === false) {
-    const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
+    const auditIssueText = auditIssues.length > 0 ? auditIssues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
+    const advisoryOnly = auditIssues.length > 0 && auditIssues.every((issue) => isAdvisoryAuditIssue(issue));
+    const highLocalConfidence = params.analyzedScore >= 0.84;
     
-    // FAIL-SAFE: If text is strong locally, we proceed with warnings instead of crashing
     if (params.finalLocalTopBrokerReady) {
-      warnings.push(`[Final Gate] AI-audit underkände texten (${auditIssues}), men lokal granskning godkände den. Levererar med varning.`);
+      warnings.push(`[Final Gate] AI-audit underkände texten (${auditIssueText}), men lokal granskning godkände den. Levererar med varning.`);
+    } else if (advisoryOnly && highLocalConfidence) {
+      finalBrokerAudit = params.buildLocalFallback({
+        publishReady: true,
+        brokerQualityScore: Math.max(params.analyzedScore, Number(finalBrokerAudit?.broker_quality_score) || 0),
+        reason: "AI-audit gav främst förbättringsråd; lokal kvalitetsnivå var tillräckligt hög för leverans.",
+        issues: auditIssues,
+      });
+      warnings.push(`[Final Gate] AI-audit markerade förbättringsråd (${auditIssueText}) men texten levereras med lokal fallback och tydliga förbättringsförslag.`);
     } else {
-      // If even local audit fails, we throw to avoid delivering garbage
-      throw new Error(`[Final Gate] AI-audit underkände texten efter slutgranskning: ${auditIssues}`);
+      throw new Error(`[Final Gate] AI-audit underkände texten efter slutgranskning: ${auditIssueText}`);
     }
   }
 
   if (finalBrokerAudit.broker_quality_score < params.brokerQualityThreshold) {
-    const auditIssues = Array.isArray(finalBrokerAudit.issues) ? finalBrokerAudit.issues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
+    const auditIssueText = auditIssues.length > 0 ? auditIssues.slice(0, 5).join(" | ") : "Mäklarkvaliteten nådde inte tröskelvärdet.";
     
     if ((params.finalLocalTopBrokerReady && finalBrokerAudit.broker_quality_score >= 0.75) || finalBrokerAudit.broker_quality_score > 0.70) {
       warnings.push(`[Final Gate] Broker quality score låg under tröskeln (${finalBrokerAudit.broker_quality_score}), men texten bedöms ändå leveransbar.`);
     } else {
-      throw new Error(`[Final Gate] Broker quality score låg under tröskeln efter slutgranskning. Score ${finalBrokerAudit.broker_quality_score}, krav ${params.brokerQualityThreshold}. ${auditIssues}`);
+      throw new Error(`[Final Gate] Broker quality score låg under tröskeln efter slutgranskning. Score ${finalBrokerAudit.broker_quality_score}, krav ${params.brokerQualityThreshold}. ${auditIssueText}`);
     }
   }
 
