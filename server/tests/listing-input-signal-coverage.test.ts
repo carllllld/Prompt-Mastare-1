@@ -55,6 +55,26 @@ describe("listing input signal coverage", () => {
     const text = "Ekorrvägen 10 i Mörtnäs. Villa om 146 kvm med 5 rum, renoverat kök, helkaklat badrum och buss 25 minuter till Slussen.";
     const summary = evaluateInputSignalCoverage(text, disposition);
 
+    expect(summary.critical.find((c) => c.path === "property.size")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.rooms")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.kitchen")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.bathroom")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.transport")?.used).toBe(true);
+  });
+
+  it("marks kitchen as used even when description uses different kitchen phrasing", () => {
+    const disposition = {
+      property: {
+        size: 146,
+        rooms: 5,
+        kitchen: "renoverat kök med köksö",
+        bathroom: "helkaklat badrum",
+        transport: "buss 25 minuter till Slussen",
+      },
+    };
+    const text = "Villa om 146 kvm med 5 rum. Från hallen öppnar planlösningen upp mot kök och vardagsrum. Badrummet är uppdaterat och buss till Slussen tar cirka 25 minuter.";
+    const summary = evaluateInputSignalCoverage(text, disposition);
+
     expect(summary.critical.find((c) => c.path === "property.kitchen")?.used).toBe(true);
     expect(summary.critical.find((c) => c.path === "property.bathroom")?.used).toBe(true);
     expect(summary.critical.find((c) => c.path === "property.transport")?.used).toBe(true);

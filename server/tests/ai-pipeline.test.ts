@@ -5,6 +5,7 @@ import {
   buildDispositionFromStructuredData,
   countGenericBrokerPhrases,
   detectNarrativeIntegrityIssues,
+  finalizeMainMarketingText,
   isStrongPublishableCandidate,
   polishAuxFieldText,
   safeJsonParse,
@@ -255,6 +256,34 @@ describe('AI Pipeline Tests', () => {
       );
 
       expect(issues.length).toBeGreaterThan(0);
+    });
+
+    it('should enforce missing critical disposition facts in finalized main text', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Ekorrvägen 10 i Mörtnäs med södervänd uteplats och inbyggd jacuzzi.',
+        'hemnet',
+        undefined,
+        'balanced',
+        { allowParagraphs: true },
+        {
+          property: {
+            size: 146,
+            rooms: 5,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+        }
+      );
+
+      const text = finalized || '';
+      expect(text).toMatch(/\b146\b.*\bkvm\b/i);
+      expect(text).toMatch(/\b5\b.*\brum\b/i);
+      expect(text.toLowerCase()).toContain('kök');
+      expect(text.toLowerCase()).toContain('badrum');
+      expect(text.toLowerCase()).toMatch(/kommunikation|buss|slussen/);
     });
 
     it('should flag generic broker abstractions that lack concrete evidentiary density', () => {

@@ -1077,6 +1077,82 @@ function enforcePlatformMainTextHeuristics(text: string, platform: string, dispo
   return sentences.join(" ");
 }
 
+function toLowerStart(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+}
+
+function getNumericFact(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const match = value.match(/\d+/);
+    if (!match) return null;
+    const parsed = Number(match[0]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function hasRoomsMention(text: string, rooms: number | null): boolean {
+  if (!rooms) return /\b(rum|sovrum|rok)\b/i.test(text);
+  const numberWords: Record<number, string[]> = {
+    1: ["ett", "en"],
+    2: ["två"],
+    3: ["tre"],
+    4: ["fyra"],
+    5: ["fem"],
+    6: ["sex"],
+    7: ["sju"],
+    8: ["åtta"],
+    9: ["nio"],
+    10: ["tio"],
+  };
+  if (new RegExp(`\\b${rooms}\\b\\s*(rum|sovrum|rok)`, "i").test(text)) return true;
+  return (numberWords[rooms] || []).some((word) => new RegExp(`\\b${word}\\b\\s*(rum|sovrum)`, "i").test(text));
+}
+
+function enforceCriticalFactPresence(text: string, disposition?: any): string {
+  if (!text || !disposition) return text;
+  const property = disposition?.property || {};
+  const location = disposition?.location || {};
+  const sentences: string[] = [];
+
+  const size = getNumericFact(property.size);
+  const rooms = getNumericFact(property.rooms);
+  const hasSizeMention = size ? new RegExp(`\\b${size}\\b\\s*(kvm|m2|m²)`, "i").test(text) : /\b(kvm|boarea)\b/i.test(text);
+  const hasRooms = hasRoomsMention(text, rooms);
+  if ((size || rooms) && (!hasSizeMention || !hasRooms)) {
+    if (size && rooms) sentences.push(`Boarea är ${size} kvm med totalt ${rooms} rum.`);
+    else if (size) sentences.push(`Boarea är ${size} kvm.`);
+    else if (rooms) sentences.push(`Bostaden omfattar ${rooms} rum.`);
+  }
+
+  const kitchen = typeof property.kitchen === "string" && property.kitchen.trim().length > 0
+    ? property.kitchen.trim()
+    : (typeof property?.materials?.kitchen === "string" ? property.materials.kitchen.trim() : "");
+  if (kitchen && !/\b(kök|köket|köks)\b/i.test(text)) {
+    sentences.push(`Köket har ${toLowerStart(kitchen)}.`);
+  }
+
+  const bathroom = typeof property.bathroom === "string" && property.bathroom.trim().length > 0
+    ? property.bathroom.trim()
+    : (typeof property?.materials?.bathroom === "string" ? property.materials.bathroom.trim() : "");
+  if (bathroom && !/\b(badrum|badrummet|wc|toalett)\b/i.test(text)) {
+    sentences.push(`Badrummet är utfört med ${toLowerStart(bathroom)}.`);
+  }
+
+  const transport = typeof property.transport === "string" && property.transport.trim().length > 0
+    ? property.transport.trim()
+    : (typeof location.transport === "string" ? location.transport.trim() : "");
+  if (transport && !/\b(kommunikation|kommunikationer|buss|t-bana|tbana|pendeltåg|spårvagn|resecentrum|station)\b/i.test(text)) {
+    sentences.push(`Kommunikationerna omfattar ${toLowerStart(transport)}.`);
+  }
+
+  if (sentences.length === 0) return text;
+  return `${text.trim()} ${sentences.join(" ")}`.replace(/\s{2,}/g, " ").trim();
+}
+
 async function finalizeMainMarketingText(
   text: unknown,
   platform: string,
@@ -1144,6 +1220,7 @@ REGLER:
   }
 
   finalized = enforcePlatformMainTextHeuristics(finalized, platform, disposition);
+  finalized = enforceCriticalFactPresence(finalized, disposition);
 
   if (options?.allowParagraphs) {
     finalized = addParagraphs(finalized);
@@ -2258,6 +2335,7 @@ KRAV:
 - Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
 - Huvudtexten ska kännas publicerad: inled helst med [bostadstyp] om [boarea] på [adress] + en stark detalj, t.ex. "Trea om 76 kvm på Storgatan 12 med balkong i söderläge."
 - Om dispositionen innehåller rum, standard, kommunikationer eller avgift ska de vävas in naturligt där de bär beslutsvärde. Avgifter måste alltid anges med enhet (t.ex. kr/mån eller kr/år).
+- Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 - Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
 UNDVIK ALLTID:
@@ -2315,6 +2393,7 @@ KRAV:
 - Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
 - Booli/egen sida får vara mer berättande än Hemnet, men ska fortfarande vara faktaburen och relevant för köpbeslut.
 - Låt avslutet bära en trovärdig vardagsbild i stället för klyschig summering.
+- Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 
 UNDVIK ALLTID:
 erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.

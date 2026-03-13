@@ -10,6 +10,68 @@ function extractNumbers(value: string): string[] {
   return (value.match(/\d+/g) || []).slice(0, 4);
 }
 
+const SWEDISH_NUMBER_WORDS: Record<number, string[]> = {
+  1: ["ett", "en", "första"],
+  2: ["två", "andra"],
+  3: ["tre", "tredje"],
+  4: ["fyra", "fjärde"],
+  5: ["fem", "femte"],
+  6: ["sex", "sjätte"],
+  7: ["sju", "sjunde"],
+  8: ["åtta", "åttonde"],
+  9: ["nio", "nionde"],
+  10: ["tio", "tionde"],
+  11: ["elva", "elfte"],
+  12: ["tolv", "tolfte"],
+};
+
+function parseExpectedNumber(value: string): number | null {
+  const digitMatch = value.match(/\d+/);
+  if (digitMatch) {
+    const num = Number(digitMatch[0]);
+    return Number.isFinite(num) ? num : null;
+  }
+  const normalized = normalize(value);
+  for (const [num, words] of Object.entries(SWEDISH_NUMBER_WORDS)) {
+    if (words.some((word) => new RegExp(`\\b${word}\\b`, "u").test(normalized))) {
+      return Number(num);
+    }
+  }
+  return null;
+}
+
+function hasExpectedNumberMention(text: string, expected: number): boolean {
+  if (new RegExp(`\\b${expected}\\b`, "u").test(text)) return true;
+  const words = SWEDISH_NUMBER_WORDS[expected] || [];
+  return words.some((word) => new RegExp(`\\b${word}\\b`, "u").test(text));
+}
+
+function mentionsSize(text: string, sourceValue: string): boolean {
+  const expected = parseExpectedNumber(sourceValue);
+  const hasAreaSignal = /\b(kvm|m2|m²|boarea|kvadrat(?:meter)?)\b/u.test(text);
+  if (expected === null) return hasAreaSignal;
+  return hasAreaSignal && hasExpectedNumberMention(text, expected);
+}
+
+function mentionsRooms(text: string, sourceValue: string): boolean {
+  const expected = parseExpectedNumber(sourceValue);
+  const hasRoomSignal = /\b(rum|rok|sovrum|sovrummen)\b/u.test(text);
+  if (expected === null) return hasRoomSignal;
+  return hasRoomSignal && hasExpectedNumberMention(text, expected);
+}
+
+function mentionsKitchen(text: string): boolean {
+  return /\b(kök|köket|köks)\b/u.test(text);
+}
+
+function mentionsBathroom(text: string): boolean {
+  return /\b(badrum|badrummet|wc|toalett|gästwc|gäst-wc)\b/u.test(text);
+}
+
+function mentionsTransport(text: string): boolean {
+  return /\b(kommunikation|kommunikationer|buss|t-bana|tbana|pendeltåg|spårvagn|resecentrum|centralstation|station)\b/u.test(text);
+}
+
 function looksInformative(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === "number") return Number.isFinite(value) && value > 0;
@@ -27,7 +89,9 @@ function matchesSignal(text: string, value: string): boolean {
   const numbers = extractNumbers(value);
   const keywordHits = words.filter((word) => text.includes(word)).length;
   const numberHit = numbers.length === 0 || numbers.some((num) => text.includes(num));
-  return keywordHits >= Math.max(1, Math.min(2, words.length)) && numberHit;
+  if (words.length === 0) return numberHit;
+  const requiredKeywordHits = words.length >= 4 ? 2 : 1;
+  return keywordHits >= requiredKeywordHits && numberHit;
 }
 
 function toSignalEntries(source: any): Array<{ path: string; value: string }> {
@@ -91,9 +155,29 @@ export function evaluateInputSignalCoverage(text: string, disposition: any): Inp
     { path: "property.year_built", aliases: ["property.year_built", "property.build_year"] },
   ];
 
+  const valueByPath = new Map<string, string>();
+  for (const signal of measured) {
+    if (!valueByPath.has(signal.path)) valueByPath.set(signal.path, signal.value);
+  }
+
   const critical = criticalPathAliases.map((entry) => {
-    const found = measured.find((signal) => entry.aliases.includes(signal.path));
-    return { path: entry.path, used: found ? found.used : false };
+    const aliasSignals = measured.filter((signal) => entry.aliases.includes(signal.path));
+    const directlyUsed = aliasSignals.some((signal) => signal.used);
+    if (directlyUsed) return { path: entry.path, used: true };
+
+    const sourceValue = aliasSignals[0]?.value || "";
+    let used = false;
+    if (entry.path === "property.size") used = mentionsSize(normalizedText, sourceValue);
+    else if (entry.path === "property.rooms") used = mentionsRooms(normalizedText, sourceValue);
+    else if (entry.path === "property.kitchen") used = mentionsKitchen(normalizedText);
+    else if (entry.path === "property.bathroom") used = mentionsBathroom(normalizedText);
+    else if (entry.path === "property.transport") used = mentionsTransport(normalizedText);
+    else if (entry.path === "property.address") {
+      const addressValue = sourceValue || valueByPath.get("property.address") || valueByPath.get("location.address") || "";
+      used = addressValue ? matchesSignal(normalizedText, addressValue) : false;
+    }
+
+    return { path: entry.path, used };
   });
 
   const topMissing = measured
