@@ -967,6 +967,7 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   cleaned = cleaned.replace(/\bupplevs (?:som )?rymlig(?:t)?\b/gi, "är rymlig");
   cleaned = cleaned.replace(/\bupplevs (?:som )?välplanerad\b/gi, "är välplanerad");
   cleaned = cleaned.replace(/\bupplevs (?:som )?harmonisk\b/gi, "är harmonisk");
+  cleaned = collapseRepeatedPhraseRuns(cleaned);
   
   cleaned = cleaned.replace(/[^\S\r\n]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 
@@ -981,7 +982,12 @@ function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingI
   value = value.replace(/\b(laddplats(?: för elbil)?|laddbox(?: installerad)?)\b/gi, "laddbox för elbil");
   value = value.replace(/\bladdbox för elbil(?:\s+med\s+)?laddbox för elbil\b/gi, "laddbox för elbil");
   value = value.replace(/\b(Söder|Väster|Öster|Norr)\b/g, (m) => m.toLowerCase());
+  value = collapseRepeatedPhraseRuns(value);
   value = value.replace(/\s{2,}/g, " ").trim();
+
+  if (field === "socialCopy" || field === "instagramCaption") {
+    value = value.replace(/(?:[.!?]\s*)?(?:skriv för visningstid(?: och mer information)?|hör av dig(?: för [^.!?]+)?|kontakta(?: ansvarig mäklare)?(?: för [^.!?]+)?|boka visning|anmälan)\b[^.!?]*[.!?]?$/i, "").trim();
+  }
 
   if (field === "instagramCaption") {
     const hasEndPunctuation = /[.!?…]$/.test(value);
@@ -1244,6 +1250,15 @@ function replaceWholePhrase(text: string, phrase: string, replacement: string): 
   return text.replace(pattern, (_match, prefix: string) => `${prefix}${replacement}`);
 }
 
+function collapseRepeatedPhraseRuns(text: string): string {
+  if (!text) return text;
+
+  let value = text;
+  value = value.replace(/\b([A-Za-zÅÄÖåäö0-9]{3,})\s+\1(?:\s+\1)+\b/giu, "$1");
+  value = value.replace(/\b([A-Za-zÅÄÖåäö0-9]{2,}(?:\s+[A-Za-zÅÄÖåäö0-9]{2,}){0,2})\s+\1(?:\s+\1)+\b/giu, "$1");
+  return value;
+}
+
 function repairEmbeddedForAttArtifacts(text: string): string {
   if (!text) return text;
 
@@ -1283,7 +1298,7 @@ function repairMechanicalBrokerArtifacts(text: string): string {
   repaired = repaired.replace(/\b[Pp]arkering\s+har\s+laddplats\s+för\s+elbil\b/g, 'Parkering med laddplats för elbil');
   repaired = repaired.replace(/\b[Pp]arkering\s+har\s+(garage|carport|plats)\b/g, 'Parkering med $1');
 
-  repaired = repaired.replace(/\b(avgift(?:en)?|driftkostnad(?:en)?|kostnad(?:en)?)\s+(?:om|på)\s+(\d{1,3}(?:[ \u00A0]\d{3})*)(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per))/gi, '$1 $2 kr');
+  repaired = repaired.replace(/\b(avgift(?:en)?|driftkostnad(?:en)?|kostnad(?:en)?)\s+(?:om|på)\s+((?:\d{1,3}(?:[ \u00A0]\d{3})*|\d{4,7}))(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per))/gi, '$1 $2 kr');
 
   // Improve phrasing for nearby amenities.
   repaired = repaired.replace(/(^|[.!?]\s+)([A-ZÅÄÖ][A-Za-zÅÄÖåäö0-9&' -]{1,60})\s+ligger\s+nära\s+när\s+det\s+passar\s+med\s+en\s+måltid\b/g, '$1I samma riktning finns $2 när det passar att äta ute');
@@ -1344,6 +1359,7 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
     [/\bVedpanna \. Ppvärmning\./gi, "Vedpanna och pannvärme."],
     [/\bPpvärmning\b/gi, "pannvärme"],
     [/\bAmiljen\b/gi, "miljön"],
+    [/\bläför att att\b/gi, "lätt att"],
   ];
 
   for (const [regex, replacement] of brokenWordFixes) {
@@ -4224,12 +4240,32 @@ Svara med JSON:
       const finalStrongWordFloor = getStrongPublishableWordFloor(minimumPublishableWordMin, plan);
       const finalGenericPhraseCountForScorecard = countGenericBrokerPhrases(result.improvedPrompt || "");
       const finalNarrativeIntegrityIssues = detectNarrativeIntegrityIssues(result.improvedPrompt || "");
+      const preAuditBlueprintCoverage = evaluateBlueprintCoverage(result.improvedPrompt || "", resolvedBlueprint.mustIncludeFacts);
+      const preAuditInputSignalCoverage = evaluateInputSignalCoverage(result.improvedPrompt || "", cleanDisposition);
+      const criticalSignalExpectations = [
+        { path: "property.size", present: cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null },
+        { path: "property.rooms", present: cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null },
+        { path: "property.kitchen", present: typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0 },
+        { path: "property.bathroom", present: typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0 },
+        { path: "property.transport", present: typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0 },
+      ].filter((entry) => entry.present).map((entry) => entry.path);
+      const preAuditMissingCriticalSignalCount = preAuditInputSignalCoverage.critical
+        .filter((entry) => criticalSignalExpectations.includes(entry.path) && !entry.used)
+        .length;
+      const preAuditExtraFieldViolationCount = getNonWordCountViolations(
+        validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
+          .filter((v) => v.startsWith("["))
+      ).length;
       const brokerAuditDecision = evaluateBrokerAuditGate({
         strongCandidateFastPath,
         finalMainWordCount,
         finalStrongWordFloor,
         finalGenericBrokerPhraseCount: finalGenericPhraseCountForScorecard,
         finalNarrativeIntegrityIssueCount: finalNarrativeIntegrityIssues.length,
+        finalExtraFieldViolationCount: preAuditExtraFieldViolationCount,
+        blueprintCoverageRatio: preAuditBlueprintCoverage.ratio,
+        inputSignalCoverageRatio: preAuditInputSignalCoverage.ratio,
+        missingCriticalSignalCount: preAuditMissingCriticalSignalCount,
       }).brokerAuditDecision;
       const finalAuditIteration = runAgentIteration({
         runState,
@@ -4587,7 +4623,28 @@ Svara med JSON:
       }
 
       const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
-      const finalNonWordCountViolations = getNonWordCountViolations(finalMainViolations);
+      const criticalCoverageExpectations = [
+        { path: "property.size", present: cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null, label: "boarea" },
+        { path: "property.rooms", present: cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null, label: "antal rum" },
+        { path: "property.kitchen", present: typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0, label: "kök" },
+        { path: "property.bathroom", present: typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0, label: "badrum" },
+        { path: "property.transport", present: typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0, label: "kommunikation" },
+      ];
+      const missingCriticalCoverageLabels = criticalCoverageExpectations
+        .filter((entry) => entry.present)
+        .filter((entry) => !inputSignalCoverage.critical.some((critical) => critical.path === entry.path && critical.used))
+        .map((entry) => entry.label);
+      const coverageViolations: string[] = [];
+      if (blueprintCoverage.required > 0 && blueprintCoverage.ratio < 0.65) {
+        coverageViolations.push(`[Täckning] För låg skrivplanstäckning: ${blueprintCoverage.matched}/${blueprintCoverage.required} (${Math.round(blueprintCoverage.ratio * 100)}%).`);
+      }
+      if (inputSignalCoverage.totalSignals >= 8 && inputSignalCoverage.ratio < 0.55) {
+        coverageViolations.push(`[Täckning] För låg input-signaltäckning: ${inputSignalCoverage.usedSignals}/${inputSignalCoverage.totalSignals} (${Math.round(inputSignalCoverage.ratio * 100)}%).`);
+      }
+      if (missingCriticalCoverageLabels.length > 0) {
+        coverageViolations.push(`[Täckning] Saknar kritiska fakta i sluttext: ${missingCriticalCoverageLabels.join(", ")}.`);
+      }
+      const finalNonWordCountViolations = [...getNonWordCountViolations(finalMainViolations), ...coverageViolations];
       const finalWordCountViolations = finalMainViolations.filter((v) => v.startsWith("För få ord") || v.startsWith("För många ord"));
       const finalLocalTopBrokerReady = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
       const finalExtraFieldViolations = getNonWordCountViolations(
@@ -4601,6 +4658,7 @@ Svara med JSON:
         finalWordCountViolations,
         finalExtraFieldViolations,
         finalNarrativeIssues,
+        strictExtraFieldValidation: plan !== "free",
         minimumPublishableWordMin,
         targetWordMin,
         targetWordMax,

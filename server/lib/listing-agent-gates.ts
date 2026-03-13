@@ -59,6 +59,10 @@ export function evaluateBrokerAuditGate(params: {
   finalStrongWordFloor: number;
   finalGenericBrokerPhraseCount: number;
   finalNarrativeIntegrityIssueCount: number;
+  finalExtraFieldViolationCount?: number;
+  blueprintCoverageRatio?: number;
+  inputSignalCoverageRatio?: number;
+  missingCriticalSignalCount?: number;
 }): BrokerAuditGateResult {
   return {
     brokerAuditDecision: decideBrokerAuditStrategy({
@@ -67,6 +71,10 @@ export function evaluateBrokerAuditGate(params: {
       finalStrongWordFloor: params.finalStrongWordFloor,
       finalGenericBrokerPhraseCount: params.finalGenericBrokerPhraseCount,
       finalNarrativeIntegrityIssueCount: params.finalNarrativeIntegrityIssueCount,
+      finalExtraFieldViolationCount: params.finalExtraFieldViolationCount,
+      blueprintCoverageRatio: params.blueprintCoverageRatio,
+      inputSignalCoverageRatio: params.inputSignalCoverageRatio,
+      missingCriticalSignalCount: params.missingCriticalSignalCount,
     }),
   };
 }

@@ -12,6 +12,8 @@ import { setupAuth } from "./auth";
 import { registerRoutes } from "./routes";
 import { setupVite } from "./vite";
 import emailWebhooks from './routes/email-webhooks';
+import { securityHeaders, sanitizeInput, authRateLimit, apiRateLimit, aiRateLimit } from "./middleware/security";
+import { monitoringSystem } from "./lib/monitoring";
 // dotenv loaded via environment variables
 
 // Polyfill __dirname for ES modules
@@ -76,7 +78,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Stripe webhook needs raw body - must be before express.json()
 app.post("/api/stripe/webhook", express.raw({ type: "application/json", limit: "2mb" }));
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({
+  limit: "2mb",
+  verify: (req: Request, _res: Response, buf: Buffer) => {
+    (req as any).rawBody = Buffer.from(buf);
+  },
+}));
 app.use(express.urlencoded({ extended: false, limit: "2mb" }));
 
 // Session configuration
@@ -86,17 +93,11 @@ if (isProduction) {
   app.set("trust proxy", 1);
 }
 
-// ─── SECURITY HEADERS ───
-if (isProduction) {
-  app.use((_req: Request, res: Response, next: NextFunction) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-    res.setHeader("X-XSS-Protection", "1; mode=block");
-    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-    next();
-  });
-}
+if (isProduction) app.use(securityHeaders);
+app.use(sanitizeInput);
+app.use("/auth", authRateLimit);
+app.use("/api", apiRateLimit);
+app.use("/api/optimize", aiRateLimit);
 
 function validateEnvForProduction() {
   if (!isProduction) return;
@@ -114,6 +115,7 @@ function validateEnvForProduction() {
   }
   if (!process.env.RESEND_API_KEY) missing.push("RESEND_API_KEY");
   if (!process.env.FROM_EMAIL) missing.push("FROM_EMAIL");
+  if (!process.env.RESEND_WEBHOOK_SECRET && !process.env.EMAIL_WEBHOOK_SECRET) missing.push("RESEND_WEBHOOK_SECRET");
 
   const hasOpenAiKey = Boolean(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY);
   if (!hasOpenAiKey) missing.push("OPENAI_API_KEY");
@@ -240,6 +242,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
+    monitoringSystem.recordRequest({
+      path: reqPath,
+      statusCode: res.statusCode,
+      durationMs: duration,
+    });
     if (reqPath.startsWith("/api") || reqPath.startsWith("/auth") || reqPath === "/health") {
       log("info", "request", {
         requestId,
@@ -274,6 +281,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // Create HTTP server
   const server = createServer(app);
+  let activeConnections = 0;
+  server.on("connection", (socket) => {
+    activeConnections += 1;
+    monitoringSystem.setActiveConnections(activeConnections);
+    socket.on("close", () => {
+      activeConnections = Math.max(0, activeConnections - 1);
+      monitoringSystem.setActiveConnections(activeConnections);
+    });
+  });
 
   // Setup API routes
   await registerRoutes(server, app);

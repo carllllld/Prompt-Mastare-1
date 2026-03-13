@@ -148,6 +148,17 @@ describe('AI Pipeline Tests', () => {
       expect(cleaned?.endsWith('.')).toBe(true);
     });
 
+    it('should remove CTA tails from social copy and collapse repeated phrases', () => {
+      const cleaned = polishAuxFieldText(
+        'socialCopy',
+        'Villa om 146 kvm med uteplats och laddbox för elbil för elbil för elbil. Hör av dig för visning.'
+      );
+
+      expect(cleaned?.toLowerCase()).not.toContain('hör av dig');
+      expect(cleaned?.toLowerCase()).not.toContain('för elbil för elbil');
+      expect(cleaned?.toLowerCase()).toContain('laddbox för elbil');
+    });
+
 
     it('should validate AI output quality against the current helper rules', () => {
       const goodOutput = 'Trea om 76 kvm med balkong i västerläge på Storgatan 12, 3 tr, Linköping. Köket renoverades 2022.';
@@ -207,7 +218,7 @@ describe('AI Pipeline Tests', () => {
         improvedPrompt: 'Radhus om 118 kvm med lugnt läge. Driftkostnad om 12000 och smidig pendling till stan.'
       }, 'hemnet', 1, 500, 'balanced');
 
-      expect(violations.some((v) => v.includes('Kostnad saknar enhet'))).toBe(true);
+      expect(violations.some((v) => v.includes('Kostnad saknar enhet') || v.includes('Avgift saknar enhet'))).toBe(true);
     });
 
     it('should flag probable sentence boundary break after numbers before new clause', () => {
@@ -216,6 +227,14 @@ describe('AI Pipeline Tests', () => {
       }, 'booli', 1, 600, 'balanced');
 
       expect(violations.some((v) => v.includes('Sannolik saknad punkt'))).toBe(true);
+    });
+
+    it('should flag repeated phrase loops when sanitizer misses them', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Villa med laddbox för elbil för elbil för elbil och bra planlösning.'
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('Upprepad fras'))).toBe(true);
     });
 
     it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {

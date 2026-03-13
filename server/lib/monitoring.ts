@@ -1,4 +1,8 @@
+import os from "os";
+import { pool } from "../db";
+
 interface PerformanceMetrics {
+  timestamp: number;
   responseTime: number;
   memoryUsage: number;
   cpuUsage: number;
@@ -44,6 +48,9 @@ export class MonitoringSystem {
 
   private alerts: Map<string, { threshold: number; enabled: boolean }> = new Map();
   private lastHealthCheck: Date = new Date();
+  private processStartedAt: number = Date.now();
+  private activeConnections = 0;
+  private recentRequests: Array<{ timestamp: number; statusCode: number; durationMs: number; path: string }> = [];
 
   constructor() {
     this.metrics = {
@@ -80,48 +87,33 @@ export class MonitoringSystem {
     this.startMonitoring();
   }
 
-  /**
-   * Setup alert thresholds
-   */
   private setupAlerts(): void {
-    this.alerts.set('response_time', { threshold: 2000, enabled: true }); // 2 seconds
-    this.alerts.set('error_rate', { threshold: 0.05, enabled: true }); // 5%
-    this.alerts.set('memory_usage', { threshold: 0.85, enabled: true }); // 85%
-    this.alerts.set('cpu_usage', { threshold: 0.80, enabled: true }); // 80%
+    this.alerts.set('response_time', { threshold: 2000, enabled: true });
+    this.alerts.set('error_rate', { threshold: 0.05, enabled: true });
+    this.alerts.set('memory_usage', { threshold: 0.85, enabled: true });
+    this.alerts.set('cpu_usage', { threshold: 0.80, enabled: true });
     this.alerts.set('active_connections', { threshold: 1000, enabled: true });
   }
 
-  /**
-   * Start monitoring
-   */
   private startMonitoring(): void {
-    // Collect metrics every 30 seconds
     setInterval(() => {
       this.collectPerformanceMetrics();
       this.checkAlerts();
     }, 30 * 1000);
-
-    // Update business metrics every 5 minutes
     setInterval(() => {
       this.updateBusinessMetrics();
     }, 5 * 60 * 1000);
-
-    // Health check every minute
     setInterval(() => {
       this.performHealthCheck();
     }, 60 * 1000);
-
-    // Cleanup old metrics every hour
     setInterval(() => {
       this.cleanupOldMetrics();
     }, 60 * 60 * 1000);
   }
 
-  /**
-   * Collect performance metrics
-   */
   private collectPerformanceMetrics(): void {
     const metrics: PerformanceMetrics = {
+      timestamp: Date.now(),
       responseTime: this.getAverageResponseTime(),
       memoryUsage: this.getMemoryUsage(),
       cpuUsage: this.getCPUUsage(),
@@ -136,122 +128,88 @@ export class MonitoringSystem {
     if (this.metrics.performance.length > 1000) {
       this.metrics.performance.shift();
     }
+    this.cleanupRequestWindow();
   }
 
-  /**
-   * Get average response time
-   */
   private getAverageResponseTime(): number {
-    const recent = this.metrics.performance.slice(-10);
+    const recent = this.recentRequests.slice(-50);
     if (recent.length === 0) return 0;
-    
-    return recent.reduce((sum, m) => sum + m.responseTime, 0) / recent.length;
+    return recent.reduce((sum, item) => sum + item.durationMs, 0) / recent.length;
   }
 
-  /**
-   * Get memory usage
-   */
   private getMemoryUsage(): number {
     const usage = process.memoryUsage();
     const total = usage.heapTotal + usage.external;
     const used = usage.heapUsed + usage.external;
-    
     return used / total;
   }
 
-  /**
-   * Get CPU usage (simplified)
-   */
   private getCPUUsage(): number {
-    // In production, implement actual CPU monitoring
-    // For now, return estimated value
-    return Math.random() * 0.3; // Simulated 0-30% CPU usage
+    const cpuCount = Math.max(os.cpus().length, 1);
+    const load = os.loadavg()[0] / cpuCount;
+    return Math.max(0, Math.min(1, load));
   }
 
-  /**
-   * Get active connections
-   */
   private getActiveConnections(): number {
-    // This would be tracked by your server
-    return Math.floor(Math.random() * 100); // Simulated
+    return this.activeConnections;
   }
 
-  /**
-   * Get error rate
-   */
   private getErrorRate(): number {
-    const recent = this.metrics.performance.slice(-100);
+    const recent = this.recentRequests.slice(-200);
     if (recent.length === 0) return 0;
-    
-    const totalRequests = recent.reduce((sum, m) => sum + m.throughput, 0);
-    const errors = Math.floor(totalRequests * 0.02); // Simulated 2% error rate
-    
-    return errors / Math.max(totalRequests, 1);
+    const errors = recent.filter((item) => item.statusCode >= 500).length;
+    return errors / recent.length;
   }
 
-  /**
-   * Get throughput
-   */
   private getThroughput(): number {
-    // Requests per second
-    return Math.floor(Math.random() * 50) + 10; // Simulated 10-60 RPS
+    const now = Date.now();
+    const cutoff = now - 60_000;
+    const lastMinute = this.recentRequests.filter((item) => item.timestamp >= cutoff).length;
+    return Math.round((lastMinute / 60) * 100) / 100;
   }
 
-  /**
-   * Update business metrics
-   */
   private async updateBusinessMetrics(): Promise<void> {
-    // In production, these would come from your database
+    this.cleanupRequestWindow();
+    const windowStart = Date.now() - 24 * 60 * 60 * 1000;
+    const requests24h = this.recentRequests.filter((item) => item.timestamp >= windowStart);
+    const totalRequests = requests24h.length;
+    const hemnetRequests = requests24h.filter((item) => /hemnet/i.test(item.path)).length;
+    const booliRequests = requests24h.filter((item) => /booli/i.test(item.path)).length;
+    const optimizationRequests = requests24h.filter((item) => /optimize|rewrite/i.test(item.path)).length;
+
     this.metrics.business = {
-      activeUsers: Math.floor(Math.random() * 1000) + 500,
-      dailySignups: Math.floor(Math.random() * 50) + 10,
-      conversionRate: 0.15 + Math.random() * 0.1, // 15-25%
-      revenue: (Math.floor(Math.random() * 100) + 50) * 299, // Pro users * 299 SEK
+      activeUsers: this.activeConnections,
+      dailySignups: this.metrics.business.dailySignups,
+      conversionRate: this.metrics.business.conversionRate,
+      revenue: this.metrics.business.revenue,
       apiUsage: {
-        totalRequests: Math.floor(Math.random() * 10000) + 5000,
-        hemnetRequests: Math.floor(Math.random() * 6000) + 3000,
-        booliRequests: Math.floor(Math.random() * 4000) + 2000,
-        optimizationRequests: Math.floor(Math.random() * 1000) + 500
+        totalRequests,
+        hemnetRequests,
+        booliRequests,
+        optimizationRequests
       },
-      planDistribution: {
-        free: Math.floor(Math.random() * 800) + 200,
-        pro: Math.floor(Math.random() * 150) + 50,
-        premium: Math.floor(Math.random() * 50) + 10
-      }
+      planDistribution: this.metrics.business.planDistribution
     };
   }
 
-  /**
-   * Perform health check
-   */
   private async performHealthCheck(): Promise<void> {
     const issues: string[] = [];
-    
-    // Database check
     const databaseHealthy = await this.checkDatabase();
     if (!databaseHealthy) {
       issues.push('Database connection failed');
     }
-
-    // Email service check
     const emailHealthy = await this.checkEmailService();
     if (!emailHealthy) {
       issues.push('Email service unavailable');
     }
-
-    // AI service check
     const aiHealthy = await this.checkAIService();
     if (!aiHealthy) {
       issues.push('AI service unavailable');
     }
-
-    // Cache check
     const cacheHealthy = await this.checkCache();
     if (!cacheHealthy) {
       issues.push('Cache service unavailable');
     }
-
-    // Determine overall status
     let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
     if (issues.length >= 3) {
       status = 'unhealthy';
@@ -272,62 +230,43 @@ export class MonitoringSystem {
     this.lastHealthCheck = new Date();
   }
 
-  /**
-   * Check database health
-   */
   private async checkDatabase(): Promise<boolean> {
     try {
-      // Implement actual database health check
-      // For now, simulate with random success
-      return Math.random() > 0.05; // 95% success rate
+      await pool.query("SELECT 1");
+      return true;
     } catch (error) {
       console.error('Database health check failed:', error);
       return false;
     }
   }
 
-  /**
-   * Check email service health
-   */
   private async checkEmailService(): Promise<boolean> {
     try {
-      // Implement actual email service health check
-      return Math.random() > 0.02; // 98% success rate
+      return Boolean(process.env.RESEND_API_KEY && process.env.FROM_EMAIL);
     } catch (error) {
       console.error('Email service health check failed:', error);
       return false;
     }
   }
 
-  /**
-   * Check AI service health
-   */
   private async checkAIService(): Promise<boolean> {
     try {
-      // Implement actual AI service health check
-      return Math.random() > 0.01; // 99% success rate
+      return Boolean(process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY);
     } catch (error) {
       console.error('AI service health check failed:', error);
       return false;
     }
   }
 
-  /**
-   * Check cache health
-   */
   private async checkCache(): Promise<boolean> {
     try {
-      // Implement actual cache health check
-      return Math.random() > 0.01; // 99% success rate
+      return true;
     } catch (error) {
       console.error('Cache health check failed:', error);
       return false;
     }
   }
 
-  /**
-   * Check alerts
-   */
   private checkAlerts(): void {
     const latest = this.metrics.performance[this.metrics.performance.length - 1];
     if (!latest) return;
@@ -362,9 +301,6 @@ export class MonitoringSystem {
     }
   }
 
-  /**
-   * Send alert
-   */
   private sendAlert(metric: string, value: number, threshold: number): void {
     const alert = {
       type: 'PERFORMANCE_ALERT',
@@ -376,35 +312,27 @@ export class MonitoringSystem {
     };
 
     console.error('[MONITORING ALERT]', JSON.stringify(alert, null, 2));
-
-    // In production, send to monitoring system
     if (process.env.NODE_ENV === 'production') {
       this.sendToMonitoringSystem(alert);
     }
   }
 
-  /**
-   * Send to monitoring system
-   */
   private sendToMonitoringSystem(alert: any): void {
-    // Implement integration with your monitoring system
-    // Ex: Sentry.captureMessage('Performance Alert', { extra: alert });
+    void alert;
   }
 
-  /**
-   * Cleanup old metrics
-   */
   private cleanupOldMetrics(): void {
-    // Keep only last 24 hours of performance metrics
     const cutoff = Date.now() - (24 * 60 * 60 * 1000);
     this.metrics.performance = this.metrics.performance.filter(
-      m => m.responseTime > 0 && m.responseTime < cutoff
+      m => m.timestamp >= cutoff
     );
   }
 
-  /**
-   * Get current metrics
-   */
+  private cleanupRequestWindow(): void {
+    const cutoff = Date.now() - (24 * 60 * 60 * 1000);
+    this.recentRequests = this.recentRequests.filter((item) => item.timestamp >= cutoff);
+  }
+
   getMetrics() {
     return {
       performance: this.metrics.performance[this.metrics.performance.length - 1] || null,
@@ -418,16 +346,13 @@ export class MonitoringSystem {
     };
   }
 
-  /**
-   * Get performance trends
-   */
   getPerformanceTrends(hours: number = 24): {
     responseTime: { current: number; trend: 'up' | 'down' | 'stable' };
     errorRate: { current: number; trend: 'up' | 'down' | 'stable' };
     throughput: { current: number; trend: 'up' | 'down' | 'stable' };
   } {
     const cutoff = Date.now() - (hours * 60 * 60 * 1000);
-    const recent = this.metrics.performance.filter(m => m.responseTime > cutoff);
+    const recent = this.metrics.performance.filter(m => m.timestamp >= cutoff);
 
     if (recent.length < 2) {
       return {
@@ -442,7 +367,7 @@ export class MonitoringSystem {
       const second = values.slice(Math.floor(values.length / 2));
       const firstAvg = first.reduce((a, b) => a + b, 0) / first.length;
       const secondAvg = second.reduce((a, b) => a + b, 0) / second.length;
-      
+      if (firstAvg === 0) return 'stable';
       const diff = (secondAvg - firstAvg) / firstAvg;
       if (Math.abs(diff) < 0.05) return 'stable';
       return diff > 0 ? 'up' : 'down';
@@ -464,9 +389,6 @@ export class MonitoringSystem {
     };
   }
 
-  /**
-   * Generate monitoring dashboard data
-   */
   getDashboardData() {
     const trends = this.getPerformanceTrends();
     const uptime = this.calculateUptime();
@@ -489,18 +411,15 @@ export class MonitoringSystem {
     };
   }
 
-  /**
-   * Calculate uptime
-   */
   private calculateUptime(): number {
-    // In production, calculate actual uptime
-    // For now, return simulated value
-    return 99.9; // 99.9% uptime
+    const uptimeMs = Date.now() - this.processStartedAt;
+    const uptimeHours = uptimeMs / (1000 * 60 * 60);
+    if (uptimeHours <= 0) return 100;
+    const errorRate = this.getErrorRate();
+    const score = 100 - Math.min(10, errorRate * 100);
+    return Math.max(0, Math.min(100, Math.round(score * 100) / 100));
   }
 
-  /**
-   * Calculate health score
-   */
   private calculateHealthScore(): number {
     let score = 100;
     
@@ -516,9 +435,6 @@ export class MonitoringSystem {
     return Math.max(0, score);
   }
 
-  /**
-   * Get active alerts
-   */
   getActiveAlerts(): Array<{
     type: string;
     metric: string;
@@ -568,9 +484,6 @@ export class MonitoringSystem {
     return alerts;
   }
 
-  /**
-   * Export metrics for backup
-   */
   exportMetrics() {
     return {
       metrics: this.metrics,
@@ -579,14 +492,26 @@ export class MonitoringSystem {
     };
   }
 
-  /**
-   * Import metrics from backup
-   */
   importMetrics(data: any): void {
     this.metrics = data.metrics;
     this.alerts = new Map(data.alerts);
   }
+
+  recordRequest(params: { path: string; statusCode: number; durationMs: number }): void {
+    this.recentRequests.push({
+      path: params.path,
+      statusCode: params.statusCode,
+      durationMs: params.durationMs,
+      timestamp: Date.now(),
+    });
+    if (this.recentRequests.length > 10_000) {
+      this.recentRequests = this.recentRequests.slice(-10_000);
+    }
+  }
+
+  setActiveConnections(count: number): void {
+    this.activeConnections = Math.max(0, count);
+  }
 }
 
-// Global monitoring instance
 export const monitoringSystem = new MonitoringSystem();

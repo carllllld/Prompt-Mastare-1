@@ -80,20 +80,20 @@ export function evaluateInputSignalCoverage(text: string, disposition: any): Inp
   const usedSignals = measured.filter((item) => item.used).length;
   const ratio = totalSignals === 0 ? 1 : Number((usedSignals / totalSignals).toFixed(3));
 
-  const criticalPaths = [
-    "property.address",
-    "property.size",
-    "property.rooms",
-    "property.kitchen",
-    "property.bathroom",
-    "property.transport",
-    "property.balcony.direction",
-    "property.year_built",
+  const criticalPathAliases: Array<{ path: string; aliases: string[] }> = [
+    { path: "property.address", aliases: ["property.address", "location.address"] },
+    { path: "property.size", aliases: ["property.size", "property.living_area", "property.area"] },
+    { path: "property.rooms", aliases: ["property.rooms"] },
+    { path: "property.kitchen", aliases: ["property.kitchen", "property.materials.kitchen"] },
+    { path: "property.bathroom", aliases: ["property.bathroom", "property.materials.bathroom"] },
+    { path: "property.transport", aliases: ["property.transport", "location.transport"] },
+    { path: "property.balcony.direction", aliases: ["property.balcony.direction", "property.outdoor_space.direction"] },
+    { path: "property.year_built", aliases: ["property.year_built", "property.build_year"] },
   ];
 
-  const critical = criticalPaths.map((path) => {
-    const found = measured.find((entry) => entry.path === path);
-    return { path, used: found ? found.used : false };
+  const critical = criticalPathAliases.map((entry) => {
+    const found = measured.find((signal) => entry.aliases.includes(signal.path));
+    return { path: entry.path, used: found ? found.used : false };
   });
 
   const topMissing = measured

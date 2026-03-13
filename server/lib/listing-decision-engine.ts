@@ -43,6 +43,10 @@ export interface BrokerAuditDecisionInput {
   finalStrongWordFloor: number;
   finalGenericBrokerPhraseCount: number;
   finalNarrativeIntegrityIssueCount: number;
+  finalExtraFieldViolationCount?: number;
+  blueprintCoverageRatio?: number;
+  inputSignalCoverageRatio?: number;
+  missingCriticalSignalCount?: number;
 }
 
 export interface BrokerAuditDecisionResult {
@@ -160,10 +164,19 @@ export function decideRewriteAcceptance(input: RewriteAcceptanceInput): RewriteA
 }
 
 export function decideBrokerAuditStrategy(input: BrokerAuditDecisionInput): BrokerAuditDecisionResult {
+  const extraFieldViolationCount = typeof input.finalExtraFieldViolationCount === "number" ? input.finalExtraFieldViolationCount : 0;
+  const blueprintCoverageRatio = typeof input.blueprintCoverageRatio === "number" ? input.blueprintCoverageRatio : 1;
+  const inputSignalCoverageRatio = typeof input.inputSignalCoverageRatio === "number" ? input.inputSignalCoverageRatio : 1;
+  const missingCriticalSignalCount = typeof input.missingCriticalSignalCount === "number" ? input.missingCriticalSignalCount : 0;
+
   const canSkipExternalAudit = input.strongCandidateFastPath
     && input.finalMainWordCount >= input.finalStrongWordFloor
     && input.finalGenericBrokerPhraseCount === 0
-    && input.finalNarrativeIntegrityIssueCount === 0;
+    && input.finalNarrativeIntegrityIssueCount === 0
+    && extraFieldViolationCount === 0
+    && blueprintCoverageRatio >= 0.7
+    && inputSignalCoverageRatio >= 0.55
+    && missingCriticalSignalCount === 0;
 
   return {
     canSkipExternalAudit,

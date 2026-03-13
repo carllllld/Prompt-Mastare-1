@@ -107,4 +107,32 @@ describe("listing decision engine", () => {
     expect(skip.canSkipExternalAudit).toBe(true);
     expect(requireAudit.canSkipExternalAudit).toBe(false);
   });
+
+  it("requires external broker audit when coverage or extra fields are weak despite strong main text", () => {
+    const weakCoverage = decideBrokerAuditStrategy({
+      strongCandidateFastPath: true,
+      finalMainWordCount: 260,
+      finalStrongWordFloor: 235,
+      finalGenericBrokerPhraseCount: 0,
+      finalNarrativeIntegrityIssueCount: 0,
+      finalExtraFieldViolationCount: 0,
+      blueprintCoverageRatio: 0.8,
+      inputSignalCoverageRatio: 0.42,
+      missingCriticalSignalCount: 0,
+    });
+    const extraFieldIssues = decideBrokerAuditStrategy({
+      strongCandidateFastPath: true,
+      finalMainWordCount: 260,
+      finalStrongWordFloor: 235,
+      finalGenericBrokerPhraseCount: 0,
+      finalNarrativeIntegrityIssueCount: 0,
+      finalExtraFieldViolationCount: 2,
+      blueprintCoverageRatio: 0.8,
+      inputSignalCoverageRatio: 0.7,
+      missingCriticalSignalCount: 0,
+    });
+
+    expect(weakCoverage.canSkipExternalAudit).toBe(false);
+    expect(extraFieldIssues.canSkipExternalAudit).toBe(false);
+  });
 });

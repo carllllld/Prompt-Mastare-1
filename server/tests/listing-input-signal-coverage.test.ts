@@ -36,4 +36,27 @@ describe("listing input signal coverage", () => {
     expect(summary.ratio).toBeLessThan(0.5);
     expect(summary.topMissing.length).toBeGreaterThan(0);
   });
+
+  it("maps alias paths for critical signals from nested disposition structures", () => {
+    const disposition = {
+      property: {
+        address: "Ekorrvägen 10, Mörtnäs, Värmdö",
+        size: 146,
+        rooms: 5,
+        materials: {
+          kitchen: "renoverat kök",
+          bathroom: "helkaklat badrum",
+        },
+      },
+      location: {
+        transport: "buss 25 minuter till Slussen",
+      },
+    };
+    const text = "Ekorrvägen 10 i Mörtnäs. Villa om 146 kvm med 5 rum, renoverat kök, helkaklat badrum och buss 25 minuter till Slussen.";
+    const summary = evaluateInputSignalCoverage(text, disposition);
+
+    expect(summary.critical.find((c) => c.path === "property.kitchen")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.bathroom")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.transport")?.used).toBe(true);
+  });
 });

@@ -12,7 +12,8 @@
     "test": "vitest run --config server/vitest.config.ts",
     "test:watch": "vitest --config server/vitest.config.ts",
     "test:regression": "vitest run --config server/vitest.config.ts server/tests/regression.test.ts",
-    "test:canary": "vitest run --config server/vitest.config.ts server/tests/listing-canary-suite.test.ts server/tests/listing-quality-guards.test.ts"
+    "test:canary": "vitest run --config server/vitest.config.ts server/tests/listing-canary-suite.test.ts server/tests/listing-quality-guards.test.ts",
+    "launch:gate": "tsx script/launch-gate.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

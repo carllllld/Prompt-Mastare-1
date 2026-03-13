@@ -116,6 +116,23 @@ describe("listing final audit subflow", () => {
     expect(validation.warnings).toHaveLength(2);
   });
 
+  it("blocks when strict extra field validation is enabled and auxiliary fields have violations", () => {
+    expect(() => finalizeFinalMainValidation({
+      resultText: "one two three",
+      finalNonWordCountViolations: [],
+      finalWordCountViolations: [],
+      finalExtraFieldViolations: ["[socialCopy] CTA-slut"],
+      finalNarrativeIssues: [],
+      strictExtraFieldValidation: true,
+      minimumPublishableWordMin: 3,
+      targetWordMin: 5,
+      targetWordMax: 10,
+      isDispositionLikeOutput: () => false,
+      isTooThinForDelivery: () => false,
+      countWords: (text) => text.split(/\s+/).filter(Boolean).length,
+    })).toThrow("Kvarvarande kvalitetsfel i extratexter");
+  });
+
   it("throws when final main validation finds narrative issues", () => {
     expect(() => finalizeFinalMainValidation({
       resultText: "one two three",

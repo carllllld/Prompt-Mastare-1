@@ -228,6 +228,7 @@ export function finalizeFinalMainValidation(params: {
   finalWordCountViolations: string[];
   finalExtraFieldViolations: string[];
   finalNarrativeIssues: string[];
+  strictExtraFieldValidation?: boolean;
   minimumPublishableWordMin: number;
   targetWordMin: number;
   targetWordMax: number;
@@ -270,6 +271,9 @@ export function finalizeFinalMainValidation(params: {
   }
 
   if (params.finalExtraFieldViolations.length > 0) {
+    if (params.strictExtraFieldValidation) {
+      throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i extratexter: ${params.finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
+    }
     warnings.push(`[Final Gate] Extratexter har kvarvarande kvalitetsanmärkningar men blockerar inte huvudtexten: ${params.finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
   }
 

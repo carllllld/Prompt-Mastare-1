@@ -92,8 +92,9 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     [/\bavgift\s+om\s+\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\b/, 'Trasig avgiftsmening: saknar enhet (kr/mån, kr/år) och meningsgräns'],
     [/\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\s+ligger\s+nära\b/i, 'Trasig meningsövergång: siffra direkt följt av nytt stycke utan punkt'],
     [/\bavgift(?:en)?\s+på\s+\d{1,6}(?!\s*(?:kr|:-|\/mån|\/år|sek))\b/i, 'Avgift saknar enhet (kr/mån, kr/år)'],
-    [/\b(?:avgift|driftkostnad|driftskostnad|månadskostnad|kostnad)(?:en)?\s+(?:om|på)\s+\d{1,3}(?:[ \u00A0]\d{3})*(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per månad|per år))\b/i, 'Kostnad saknar enhet (kr/mån, kr/år)'],
+    [/\b(?:avgift|driftkostnad|driftskostnad|månadskostnad|kostnad)(?:en)?\s+(?:om|på)\s+(?:\d{1,3}(?:[ \u00A0]\d{3})*|\d{4,7})(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per månad|per år))\b/i, 'Kostnad saknar enhet (kr/mån, kr/år)'],
     [/\b\d{1,3}(?:[ \u00A0]\d{3})?\s+[A-ZÅÄÖ][a-zåäö]{2,}\s+(?:fungerar|ligger|har|är|ger|tar)\b/u, 'Sannolik saknad punkt mellan siffra och ny mening'],
+    [/\b([A-Za-zÅÄÖåäö]{2,}(?:\s+[A-Za-zÅÄÖåäö]{2,}){0,2})\s+\1(?:\s+\1)+\b/u, 'Upprepad fras flera gånger i rad'],
   ];
   for (const [pattern, message] of mechanicalQualityPatterns) {
     if (pattern.test(text)) {
