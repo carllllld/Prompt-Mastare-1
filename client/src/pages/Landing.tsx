@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Crown, Check, ArrowRight, Zap, Shield, FileText,
-  Sparkles, BarChart3, Users, Pen, Menu, X,
+  Sparkles, BarChart3, Pen, Menu, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
@@ -23,8 +23,8 @@ Visning söndag 13–14.`;
 const FEATURES = [
   {
     icon: Zap,
-    title: "5 texter på 15 sekunder",
-    desc: "Objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan och kortannons — allt genereras samtidigt.",
+    title: "5 texter i ett flöde",
+    desc: "Objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan och kortannons — oftast klart på cirka 15 sekunder.",
   },
   {
     icon: Shield,
@@ -38,8 +38,8 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: "Områdesanalys",
-    desc: "AI:n analyserar marknadsposition, arkitektoniskt värde och köparpsykologi för varje objekt. (Pro/Premium)",
+    title: "Adressuppslag & områdesinfo",
+    desc: "Fyller på kollektivtrafik och närområde från adressen för snabbare, mer relevant lägesdel. (Pro/Premium)",
   },
   {
     icon: Sparkles,
@@ -47,9 +47,9 @@ const FEATURES = [
     desc: "Ladda upp dina bästa texter — AI:n lär sig din ton och skriver som du, fast snabbare. (Pro/Premium)",
   },
   {
-    icon: Users,
-    title: "Team-funktioner",
-    desc: "Dela skrivstil och mallar med hela kontoret. Konsekvent kvalitet oavsett vem som skriver. (Byrå)",
+    icon: Crown,
+    title: "Team-samarbete",
+    desc: "Bjud in kollegor, dela prompter och jobba tillsammans i samma flöde. (Pro/Premium)",
   },
 ];
 
@@ -62,8 +62,8 @@ const PLANS = [
     color: "#9CA3AF",
     features: [
       "2 genereringar / månad",
-      "Hemnet + Booli-texter",
-      "Rubrik, socialt inlägg & kortannons",
+      "5 textformat per generering",
+      "Hemnet + Booli-anpassad huvudtext",
       "300–450 ord per text",
     ],
     cta: "Kom igång gratis",
@@ -80,6 +80,7 @@ const PLANS = [
       "40 AI-textredigeringar / månad",
       "Personlig skrivstil",
       "Adressuppslag & områdesinfo",
+      "Team-samarbete",
       "Faktagranskning",
       "Valfri textlängd (200–600 ord)",
     ],
@@ -95,30 +96,15 @@ const PLANS = [
     features: [
       "25 genereringar / månad",
       "120 AI-textredigeringar / månad",
-      "Allt i Pro, plus:",
-      "Längre texter (upp till 800 ord)",
+      "Personlig skrivstil",
+      "Adressuppslag & områdesinfo",
+      "Team-samarbete",
+      "Faktagranskning",
+      "Valfri textlängd (200–800 ord)",
       "Förbättringsförslag per text",
-      "Prioriterad support",
     ],
     cta: "Välj Premium",
     tier: "premium" as "premium",
-    highlight: false,
-  },
-  {
-    name: "Byrå",
-    price: null,
-    desc: "Hela kontoret på en plattform",
-    color: "#1D2939",
-    features: [
-      "Obegränsade genereringar",
-      "Obegränsade AI-redigeringar",
-      "Delade skrivstilsprofiler",
-      "Flera användare & roller",
-      "Volymprissättning",
-      "Dedikerad support",
-    ],
-    cta: "Kontakta oss",
-    tier: null as null | "pro" | "premium",
     highlight: false,
   },
 ];
@@ -171,6 +157,8 @@ export default function Landing() {
             <button
               className="sm:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Stäng meny" : "Öppna meny"}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" style={{ color: "#1D2939" }} /> : <Menu className="w-5 h-5" style={{ color: "#1D2939" }} />}
             </button>
@@ -221,7 +209,7 @@ export default function Landing() {
               Testa gratis — 2 genereringar/månad
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <span className="text-xs" style={{ color: "#9CA3AF" }}>Inget kort krävs</span>
+            <span className="text-xs" style={{ color: "#6B7280" }}>Inget kort krävs</span>
           </div>
 
           {/* Stats — bara produktfakta, inga användarsiffror */}
@@ -234,7 +222,7 @@ export default function Landing() {
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-xl sm:text-2xl font-bold" style={{ color: "#2D6A4F" }}>{stat.value}</div>
-                <div className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{stat.label}</div>
+                <div className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{stat.label}</div>
               </div>
             ))}
           </div>
@@ -316,7 +304,7 @@ export default function Landing() {
                   </span>
                 ))}
               </div>
-              <p className="text-[10px] mt-2" style={{ color: "#9CA3AF" }}>0 klyschor. 100% fakta.</p>
+              <p className="text-[10px] mt-2" style={{ color: "#6B7280" }}>Faktastyrd och klyschfri ton.</p>
             </div>
           </div>
         </div>
@@ -360,7 +348,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
@@ -394,28 +382,21 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                {plan.name === "Byrå" ? (
-                  <a
-                    href="mailto:info@optiprompt.se?subject=Byrå-plan%20förfrågan"
-                    className="inline-flex items-center justify-center w-full font-medium rounded-md border px-4 py-2 text-sm transition-colors hover:opacity-90"
-                    style={{ borderColor: plan.color, color: plan.color }}
-                  >
-                    {plan.cta}
-                  </a>
-                ) : (
-                  <Button
-                    onClick={openRegister}
-                    variant={plan.highlight ? "default" : "outline"}
-                    className="w-full font-medium"
-                    style={plan.highlight ? { background: plan.color, color: "#fff" } : {}}
-                  >
-                    {plan.tier && <Crown className="w-4 h-4 mr-2" />}
-                    {plan.cta}
-                  </Button>
-                )}
+                <Button
+                  onClick={openRegister}
+                  variant={plan.highlight ? "default" : "outline"}
+                  className="w-full font-medium"
+                  style={plan.highlight ? { background: plan.color, color: "#fff" } : {}}
+                >
+                  {plan.tier && <Crown className="w-4 h-4 mr-2" />}
+                  {plan.cta}
+                </Button>
               </div>
             ))}
           </div>
+          <p className="text-xs text-center mt-6" style={{ color: "#9CA3AF" }}>
+            Team-samarbete ingår i Pro och Premium.
+          </p>
         </div>
       </section>
 

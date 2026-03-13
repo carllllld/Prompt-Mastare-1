@@ -171,6 +171,10 @@ FÖRBÄTTRA SÅ HÄR:
 - Selektiv betoning - ge de bästa detaljerna mer utrymme.
 - Behåll naturligt styckeflöde.
 - REPARERA SPRÅKET: Fixa avhuggna meningar, trasiga ord och konstiga teckenföljder.
+- Prioritera svensk mäklarprosa: konkret, trygg, saklig och säljande utan överord.
+- Om texten redan håller hög nivå: gör små precisionslyft istället för total omskrivning.
+- Lyft områdets vardagsnytta i naturlig prosa i stället för listor med butiksnamn.
+- Säkerställ att varje stycke tillför ny information och undviker repetition av samma säljpunkt.
 
 DU FÅR INTE:
 - Ändra fakta eller hitta på nya detaljer.

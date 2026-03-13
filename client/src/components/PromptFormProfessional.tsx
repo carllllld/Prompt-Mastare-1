@@ -79,7 +79,7 @@ const HEATING_CHIPS = [
 ];
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
-  "Dränering utförd", "Solceller", "Laddbox installerad",
+  "Dränering utförd", "Solceller", "Laddbox för elbil",
   "Braskamin", "Kakelugn", "Originaldetaljer",
 ];
 const GARDEN_CHIPS = [
@@ -94,7 +94,7 @@ const USP_CHIPS = [
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
-  "Garageplats", "Boendeparkering", "Laddplats elbil",
+  "Garageplats", "Boendeparkering", "Laddbox för elbil",
 ];
 const ROOF_CHIPS = [
   "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak",
@@ -329,9 +329,38 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
   const onLocalSubmit = (values: PropertyFormData) => {
+    const normalizeListText = (value: string) => {
+      if (!value) return "";
+      const parts = value
+        .split(/[,.;]\s*/)
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+      const aliasRules: Array<{ canonical: string; pattern: RegExp }> = [
+        { canonical: "Laddbox för elbil", pattern: /\b(laddplats elbil|laddplats för elbil|laddbox(?: installerad)?)\b/i },
+        { canonical: "Nya fönster", pattern: /\b(fönster bytta|nya fönster)\b/i },
+        { canonical: "Stambyte genomfört", pattern: /\b(stambyte|stamrenovering)\b/i },
+      ];
+
+      const seen = new Set<string>();
+      const normalized = parts.map((part) => {
+        for (const rule of aliasRules) {
+          if (rule.pattern.test(part)) return rule.canonical;
+        }
+        return part;
+      }).filter((part) => {
+        const key = part.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      return normalized.join(", ");
+    };
+
     const mergeChipsAndText = (chips: string[], text: string) => {
       const parts = [chips.join(", "), text].filter(Boolean);
-      return parts.join(". ");
+      return normalizeListText(parts.join(". "));
     };
 
     const merged = {
@@ -342,13 +371,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       kitchenDescription: mergeChipsAndText(kitchenChips, values.kitchenDescription),
       bathroomDescription: mergeChipsAndText(bathroomChips, values.bathroomDescription),
       flooring: mergeChipsAndText(flooringChips, values.flooring),
-      heating: heatingChips.length > 0 ? heatingChips.join(", ") : values.heating,
+      heating: normalizeListText(heatingChips.length > 0 ? heatingChips.join(", ") : values.heating),
       specialFeatures: mergeChipsAndText(specialChips, values.specialFeatures),
       gardenDescription: mergeChipsAndText(gardenChips, values.gardenDescription),
       uniqueSellingPoints: mergeChipsAndText(uspChips, values.uniqueSellingPoints),
       parking: mergeChipsAndText(parkingChips, values.parking),
       konstruktionMaterial: mergeChipsAndText(materialChips, values.konstruktionMaterial),
-      taktyp: roofChips.length > 0 ? roofChips.join(", ") : values.taktyp,
+      taktyp: normalizeListText(roofChips.length > 0 ? roofChips.join(", ") : values.taktyp),
       balconyArea: hasBalcony ? values.balconyArea : "",
       balconyDirection: hasBalcony ? values.balconyDirection : "",
     };

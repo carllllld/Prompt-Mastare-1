@@ -116,9 +116,9 @@ function buildPlatformDirective(platform: string, propertyType: string): Platfor
       openingPriority: isHouse
         ? ["uteplats eller tomt", "planlösning", "kök", "läge"]
         : ["ljus eller uteplats", "planlösning", "kök", "läge"],
-      locationStrategy: "Skriv läget med lugn, pendling och vardagsfunktion i naturlig prosa utan annonsklyschor.",
+      locationStrategy: "Skriv läget med lugn, pendling och vardagsfunktion i naturlig prosa; i Booli/egen sida får området ramas in mer berättande så länge fakta är konkreta och verifierbara.",
       weakFactPolicy: "Teknikfakta får bara vara med om de hjälper köparen förstå standard, drift eller vardagsnytta.",
-      closingStrategy: "Avsluta sakligt och selektivt med läge, vardag eller köparnytta snarare än CTA eller känslosummering.",
+      closingStrategy: "Avsluta med en vardagsnära bild eller köparnytta förankrad i fakta; undvik CTA men behåll berättande ton.",
     };
   }
 
@@ -126,9 +126,9 @@ function buildPlatformDirective(platform: string, propertyType: string): Platfor
     openingPriority: isHouse
       ? ["uteplats, solläge eller tomt", "sociala ytor", "kök", "läge"]
       : ["balkong, terrass eller ljus", "planlösning", "kök", "läge"],
-    locationStrategy: "Hemnet-huvudtexten ska kännas publicerad: välj få starka platsdetaljer och koppla dem till vardag, pendling eller närservice.",
+    locationStrategy: "Hemnet-huvudtexten ska kännas publicerad: använd helst bostadstyp + boarea + stark detalj tidigt, och koppla läget till vardag, pendling eller närservice.",
     weakFactPolicy: "Energiklass, fiber, parkering och teknik får aldrig ta plats från öppningen eller bära egna mekaniska meningar om de inte lyfter köparnyttan.",
-    closingStrategy: "Avsluta med ett starkt men trovärdigt lägesankare eller en konkret sista köparnytta, aldrig med CTA eller abstrakt summering.",
+    closingStrategy: "Avsluta med ett starkt men trovärdigt lägesankare eller en konkret sista köparnytta, aldrig med CTA eller drömsummering.",
   };
 }
 
@@ -234,8 +234,10 @@ export function buildListingGenerationBlueprint(input: BlueprintInput): ListingG
     platformDirective.weakFactPolicy,
     platformDirective.closingStrategy,
     audience ? `Tänk på sannolik köpare: ${audience}.` : "Skriv för en bred svensk bostadsköpare utan att bli generisk.",
-    "Varje stycke måste bära egen köparnytta eller konkret fakta; upprepning av kärnfakta är inte tillåten.",
+    "Varje stycke måste bära egen köparnytta eller konkret fakta; upprepning av kärnfakta ska minimeras.",
     "Styckesstruktur ska efterlikna svensk publicerad objektsbeskrivning: stark öppning, boendekvaliteter i mitten, selektivt läges- eller föreningsavslut.",
+    "Tänk som en svensk mäklare: skriv kort, tydligt och trovärdigt med rätt balans mellan säljtryck och saklighet.",
+    "Fokusera på det köparen faktiskt väger in: planlösning, ljus, standard, läge, vardagslogistik, ekonomi och bevisbara kvaliteter.",
     "Använd endast de starkaste kärnfakta i löptexten. Övriga datapunkter ska fungera som kontext och får utelämnas om de stör läsbarhet.",
     "SPRÅKLIG INTEGRITET: Skriv alltid fullständiga och grammatiskt korrekta meningar. Undvik avhuggna ord, felaktiga radbrytningar eller korrupta tecken.",
     "Om underlaget är oklart ska texten bli försiktigare, inte mer fantasifull.",

@@ -253,10 +253,8 @@ function buildDeterministicFallbackDescription(disposition: any, style: WritingS
   const area = formatFallbackValue(location.area);
   const fee = typeof financial.fee === "number" && Number.isFinite(financial.fee) ? `${Math.round(financial.fee).toLocaleString("sv-SE")} kr/mån` : formatFallbackValue(financial.fee);
 
-  const openingParts = [address];
-  if (rooms) openingParts.push(`${rooms} rum`);
-  if (livingArea) openingParts.push(`${livingArea} kvm`);
-  let opening = openingParts.join(", ");
+  const propertyTypeLabel = `${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)}`;
+  let opening = `${propertyTypeLabel}${livingArea ? ` om ${livingArea} kvm` : ""}${rooms ? ` med ${rooms} rum` : ""}${address ? ` på ${address}` : ""}`;
 
   if (style === "selling") {
     if (outdoorType && outdoorDirection) {
@@ -975,6 +973,88 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   return cleaned.trim() || null;
 }
 
+function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", text: unknown): string | null {
+  if (typeof text !== "string") return null;
+  let value = text.trim();
+  if (!value) return null;
+
+  value = value.replace(/\b(laddplats(?: för elbil)?|laddbox(?: installerad)?)\b/gi, "laddbox för elbil");
+  value = value.replace(/\bladdbox för elbil(?:\s+med\s+)?laddbox för elbil\b/gi, "laddbox för elbil");
+  value = value.replace(/\b(Söder|Väster|Öster|Norr)\b/g, (m) => m.toLowerCase());
+  value = value.replace(/\s{2,}/g, " ").trim();
+
+  if (field === "instagramCaption") {
+    const hasEndPunctuation = /[.!?…]$/.test(value);
+    if (!hasEndPunctuation) value += ".";
+  } else if (field !== "headline") {
+    value = value.replace(/[!?…]+$/g, ".");
+    if (!/[.]$/.test(value)) value += ".";
+  }
+
+  if ((field === "instagramCaption" || field === "socialCopy") && /(?:skulle du börja|skulle du avsluta|vad säger du)\s*\.?$/i.test(value)) {
+    value = value.replace(/(?:skulle du börja|skulle du avsluta|vad säger du)\s*\.?$/i, "").trim();
+    if (value && !/[.!?]$/.test(value)) value += ".";
+  }
+
+  return value || null;
+}
+
+function normalizePropertyTypeLabel(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim().toLowerCase();
+  if (!raw) return null;
+  const map: Record<string, string> = {
+    apartment: "lägenhet",
+    condo: "lägenhet",
+    house: "villa",
+    townhouse: "radhus",
+    villa: "villa",
+    radhus: "radhus",
+    lägenhet: "lägenhet",
+    fritidshus: "fritidshus",
+    parhus: "parhus",
+    kedjehus: "kedjehus",
+  };
+  return map[raw] || raw;
+}
+
+function enforcePlatformMainTextHeuristics(text: string, platform: string, disposition?: any): string {
+  if (!text || platform !== "hemnet") return text;
+  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  if (sentences.length === 0) return text;
+
+  const firstSentence = sentences[0];
+  const hasTypeInOpening = /\b(villa|lägenhet|radhus|parhus|kedjehus|fritidshus|etta|tvåa|trea|fyra|femma)\b/i.test(firstSentence);
+  const hasSizeInOpening = /\b\d+\s*kvm\b/i.test(firstSentence);
+  const hasStrongOpeningSignal = /(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence);
+  const firstSentenceWordCount = firstSentence.split(/\s+/).filter(Boolean).length;
+  const openingLikelyAlreadyGood = hasStrongOpeningSignal && firstSentenceWordCount >= 8;
+  const shouldAttemptRewrite = (!hasTypeInOpening || !hasSizeInOpening) && !openingLikelyAlreadyGood;
+  if (!shouldAttemptRewrite) return text;
+
+  const property = disposition?.property || {};
+  const propertyType = normalizePropertyTypeLabel(property.type || disposition?.propertyType);
+  const numericSize = typeof property.size === "number"
+    ? property.size
+    : (typeof property.size === "string" ? Number((property.size.match(/\d+/) || [])[0]) : null);
+  if (!propertyType || !numericSize || Number.isNaN(numericSize)) return text;
+
+  const area = typeof disposition?.location?.area === "string" && disposition.location.area.trim()
+    ? disposition.location.area.trim()
+    : null;
+
+  const strengthCandidates = [
+    typeof property.preferred_outdoor_term === "string" ? property.preferred_outdoor_term : null,
+    Array.isArray(disposition?.unique_features) ? disposition.unique_features.find((item: unknown) => typeof item === "string" && item.trim().length > 0) : null,
+    typeof property.layout === "string" ? property.layout : null,
+  ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+
+  const strength = strengthCandidates[0] || null;
+  const lead = `${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)} om ${numericSize} kvm${area ? ` i ${area}` : ""}${strength ? ` med ${strength}` : ""}.`;
+  sentences[0] = lead.replace(/\s{2,}/g, " ").trim();
+  return sentences.join(" ");
+}
+
 async function finalizeMainMarketingText(
   text: unknown,
   platform: string,
@@ -1033,6 +1113,8 @@ REGLER:
         }
     }
   }
+
+  finalized = enforcePlatformMainTextHeuristics(finalized, platform, disposition);
 
   if (options?.allowParagraphs) {
     finalized = addParagraphs(finalized);
@@ -2063,6 +2145,48 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
   ]
 };
 
+const GOLDEN_BROKER_EXAMPLES = {
+  hemnet: [
+    `EXEMPEL A:
+Villa om 146 kvm i Mörtnäs med södervänd uteplats och inbyggd jacuzzi.
+
+Planlösningen är genomgående med öppna sociala ytor mellan kök och vardagsrum, samtidigt som tre sovrum ligger mer avskilt. Köket är renoverat och materialvalen håller en enhetlig nivå med ekparkett i större delen av huset.
+
+Fönster är bytta och huset har tilläggsisolerats i samband med renovering. Energiklass B och laddbox för elbil stärker vardagsfunktionen över tid.
+
+Mörtnäs ger ett lugnt läge nära service och med smidig pendling mot Slussen.`,
+    `EXEMPEL B:
+Trea om 76 kvm med balkong i västerläge på Storgatan 12, 3 tr, Linköping.
+
+Köket renoverades 2022 med luckor från Ballingslöv och har matplats vid fönstret. Vardagsrummet rymmer både soffgrupp och matbord utan att flödet blir trångt.
+
+Sovrummen ligger mot gårdssidan och badrummet är uppdaterat. BRF med stabil ekonomi och avgift som inkluderar värme och vatten.
+
+Resecentrum nås på några minuter och vardagsservice finns i direkt närområde.`
+  ],
+  booli: [
+    `EXEMPEL A:
+På Ekorrvägen 10 i Mörtnäs ligger en villa om 146 kvm där söderläget märks direkt på uteplatsen.
+
+Entréplanet samlar kök och vardagsrum i ett öppet men tydligt flöde, vilket gör att både vardagsmiddag och större helgmiddagar fungerar utan att ytorna känns överbelastade. Tre sovrum ger flexibel användning för familj, gäster eller hemmakontor.
+
+Renoveringar de senaste åren omfattar bland annat fönsterbyte och tilläggsisolering, vilket bidrar till ett jämnare inomhusklimat. Vid huset finns laddbox för elbil.
+
+I Mörtnäs bor du lugnt med närhet till service och med pendling som fungerar i praktiken över tid.`,
+    `EXEMPEL B:
+Tallstigen 4 i Värmdö är ett radhus om 118 kvm med uteplats i västerläge och tydlig vardagsfunktion.
+
+Kök och vardagsrum ligger i social anslutning med bra kontakt mot uteplatsen, medan övervåningen rymmer sovrum i mer privat del. Material och standard är valda för att tåla vardagstempo utan att tumma på helhetsintrycket.
+
+Området kombinerar lugn med korta avstånd till service, skola och kommunikationer. Det gör bostaden relevant både för familjeliv och för dig som pendlar regelbundet.`
+  ],
+} as const;
+
+function buildGoldenBrokerExamples(platform: "hemnet" | "booli"): string {
+  const examples = GOLDEN_BROKER_EXAMPLES[platform] || [];
+  return examples.map((example, index) => `--- Referensexempel ${index + 1} ---\n${example}`).join("\n\n");
+}
+
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
 const HEMNET_TEXT_PROMPT = `Du är en av Sveriges absolut bästa fastighetsmäklare. Ditt uppdrag är att skriva en Hemnet-text som är så övertygande, professionell och klyschfri att den sätter en ny standard för branschen.
 
@@ -2089,19 +2213,35 @@ KRAV:
 - Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
 - Undvik mekanisk uppräkning. Väv in tekniska detaljer (energiklass, fiber) i en naturlig mening, eller utelämna dem om de stör flödet.
 - Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
+- Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
+- Om dispositionen innehåller boarea, rum, standard, kommunikationer eller avgift ska de vävas in naturligt där de bär beslutsvärde.
+- Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
 UNDVIK ALLTID:
 erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.
 
 EXTRA TEXTER (anpassa för varje format):
 - headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
-- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Ställ en fråga på slutet för att uppmuntra till engagemang.
+- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Avsluta alltid med en komplett mening med korrekt sluttecken.
 - showingInvitation: Tydlig, informativ och professionell. Fokus på fakta och praktisk information om visningen.
 - shortAd: För kortare annonsformat som t.ex. tidningsannonser. Fokusera på de 2-3 starkaste säljargumenten.
 - socialCopy: Anpassad för delning på sociala medier. Lite mer säljande och med en tydlig call-to-action.
+- Terminologi: använd EN huvudterm per sak. Exempel: skriv "laddbox för elbil" och undvik dubbleringar som "laddplats ... laddbox" i samma text.
 
 OUTPUT:
-Svara med JSON och fyll alla fält.`;;
+Svara med JSON och fyll alla fält.
+JSON måste innehålla:
+{
+  "improvedPrompt": "...",
+  "headline": "...",
+  "socialCopy": "...",
+  "instagramCaption": "...",
+  "showingInvitation": "...",
+  "shortAd": "..."
+}
+
+REFERENSEXEMPEL FÖR NIVÅ OCH STIL:
+${buildGoldenBrokerExamples("hemnet")}`;;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
 const BOOLI_TEXT_PROMPT_WRITER = `Du är en av Sveriges absolut bästa fastighetsmäklare. Ditt uppdrag är att skriva en objektbeskrivning som är så övertygande, professionell och klyschfri att den sätter en ny standard för branschen.
@@ -2129,19 +2269,35 @@ KRAV:
 - Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
 - Undvik mekanisk uppräkning. Väv in tekniska detaljer (energiklass, fiber) i en naturlig mening, eller utelämna dem om de stör flödet.
 - Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
+- Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
+- Booli/egen sida får vara mer berättande än Hemnet, men ska fortfarande vara faktaburen och relevant för köpbeslut.
+- Låt avslutet bära en trovärdig vardagsbild i stället för klyschig summering.
 
 UNDVIK ALLTID:
 erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.
 
 EXTRA TEXTER (anpassa för varje format):
 - headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
-- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Ställ en fråga på slutet för att uppmuntra till engagemang.
+- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Avsluta alltid med en komplett mening med korrekt sluttecken.
 - showingInvitation: Tydlig, informativ och professionell. Fokus på fakta och praktisk information om visningen.
 - shortAd: För kortare annonsformat som t.ex. tidningsannonser. Fokusera på de 2-3 starkaste säljargumenten.
 - socialCopy: Anpassad för delning på sociala medier. Lite mer säljande och med en tydlig call-to-action.
+- Terminologi: använd EN huvudterm per sak. Exempel: skriv "laddbox för elbil" och undvik dubbleringar som "laddplats ... laddbox" i samma text.
 
 OUTPUT:
-Svara med JSON och fyll alla fält.`;;
+Svara med JSON och fyll alla fält.
+JSON måste innehålla:
+{
+  "improvedPrompt": "...",
+  "headline": "...",
+  "socialCopy": "...",
+  "instagramCaption": "...",
+  "showingInvitation": "...",
+  "shortAd": "..."
+}
+
+REFERENSEXEMPEL FÖR NIVÅ OCH STIL:
+${buildGoldenBrokerExamples("booli")}`;;
 
 // Faktagranskning med kirurgisk korrigering — fixa BARA felen, bevara allt rätt
 const FACT_CHECK_PROMPT = `
@@ -3561,7 +3717,8 @@ Svara med JSON:
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
-          result[field] = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+          const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+          result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", sanitized);
         }
       }
 
@@ -4000,11 +4157,15 @@ Svara med JSON:
         if (kontakt) finalShowingInvitation = finalShowingInvitation.replace(/\[KONTAKT\]/g, kontakt);
       }
 
-      finalShowingInvitation = sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true });
+      finalShowingInvitation = polishAuxFieldText(
+        "showingInvitation",
+        sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true })
+      );
       result.showingInvitation = finalShowingInvitation;
 
       for (const field of ['socialCopy', 'instagramCaption', 'shortAd', 'headline']) {
-        result[field] = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+        const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
+        result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "shortAd" | "headline", sanitized);
       }
 
       result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
@@ -5806,6 +5967,7 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
 }
 
 export {
+  buildGoldenBrokerExamples,
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
   countGenericBrokerPhrases,
@@ -5814,5 +5976,6 @@ export {
   isStrongPublishableCandidate,
   safeJsonParse,
   sanitizeGeneratedMarketingField,
+  polishAuxFieldText,
   validateOptimizationResult,
 };

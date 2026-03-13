@@ -71,7 +71,7 @@ export default function Teams() {
             <Link href="/">
               <Button className="w-full" data-testid="button-go-home">Till startsidan</Button>
             </Link>
-            <Link href="/#pricing">
+            <Link href="/#priser">
               <Button variant="outline" className="w-full">Se priser</Button>
             </Link>
           </CardContent>

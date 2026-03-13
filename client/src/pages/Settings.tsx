@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useStripePortal } from "@/hooks/use-stripe";
+import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -110,6 +110,7 @@ export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { mutate: openPortal, isPending: isPortalPending } = useStripePortal();
+  const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
 
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -194,6 +195,28 @@ export default function Settings() {
 
   const fmtDate = (iso?: string) =>
     iso ? new Date(iso).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }) : "—";
+
+  const planBenefits: Record<AccountDetails["plan"], string[]> = {
+    free: [
+      "2 genereringar per månad",
+      "5 textformat per generering",
+      "Textlängd 300–450 ord",
+    ],
+    pro: [
+      "10 genereringar per månad",
+      "40 AI-textredigeringar per månad",
+      "Personlig skrivstil och adressuppslag",
+      "Team-samarbete",
+      "Textlängd 200–600 ord",
+    ],
+    premium: [
+      "25 genereringar per månad",
+      "120 AI-textredigeringar per månad",
+      "Personlig skrivstil och adressuppslag",
+      "Team-samarbete",
+      "Textlängd 200–800 ord",
+    ],
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
@@ -386,13 +409,58 @@ export default function Settings() {
                 </div>
               </div>
 
+              <div className="rounded-lg border p-4 space-y-2" style={{ borderColor: "#E8E5DE", background: "#FFFFFF" }}>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                  Detta ingår i din plan
+                </p>
+                <ul className="space-y-1.5">
+                  {planBenefits[details?.plan || "free"].map((benefit) => (
+                    <li key={benefit} className="text-xs flex items-start gap-2" style={{ color: "#4B5563" }}>
+                      <Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: "#2D6A4F" }} />
+                      {benefit}
+                    </li>
+                  ))}
+                </ul>
+                {(details?.plan === "pro" || details?.plan === "premium") && (
+                  <Link href="/teams" className="inline-flex items-center text-xs font-medium hover:underline" style={{ color: "#4B5563" }}>
+                    Öppna Team-samarbete
+                  </Link>
+                )}
+              </div>
+
               {details?.plan === "free" && (
-                <Link href="/app" className="block">
-                  <Button className="w-full font-medium" style={{ background: "#2D6A4F", color: "#fff" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    className="w-full font-medium"
+                    style={{ background: "#2D6A4F", color: "#fff" }}
+                    onClick={() => startCheckout("pro")}
+                    disabled={isCheckoutPending}
+                  >
                     <Crown className="w-4 h-4 mr-2" />
-                    Uppgradera till Pro — 299 kr/mån
+                    {isCheckoutPending ? "Öppnar checkout..." : "Pro — 299 kr/mån"}
                   </Button>
-                </Link>
+                  <Button
+                    variant="outline"
+                    className="w-full font-medium"
+                    onClick={() => startCheckout("premium")}
+                    disabled={isCheckoutPending}
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    {isCheckoutPending ? "Öppnar checkout..." : "Premium — 599 kr/mån"}
+                  </Button>
+                </div>
+              )}
+
+              {details?.plan === "pro" && (
+                <Button
+                  variant="outline"
+                  className="w-full font-medium"
+                  onClick={() => startCheckout("premium")}
+                  disabled={isCheckoutPending}
+                >
+                  <Crown className="w-4 h-4 mr-2" />
+                  {isCheckoutPending ? "Öppnar checkout..." : "Uppgradera till Premium — 599 kr/mån"}
+                </Button>
               )}
             </section>
 

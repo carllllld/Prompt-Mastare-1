@@ -84,6 +84,8 @@ describe("listing selection subflow", () => {
     expect(input).toHaveLength(2);
     expect(input[0].role).toBe("developer");
     expect(input[0].content).toContain("Förfina en redan bra objektbeskrivning");
+    expect(input[0].content).toContain("svensk mäklarprosa");
+    expect(input[0].content).toContain("områdets vardagsnytta");
     expect(input[1].role).toBe("user");
     expect(input[1].content).toContain("DISPOSITION:");
     expect(input[1].content).toContain("SKRIVPLAN:");

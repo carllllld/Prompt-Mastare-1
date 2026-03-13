@@ -155,16 +155,23 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   }
 
   const last200 = lowerText.slice(-200);
-  const emotionalEndings = [
-    'kontakta oss', 'boka visning', 'tveka inte', 'hör av dig', 'för mer information',
-    'skapa minnen', 'drömboende', 'drömhem', 'välkommen hem',
-    'allt du behöver', 'allt man kan önska', 'ett hem att trivas i',
-    'detta gör bostaden', 'detta gör lägenheten', 'detta gör villan',
-    'sammanfattningsvis', 'kort sagt', 'allt sammantaget',
-  ];
-  for (const ending of emotionalEndings) {
+  const ctaEndings = ['kontakta oss', 'boka visning', 'tveka inte', 'hör av dig', 'för mer information'];
+  for (const ending of ctaEndings) {
     if (last200.includes(ending)) {
-      violations.push(`Emotionellt/CTA-slut: "${ending}" — avsluta med LÄGE eller PRIS`);
+      violations.push(`CTA-slut: "${ending}" — avsluta utan uppmaning till kontakt i huvudtexten.`);
+    }
+  }
+  if (platform === "hemnet") {
+    const emotionalEndings = [
+      'skapa minnen', 'drömboende', 'drömhem', 'välkommen hem',
+      'allt du behöver', 'allt man kan önska', 'ett hem att trivas i',
+      'detta gör bostaden', 'detta gör lägenheten', 'detta gör villan',
+      'sammanfattningsvis', 'kort sagt', 'allt sammantaget',
+    ];
+    for (const ending of emotionalEndings) {
+      if (last200.includes(ending)) {
+        violations.push(`Emotionellt Hemnet-slut: "${ending}" — avsluta med konkret läges- eller vardagsnytta.`);
+      }
     }
   }
 

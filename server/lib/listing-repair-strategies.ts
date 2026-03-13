@@ -244,7 +244,7 @@ NEGATIVT EXEMPEL:
 "Lägenheten har en bra planlösning och fina ytskikt."
 
 POSITIVT EXEMPEL:
-"Planlösningen är optimal med sovrummen vända mot den tysta innergården, och i hela lägenheten ligger en nylagd enstavig ekparkett."`;
+"Planlösningen binder samman sociala ytor med tydlig möblerbarhet, sovrummen ligger mot den tysta innergården och i lägenheten ligger nylagd enstavsparkett i ek."`;
             user = `GÖR DENNA TEXT MER KONKRET OCH TA BORT KLYSCHOR:\n${text}\n\nSVARSFORMAT: Svara endast med giltig json: {"corrected_text":"..."} `;
             break;
 

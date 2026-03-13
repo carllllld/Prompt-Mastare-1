@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildGoldenBrokerExamples,
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
   countGenericBrokerPhrases,
   detectNarrativeIntegrityIssues,
   isStrongPublishableCandidate,
+  polishAuxFieldText,
   safeJsonParse,
   sanitizeGeneratedMarketingField,
   validateOptimizationResult,
@@ -12,6 +14,16 @@ import {
 
 describe('AI Pipeline Tests', () => {
   describe('Prompt Optimization', () => {
+    it('should provide platform-specific golden broker examples for prompt guidance', () => {
+      const hemnetExamples = buildGoldenBrokerExamples('hemnet');
+      const booliExamples = buildGoldenBrokerExamples('booli');
+
+      expect(hemnetExamples).toContain('Referensexempel 1');
+      expect(hemnetExamples.toLowerCase()).toContain('villa om');
+      expect(booliExamples).toContain('Referensexempel 1');
+      expect(booliExamples.toLowerCase()).toContain('vardagsfunktion');
+    });
+
     it('should build structured pipeline input from property data', () => {
       const result = buildDispositionFromStructuredData({
         propertyType: 'apartment',
@@ -121,8 +133,24 @@ describe('AI Pipeline Tests', () => {
       expect(violations.filter((v) => v.includes('energiklass') || v.includes('Parkering har') || v.includes('meningsgräns') || v.includes('servicefras'))).toHaveLength(0);
     });
 
+    it('should normalize duplicate charging terms in auxiliary fields', () => {
+      const cleaned = polishAuxFieldText('shortAd', 'Laddplats för elbil med installerad laddbox finns vid huset');
+
+      expect(cleaned).toContain('laddbox för elbil');
+      expect(cleaned?.toLowerCase()).not.toContain('laddplats');
+      expect(cleaned?.endsWith('.')).toBe(true);
+    });
+
+    it('should remove truncated engagement tails in instagram captions', () => {
+      const cleaned = polishAuxFieldText('instagramCaption', 'Södersol på uteplatsen och lugnt läge. Skulle du börja');
+
+      expect(cleaned?.toLowerCase()).not.toContain('skulle du börja');
+      expect(cleaned?.endsWith('.')).toBe(true);
+    });
+
+
     it('should validate AI output quality against the current helper rules', () => {
-      const goodOutput = 'Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i västerläge och kök renoverat 2022.';
+      const goodOutput = 'Trea om 76 kvm med balkong i västerläge på Storgatan 12, 3 tr, Linköping. Köket renoverades 2022.';
       const badOutput = 'Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en underbar känsla.';
 
       const goodViolations = validateOptimizationResult({ improvedPrompt: goodOutput }, 'hemnet', 1, 500, 'balanced');
@@ -146,6 +174,23 @@ describe('AI Pipeline Tests', () => {
       }, 'hemnet', 1, 500, 'balanced');
 
       expect(violations.some((v) => v.includes('Svagt lägesslut'))).toBe(true);
+    });
+
+    it('should allow narrative Hemnet opening even without forced type-and-kvm pattern', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Ekorrvägen 10 i Mörtnäs med solig uteplats och lugnt läge. Tre sovrum och öppna sociala ytor.'
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('Hemnet-öppningen saknar tydlig bostadstyp'))).toBe(false);
+      expect(violations.some((v) => v.includes('Hemnet-öppningen saknar boarea'))).toBe(false);
+    });
+
+    it('should allow emotional-but-factual closing in Booli main text', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Ekorrvägen 10, Mörtnäs, Värmdö. Villa om 146 kvm med uteplats i söderläge och inbyggd jacuzzi. När kvällen kommer blir uteplatsen en lugn plats efter middagen.'
+      }, 'booli', 1, 600, 'balanced');
+
+      expect(violations.some((v) => v.includes('Emotionellt Hemnet-slut'))).toBe(false);
     });
 
     it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {

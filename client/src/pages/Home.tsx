@@ -337,10 +337,10 @@ export default function Home() {
             <div className="flex flex-wrap gap-2 mb-3">
               {[
                 { label: "Objektbeskrivning", sub: "Hemnet & Booli" },
-                { label: "Rubrik", sub: "max 70 tecken" },
+                { label: "Rubrik", sub: "kort och klickstark" },
                 { label: "Socialt inlägg", sub: "+ hashtags" },
                 { label: "Visningsinbjudan", sub: "mäklarinfo" },
-                { label: "Kortannons", sub: "max 40 ord" },
+                { label: "Kortannons", sub: "kort format" },
               ].map((pill) => (
                 <div key={pill.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                   <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#2D6A4F" }} />
@@ -368,7 +368,7 @@ export default function Home() {
                 <p className="text-sm font-semibold" style={{ color: "#9A3412" }}>Månadskvoten är slut</p>
                 <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
                   {plan === "free"
-                    ? "Pro ger dig 10 genereringar + 40 AI-redigeringar per månad."
+                    ? "Pro ger 10 genereringar, 40 AI-redigeringar, personlig skrivstil, adressuppslag och team-samarbete."
                     : `Återställs ${userStatus?.resetTime ? new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }) : "nästa månad"}`}
                 </p>
               </div>
@@ -494,6 +494,7 @@ export default function Home() {
                               <span>10 texter / mån</span>
                               <span>40 AI-redigeringar</span>
                               <span>Personlig skrivstil</span>
+                              <span>Team-samarbete</span>
                             </div>
                           </div>
                           <Button
@@ -518,6 +519,7 @@ export default function Home() {
                           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
                             <span>25 texter / mån</span>
                             <span>120 AI-redigeringar</span>
+                            <span>Team-samarbete</span>
                             <span>800 ord / text</span>
                           </div>
                         </div>
@@ -535,6 +537,11 @@ export default function Home() {
                     <p className="text-[10px] text-center pt-1" style={{ color: "#9CA3AF" }}>
                       Ingen bindningstid · Avsluta när du vill
                     </p>
+                    <div className="pt-1 text-center">
+                      <Link href="/settings" className="text-[11px] font-medium hover:underline" style={{ color: "#4B5563" }}>
+                        Se full planjämförelse i Inställningar
+                      </Link>
+                    </div>
                   </div>
                 </div>
               )}
@@ -560,8 +567,8 @@ export default function Home() {
                   </div>
                   <div className="p-5 bg-white space-y-2.5">
                     {[
-                      "Objektbeskrivning, Hemnet & Booli",
-                      "Rubrik, Instagram & kortannons",
+                      "5 textformat per generering",
+                      "Hemnet + Booli-anpassad huvudtext",
                       "397+ klyschor filtreras bort",
                       "Inget kreditkort krävs",
                     ].map((f) => (
