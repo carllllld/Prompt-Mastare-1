@@ -145,7 +145,7 @@ export default function PromptEditor() {
       queryClient.invalidateQueries({ queryKey: ["/api/prompts", promptId] });
     },
     onError: (err: any) => {
-      toast({ title: "Cannot edit", description: err.message || "This prompt is being edited by someone else", variant: "destructive" });
+      toast({ title: "Kan inte redigera", description: err.message || "Den här prompten redigeras just nu av någon annan.", variant: "destructive" });
     },
   });
 
@@ -166,9 +166,9 @@ export default function PromptEditor() {
       await updatePromptMutation.mutateAsync({ content, optimizedContent });
       broadcastPromptUpdate(promptId!, { content, optimizedContent });
       await unlockMutation.mutateAsync();
-      toast({ title: "Saved", description: "Your changes have been saved." });
+      toast({ title: "Sparat", description: "Dina ändringar har sparats." });
     } catch (err) {
-      toast({ title: "Error", description: "Could not save changes", variant: "destructive" });
+      toast({ title: "Fel", description: "Kunde inte spara ändringarna.", variant: "destructive" });
     }
   };
 
@@ -188,9 +188,9 @@ export default function PromptEditor() {
         status: "optimized"
       });
       broadcastPromptUpdate(promptId!, { optimizedContent: result.improvedPrompt });
-      toast({ title: "Optimized!", description: "Your prompt has been enhanced." });
+      toast({ title: "Klar!", description: "Prompten har förbättrats." });
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Could not optimize prompt", variant: "destructive" });
+      toast({ title: "Fel", description: err.message || "Kunde inte förbättra prompten.", variant: "destructive" });
     } finally {
       setIsOptimizing(false);
     }
@@ -202,7 +202,7 @@ export default function PromptEditor() {
       await addComment(newComment.trim());
       setNewComment("");
     } catch (err) {
-      toast({ title: "Error", description: "Could not add comment", variant: "destructive" });
+      toast({ title: "Fel", description: "Kunde inte lägga till kommentaren.", variant: "destructive" });
     }
   };
 
@@ -210,7 +210,7 @@ export default function PromptEditor() {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Copied!", description: "Text copied to clipboard." });
+    toast({ title: "Kopierat", description: "Texten har kopierats till urklipp." });
   };
 
   if (!isAuthenticated) {
@@ -218,11 +218,11 @@ export default function PromptEditor() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
-            <CardTitle>Sign in Required</CardTitle>
+            <CardTitle>Inloggning krävs</CardTitle>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/">
-              <Button data-testid="button-go-home">Go to Home</Button>
+              <Button data-testid="button-go-home">Till startsidan</Button>
             </Link>
           </CardContent>
         </Card>
@@ -293,10 +293,10 @@ export default function PromptEditor() {
               {isEditing ? (
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={() => unlockMutation.mutate()} data-testid="button-cancel-edit">
-                    Cancel
+                    Avbryt
                   </Button>
                   <Button onClick={handleSave} disabled={updatePromptMutation.isPending} data-testid="button-save">
-                    {updatePromptMutation.isPending ? "Saving..." : "Save"}
+                    {updatePromptMutation.isPending ? "Sparar..." : "Spara"}
                   </Button>
                 </div>
               ) : (
@@ -308,10 +308,10 @@ export default function PromptEditor() {
                   {prompt.isLocked && prompt.lockedBy !== user?.id ? (
                     <>
                       <Lock className="h-4 w-4 mr-2" />
-                      Locked
+                      Låst
                     </>
                   ) : (
-                    "Edit"
+                    "Redigera"
                   )}
                 </Button>
               )}
@@ -326,7 +326,7 @@ export default function PromptEditor() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Original Prompt</CardTitle>
+                  <CardTitle className="text-base">Originalprompt</CardTitle>
                   {!isEditing && (
                     <Button variant="ghost" size="sm" onClick={() => handleCopy(content)} data-testid="button-copy-original">
                       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -355,7 +355,7 @@ export default function PromptEditor() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    Optimized Prompt
+                    Förbättrad prompt
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     {optimizedContent && (
@@ -369,7 +369,7 @@ export default function PromptEditor() {
                       disabled={isOptimizing || !content.trim()}
                       data-testid="button-optimize"
                     >
-                      {isOptimizing ? "Optimizing..." : "Optimize"}
+                      {isOptimizing ? "Förbättrar..." : "Förbättra"}
                     </Button>
                   </div>
                 </div>
@@ -378,7 +378,7 @@ export default function PromptEditor() {
                 <div className="min-h-[200px] p-3 rounded-lg bg-muted font-mono text-sm whitespace-pre-wrap">
                   {optimizedContent || (
                     <span className="text-muted-foreground italic">
-                      Click "Optimize" to enhance this prompt with AI
+                      Klicka på "Förbättra" för att låta AI:n förbättra prompten.
                     </span>
                   )}
                 </div>
@@ -389,12 +389,12 @@ export default function PromptEditor() {
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Comments ({comments.length})</CardTitle>
+                <CardTitle className="text-base">Kommentarer ({comments.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Add a comment..."
+                    placeholder="Skriv en kommentar..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
@@ -418,7 +418,7 @@ export default function PromptEditor() {
                   </div>
                 ) : comments.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No comments yet. Be the first to comment!
+                    Inga kommentarer ännu. Skriv den första kommentaren.
                   </p>
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
@@ -438,7 +438,7 @@ export default function PromptEditor() {
                               {comment.user.displayName || comment.user.email.split("@")[0]}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(comment.createdAt).toLocaleDateString()}
+                              {new Date(comment.createdAt).toLocaleDateString("sv-SE")}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground mt-0.5">{comment.content}</p>

@@ -627,7 +627,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Skriv bara det som gör skillnad i en riktig objektsbeskrivning</p>
+                <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Skriv det som faktiskt höjer kvaliteten i en publicerbar objektsbeskrivning</p>
                 <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
                   Prioritera skick, större renoveringar, planlösning, läge och det som avviker positivt från standard. Saker som oftast är standard ska bara nämnas om de faktiskt är särskiljande för objektet.
                 </p>
@@ -726,7 +726,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
                   Grundfakta
                 </label>
-                <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>Det här är basen för hela objektbeskrivningen. Fyll i först.</p>
+                <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>Det här är basen för hela objektbeskrivningen. Fyll i detta först för bäst resultat.</p>
               </div>
               <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
                 <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#92400E" }} />
@@ -759,7 +759,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   </div>
                   {addressLookupResult && (
                     <p className="text-[10px] mt-1" style={{ color: "#2D6A4F" }}>
-                      ✓ {addressLookupResult} — kollektivtrafik & närområde ifyllt
+                      ✓ {addressLookupResult} — kollektivtrafik och närområde ifyllt
                     </p>
                   )}
                   <FormMessage />
@@ -1344,16 +1344,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   ))}
                 </div>
                 <p className="text-[10px] mt-1.5" style={{ color: "#9CA3AF" }}>
-                  {selectedStyle === "factual" && "Ren fakta i kronologisk ordning. Noll säljspråk, som ett PM."}
-                  {selectedStyle === "balanced" && "Fakta i fokus men med rytm. Lyfter säljpunkter utan klyschor."}
-                  {selectedStyle === "selling" && "Klyschfritt men övertygande. Starkare betoning och avslut."}
+                  {selectedStyle === "factual" && "Saklig och rak ton med fokus på verifierbara fakta."}
+                  {selectedStyle === "balanced" && "Fakta i fokus med naturlig rytm och tydlig köparnytta."}
+                  {selectedStyle === "selling" && "Mer säljtryck och tydlig vinkel utan klyschor."}
                 </p>
               </div>
             </div>
 
             <div className="rounded-lg border px-3.5 py-3" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
               <span className="text-xs font-medium" style={{ color: "#4B5563" }}>
-                Välj plattform och textstil innan du genererar för att få rätt ton från start.
+                Välj plattform och textstil innan generering så blir tonalitet och struktur rätt från början.
               </span>
             </div>
 
@@ -1379,7 +1379,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-xs text-gray-400 ml-2">(GPT-5.2 med thinking mode)</span>
+                  <span className="text-xs text-gray-400 ml-2">(anpassas efter din plan)</span>
                 </div>
               </div>
             )}
@@ -1390,7 +1390,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-md">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-xs font-medium text-white">GPT-5.2</span>
-                <span className="text-xs text-gray-400">med thinking mode</span>
+                <span className="text-xs text-gray-400">optimerad för objektsbeskrivning</span>
               </div>
             </div>
 
@@ -1449,7 +1449,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <div className="border border-dashed rounded-lg p-3 text-center" style={{ borderColor: "#E8E5DE", background: "#FAFAF7" }}>
                   <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
                     <Lock className="w-3.5 h-3.5" />
-                    Uppgradera till Pro för bildanalys
+                    Uppgradera till Pro för bildtolkning
                   </div>
                 </div>
               )}
@@ -1466,12 +1466,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 {isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Genererar beskrivning...
+                    Genererar textpaket...
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 mr-2" />
-                    Generera objektbeskrivning
+                    Generera textpaket
                     <span className="hidden sm:inline text-[10px] ml-2 opacity-60">(⌘↵)</span>
                   </>
                 )}

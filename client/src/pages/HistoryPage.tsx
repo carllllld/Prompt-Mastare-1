@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Optimization } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,7 @@ export default function HistoryPage() {
                         <div className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1 ${daysLeft <= 7 ? "text-orange-600" : "text-gray-500"
                           }`} style={{ background: daysLeft <= 7 ? "#FFF7ED" : "#F0EDE6", border: "none" }}>
                           <Clock className="h-3 w-3" />
-                          {daysLeft}d kvar
+                          {daysLeft} dagar kvar
                         </div>
                         <Button
                           variant="ghost"
@@ -158,7 +158,7 @@ export default function HistoryPage() {
                       {item.socialCopy && (
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                           <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-semibold text-sm text-gray-800">Social Media</h4>
+                            <h4 className="font-semibold text-sm text-gray-800">Socialt inlägg</h4>
                             <Button
                               variant="ghost"
                               size="sm"

@@ -599,7 +599,7 @@ export default function Home() {
           <span>© {new Date().getFullYear()} OptiPrompt</span>
           <div className="flex gap-4">
             <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>
-            <Link href="/teams" className="hover:underline" style={{ color: "#9CA3AF" }}>Teams</Link>
+            <Link href="/teams" className="hover:underline" style={{ color: "#9CA3AF" }}>Team</Link>
             <Link href="/privacy" className="hover:underline" style={{ color: "#9CA3AF" }}>Integritetspolicy</Link>
             <Link href="/terms" className="hover:underline" style={{ color: "#9CA3AF" }}>Villkor</Link>
           </div>

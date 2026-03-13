@@ -423,7 +423,7 @@ export default function Settings() {
                 </ul>
                 {(details?.plan === "pro" || details?.plan === "premium") && (
                   <Link href="/teams" className="inline-flex items-center text-xs font-medium hover:underline" style={{ color: "#4B5563" }}>
-                    Öppna Team-samarbete
+                    Öppna team-samarbete
                   </Link>
                 )}
               </div>
@@ -437,7 +437,7 @@ export default function Settings() {
                     disabled={isCheckoutPending}
                   >
                     <Crown className="w-4 h-4 mr-2" />
-                    {isCheckoutPending ? "Öppnar checkout..." : "Pro — 299 kr/mån"}
+                    {isCheckoutPending ? "Öppnar betalning..." : "Pro — 299 kr/mån"}
                   </Button>
                   <Button
                     variant="outline"
@@ -446,7 +446,7 @@ export default function Settings() {
                     disabled={isCheckoutPending}
                   >
                     <Crown className="w-4 h-4 mr-2" />
-                    {isCheckoutPending ? "Öppnar checkout..." : "Premium — 599 kr/mån"}
+                    {isCheckoutPending ? "Öppnar betalning..." : "Premium — 599 kr/mån"}
                   </Button>
                 </div>
               )}
@@ -459,7 +459,7 @@ export default function Settings() {
                   disabled={isCheckoutPending}
                 >
                   <Crown className="w-4 h-4 mr-2" />
-                  {isCheckoutPending ? "Öppnar checkout..." : "Uppgradera till Premium — 599 kr/mån"}
+                  {isCheckoutPending ? "Öppnar betalning..." : "Uppgradera till Premium — 599 kr/mån"}
                 </Button>
               )}
             </section>
@@ -498,7 +498,7 @@ export default function Settings() {
               </div>
 
               <p className="text-sm text-gray-600 leading-relaxed">
-                Permanent radering av ditt konto och all tillhörande data (historik, personlig stil, teams).
+                Permanent radering av ditt konto och all tillhörande data (historik, personlig stil, team).
                 Om du har en aktiv prenumeration avslutas den automatiskt. <strong>Åtgärden kan inte ångras.</strong>
               </p>
 

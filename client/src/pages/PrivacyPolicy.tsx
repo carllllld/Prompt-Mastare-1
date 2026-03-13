@@ -36,11 +36,11 @@ export default function PrivacyPolicy() {
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#1D2939" }}>2. Vilka uppgifter vi samlar in</h2>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Kontouppgifter:</strong> E-postadress och lösenord (krypterat med bcrypt)</li>
-              <li><strong>Användningsdata:</strong> Antal genererade texter, plan-typ, skapade optimeringar</li>
+              <li><strong>Användningsdata:</strong> Antal genererade texter, plan och skapade optimeringar</li>
               <li><strong>Fastighetsdata:</strong> Information du fyller i formuläret (adress, storlek, etc.) — används enbart för textgenerering</li>
               <li><strong>Betalningsuppgifter:</strong> Hanteras av Stripe — vi lagrar aldrig kortnummer</li>
               <li><strong>Sessionscookies:</strong> För att hålla dig inloggad (30 dagars livslängd)</li>
-              <li><strong>Teknisk data:</strong> IP-adress och user-agent vid inloggning (säkerhetsändamål)</li>
+              <li><strong>Teknisk data:</strong> IP-adress och webbläsaruppgifter (user-agent) vid inloggning (säkerhetsändamål)</li>
             </ul>
           </section>
 

@@ -99,7 +99,7 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
       await register({ email, password });
       setPendingEmail(email);
       setMode("verify-pending");
-      setSuccessMessage("Konto skapat! Kontrollera din e-post för att verifiera ditt konto.");
+      setSuccessMessage("Konto skapat! Kontrollera din e-post och verifiera kontot för att fortsätta.");
     } catch (err: any) {
       setError(err.message || "Registrering misslyckades. Försök igen.");
     }
@@ -202,7 +202,7 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
                 <p className="font-medium">Kontrollera din inkorg</p>
                 <p className="text-sm text-muted-foreground">
                   Vi har skickat ett verifieringsmail till <strong>{pendingEmail}</strong>.
-                  Klicka på länken i mailet för att aktivera ditt konto.
+                  Klicka på länken i mejlet för att aktivera ditt konto.
                 </p>
               </div>
             </div>
@@ -469,7 +469,7 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
                   className="text-muted-foreground hover:text-primary hover:underline mt-1 inline-block"
                   data-testid="button-go-to-resend"
                 >
-                  Fått inget verifieringsmail?
+                  Har du inte fått verifieringsmejl?
                 </button>
               </>
             ) : (

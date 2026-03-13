@@ -77,7 +77,7 @@ function CopyAllButton({ result }: { result: OptimizeResponse }) {
       }}
     >
       {copied ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
-      {copied ? "Alla texter kopierade!" : "Kopiera alla 5 texter"}
+      {copied ? "Alla texter kopierade!" : "Kopiera alla texter"}
     </Button>
   );
 }
@@ -125,7 +125,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
         <div className="flex items-center gap-2 animate-slide-up">
           <div className="w-2 h-2 rounded-full" style={{ background: "#2D6A4F" }} />
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#2D6A4F" }}>
-            Komplett textkit — 5 texter genererade
+            Komplett textpaket — alla format genererade
           </span>
         </div>
       )}
@@ -374,7 +374,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
 
       {/* ── SOCIAL MEDIA (legacy / extra) ── */}
       {result.socialCopy && !result.instagramCaption && (
-        <CopyCard title="Social media-text" icon={Share2} text={result.socialCopy} iconColor="#9CA3AF" delay="0.2s" />
+        <CopyCard title="Social text" icon={Share2} text={result.socialCopy} iconColor="#9CA3AF" delay="0.2s" />
       )}
 
       {/* ── FACT CHECK ISSUES ── */}

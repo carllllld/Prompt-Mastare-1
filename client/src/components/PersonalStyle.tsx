@@ -193,10 +193,10 @@ export function PersonalStyle() {
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
-            Personlig Skrivstil
+            Personlig skrivstil
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Lär AI:n din unika skrivstil med 1–3 stilprover från olika delar av en bra objektbeskrivning
+            Lär AI:n din skrivstil med 1–3 stilprover från olika delar av en stark objektsbeskrivning.
           </p>
         </div>
 
@@ -228,14 +228,21 @@ export function PersonalStyle() {
       {personalStyle?.styleProfile && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Din Stilprofil</CardTitle>
+            <CardTitle className="text-base">Din stilprofil</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {Object.entries(personalStyle.styleProfile).map(([key, value]) => (
                 <div key={key} className="space-y-1">
                   <div className="text-sm font-medium capitalize">
-                    {key.replace(/([A-Z])/g, ' $1').trim()}
+                    {{
+                      formality: "Formalitet",
+                      detailLevel: "Detaljnivå",
+                      emotionalTone: "Emotionell ton",
+                      sentenceLength: "Meningslängd",
+                      adjectiveUsage: "Adjektivnivå",
+                      factFocus: "Faktafokus",
+                    }[key] || key.replace(/([A-Z])/g, ' $1').trim()}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -322,7 +329,7 @@ export function PersonalStyle() {
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              {personalStyle?.hasStyle ? "Uppdatera Stil" : "Spara Stil"}
+              {personalStyle?.hasStyle ? "Uppdatera stil" : "Spara stil"}
             </Button>
 
             <Button

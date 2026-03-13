@@ -100,7 +100,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
     return (
       <div className="rounded-xl border p-6 text-center" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
         <Clock className="w-5 h-5 mx-auto mb-2" style={{ color: "#D1D5DB" }} />
-        <p className="text-xs" style={{ color: "#9CA3AF" }}>Ingen historik ännu. Generera din första text!</p>
+        <p className="text-xs" style={{ color: "#9CA3AF" }}>Ingen historik ännu. Skapa din första text för att komma igång.</p>
       </div>
     );
   }
@@ -125,7 +125,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Sök i texter..."
+            placeholder="Sök i historiken..."
             className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border outline-none focus:ring-1"
             style={{ borderColor: "#E5E7EB", background: "#F9FAFB" }}
           />
@@ -182,7 +182,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
                   const tabs = [
                     { key: "description", label: "Beskrivning", text: item.improvedPrompt },
                     ...(item.headline ? [{ key: "headline", label: "Rubrik", text: item.headline }] : []),
-                    ...(item.instagramCaption ? [{ key: "instagram", label: "Socialt", text: item.instagramCaption }] : []),
+                    ...(item.instagramCaption ? [{ key: "instagram", label: "Socialt inlägg", text: item.instagramCaption }] : []),
                     ...(item.showingInvitation ? [{ key: "showing", label: "Visning", text: item.showingInvitation }] : []),
                     ...(item.shortAd ? [{ key: "shortad", label: "Kortannons", text: item.shortAd }] : []),
                   ];
@@ -193,7 +193,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
                       {/* Info för äldre poster */}
                       {!hasExtras && (
                         <p className="text-[10px] mb-2 italic" style={{ color: "#9CA3AF" }}>
-                          Äldre post — rubrik och sociala texter sparas från och med nu.
+                          Äldre post — rubrik och extratexter började sparas senare.
                         </p>
                       )}
                       {/* Tab bar */}

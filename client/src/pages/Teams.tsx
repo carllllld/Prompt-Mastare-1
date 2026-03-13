@@ -44,7 +44,7 @@ export default function Teams() {
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
             <CardTitle>Inloggning krävs</CardTitle>
-            <CardDescription>Du måste logga in för att komma åt teamfunktioner</CardDescription>
+            <CardDescription>Du behöver logga in för att använda team-samarbete.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/">
@@ -62,9 +62,9 @@ export default function Teams() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
-            <CardTitle>Pro- eller Premium-prenumeration krävs</CardTitle>
+            <CardTitle>Pro eller Premium krävs</CardTitle>
             <CardDescription>
-              Teamfunktioner är tillgängliga för Pro- och Premium-användare. Uppgradera för att samarbeta med ditt team.
+              Team-samarbete ingår i Pro och Premium. Uppgradera för att bjuda in kollegor och dela prompter.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -107,13 +107,13 @@ export default function Teams() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-semibold">Mina Team</h1>
+            <h1 className="text-xl font-semibold">Mina team</h1>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button data-testid="button-create-team">
                 <Plus className="h-4 w-4 mr-2" />
-                Skapa Team
+                Skapa team
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -134,7 +134,7 @@ export default function Teams() {
                   disabled={isCreatingTeam || !newTeamName.trim()}
                   data-testid="button-submit-team"
                 >
-                  {isCreatingTeam ? "Skapar..." : "Skapa Team"}
+                  {isCreatingTeam ? "Skapar..." : "Skapa team"}
                 </Button>
               </div>
             </DialogContent>
@@ -160,7 +160,7 @@ export default function Teams() {
               <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold mb-2">Inga team ännu</h2>
               <p className="text-muted-foreground mb-6">
-                Skapa ett team för att börja samarbeta med andra
+                Skapa ett team för att samarbeta med kollegor i samma arbetsyta.
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-first-team">
                 <Plus className="h-4 w-4 mr-2" />
@@ -236,7 +236,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
       setNewPromptTitle("");
       setNewPromptContent("");
       setIsNewPromptDialogOpen(false);
-      toast({ title: "Prompt skapad!", description: "Din prompt har lagts till i teambiblioteket." });
+      toast({ title: "Prompt skapad!", description: "Prompten har lagts till i teambiblioteket." });
     } catch (err: any) {
       toast({ title: "Fel", description: err.message || "Kunde inte skapa prompt", variant: "destructive" });
     }
@@ -317,7 +317,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
               <DialogTrigger asChild>
                 <Button data-testid="button-new-prompt">
                   <Plus className="h-4 w-4 mr-2" />
-                  Ny Prompt
+                  Ny prompt
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg">
@@ -326,14 +326,14 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
                   <Input
-                    placeholder="Prompt-titel"
+                    placeholder="Titel på prompt"
                     value={newPromptTitle}
                     onChange={(e) => setNewPromptTitle(e.target.value)}
                     data-testid="input-prompt-title"
                   />
                   <textarea
                     className="w-full min-h-[120px] rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Ange din prompt-innehåll..."
+                    placeholder="Ange innehållet i prompten..."
                     value={newPromptContent}
                     onChange={(e) => setNewPromptContent(e.target.value)}
                     data-testid="input-prompt-content"
@@ -344,7 +344,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
                     disabled={isCreating || !newPromptTitle.trim() || !newPromptContent.trim()}
                     data-testid="button-submit-prompt"
                   >
-                    {isCreating ? "Skapar..." : "Skapa Prompt"}
+                    {isCreating ? "Skapar..." : "Skapa prompt"}
                   </Button>
                 </div>
               </DialogContent>
@@ -359,7 +359,7 @@ function TeamDashboard({ teamId, onBack }: { teamId: number; onBack: () => void 
             <div>
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Delade Prompter
+                Delade prompter
               </h2>
               {isLoadingPrompts ? (
                 <div className="grid gap-4 md:grid-cols-2">

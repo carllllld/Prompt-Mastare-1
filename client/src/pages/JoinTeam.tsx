@@ -44,7 +44,7 @@ export default function JoinTeam() {
           <CardHeader className="text-center">
             <Users className="h-12 w-12 mx-auto text-primary mb-4" />
             <CardTitle>Teaminbjudan</CardTitle>
-            <CardDescription>Du måste logga in för att acceptera denna teaminbjudan</CardDescription>
+            <CardDescription>Du behöver logga in för att acceptera den här teaminbjudan.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/">
@@ -65,7 +65,7 @@ export default function JoinTeam() {
               <Check className="h-6 w-6 text-green-600" />
             </div>
             <CardTitle>Du är med!</CardTitle>
-            <CardDescription>Omdirigerar till dina team...</CardDescription>
+            <CardDescription>Du skickas vidare till dina team...</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -85,7 +85,7 @@ export default function JoinTeam() {
           </CardHeader>
           <CardContent className="flex justify-center">
             <Link href="/teams">
-              <Button data-testid="button-go-teams">Gå till Mina Team</Button>
+              <Button data-testid="button-go-teams">Gå till mina team</Button>
             </Link>
           </CardContent>
         </Card>
@@ -100,7 +100,7 @@ export default function JoinTeam() {
           <Users className="h-12 w-12 mx-auto text-primary mb-4" />
           <CardTitle>Teaminbjudan</CardTitle>
           <CardDescription>
-            Du har bjudits in att gå med i ett team. Klicka nedan för att acceptera inbjudan.
+            Du har blivit inbjuden till ett team. Godkänn inbjudan för att fortsätta.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
