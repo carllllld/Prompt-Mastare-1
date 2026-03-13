@@ -127,7 +127,7 @@ function buildPlatformDirective(platform: string, propertyType: string): Platfor
       ? ["uteplats, solläge eller tomt", "sociala ytor", "kök", "läge"]
       : ["balkong, terrass eller ljus", "planlösning", "kök", "läge"],
     locationStrategy: "Hemnet-huvudtexten ska kännas publicerad: använd helst bostadstyp + boarea + stark detalj tidigt, och koppla läget till vardag, pendling eller närservice.",
-    weakFactPolicy: "Energiklass, fiber, parkering och teknik får aldrig ta plats från öppningen eller bära egna mekaniska meningar om de inte lyfter köparnyttan.",
+    weakFactPolicy: "Energiklass ska aldrig nämnas i Hemnet-huvudtexten då den visas separat i annonsen. Fiber, parkering och teknik får aldrig ta plats från öppningen eller bära egna mekaniska meningar.",
     closingStrategy: "Avsluta med ett starkt men trovärdigt lägesankare eller en konkret sista köparnytta, aldrig med CTA eller drömsummering.",
   };
 }

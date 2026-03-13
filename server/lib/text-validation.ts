@@ -1,5 +1,13 @@
 import { FORBIDDEN_PHRASES, getExemptPhrases, WritingStyle } from "./text-rules";
 
+const PLATFORM_RULES: Record<string, Array<{ pattern: RegExp; message: string }>> = {
+  hemnet: [
+    { pattern: /\benergiklass\b/i, message: "Energiklass ska inte nämnas i Hemnet-huvudtexten då den visas separat i annonsen." },
+    { pattern: /\benergiprestanda\b/i, message: "Energiprestanda ska inte nämnas i Hemnet-huvudtexten då den visas separat i annonsen." },
+  ],
+  booli: [],
+};
+
 function countGenericBrokerPhrases(text: string): number {
   if (!text) return 0;
 
@@ -50,6 +58,14 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     violations.push("Saknar tydlig styckeindelning i huvudtexten.");
   }
 
+  const platformKey = platform.toLowerCase();
+  const platformRules = PLATFORM_RULES[platformKey] || [];
+  for (const rule of platformRules) {
+    if (rule.pattern.test(text)) {
+      violations.push(rule.message);
+    }
+  }
+
   const corruptedPatterns: Array<[RegExp, string]> = [
     [/\bköketför att\b/gi, 'Trasigt ord: "köketför att"'],
     [/\bvardagsrummetför att\b/gi, 'Trasigt ord: "vardagsrummetför att"'],
@@ -73,6 +89,11 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     [/\bnär det passar med en måltid\s+buss\s+tar\b/i, 'Saknad meningsgräns före kommunikationsmening'],
     [/\b(kikka|come 2 eat|chopchop asian express värmdö)[^.!?\n]{0,90}när det passar med en måltid\b/i, 'Svag servicefras i lägesstycke'],
     [/\bbörja\s+[A-ZÅÄÖ][a-zåäö]+\b/i, 'Avhuggen mening efter "börja"'],
+    [/\bavgift\s+om\s+\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\b/, 'Trasig avgiftsmening: saknar enhet (kr/mån, kr/år) och meningsgräns'],
+    [/\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\s+ligger\s+nära\b/i, 'Trasig meningsövergång: siffra direkt följt av nytt stycke utan punkt'],
+    [/\bavgift(?:en)?\s+på\s+\d{1,6}(?!\s*(?:kr|:-|\/mån|\/år|sek))\b/i, 'Avgift saknar enhet (kr/mån, kr/år)'],
+    [/\b(?:avgift|driftkostnad|driftskostnad|månadskostnad|kostnad)(?:en)?\s+(?:om|på)\s+\d{1,3}(?:[ \u00A0]\d{3})*(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per månad|per år))\b/i, 'Kostnad saknar enhet (kr/mån, kr/år)'],
+    [/\b\d{1,3}(?:[ \u00A0]\d{3})?\s+[A-ZÅÄÖ][a-zåäö]{2,}\s+(?:fungerar|ligger|har|är|ger|tar)\b/u, 'Sannolik saknad punkt mellan siffra och ny mening'],
   ];
   for (const [pattern, message] of mechanicalQualityPatterns) {
     if (pattern.test(text)) {

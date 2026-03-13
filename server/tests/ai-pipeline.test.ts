@@ -193,6 +193,31 @@ describe('AI Pipeline Tests', () => {
       expect(violations.some((v) => v.includes('Emotionellt Hemnet-slut'))).toBe(false);
     });
 
+    it('should enforce platform-specific technical field separation for Hemnet but not Booli', () => {
+      const text = 'Villa om 146 kvm på Ekorrvägen 10 med uteplats i söderläge. Bostaden har energiklass B.';
+      const hemnetViolations = validateOptimizationResult({ improvedPrompt: text }, 'hemnet', 1, 500, 'balanced');
+      const booliViolations = validateOptimizationResult({ improvedPrompt: text }, 'booli', 1, 600, 'balanced');
+
+      expect(hemnetViolations.some((v) => v.toLowerCase().includes('energiklass'))).toBe(true);
+      expect(booliViolations.some((v) => v.toLowerCase().includes('energiklass'))).toBe(false);
+    });
+
+    it('should flag generic missing cost unit regardless of exact cost label', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Radhus om 118 kvm med lugnt läge. Driftkostnad om 12000 och smidig pendling till stan.'
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('Kostnad saknar enhet'))).toBe(true);
+    });
+
+    it('should flag probable sentence boundary break after numbers before new clause', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Bostaden har nyare fönster och låg energiförbrukning. Avgift om 10 000 Mörtnäs ligger nära service och buss.'
+      }, 'booli', 1, 600, 'balanced');
+
+      expect(violations.some((v) => v.includes('Sannolik saknad punkt'))).toBe(true);
+    });
+
     it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {
       const genericThinText = 'En trea om 76 kvm. Kök renoverat 2022. ICA nära.';
 

@@ -1018,8 +1018,24 @@ function normalizePropertyTypeLabel(value: unknown): string | null {
   return map[raw] || raw;
 }
 
+const PLATFORM_MAIN_TEXT_BLOCKLIST: Record<string, RegExp[]> = {
+  hemnet: [/\benergiklass\b/i, /\benergiprestanda\b/i],
+  booli: [],
+};
+
+function stripPlatformDisallowedMainTextSentences(text: string, platform: string): string {
+  if (!text) return text;
+  const blockedPatterns = PLATFORM_MAIN_TEXT_BLOCKLIST[(platform || "").toLowerCase()] || [];
+  if (blockedPatterns.length === 0) return text;
+
+  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  const filtered = sentences.filter((sentence) => blockedPatterns.every((pattern) => !pattern.test(sentence)));
+  return filtered.length > 0 ? filtered.join(" ") : text;
+}
+
 function enforcePlatformMainTextHeuristics(text: string, platform: string, disposition?: any): string {
-  if (!text || platform !== "hemnet") return text;
+  if (!text) return text;
+  if ((platform || "").toLowerCase() !== "hemnet") return text;
   const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   if (sentences.length === 0) return text;
 
@@ -1066,20 +1082,25 @@ async function finalizeMainMarketingText(
   const sanitized = sanitizeGeneratedMarketingField(text, styleProfile, style, options);
   if (!sanitized) return null;
 
-  let finalized = sanitized;
+  let finalized = stripPlatformDisallowedMainTextSentences(sanitized, platform);
 
-  if (platform === "hemnet") {
+  if ((platform || "").toLowerCase() === "hemnet") {
     const sentences = finalized.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-    const technicalSentences = sentences.filter(sentence => {
+    
+    // För Hemnet: Filtrera bort energiklass helt (visas separat på Hemnet)
+    const filteredSentences = sentences.filter(sentence => {
+      const lower = sentence.toLowerCase();
+      return !(/energiklass(?:en)?\s+[a-g]/i.test(lower)) && !(/\bbostaden har energiklass\b/i.test(lower));
+    });
+    
+    const technicalSentences = filteredSentences.filter(sentence => {
         const lower = sentence.toLowerCase();
-        return /^bostaden har energiklass\s+[a-g]/i.test(lower) || 
-               /^energiklass(?:en)?\s+[a-g]/i.test(lower) || 
-               /^fiber\s+är\s+installerat/i.test(lower) ||
+        return /^fiber\s+är\s+installerat/i.test(lower) ||
                (/^uppvärmning sker via/i.test(lower) && sentence.split(/\s+/).length <= 8);
     });
 
     if (technicalSentences.length > 0) {
-        const mainTextSentences = sentences.filter(s => !technicalSentences.includes(s));
+        const mainTextSentences = filteredSentences.filter(s => !technicalSentences.includes(s));
         const mainText = mainTextSentences.join(" ");
 
         const integrationPrompt = {
@@ -1111,6 +1132,8 @@ REGLER:
             console.warn("[Hemnet Finalize] AI integration failed, falling back to filtering:", e);
             finalized = mainText;
         }
+    } else {
+        finalized = filteredSentences.join(" ");
     }
   }
 
@@ -1260,6 +1283,8 @@ function repairMechanicalBrokerArtifacts(text: string): string {
   repaired = repaired.replace(/\b[Pp]arkering\s+har\s+laddplats\s+för\s+elbil\b/g, 'Parkering med laddplats för elbil');
   repaired = repaired.replace(/\b[Pp]arkering\s+har\s+(garage|carport|plats)\b/g, 'Parkering med $1');
 
+  repaired = repaired.replace(/\b(avgift(?:en)?|driftkostnad(?:en)?|kostnad(?:en)?)\s+(?:om|på)\s+(\d{1,3}(?:[ \u00A0]\d{3})*)(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per))/gi, '$1 $2 kr');
+
   // Improve phrasing for nearby amenities.
   repaired = repaired.replace(/(^|[.!?]\s+)([A-ZÅÄÖ][A-Za-zÅÄÖåäö0-9&' -]{1,60})\s+ligger\s+nära\s+när\s+det\s+passar\s+med\s+en\s+måltid\b/g, '$1I samma riktning finns $2 när det passar att äta ute');
   
@@ -1267,6 +1292,7 @@ function repairMechanicalBrokerArtifacts(text: string): string {
   repaired = repaired.replace(/(när det passar med en måltid)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2');
   repaired = repaired.replace(/(när det passar att äta ute)\s+(Buss\s+tar\s+cirka\s+\d+)/g, '$1. $2');
   repaired = repaired.replace(/\bBuss\s+tar\s+cirka\s+(\d+\s+minuter[^.!?\n]*)/g, 'Med buss tar det cirka $1');
+  repaired = repaired.replace(/\b(\d{1,3}(?:[ \u00A0]\d{3})\s*(?:kr|sek|kronor|:-)?)(?:\s+)([A-ZÅÄÖ][a-zåäö]{2,}\s+(?:fungerar|ligger|har|är|ger|tar)\b)/g, '$1. $2');
 
   return repaired;
 }
@@ -2211,10 +2237,11 @@ KRAV:
 - Öppningen är A och O. De första två meningarna måste omedelbart fånga en stressad Hemnet-scrollare med den mest unika och attraktiva egenskapen hos bostaden.
 - Prioritera enligt följande: 1. Uteplats/Solläge/Utsikt, 2. Sociala ytor/Planlösning, 3. Kök/Badrum, 4. Läge.
 - Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
-- Undvik mekanisk uppräkning. Väv in tekniska detaljer (energiklass, fiber) i en naturlig mening, eller utelämna dem om de stör flödet.
+- Undvik mekanisk uppräkning. Energiklass ska aldrig nämnas i huvudtexten för Hemnet då den visas separat. Fiber och parkering får vävas in naturligt om de tillför värde, men aldrig som egna mekaniska meningar.
 - Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
 - Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
-- Om dispositionen innehåller boarea, rum, standard, kommunikationer eller avgift ska de vävas in naturligt där de bär beslutsvärde.
+- Huvudtexten ska kännas publicerad: inled helst med [bostadstyp] om [boarea] på [adress] + en stark detalj, t.ex. "Trea om 76 kvm på Storgatan 12 med balkong i söderläge."
+- Om dispositionen innehåller rum, standard, kommunikationer eller avgift ska de vävas in naturligt där de bär beslutsvärde. Avgifter måste alltid anges med enhet (t.ex. kr/mån eller kr/år).
 - Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
 UNDVIK ALLTID:
@@ -2307,17 +2334,19 @@ Du är en noggrann granskare. Kontrollera objektbeskrivningen mot dispositionen 
 
 # REGLER — KIRURGISK KORRIGERING
 
-1. Kontrollera att fakta i texten stämmer med dispositionen
-2. Identifiera och korrigera BARA: påhittade detaljer, felaktiga mått/år/märken
-3. Juridiskt känsliga påståenden utan stöd i dispositionen: ta bort eller neutralisera dem
-4. Identifiera förbjudna AI-fraser och ersätt dem kirurgiskt (se lista nedan)
-5. Laga syftningsfel och punktueringsfel (t.ex. saknade punkter mellan meningar)
-6. TA BORT alla parenteser som förklarar typ av service (t.ex. "ICA (matbutik)" -> "ICA")
-7. ERSÄTT "fega" formuleringar (t.ex. "upplevs tyst") med mer självsäkra påståenden (t.ex. "är tyst") om det finns stöd för det
-8. Behåll ALL korrekt text — meningsstruktur, stil och flöde ska INTE ändras
-9. KIRURGISK FIX: Byt ut bara de felaktiga fraserna. Kopiera resten av texten OFÖRÄNDRAT.
-10. Om inga fel hittas: sätt fact_check_passed=true och corrected_text=null — skriv INTE om en korrekt text
-11. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är
+1. Kontrollera att fakta i texten stämmer med dispositionen.
+2. Identifiera och korrigera BARA: påhittade detaljer, felaktiga mått/år/märken.
+3. Juridiskt känsliga påståenden utan stöd i dispositionen: ta bort eller neutralisera dem.
+4. Identifiera förbjudna AI-fraser och ersätt dem kirurgiskt (se lista nedan).
+5. Laga syftningsfel och punktueringsfel (t.ex. saknade punkter mellan meningar eller efter siffror).
+6. Särskilt viktigt: Kontrollera avgifter och kostnader. De MÅSTE ha enhet (kr, kr/mån, kr/år). Fixa meningar som "avgift om 10 000 Mörtnäs..." till "avgift om 10 000 kr/år. Mörtnäs...".
+7. För Hemnet-text: Om energiklass nämns, TA BORT den meningen helt (energiklass visas separat på Hemnet).
+8. TA BORT alla parenteser som förklarar typ av service (t.ex. "ICA (matbutik)" -> "ICA").
+9. ERSÄTT "fega" formuleringar (t.ex. "upplevs tyst") med mer självsäkra påståenden (t.ex. "är tyst") om det finns stöd för det.
+10. Behåll ALL korrekt text — meningsstruktur, stil och flöde ska INTE ändras.
+11. KIRURGISK FIX: Byt ut bara de felaktiga fraserna. Kopiera resten av texten OFÖRÄNDRAT.
+12. Om inga fel hittas: sätt fact_check_passed=true och corrected_text=null — skriv INTE om en korrekt text.
+13. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är.
 
 # UNIVERSELLT FÖRBJUDNA AI-FRASER (flagga ALLTID, oavsett stil)
 erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd,
