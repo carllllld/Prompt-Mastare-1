@@ -1112,6 +1112,25 @@ function hasRoomsMention(text: string, rooms: number | null): boolean {
   return (numberWords[rooms] || []).some((word) => new RegExp(`\\b${word}\\b\\s*(rum|sovrum)`, "i").test(text));
 }
 
+function hasCountLabelMention(text: string, count: number | null, labels: string[]): boolean {
+  if (!count) return labels.some((label) => new RegExp(`\\b${label}\\b`, "i").test(text));
+  const numberWords: Record<number, string[]> = {
+    1: ["ett", "en"],
+    2: ["två"],
+    3: ["tre"],
+    4: ["fyra"],
+    5: ["fem"],
+    6: ["sex"],
+    7: ["sju"],
+    8: ["åtta"],
+    9: ["nio"],
+    10: ["tio"],
+  };
+  const labelsPattern = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  if (new RegExp(`\\b${count}\\b\\s*(?:${labelsPattern})`, "i").test(text)) return true;
+  return (numberWords[count] || []).some((word) => new RegExp(`\\b${word}\\b\\s*(?:${labelsPattern})`, "i").test(text));
+}
+
 function enforceCriticalFactPresence(text: string, disposition?: any): string {
   if (!text || !disposition) return text;
   const property = disposition?.property || {};
@@ -1120,12 +1139,23 @@ function enforceCriticalFactPresence(text: string, disposition?: any): string {
 
   const size = getNumericFact(property.size);
   const rooms = getNumericFact(property.rooms);
+  const bedrooms = getNumericFact(property.bedrooms);
+  const bathrooms = getNumericFact(property.bathrooms);
   const hasSizeMention = size ? new RegExp(`\\b${size}\\b\\s*(kvm|m2|m²)`, "i").test(text) : /\b(kvm|boarea)\b/i.test(text);
-  const hasRooms = hasRoomsMention(text, rooms);
-  if ((size || rooms) && (!hasSizeMention || !hasRooms)) {
-    if (size && rooms) sentences.push(`Boarea är ${size} kvm med totalt ${rooms} rum.`);
-    else if (size) sentences.push(`Boarea är ${size} kvm.`);
-    else if (rooms) sentences.push(`Bostaden omfattar ${rooms} rum.`);
+  const hasBedrooms = hasCountLabelMention(text, bedrooms, ["sovrum", "sovrummen"]);
+  const hasBathroomsCount = hasCountLabelMention(text, bathrooms, ["badrum", "badrummen", "wc", "toalett"]);
+  const hasRooms = hasRoomsMention(text, rooms) || (bedrooms ? hasBedrooms : false);
+  if (size && !hasSizeMention) {
+    sentences.push(`Boarea är ${size} kvm.`);
+  }
+  if (rooms && !hasRooms) {
+    sentences.push(`Bostaden omfattar ${rooms} rum.`);
+  }
+  if (bedrooms && !hasBedrooms) {
+    sentences.push(`Planlösningen rymmer ${bedrooms} sovrum.`);
+  }
+  if (bathrooms && !hasBathroomsCount) {
+    sentences.push(`Bostaden har ${bathrooms} badrum.`);
   }
 
   const kitchen = typeof property.kitchen === "string" && property.kitchen.trim().length > 0
@@ -1947,8 +1977,9 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
   const propertyTypeRaw = sanitizeStructuredText(propertyData.propertyType || propertyData.type || "lägenhet")?.toLowerCase() || "lägenhet";
   const propertyType = propertyTypeRaw === "apartment" ? "lägenhet" : propertyTypeRaw;
   const livingArea = Number(propertyData.livingArea ?? propertyData.area ?? propertyData.size) || null;
-  const rooms = Number(propertyData.rooms) || null;
+  const rooms = Number(propertyData.rooms ?? propertyData.totalRooms) || null;
   const bedrooms = Number(propertyData.bedrooms) || null;
+  const bathrooms = Number(propertyData.bathrooms) || null;
   const price = Number(propertyData.price) || null;
   const fee = Number(propertyData.monthlyFee ?? propertyData.fee) || null;
   const pricePerKvm = price && livingArea ? Math.round(price / livingArea) : null;
@@ -2040,6 +2071,7 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
       size: livingArea,
       rooms,
       bedrooms,
+      bathrooms,
       floor: floorText,
       year_built: yearBuilt,
       condition: sanitizeStructuredText(propertyData.condition ?? null),
@@ -2134,7 +2166,7 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     opening: "Adress + typ + storlek + stark konkret detalj utan klyscha",
     paragraphs: [
       { id: "p1", goal: "Öppning", must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null].filter(Boolean), do_not_include: weakHemnetFacts, allowed_flair: uniqueSellingPoints[0] || null },
-      { id: "p2", goal: "Planlösning och rum", must_include: [layoutText, rooms ? `${rooms} rum` : null].filter(Boolean), do_not_include: dataQualityNotes.length > 0 ? ["oklara planlösningspåståenden"] : [] },
+      { id: "p2", goal: "Planlösning och rum", must_include: [layoutText, rooms ? `${rooms} rum` : null, bedrooms ? `${bedrooms} sovrum` : null, bathrooms ? `${bathrooms} badrum` : null].filter(Boolean), do_not_include: dataQualityNotes.length > 0 ? ["oklara planlösningspåståenden"] : [] },
       { id: "p3", goal: "Kök, badrum och material", must_include: [kitchenText, bathroomText, flooringText].filter(Boolean), do_not_include: [] },
       { id: "p4", goal: "Uteplats och övrigt", must_include: [preferredOutdoorTerm, outdoorSize, balconyDirection].filter(Boolean), mention_if_space_allows: [parkingText, heatingText, sanitizeStructuredText(propertyData.energyClass ?? null)].filter(Boolean), do_not_include: ["blandad balkong/terrass/altan-terminologi", ...weakHemnetFacts] },
       { id: "p5", goal: "Läge", must_include: [areaName, transport, ...amenities.slice(0, 2)].filter(Boolean), do_not_include: ["påhittade områdespåståenden"] },
@@ -2142,6 +2174,8 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     claims: [
       livingArea ? { claim: `Boyta om ${livingArea} kvm`, evidence_path: "property.size", evidence_value: livingArea } : null,
       rooms ? { claim: `${rooms} rum`, evidence_path: "property.rooms", evidence_value: rooms } : null,
+      bedrooms ? { claim: `${bedrooms} sovrum`, evidence_path: "property.bedrooms", evidence_value: bedrooms } : null,
+      bathrooms ? { claim: `${bathrooms} badrum`, evidence_path: "property.bathrooms", evidence_value: bathrooms } : null,
       yearBuilt ? { claim: `Byggår ${yearBuilt}`, evidence_path: "property.year_built", evidence_value: yearBuilt } : null,
       outdoorSize ? { claim: `${preferredOutdoorTerm} ${outdoorSize}`, evidence_path: "property.balcony.size", evidence_value: outdoorSize } : null,
       balconyDirection ? { claim: `${preferredOutdoorTerm} i ${balconyDirection}`, evidence_path: "property.balcony.direction", evidence_value: balconyDirection } : null,
@@ -2334,7 +2368,8 @@ KRAV:
 - Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
 - Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
 - Huvudtexten ska kännas publicerad: inled helst med [bostadstyp] om [boarea] på [adress] + en stark detalj, t.ex. "Trea om 76 kvm på Storgatan 12 med balkong i söderläge."
-- Om dispositionen innehåller rum, standard, kommunikationer eller avgift ska de vävas in naturligt där de bär beslutsvärde. Avgifter måste alltid anges med enhet (t.ex. kr/mån eller kr/år).
+- Om dispositionen innehåller rum, standard eller kommunikationer ska de vävas in naturligt där de bär beslutsvärde.
+- För avgift/driftskostnad: nämn i huvudtext när det är tydligt beslutsdrivande eller särskiljande; annars räcker faktadelen i annonsen. Om kostnad nämns ska enhet alltid anges (t.ex. kr/mån eller kr/år).
 - Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 - Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
@@ -2393,6 +2428,7 @@ KRAV:
 - Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
 - Booli/egen sida får vara mer berättande än Hemnet, men ska fortfarande vara faktaburen och relevant för köpbeslut.
 - Låt avslutet bära en trovärdig vardagsbild i stället för klyschig summering.
+- För avgift/driftskostnad: nämn i huvudtext när det stärker köpbeslutet tydligt; annars kan uppgiften ligga i faktadelen.
 - Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 
 UNDVIK ALLTID:
@@ -4323,7 +4359,9 @@ Svara med JSON:
       const preAuditInputSignalCoverage = evaluateInputSignalCoverage(result.improvedPrompt || "", cleanDisposition);
       const criticalSignalExpectations = [
         { path: "property.size", present: cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null },
-        { path: "property.rooms", present: cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null },
+        { path: "property.rooms", present: (cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null) || (cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null) },
+        { path: "property.bedrooms", present: cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null },
+        { path: "property.bathrooms", present: cleanDisposition?.property?.bathrooms !== undefined && cleanDisposition?.property?.bathrooms !== null },
         { path: "property.kitchen", present: typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0 },
         { path: "property.bathroom", present: typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0 },
         { path: "property.transport", present: typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0 },
@@ -4704,7 +4742,9 @@ Svara med JSON:
       const finalMainViolations = validateMainMarketingText(result, platform, minimumPublishableWordMin, targetWordMax, style);
       const criticalCoverageExpectations = [
         { path: "property.size", present: cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null, label: "boarea" },
-        { path: "property.rooms", present: cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null, label: "antal rum" },
+        { path: "property.rooms", present: (cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null) || (cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null), label: "antal rum/sovrum" },
+        { path: "property.bedrooms", present: cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null, label: "sovrum" },
+        { path: "property.bathrooms", present: cleanDisposition?.property?.bathrooms !== undefined && cleanDisposition?.property?.bathrooms !== null, label: "antal badrum" },
         { path: "property.kitchen", present: typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0, label: "kök" },
         { path: "property.bathroom", present: typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0, label: "badrum" },
         { path: "property.transport", present: typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0, label: "kommunikation" },

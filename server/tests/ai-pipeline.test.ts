@@ -45,8 +45,27 @@ describe('AI Pipeline Tests', () => {
       expect(result.disposition.property.address).toBe('Testgatan 1, Stockholm');
       expect(result.disposition.property.size).toBe(75);
       expect(result.disposition.property.rooms).toBe(3);
+      expect(result.disposition.property.bedrooms).toBe(2);
       expect(result.tone_analysis.target_audience).toBeTruthy();
       expect(Array.isArray(result.writing_plan.paragraphs)).toBe(true);
+    });
+
+    it('should map totalRooms and bathrooms from form payload fields', () => {
+      const result = buildDispositionFromStructuredData({
+        propertyType: 'villa',
+        address: 'Ekorrvägen 10, Värmdö',
+        livingArea: 146,
+        totalRooms: 5,
+        bedrooms: 3,
+        bathrooms: 2,
+        kitchen: 'renoverat kök',
+        bathroom: 'helkaklat badrum',
+        transport: 'buss 25 minuter till Slussen',
+      });
+
+      expect(result.disposition.property.rooms).toBe(5);
+      expect(result.disposition.property.bedrooms).toBe(3);
+      expect(result.disposition.property.bathrooms).toBe(2);
     });
 
     it('should produce a publishable deterministic fallback after sanitizing', () => {
@@ -283,6 +302,37 @@ describe('AI Pipeline Tests', () => {
       expect(text).toMatch(/\b5\b.*\brum\b/i);
       expect(text.toLowerCase()).toContain('kök');
       expect(text.toLowerCase()).toContain('badrum');
+      expect(text.toLowerCase()).toMatch(/kommunikation|buss|slussen/);
+    });
+
+    it('should accept bedrooms mention as room coverage and still enforce bedrooms and bathrooms count', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Ekorrvägen 10 i Mörtnäs med genomgående planlösning och tre sovrum nära södervänd uteplats.',
+        'hemnet',
+        undefined,
+        'balanced',
+        { allowParagraphs: true },
+        {
+          property: {
+            size: 146,
+            rooms: 5,
+            bedrooms: 3,
+            bathrooms: 2,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+        }
+      );
+
+      const text = finalized || '';
+      expect(text).toMatch(/\b146\b.*\bkvm\b/i);
+      expect(text.toLowerCase()).toContain('tre sovrum');
+      expect(text).not.toMatch(/\b5\b.*\brum\b/i);
+      expect(text.toLowerCase()).toMatch(/\b2\b.*\bbadrum\b/);
+      expect(text.toLowerCase()).toContain('kök');
       expect(text.toLowerCase()).toMatch(/kommunikation|buss|slussen/);
     });
 

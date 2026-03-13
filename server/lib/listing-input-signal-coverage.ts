@@ -10,6 +10,14 @@ function extractNumbers(value: string): string[] {
   return (value.match(/\d+/g) || []).slice(0, 4);
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasWord(text: string, word: string): boolean {
+  return new RegExp(`(^|[^\\p{L}\\p{N}])${escapeRegExp(word)}(?=[^\\p{L}\\p{N}]|$)`, "u").test(text);
+}
+
 const SWEDISH_NUMBER_WORDS: Record<number, string[]> = {
   1: ["ett", "en", "första"],
   2: ["två", "andra"],
@@ -33,7 +41,7 @@ function parseExpectedNumber(value: string): number | null {
   }
   const normalized = normalize(value);
   for (const [num, words] of Object.entries(SWEDISH_NUMBER_WORDS)) {
-    if (words.some((word) => new RegExp(`\\b${word}\\b`, "u").test(normalized))) {
+    if (words.some((word) => hasWord(normalized, word))) {
       return Number(num);
     }
   }
@@ -43,7 +51,7 @@ function parseExpectedNumber(value: string): number | null {
 function hasExpectedNumberMention(text: string, expected: number): boolean {
   if (new RegExp(`\\b${expected}\\b`, "u").test(text)) return true;
   const words = SWEDISH_NUMBER_WORDS[expected] || [];
-  return words.some((word) => new RegExp(`\\b${word}\\b`, "u").test(text));
+  return words.some((word) => hasWord(text, word));
 }
 
 function mentionsSize(text: string, sourceValue: string): boolean {
@@ -58,6 +66,20 @@ function mentionsRooms(text: string, sourceValue: string): boolean {
   const hasRoomSignal = /\b(rum|rok|sovrum|sovrummen)\b/u.test(text);
   if (expected === null) return hasRoomSignal;
   return hasRoomSignal && hasExpectedNumberMention(text, expected);
+}
+
+function mentionsBedrooms(text: string, sourceValue: string): boolean {
+  const expected = parseExpectedNumber(sourceValue);
+  const hasBedroomSignal = /\b(sovrum|sovrummen)\b/u.test(text);
+  if (expected === null) return hasBedroomSignal;
+  return hasBedroomSignal && hasExpectedNumberMention(text, expected);
+}
+
+function mentionsBathroomCount(text: string, sourceValue: string): boolean {
+  const expected = parseExpectedNumber(sourceValue);
+  const hasBathroomSignal = /\b(badrum|badrummen|wc|toalett)\b/u.test(text);
+  if (expected === null) return hasBathroomSignal;
+  return hasBathroomSignal && hasExpectedNumberMention(text, expected);
 }
 
 function mentionsKitchen(text: string): boolean {
@@ -88,7 +110,7 @@ function matchesSignal(text: string, value: string): boolean {
   const words = extractWords(value);
   const numbers = extractNumbers(value);
   const keywordHits = words.filter((word) => text.includes(word)).length;
-  const numberHit = numbers.length === 0 || numbers.some((num) => text.includes(num));
+  const numberHit = numbers.length === 0 || numbers.some((num) => new RegExp(`\\b${num}\\b`, "u").test(text));
   if (words.length === 0) return numberHit;
   const requiredKeywordHits = words.length >= 4 ? 2 : 1;
   return keywordHits >= requiredKeywordHits && numberHit;
@@ -148,6 +170,8 @@ export function evaluateInputSignalCoverage(text: string, disposition: any): Inp
     { path: "property.address", aliases: ["property.address", "location.address"] },
     { path: "property.size", aliases: ["property.size", "property.living_area", "property.area"] },
     { path: "property.rooms", aliases: ["property.rooms"] },
+    { path: "property.bedrooms", aliases: ["property.bedrooms"] },
+    { path: "property.bathrooms", aliases: ["property.bathrooms"] },
     { path: "property.kitchen", aliases: ["property.kitchen", "property.materials.kitchen"] },
     { path: "property.bathroom", aliases: ["property.bathroom", "property.materials.bathroom"] },
     { path: "property.transport", aliases: ["property.transport", "location.transport"] },
@@ -166,9 +190,12 @@ export function evaluateInputSignalCoverage(text: string, disposition: any): Inp
     if (directlyUsed) return { path: entry.path, used: true };
 
     const sourceValue = aliasSignals[0]?.value || "";
+    const bedroomsValue = valueByPath.get("property.bedrooms") || "";
     let used = false;
     if (entry.path === "property.size") used = mentionsSize(normalizedText, sourceValue);
-    else if (entry.path === "property.rooms") used = mentionsRooms(normalizedText, sourceValue);
+    else if (entry.path === "property.rooms") used = mentionsRooms(normalizedText, sourceValue) || (bedroomsValue ? mentionsBedrooms(normalizedText, bedroomsValue) : false);
+    else if (entry.path === "property.bedrooms") used = mentionsBedrooms(normalizedText, sourceValue);
+    else if (entry.path === "property.bathrooms") used = mentionsBathroomCount(normalizedText, sourceValue);
     else if (entry.path === "property.kitchen") used = mentionsKitchen(normalizedText);
     else if (entry.path === "property.bathroom") used = mentionsBathroom(normalizedText);
     else if (entry.path === "property.transport") used = mentionsTransport(normalizedText);

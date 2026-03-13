@@ -79,4 +79,55 @@ describe("listing input signal coverage", () => {
     expect(summary.critical.find((c) => c.path === "property.bathroom")?.used).toBe(true);
     expect(summary.critical.find((c) => c.path === "property.transport")?.used).toBe(true);
   });
+
+  it("flags missing bathroom and room mismatch in long broker-like prose", () => {
+    const disposition = {
+      property: {
+        address: "Ekorrvägen 10, Mörtnäs, Värmdö",
+        size: 146,
+        rooms: 5,
+        kitchen: "renoverat kök",
+        bathroom: "helkaklat badrum",
+      },
+      location: {
+        transport: "buss 25 minuter till Slussen",
+      },
+    };
+
+    const text = "Villa om 146 kvm på Ekorrvägen 10 i Mörtnäs, Värmdö med södervänd uteplats och inbyggd jacuzzi. Planlösningen är genomgående och tre sovrum samlar familjens privata delar. Ekparkett och mörkoljad ekparkett ger en tydlig linje mellan rummen och vardagen fungerar smidigt. Bussen tar dig till Slussen på cirka 25 minuter.";
+    const summary = evaluateInputSignalCoverage(text, disposition);
+
+    expect(summary.critical.find((c) => c.path === "property.address")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.size")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.rooms")?.used).toBe(false);
+    expect(summary.critical.find((c) => c.path === "property.kitchen")?.used).toBe(false);
+    expect(summary.critical.find((c) => c.path === "property.bathroom")?.used).toBe(false);
+    expect(summary.critical.find((c) => c.path === "property.transport")?.used).toBe(true);
+  });
+
+  it("accepts bedrooms as room coverage when bedroom column exists", () => {
+    const disposition = {
+      property: {
+        address: "Ekorrvägen 10, Mörtnäs, Värmdö",
+        size: 146,
+        rooms: 5,
+        bedrooms: 3,
+        bathrooms: 2,
+        kitchen: "renoverat kök",
+        bathroom: "helkaklat badrum",
+      },
+      location: {
+        transport: "buss 25 minuter till Slussen",
+      },
+    };
+    const text = "Villa om 146 kvm på Ekorrvägen 10 i Mörtnäs med tre sovrum, två badrum, renoverat kök och buss till Slussen på cirka 25 minuter.";
+    const summary = evaluateInputSignalCoverage(text, disposition);
+
+    expect(summary.critical.find((c) => c.path === "property.rooms")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.bedrooms")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.bathrooms")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.kitchen")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.bathroom")?.used).toBe(true);
+    expect(summary.critical.find((c) => c.path === "property.transport")?.used).toBe(true);
+  });
 });
