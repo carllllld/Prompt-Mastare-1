@@ -221,7 +221,7 @@ export default function Settings() {
       "Personlig skrivstil",
       "Team-samarbete",
       "Kvalitetskontroll och förbättringsförslag (vid behov)",
-      "Textlängd 200–800 ord",
+      "Textlängd 200–600 ord",
     ],
   };
 

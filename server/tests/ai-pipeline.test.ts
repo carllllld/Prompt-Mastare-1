@@ -161,7 +161,6 @@ describe('AI Pipeline Tests', () => {
       expect(cleaned).toBeTruthy();
       expect(cleaned?.toLowerCase()).not.toContain('välkommen till');
       expect(cleaned?.toLowerCase()).not.toContain('erbjuder');
-      expect(cleaned?.toLowerCase()).not.toContain('här kan du');
     });
 
     it('should repair embedded "för att" word artifacts before validation', () => {
@@ -234,6 +233,7 @@ describe('AI Pipeline Tests', () => {
       expect(cleaned?.toLowerCase()).not.toContain('hör av dig');
       expect(cleaned?.toLowerCase()).not.toContain('för elbil för elbil');
       expect(cleaned?.toLowerCase()).toContain('laddbox för elbil');
+      expect(cleaned).toContain('Läs mer i annonsen.');
     });
 
     it('should sanitize forbidden phrase and duplicate punctuation in auxiliary text', () => {
@@ -245,6 +245,26 @@ describe('AI Pipeline Tests', () => {
       expect(cleaned?.toLowerCase()).not.toContain('inom räckhåll');
       expect(cleaned).not.toContain('..');
       expect(cleaned?.endsWith('.')).toBe(true);
+    });
+
+    it('should preserve mild selling wording in selling-style auxiliary copy', () => {
+      const cleaned = polishAuxFieldText(
+        'socialCopy',
+        'Smakfullt renoverat kök med köksö och plats för sex personer.',
+        'selling'
+      );
+
+      expect(cleaned?.toLowerCase()).toContain('smakfullt');
+    });
+
+    it('should trim headline punctuation and keep it concise', () => {
+      const cleaned = polishAuxFieldText(
+        'headline',
+        'Insynsskyddad trea med balkong i söderläge och kvällssol!'
+      );
+
+      expect(cleaned?.endsWith('!')).toBe(false);
+      expect((cleaned || '').split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(9);
     });
 
 
@@ -301,6 +321,22 @@ describe('AI Pipeline Tests', () => {
       expect(booliViolations.some((v) => v.toLowerCase().includes('energiklass'))).toBe(false);
     });
 
+    it('should apply field-specific validation for auxiliary texts', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Storgatan 12, 3 tr, Linköping. Trea om 76 kvm med balkong i söderläge och renoverat kök.',
+        headline: 'Ljus trea med söderbalkong.',
+        instagramCaption: 'Ljus trea med söderbalkong och renoverat kök.',
+        showingInvitation: 'Välkommen till lägenheten [TID].',
+        shortAd: 'Trea om 76 kvm med söderbalkong och renoverat kök. Nära resecentrum, service och skolor. Planlösningen passar både familj och hemarbete.',
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('[headline] Rubrik ska inte avslutas'))).toBe(true);
+      expect(violations.some((v) => v.includes('[instagramCaption] instagramCaption bör innehålla minst en relevant emoji'))).toBe(true);
+      expect(violations.some((v) => v.includes('[showingInvitation] showingInvitation ska tydligt nämna visning'))).toBe(true);
+      expect(violations.some((v) => v.includes('[showingInvitation] showingInvitation innehåller oupplösta platshållare'))).toBe(true);
+      expect(violations.some((v) => v.includes('[shortAd] shortAd ska vara max 2 meningar'))).toBe(true);
+    });
+
     it('should flag generic missing cost unit regardless of exact cost label', () => {
       const violations = validateOptimizationResult({
         improvedPrompt: 'Radhus om 118 kvm med lugnt läge. Driftkostnad om 12000 och smidig pendling till stan.'
@@ -339,6 +375,15 @@ describe('AI Pipeline Tests', () => {
       }, 'booli', 1, 600, 'factual');
 
       expect(violations.some((v) => v.includes('Factual-stil'))).toBe(true);
+    });
+
+    it('should keep supported selling wording when style is selling', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Villa om 146 kvm med smakfullt renoverat kök från 2021, södervänd uteplats och buss 25 minuter till Slussen.'
+      }, 'booli', 1, 600, 'selling');
+
+      expect(violations.some((v) => v.includes('Factual-stil'))).toBe(false);
+      expect(violations.some((v) => v.includes('Förbjuden fras: "smakfullt"'))).toBe(false);
     });
 
     it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {

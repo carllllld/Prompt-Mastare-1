@@ -217,7 +217,6 @@ export function buildListingGenerationBlueprint(input: BlueprintInput): ListingG
   const forbiddenPatterns = [
     "erbjuder",
     "välkommen till",
-    "här finns",
     "bjuder på",
     "präglas av",
     "för den som",

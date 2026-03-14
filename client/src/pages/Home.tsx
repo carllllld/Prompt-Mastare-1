@@ -598,7 +598,7 @@ export default function Home() {
                             <span>Adressuppslag</span>
                             <span>Bildanalys</span>
                             <span>Team-samarbete</span>
-                            <span>800 ord / text</span>
+                            <span>Mer kapacitet</span>
                           </div>
                         </div>
                         <Button
@@ -647,7 +647,7 @@ export default function Home() {
                     {[
                       "5 textformat per generering",
                       "Hemnet + Booli-anpassad huvudtext",
-                      "397+ klyschor filtreras bort",
+                      "Stilmedvetet klyschfilter",
                       "Inget kreditkort krävs",
                     ].map((f) => (
                       <div key={f} className="flex items-center gap-2 text-xs" style={{ color: "#374151" }}>

@@ -116,7 +116,7 @@ const FEATURES = [
   {
     icon: Zap,
     title: "5 texter i ett flöde",
-    desc: "Objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan och kortannons — oftast klart på cirka 15 sekunder.",
+    desc: "Objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan och kortannons — oftast klart på under en minut.",
   },
   {
     icon: Shield,
@@ -125,7 +125,7 @@ const FEATURES = [
   },
   {
     icon: Pen,
-    title: "397+ klyschor filtreras bort",
+    title: "Stilmedvetet klyschfilter",
     desc: "Ingen 'generös planlösning', 'bjuder på utsikt' eller 'välkommen till'. Ren faktabaserad svenska.",
   },
   {
@@ -199,7 +199,7 @@ const PLANS = [
       "Personlig skrivstil",
       "Team-samarbete",
       "Kvalitetskontroll & förbättringsförslag (vid behov)",
-      "Valfri textlängd (200–800 ord)",
+      "Valfri textlängd (200–600 ord)",
     ],
     cta: "Välj Premium",
     tier: "premium" as "premium",
@@ -293,7 +293,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-base sm:text-lg max-w-2xl mx-auto mb-8 leading-relaxed" style={{ color: "#6B7280" }}>
-            Fyll i fastighetens data. Få 5 publiceringsklara texter på 15 sekunder —
+            Fyll i fastighetens data. Få 5 publiceringsklara texter på under en minut —
             Hemnet, rubrik, socialt inlägg, visningsinbjudan och kortannons.
             Utan klyschor. Utan "generösa ytor".
           </p>
@@ -313,10 +313,10 @@ export default function Landing() {
           {/* Stats — bara produktfakta, inga användarsiffror */}
           <div className="flex flex-wrap items-center justify-center gap-8 mt-12 pt-8 border-t" style={{ borderColor: "#E8E5DE" }}>
             {[
-              { value: "15 sek", label: "per generering" },
+              { value: "Under 1 min", label: "per generering" },
               { value: "5 texter", label: "på en gång" },
-              { value: "397+", label: "klyschor filtreras" },
-              { value: "7 steg", label: "AI-pipeline" },
+              { value: "Stilmedvetet", label: "klyschfilter" },
+              { value: "Formatmallar", label: "Hemnet & Booli" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-xl sm:text-2xl font-bold" style={{ color: "#2D6A4F" }}>{stat.value}</div>
@@ -468,7 +468,7 @@ export default function Landing() {
             Redo att testa?
           </h2>
           <p className="text-sm mb-8" style={{ color: "#A7F3D0" }}>
-            Skapa ditt konto på 30 sekunder. Ingen bindningstid. Inga dolda avgifter. 2 gratis genereringar direkt.
+            Skapa ditt konto på under en minut. Ingen bindningstid. Inga dolda avgifter. 2 gratis genereringar direkt.
           </p>
           <Button
             onClick={openRegister}

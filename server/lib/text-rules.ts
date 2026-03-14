@@ -115,7 +115,7 @@ export const FORBIDDEN_PHRASES = [
   "stark efterfrågan",
   "goda arbetsytor",
 
-  // AI-fraser som riktiga mäklare ALDRIG använder
+  // Överanvända AI-fraser i interna kvalitetstester
   "generösa ytor",
   "generös takhöjd",
   "generöst tilltaget",
@@ -135,9 +135,6 @@ export const FORBIDDEN_PHRASES = [
   "en bostad som",
   "en lägenhet som",
   "ett hem som",
-  "här finns",
-  "här kan du",
-  "här bor du",
   "strategiskt placerad",
   "strategiskt läge",
 

@@ -606,8 +606,6 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["för den som", ""],
   ["perfekt för", "passar"],
   ["välkommen till", ""],
-  ["här finns", "det finns"],
-  ["här kan du", ""],
 
   // === KLYSCHORD (TOP 15) ===
   ["fantastisk", "fin"],
@@ -841,7 +839,7 @@ function analyzeTextQuality(text: string): number {
   else if (starterRatio > 0.6) score += 0.04;
 
   // 6. No forbidden phrases (quick check — universal AI markers)
-  const forbiddenQuick = ['erbjuder', 'välkommen till', 'här finns', 'bjuder på', 'präglas av', 'genomsyras av'];
+  const forbiddenQuick = ['erbjuder', 'välkommen till', 'bjuder på', 'präglas av', 'genomsyras av'];
   const forbiddenCount = forbiddenQuick.filter(f => lowerText.includes(f)).length;
   if (forbiddenCount === 0) score += 0.08;
   else score -= (forbiddenCount * 0.04);
@@ -1079,12 +1077,12 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   return cleaned.trim() || null;
 }
 
-function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", text: unknown): string | null {
+function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", text: unknown, style: WritingStyle = "balanced"): string | null {
   if (typeof text !== "string") return null;
   let value = text.trim();
   if (!value) return null;
 
-  value = cleanForbiddenPhrases(value, null, "balanced").trim();
+  value = cleanForbiddenPhrases(value, null, style).trim();
   if (!value) return null;
   value = replaceWholePhrase(value, "inom räckhåll", "nära");
   value = value.replace(/\b(laddplats(?: för elbil)?|laddbox(?: installerad)?)\b/gi, "laddbox för elbil");
@@ -1095,13 +1093,18 @@ function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingI
   value = value.replace(/\s{2,}/g, " ").trim();
 
   if (field === "socialCopy" || field === "instagramCaption") {
-    value = value.replace(/(?:[.!?]\s*)?(?:skriv för visningstid(?: och mer information)?|hör av dig(?: för [^.!?]+)?|kontakta(?: ansvarig mäklare)?(?: för [^.!?]+)?|boka visning|anmälan)\b[^.!?]*[.!?]?$/i, "").trim();
+    value = value.replace(/(?:[.!?]\s*)?(?:skriv för visningstid(?: och mer information)?|hör av dig(?: för [^.!?]+)?|kontakta(?: ansvarig mäklare)?(?: för [^.!?]+)?|boka visning|anmälan)\b[^.!?]*[.!?]?$/i, ". Läs mer i annonsen.").trim();
+    value = value.replace(/(?:\.\s*){2,}/g, ". ").trim();
   }
 
-  if (field === "instagramCaption") {
+  if (field === "headline") {
+    value = value.replace(/[.!?…]+$/g, "").trim();
+    const words = value.split(/\s+/).filter(Boolean);
+    if (words.length > 9) value = words.slice(0, 9).join(" ");
+  } else if (field === "instagramCaption") {
     const hasEndPunctuation = /[.!?…]$/.test(value);
     if (!hasEndPunctuation) value += ".";
-  } else if (field !== "headline") {
+  } else {
     value = value.replace(/[!?…]+$/g, ".");
     if (!/[.]$/.test(value)) value += ".";
   }
@@ -1109,6 +1112,9 @@ function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingI
   if ((field === "instagramCaption" || field === "socialCopy") && /(?:skulle du börja|skulle du avsluta|vad säger du)\s*\.?$/i.test(value)) {
     value = value.replace(/(?:skulle du börja|skulle du avsluta|vad säger du)\s*\.?$/i, "").trim();
     if (value && !/[.!?]$/.test(value)) value += ".";
+  }
+  if (field === "showingInvitation" && !/\bvisning\b/i.test(value)) {
+    value = `${value.replace(/[.!?…]+$/g, "")}. Välkommen på visning.`;
   }
 
   return value || null;
@@ -2004,7 +2010,7 @@ Du ska INTE skriva själva objektbeskrivningen. Du ska bara skapa en plan som st
 
 # BASLISTA FÖRBJUDNA FRASER (lägg in i forbidden_words)
 
-För BOTH (universella AI-markörer): "i hjärtat av", "vilket gör det enkelt", "vilket", "som ger en", "rymlig känsla", "härlig plats för", "plats för avkoppling", "generösa ytor", "generös takhöjd", "bjuder på", "präglas av", "genomsyras av", "andas lugn", "andas charm", "erbjuder", "perfekt", "en sann pärla", "Välkommen", "Här finns", "här kan du", "faciliteter", "njut av", "inte bara", "utan också", "bidrar till", "förstärker", "skapar en känsla", "-möjligheter", "Det finns även", "Det finns också"
+För BOTH (universella AI-markörer): "i hjärtat av", "vilket gör det enkelt", "vilket", "som ger en", "rymlig känsla", "härlig plats för", "plats för avkoppling", "generösa ytor", "generös takhöjd", "bjuder på", "präglas av", "genomsyras av", "andas lugn", "andas charm", "erbjuder", "perfekt", "en sann pärla", "Välkommen", "faciliteter", "njut av", "inte bara", "utan också", "bidrar till", "förstärker", "skapar en känsla", "-möjligheter", "Det finns även", "Det finns också"
 
 För BOOLI/EGEN SIDA: lägg även in "för den som", "vilket ger en", "en bostad som", "ett hem som", "ett hem att trivas i", "mer än bara"
 
@@ -2440,7 +2446,7 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     ].filter(Boolean),
     must_include: [address, propertyType, livingArea ? `${livingArea} kvm` : null, areaName].filter(Boolean),
     missing_info: dataQualityNotes,
-    forbidden_phrases: ["erbjuder", "välkommen till", "här finns", "bjuder på", "präglas av", "generösa ytor"],
+    forbidden_phrases: ["erbjuder", "välkommen till", "bjuder på", "präglas av", "generösa ytor"],
     deprioritize_for_hemnet: hemnetDeprioritizeNotes,
     risk_notes: dataQualityNotes,
     emphasis_notes: [...emphasisNotes, ...hemnetDeprioritizeNotes],
@@ -2632,14 +2638,14 @@ KRAV:
 - Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
 UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende.
 
 EXTRA TEXTER (anpassa för varje format):
 - headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
-- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Avsluta alltid med en komplett mening med korrekt sluttecken.
-- showingInvitation: Tydlig, informativ och professionell. Fokus på fakta och praktisk information om visningen.
-- shortAd: För kortare annonsformat som t.ex. tidningsannonser. Fokusera på de 2-3 starkaste säljargumenten.
-- socialCopy: Anpassad för delning på sociala medier. Lite mer säljande och med en tydlig call-to-action.
+- instagramCaption: Varm, mänsklig och säljande mäklarprosa i 1-2 meningar. Använd 1-2 relevanta emojis och avsluta alltid med korrekt sluttecken.
+- showingInvitation: Professionell inbjudan med tydlig visningsnytta. Ange praktiska detaljer som finns i dispositionen ([TID], [KONTAKT]) och håll tonen trevlig, trygg och konkret.
+- shortAd: Kort annonsprosa (max 2 meningar) med bostadstyp/boarea och 2 starka styrkor. Säljande men saklig.
+- socialCopy: Säljande social text i mäklarstil med konkret köparnytta. Undvik aggressiva uppmaningar; använd i stället en mjuk avslutning som "Läs mer i annonsen".
 - Terminologi: använd EN huvudterm per sak. Exempel: skriv "laddbox för elbil" och undvik dubbleringar som "laddplats ... laddbox" i samma text.
 
 OUTPUT:
@@ -2690,14 +2696,14 @@ KRAV:
 - Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 
 UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, här finns, präglas av, magisk, fantastisk, otrolig, drömboende.
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende.
 
 EXTRA TEXTER (anpassa för varje format):
 - headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
-- instagramCaption: Mer personlig och inspirerande ton. Använd emojis. Avsluta alltid med en komplett mening med korrekt sluttecken.
-- showingInvitation: Tydlig, informativ och professionell. Fokus på fakta och praktisk information om visningen.
-- shortAd: För kortare annonsformat som t.ex. tidningsannonser. Fokusera på de 2-3 starkaste säljargumenten.
-- socialCopy: Anpassad för delning på sociala medier. Lite mer säljande och med en tydlig call-to-action.
+- instagramCaption: Varm, mänsklig och säljande mäklarprosa i 1-2 meningar. Använd 1-2 relevanta emojis och avsluta alltid med korrekt sluttecken.
+- showingInvitation: Professionell inbjudan med tydlig visningsnytta. Ange praktiska detaljer som finns i dispositionen ([TID], [KONTAKT]) och håll tonen trevlig, trygg och konkret.
+- shortAd: Kort annonsprosa (max 2 meningar) med bostadstyp/boarea och 2 starka styrkor. Säljande men saklig.
+- socialCopy: Säljande social text i mäklarstil med konkret köparnytta. Undvik aggressiva uppmaningar; använd i stället en mjuk avslutning som "Läs mer i annonsen".
 - Terminologi: använd EN huvudterm per sak. Exempel: skriv "laddbox för elbil" och undvik dubbleringar som "laddplats ... laddbox" i samma text.
 
 OUTPUT:
@@ -2740,7 +2746,7 @@ Du är en noggrann granskare. Kontrollera objektbeskrivningen mot dispositionen 
 # UNIVERSELLT FÖRBJUDNA AI-FRASER (flagga ALLTID, oavsett stil)
 erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd,
 vilket (i relativ bisats), för den som, i hjärtat av, skapar en känsla, bidrar till, välkommen till,
-här finns, här kan du, härlig plats, plats för avkoppling, faciliteter, njut av
+härlig plats, plats för avkoppling, faciliteter, njut av
 
 # STILMEDVETENHET — VIKTIGT
 Kolla STYLE-fältet i user-meddelandet:
@@ -4309,7 +4315,7 @@ Svara med JSON:
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
           const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
-          result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", sanitized);
+          result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", sanitized, style);
         }
       }
 
@@ -4750,13 +4756,14 @@ Svara med JSON:
 
       finalShowingInvitation = polishAuxFieldText(
         "showingInvitation",
-        sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true })
+        sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true }),
+        style
       );
       result.showingInvitation = finalShowingInvitation;
 
       for (const field of ['socialCopy', 'instagramCaption', 'shortAd', 'headline']) {
         const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
-        result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "shortAd" | "headline", sanitized);
+        result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "shortAd" | "headline", sanitized, style);
       }
 
       result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
@@ -5647,11 +5654,11 @@ DÅLIGT: "Det fantastiska köket erbjuder en harmonisk matlagningsupplevelse."
 DÅLIGT: "Badrummet präglas av hög kvalitet och genomtänkta materialval."
 DÅLIGT: "Det centrala läget bjuder på närhet till allt."
 
-# FÖRBJUDET (AI-klyschor som aldrig förekommer i riktiga objektbeskrivningar)
+# FÖRBJUDET (AI-klyschor som ofta gör texten generisk)
 erbjuder, bjuder på, präglas av, genomsyras av, generös, andas lugn, andas charm,
 vilket ger, som skapar, för den som, i hjärtat av, bidrar till, förstärker,
 inte bara...utan också, njut av, faciliteter, -möjligheter,
-kontakta oss, boka visning, välkommen till, här finns, här kan du
+kontakta oss, boka visning, välkommen till
 
 # REGLER
 1. Skriv om BARA den markerade texten
@@ -6615,7 +6622,7 @@ ${improvementInstruction}
 # FÖRBJUDET (AI-klyschor)
 erbjuder, bjuder på, präglas av, genomsyras av, generös, andas lugn/charm,
 vilket ger, som skapar, för den som, i hjärtat av, bidrar till, förstärker,
-inte bara...utan också, njut av, faciliteter, här finns, välkommen till
+inte bara...utan också, njut av, faciliteter, välkommen till
 
 Svara med JSON: {"improved": "den förbättrade texten"}`
           },

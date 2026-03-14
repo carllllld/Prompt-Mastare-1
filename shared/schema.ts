@@ -265,15 +265,15 @@ export const MODEL_TEXT_EDIT_LIMITS = {
 // Feature access per plan
 export const FEATURE_ACCESS = {
   free: { personalStyle: false, areaSearch: false, textEditing: false, teamFeatures: false, apiAccess: false },
-  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true },
-  premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true },
+  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: true, apiAccess: true },
+  premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: true, apiAccess: true },
 } as const;
 
 // Ordgränser för objektbeskrivningar
 export const WORD_LIMITS = {
   free: { min: 300, max: 450 },
   pro: { min: 200, max: 600, default: { min: 350, max: 450 } },
-  premium: { min: 200, max: 800, default: { min: 400, max: 600 } },  // Premium får högre max
+  premium: { min: 200, max: 600, default: { min: 400, max: 600 } },
 } as const;
 
 export const PLAN_PRICES = {

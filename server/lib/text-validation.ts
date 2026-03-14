@@ -294,6 +294,68 @@ export function isDispositionLikeOutput(text: string): boolean {
   return colonHitCount >= 5 || (headingLineCount >= 3 && lineCount >= 8);
 }
 
+function isMainTextOnlyViolation(violation: string): boolean {
+  return (
+    violation.startsWith("Saknar tydlig styckeindelning") ||
+    violation.startsWith("Börjar med ") ||
+    violation.startsWith("Generisk öppning") ||
+    violation.startsWith("Svagt lägesslut") ||
+    violation.startsWith('"Det finns" upprepas') ||
+    violation.startsWith('"Den har" upprepas') ||
+    violation.startsWith('"ligger [avstånd]" upprepas') ||
+    violation.startsWith("Monoton meningsstart") ||
+    violation.startsWith("CTA-slut") ||
+    violation.startsWith("Emotionellt Hemnet-slut") ||
+    violation.startsWith('"vilket" upprepas') ||
+    violation.startsWith("Energiklass ska inte nämnas") ||
+    violation.startsWith("Energiprestanda ska inte nämnas") ||
+    violation.startsWith("Kostnad saknar enhet") ||
+    violation.startsWith("Avgift saknar enhet") ||
+    violation.startsWith("Sannolik saknad punkt") ||
+    violation.startsWith("För många generiska mäklarabstraktioner")
+  );
+}
+
+function findAuxFieldViolations(
+  field: "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline",
+  text: string,
+  platform: string,
+  style: WritingStyle
+): string[] {
+  const violations = findRuleViolations(text, platform, style).filter((violation) => !isMainTextOnlyViolation(violation));
+  const words = text.split(/\s+/).filter(Boolean);
+  const sentenceCount = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean).length;
+
+  if (field === "headline") {
+    if (words.length > 9) violations.push("Rubrik är för lång (max 9 ord).");
+    if (/[.!?…]$/.test(text.trim())) violations.push("Rubrik ska inte avslutas med punkt eller utropstecken.");
+    if (/[#@]/.test(text)) violations.push("Rubrik ska vara ren annonsrubrik utan hashtags eller @-taggar.");
+  }
+
+  if (field === "socialCopy") {
+    if (sentenceCount > 3) violations.push("socialCopy är för lång; håll till max 3 meningar.");
+    if (!/[.!?…]$/.test(text.trim())) violations.push("socialCopy ska avslutas med korrekt sluttecken.");
+  }
+
+  if (field === "instagramCaption") {
+    if (sentenceCount > 3) violations.push("instagramCaption är för lång; håll till max 3 meningar.");
+    if (!/[.!?…]$/.test(text.trim())) violations.push("instagramCaption ska avslutas med korrekt sluttecken.");
+    if (!/[🌞🌅🏡✨🌿☀️🌳📍🛁🛋️🏠]/u.test(text)) violations.push("instagramCaption bör innehålla minst en relevant emoji.");
+  }
+
+  if (field === "showingInvitation") {
+    if (!/\bvisning\b/i.test(text)) violations.push("showingInvitation ska tydligt nämna visning.");
+    if (/\[(?:TID|KONTAKT)\]/i.test(text)) violations.push("showingInvitation innehåller oupplösta platshållare ([TID]/[KONTAKT]).");
+  }
+
+  if (field === "shortAd") {
+    if (sentenceCount > 2) violations.push("shortAd ska vara max 2 meningar.");
+    if (words.length > 32) violations.push("shortAd är för lång (max 32 ord).");
+  }
+
+  return violations;
+}
+
 export function validateOptimizationResult(result: any, platform: string = "hemnet", targetMin?: number, targetMax?: number, style: WritingStyle = "balanced"): string[] {
   const violations: string[] = [];
   if (typeof result?.improvedPrompt === "string") {
@@ -306,7 +368,7 @@ export function validateOptimizationResult(result: any, platform: string = "hemn
   const extraFields = ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline'];
   for (const field of extraFields) {
     if (typeof result?.[field] === "string" && result[field].length > 0) {
-      const fieldViolations = findRuleViolations(result[field], platform, style);
+      const fieldViolations = findAuxFieldViolations(field as "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", result[field], platform, style);
       for (const v of fieldViolations) {
         violations.push(`[${field}] ${v}`);
       }
