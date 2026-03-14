@@ -63,7 +63,7 @@ interface PropertyFormData {
 const KITCHEN_CHIPS = [
   "Renoverat kök", "Köksö", "Stenbänk/komposit",
   "Integrerade vitvaror", "Platsbyggt kök", "Matplats 4–6 pers",
-  "Öppen planlösning", "Vitvaror 2020+", "Fönster vid matplats",
+  "Öppen planlösning", "Vitvaror uppdaterade", "Fönster vid matplats",
 ];
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
@@ -79,7 +79,7 @@ const HEATING_CHIPS = [
 ];
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
-  "Dränering utförd", "Solceller", "Laddbox för elbil",
+  "Dränering utförd", "Solceller", "Fiber indraget",
   "Braskamin", "Kakelugn", "Originaldetaljer",
 ];
 const GARDEN_CHIPS = [
@@ -94,7 +94,7 @@ const USP_CHIPS = [
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
-  "Garageplats", "Boendeparkering", "Laddbox för elbil",
+  "Garageplats", "Boendeparkering", "Laddbox för elbil", "Förberett för laddbox",
 ];
 const ROOF_CHIPS = [
   "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak",
@@ -110,9 +110,9 @@ const PROPERTY_FLOORS_OPTIONS = ["1 plan", "1½ plan", "2 plan", "2½ plan", "3 
 const BALCONY_DIRECTIONS = [
   "Norr", "Nordost", "Öst", "Sydost", "Söder", "Sydväst", "Väst", "Nordväst",
 ];
-const exampleInputClass = "h-10 placeholder:italic placeholder:text-gray-400 focus:placeholder-transparent";
-const exampleCompactInputClass = "h-9 text-xs placeholder:italic placeholder:text-gray-400 focus:placeholder-transparent";
-const exampleTextareaClass = "min-h-[56px] resize-none text-sm placeholder:italic placeholder:text-gray-400 focus:placeholder-transparent";
+const exampleInputClass = "h-10 rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
+const exampleCompactInputClass = "h-9 text-xs rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
+const exampleTextareaClass = "min-h-[56px] resize-none text-sm rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
 
 // ── HELPER: Chip Selector ──
 function ChipSelector({ chips, selected, onToggle, variant = "default" }: {
@@ -122,7 +122,7 @@ function ChipSelector({ chips, selected, onToggle, variant = "default" }: {
   variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
 }) {
   const getColors = (isOn: boolean) => {
-    if (!isOn) return { background: "#FAFAF7", color: "#6B7280", borderColor: "#E8E5DE" };
+    if (!isOn) return { background: "#FFFFFF", color: "#556170", borderColor: "#DAD8D1" };
 
     const colors = {
       default: { background: "#2D6A4F", color: "#fff", borderColor: "#2D6A4F" },
@@ -680,6 +680,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <span className="font-semibold" style={{ color: "#1D2939" }}>Planlösning</span>
                   <span> — fokusera på flöde, rumssamband och användning, inte på att upprepa rena fakta.</span>
                 </div>
+                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Undvik dubbelinfo</span>
+                  <span> — lägg laddbox under Parkering och undvik att upprepa samma punkt i flera fält.</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1159,10 +1163,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 {/* Special features chips */}
                 <div>
                   <span className="text-xs text-gray-500 font-medium block mb-2">Särskilda egenskaper</span>
+                  <p className="text-[10px] text-gray-400 mb-1">Välj sådant som inte redan täcks av kök, badrum, parkering eller trädgård.</p>
                   <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} />
                   <FormField control={form.control} name="specialFeatures" render={({ field }) => (
                     <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Ex: Fönster bytta 2018, platsbyggd bokhylla och bevarad stuckatur i vardagsrummet" {...field} className={exampleCompactInputClass} /></FormControl>
+                      <FormControl><Input placeholder="Ex: Stambyte 2017, fungerande kakelugn och platsbyggd förvaring i vardagsrum" {...field} className={exampleCompactInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1228,6 +1233,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 {/* Parking chips */}
                 <div>
                   <span className="text-xs text-gray-500 font-medium block mb-2">Parkering</span>
+                  <p className="text-[10px] text-gray-400 mb-1">Laddbox och garageinfo ska ligga här för att undvika dubbla formuleringar i texten.</p>
                   <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} />
                   <FormField control={form.control} name="parking" render={({ field }) => (
                     <FormItem className="mt-2">

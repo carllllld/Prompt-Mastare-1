@@ -47,6 +47,7 @@ export class MonitoringSystem {
   };
 
   private alerts: Map<string, { threshold: number; enabled: boolean }> = new Map();
+  private alertState: Map<string, { consecutiveBreaches: number; lastSentAt: number }> = new Map();
   private lastHealthCheck: Date = new Date();
   private processStartedAt: number = Date.now();
   private activeConnections = 0;
@@ -88,11 +89,30 @@ export class MonitoringSystem {
   }
 
   private setupAlerts(): void {
-    this.alerts.set('response_time', { threshold: 2000, enabled: true });
+    this.alerts.set('response_time', { threshold: 3000, enabled: true });
     this.alerts.set('error_rate', { threshold: 0.05, enabled: true });
-    this.alerts.set('memory_usage', { threshold: 0.85, enabled: true });
-    this.alerts.set('cpu_usage', { threshold: 0.80, enabled: true });
+    this.alerts.set('memory_usage', { threshold: 0.92, enabled: true });
+    this.alerts.set('cpu_usage', { threshold: 0.90, enabled: true });
     this.alerts.set('active_connections', { threshold: 1000, enabled: true });
+  }
+
+  private shouldEmitAlert(metric: string, breached: boolean): boolean {
+    const now = Date.now();
+    const current = this.alertState.get(metric) || { consecutiveBreaches: 0, lastSentAt: 0 };
+    const requiredConsecutive = metric === "response_time" ? 2 : 3;
+    const cooldownMs = metric === "response_time" ? 90_000 : 180_000;
+    if (!breached) {
+      this.alertState.set(metric, { consecutiveBreaches: 0, lastSentAt: current.lastSentAt });
+      return false;
+    }
+    const nextConsecutive = current.consecutiveBreaches + 1;
+    const cooledDown = now - current.lastSentAt >= cooldownMs;
+    const shouldEmit = nextConsecutive >= requiredConsecutive && cooledDown;
+    this.alertState.set(metric, {
+      consecutiveBreaches: shouldEmit ? 0 : nextConsecutive,
+      lastSentAt: shouldEmit ? now : current.lastSentAt,
+    });
+    return shouldEmit;
   }
 
   private startMonitoring(): void {
@@ -295,7 +315,7 @@ export class MonitoringSystem {
           continue;
       }
 
-      if (value > config.threshold) {
+      if (this.shouldEmitAlert(metric, value > config.threshold)) {
         this.sendAlert(metric, value, config.threshold);
       }
     }

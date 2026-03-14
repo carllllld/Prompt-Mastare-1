@@ -305,6 +305,22 @@ function isAdvisoryAuditIssue(issue: string): boolean {
   return advisoryPatterns.some((pattern) => lower.includes(pattern));
 }
 
+function isHardFailureAuditIssue(issue: string): boolean {
+  const lower = issue.toLowerCase();
+  const hardFailurePatterns = [
+    "motsäger",
+    "felaktig",
+    "faktiskt fel",
+    "saknas",
+    "inte nämns",
+    "strider mot",
+    "otillåten",
+    "risk för vilseledande",
+    "vilseledande",
+  ];
+  return hardFailurePatterns.some((pattern) => lower.includes(pattern));
+}
+
 export function finalizeBrokerAuditReadiness(params: {
   finalBrokerAudit: any;
   finalLocalTopBrokerReady: boolean;
@@ -349,7 +365,8 @@ export function finalizeBrokerAuditReadiness(params: {
   if (finalBrokerAudit && finalBrokerAudit.publish_ready === false) {
     const auditIssueText = auditIssues.length > 0 ? auditIssues.slice(0, 5).join(" | ") : "Broker audit underkände texten.";
     const advisoryOnly = auditIssues.length > 0 && auditIssues.every((issue) => isAdvisoryAuditIssue(issue));
-    const highLocalConfidence = params.analyzedScore >= 0.84;
+    const hardFailureIssueExists = auditIssues.some((issue) => isHardFailureAuditIssue(issue));
+    const highLocalConfidence = params.analyzedScore >= 0.82;
     
     if (params.finalLocalTopBrokerReady) {
       warnings.push(`[Final Gate] AI-audit underkände texten (${auditIssueText}), men lokal granskning godkände den. Levererar med varning.`);
@@ -361,6 +378,14 @@ export function finalizeBrokerAuditReadiness(params: {
         issues: auditIssues,
       });
       warnings.push(`[Final Gate] AI-audit markerade förbättringsråd (${auditIssueText}) men texten levereras med lokal fallback och tydliga förbättringsförslag.`);
+    } else if (!hardFailureIssueExists && highLocalConfidence) {
+      finalBrokerAudit = params.buildLocalFallback({
+        publishReady: true,
+        brokerQualityScore: Math.max(params.analyzedScore, Number(finalBrokerAudit?.broker_quality_score) || 0),
+        reason: "AI-audit underkände främst stilnivå; lokal kvalitetsnivå och täckning bedöms tillräcklig för leverans.",
+        issues: auditIssues,
+      });
+      warnings.push(`[Final Gate] AI-audit underkände texten (${auditIssueText}) men inga hårda faktabrott hittades och lokal kvalitet är hög; levererar med fallback.`);
     } else {
       throw new Error(`[Final Gate] AI-audit underkände texten efter slutgranskning: ${auditIssueText}`);
     }

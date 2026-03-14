@@ -63,6 +63,8 @@ export function evaluateBrokerAuditGate(params: {
   blueprintCoverageRatio?: number;
   inputSignalCoverageRatio?: number;
   missingCriticalSignalCount?: number;
+  localNonWordViolationCount?: number;
+  analyzedQualityScore?: number;
 }): BrokerAuditGateResult {
   return {
     brokerAuditDecision: decideBrokerAuditStrategy({
@@ -75,6 +77,8 @@ export function evaluateBrokerAuditGate(params: {
       blueprintCoverageRatio: params.blueprintCoverageRatio,
       inputSignalCoverageRatio: params.inputSignalCoverageRatio,
       missingCriticalSignalCount: params.missingCriticalSignalCount,
+      localNonWordViolationCount: params.localNonWordViolationCount,
+      analyzedQualityScore: params.analyzedQualityScore,
     }),
   };
 }

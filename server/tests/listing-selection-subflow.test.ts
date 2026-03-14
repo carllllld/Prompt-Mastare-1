@@ -92,6 +92,22 @@ describe("listing selection subflow", () => {
     expect(input[1].content).toContain("TEXT ATT FÖRFINA:");
   });
 
+  it("trims oversized polish context payloads to control token usage", () => {
+    const huge = "x".repeat(12000);
+    const input = buildCandidatePolishRequestInput({
+      cleanDisposition: { block: huge },
+      cleanWritingPlan: { block: huge },
+      intelligence: { block: huge },
+      result: { improvedPrompt: huge },
+    });
+
+    expect(input).toHaveLength(2);
+    expect(typeof input[0].content).toBe("string");
+    expect(typeof input[1].content).toBe("string");
+    expect((input[0].content as string).length).toBeLessThan(14000);
+    expect((input[1].content as string).length).toBeLessThan(16000);
+  });
+
   it("builds the candidate polish response artifacts", () => {
     const artifacts = buildCandidatePolishResponseArtifacts({
       outputText: '{"improvedPrompt":"rå text"}',

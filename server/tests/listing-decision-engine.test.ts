@@ -135,4 +135,56 @@ describe("listing decision engine", () => {
     expect(weakCoverage.canSkipExternalAudit).toBe(false);
     expect(extraFieldIssues.canSkipExternalAudit).toBe(false);
   });
+
+  it("overrides judged candidate when it has clearly more violations with marginal score delta", () => {
+    const blueprint = buildListingGenerationBlueprint({
+      plan: "pro",
+      platform: "hemnet",
+      style: "balanced",
+      targetWordMin: 300,
+      targetWordMax: 450,
+      disposition: {
+        property: { type: "villa" },
+      },
+    });
+
+    const decision = chooseBestCandidate([
+      {
+        label: "primary",
+        qualityScore: 0.83,
+        nonWordCountViolations: ["A", "B", "C", "D"],
+        wordCount: 247,
+        weakHemnetDetailCount: 0,
+        totalScore: 0.8,
+      },
+      {
+        label: "alternative",
+        qualityScore: 0.82,
+        nonWordCountViolations: ["A"],
+        wordCount: 299,
+        weakHemnetDetailCount: 0,
+        totalScore: 0.84,
+      },
+    ], "pro", blueprint, "primary");
+
+    expect(decision.selectedLabel).toBe("alternative");
+  });
+
+  it("can skip external broker audit on calibrated strong local criteria", () => {
+    const decision = decideBrokerAuditStrategy({
+      strongCandidateFastPath: false,
+      finalMainWordCount: 245,
+      finalStrongWordFloor: 235,
+      finalGenericBrokerPhraseCount: 1,
+      finalNarrativeIntegrityIssueCount: 0,
+      finalExtraFieldViolationCount: 0,
+      blueprintCoverageRatio: 0.9,
+      inputSignalCoverageRatio: 0.8,
+      missingCriticalSignalCount: 0,
+      localNonWordViolationCount: 0,
+      analyzedQualityScore: 0.84,
+    });
+
+    expect(decision.canSkipExternalAudit).toBe(true);
+  });
 });

@@ -229,6 +229,32 @@ describe("listing final audit subflow", () => {
     })).toThrow("AI-audit underkände texten efter slutgranskning");
   });
 
+  it("accepts stylistic non-advisory audit rejection with high local confidence", () => {
+    const readiness = finalizeBrokerAuditReadiness({
+      finalBrokerAudit: {
+        publish_ready: false,
+        broker_quality_score: 0.78,
+        issues: [
+          "Öppningen börjar med råfakta och känns mer som objektrad än en stark krok.",
+          "Partiet om service och restauranger blir något uppradande och tappar mäklarprosa-känslan.",
+        ],
+      },
+      finalLocalTopBrokerReady: false,
+      analyzedScore: 0.86,
+      brokerQualityThreshold: 0.85,
+      buildLocalFallback: ({ publishReady, brokerQualityScore, reason, issues }) => ({
+        publish_ready: publishReady,
+        broker_quality_score: brokerQualityScore,
+        verdict: reason,
+        issues: issues ?? [],
+      }),
+    });
+
+    expect(readiness.finalBrokerAudit.publish_ready).toBe(true);
+    expect(readiness.finalBrokerAudit.broker_quality_score).toBeGreaterThanOrEqual(0.86);
+    expect(readiness.warnings.some((warning) => warning.includes("inga hårda faktabrott"))).toBe(true);
+  });
+
   it("builds the final broker audit retry request payload without changing the prompt content shape", () => {
     const input = buildFinalBrokerAuditRetryRequestInput({
       cleanDisposition: { address: "Testgatan 1" },

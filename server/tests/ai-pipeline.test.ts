@@ -68,6 +68,24 @@ describe('AI Pipeline Tests', () => {
       expect(result.disposition.property.bathrooms).toBe(2);
     });
 
+    it('should deduplicate laddbox across parking and special features in structured disposition', () => {
+      const result = buildDispositionFromStructuredData({
+        propertyType: 'villa',
+        address: 'Ekorrvägen 10, Värmdö',
+        livingArea: 146,
+        totalRooms: 5,
+        bedrooms: 3,
+        bathrooms: 2,
+        parking: 'Garage med laddbox för elbil',
+        specialFeatures: 'Laddbox för elbil, Solceller, Nya fönster',
+      });
+
+      const special = result.disposition.property.special_features || [];
+      expect(Array.isArray(special)).toBe(true);
+      expect(special.map((item: string) => item.toLowerCase())).not.toContain('laddbox för elbil');
+      expect((result.disposition.property.parking || '').toLowerCase()).toContain('laddbox');
+    });
+
     it('should produce a publishable deterministic fallback after sanitizing', () => {
       const structured = buildDispositionFromStructuredData({
         propertyType: 'villa',
@@ -345,6 +363,39 @@ describe('AI Pipeline Tests', () => {
       expect(text.toLowerCase()).toMatch(/\b2\b.*\bbadrum\b/);
       expect(text.toLowerCase()).toContain('kök');
       expect(text.toLowerCase()).toMatch(/kommunikation|buss|slussen/);
+    });
+
+    it('should rewrite raw-fact opening and reduce service list feel during finalization', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Villa om 146 kvm på Ekorrvägen 10 i Mörtnäs, Värmdö med södervänd uteplats och inbyggd jacuzzi. Planlösningen rymmer fem rum med tre sovrum och två badrum, en kombination som lätt att snabbt justera temperaturen. Handlingen går snabbt när Willys Värmdö ligger nära, och en spontan middag blir enkel med Kikka, COME 2 EAT och ChopChop Asian Express Värmdö.',
+        'hemnet',
+        undefined,
+        'balanced',
+        { allowParagraphs: true },
+        {
+          property: {
+            address: 'Ekorrvägen 10, Mörtnäs, Värmdö',
+            size: 146,
+            rooms: 5,
+            bedrooms: 3,
+            bathrooms: 2,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+        }
+      );
+
+      const text = finalized || '';
+      const firstSentence = text.split(/(?<=[.!?])\s+/)[0] || '';
+      expect(firstSentence.toLowerCase()).not.toMatch(/^villa om\s+146/);
+      expect(text.toLowerCase()).toContain('södervänd');
+      expect(text.toLowerCase()).toContain('jacuzzi');
+      expect(text.toLowerCase()).not.toContain('som lätt att snabbt');
+      expect(text.toLowerCase()).not.toContain('kikka, come 2 eat och chopchop asian express värmdö');
+      expect(text).not.toContain('..');
     });
 
     it('should flag generic broker abstractions that lack concrete evidentiary density', () => {

@@ -114,6 +114,13 @@ export function buildCandidatePolishRequestInput(params: {
   personalStylePrompt?: string;
   propertyType?: string;
 }) {
+  const compactJson = (value: unknown, maxChars: number): string => {
+    if (value === undefined || value === null) return "";
+    const serialized = JSON.stringify(value);
+    if (!serialized) return "";
+    if (serialized.length <= maxChars) return serialized;
+    return `${serialized.slice(0, Math.max(120, maxChars - 3))}...`;
+  };
   // Build comprehensive context for Polish
   const contextParts: string[] = [];
 
@@ -122,7 +129,7 @@ export function buildCandidatePolishRequestInput(params: {
   }
 
   if (params.intelligence) {
-    contextParts.push(`MÅLGRUPP OCH KONTEXT:\n${JSON.stringify(params.intelligence)}`);
+    contextParts.push(`MÅLGRUPP OCH KONTEXT:\n${compactJson(params.intelligence, 1800)}`);
   }
 
   if (params.positioning) {
@@ -130,7 +137,7 @@ export function buildCandidatePolishRequestInput(params: {
   }
 
   if (params.cleanWritingPlan) {
-    contextParts.push(`WRITING PLAN (original strategi):\n${JSON.stringify(params.cleanWritingPlan)}`);
+    contextParts.push(`WRITING PLAN (original strategi):\n${compactJson(params.cleanWritingPlan, 2400)}`);
   }
 
   const violationContext = params.violations && params.violations.length > 0
@@ -161,6 +168,7 @@ ANALYSMETOD:
 3. Skriv om svaga delar eller implementera smarta förbättringar från feedbacken.
 4. Behåll alla fakta korrekta.
 5. VIKTIGT: Bibehåll och förstärk användarens personliga stil.
+6. Om flera förbättringspunkter finns: lös dem i prioriterad ordning och verifiera flytet efter varje ändring.
 
 VAD SOM SKA FÖRBÄTTRAS:${violationContext}${scoreContext}${wordContext}
 
@@ -175,6 +183,9 @@ FÖRBÄTTRA SÅ HÄR:
 - Om texten redan håller hög nivå: gör små precisionslyft istället för total omskrivning.
 - Lyft områdets vardagsnytta i naturlig prosa i stället för listor med butiksnamn.
 - Säkerställ att varje stycke tillför ny information och undviker repetition av samma säljpunkt.
+- Om öppningen börjar med råfakta ("Villa om..."), skriv om första meningen till en mer lockande krok utan att tappa fakta.
+- Om grammatik ser bruten ut ("som lätt att", dubbelpunkter, sönderfallna satser), reparera fullt ut.
+- Om listor över service/restauranger blir för uppradade, väv ihop till berättande vardagsprosa.
 
 DU FÅR INTE:
 - Ändra fakta eller hitta på nya detaljer.
@@ -186,7 +197,7 @@ Svara med JSON: { "improvedPrompt": "...", "headline": "...", "changesMade": "ko
     },
     {
       role: "user" as const,
-      content: `DISPOSITION:\n${JSON.stringify(params.cleanDisposition, null, 2)}\n\nSKRIVPLAN:\n${JSON.stringify(params.cleanWritingPlan, null, 2)}\n\nTEXT ATT FÖRFINA:\n${(params.result as any)?.improvedPrompt || ''}`
+      content: `DISPOSITION:\n${compactJson(params.cleanDisposition, 3200)}\n\nSKRIVPLAN:\n${compactJson(params.cleanWritingPlan, 3200)}\n\nTEXT ATT FÖRFINA:\n${String((params.result as any)?.improvedPrompt || '').slice(0, 7000)}`
     }
   ];
 }

@@ -46,12 +46,12 @@ function BeforeAfterDemo() {
   const item = BEFORE_AFTER[activeTab];
 
   return (
-    <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+    <div className="pro-card rounded-2xl overflow-hidden">
       <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: "#E8E5DE" }}>
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
           <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
-            Vad AI:n skriver — på riktigt
+            Kvalitetslyft i praktiken
           </span>
         </div>
         <div className="flex gap-1">
@@ -75,7 +75,7 @@ function BeforeAfterDemo() {
         <div>
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "#FEE2E2", color: "#DC2626" }}>
-              Vanlig AI / ChatGPT
+              Utan optimering
             </span>
           </div>
           <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#9CA3AF", fontStyle: "italic" }}>
@@ -85,7 +85,7 @@ function BeforeAfterDemo() {
         <div className="border-t pt-4" style={{ borderColor: "#F3F4F6" }}>
           <div className="flex items-center gap-1.5 mb-1.5">
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "#DCFCE7", color: "#16A34A" }}>
-              OptiPrompt
+              Publiceringsklar version
             </span>
           </div>
           <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#1D2939" }}>
@@ -208,10 +208,10 @@ export default function Home() {
   const limit = userStatus?.monthlyTextLimit ?? 2;
   const used = userStatus?.textsUsedThisMonth ?? 0;
   return (
-    <div className="min-h-screen" style={{ background: "#FAFAF7" }}>
+    <div className="min-h-screen app-shell-bg">
 
       {/* ── NAV ── */}
-      <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
+      <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.75)", backdropFilter: "blur(12px)", borderColor: "#E8E5DE" }}>
         <div className="max-w-[2200px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-10 2xl:px-14 h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
@@ -349,7 +349,7 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <div className="rounded-xl border px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ background: "#FFFFFF", borderColor: "#E8E5DE", color: "#4B5563" }}>
+            <div className="pro-card-soft rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: "#4B5563" }}>
               <span className="font-semibold" style={{ color: "#1D2939" }}>Rekommenderat arbetsflöde:</span>
               <span>1. Grundfakta</span>
               <span>2. Vad som gör objektet speciellt</span>
@@ -392,7 +392,7 @@ export default function Home() {
 
           {/* ── LEFT: Form ── */}
           <div className="lg:col-span-7">
-            <div className="bg-white rounded-xl border p-5 sm:p-6" style={{ borderColor: "#E8E5DE" }}>
+            <div className="pro-card rounded-2xl p-5 sm:p-6">
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -403,7 +403,7 @@ export default function Home() {
 
             {/* Loading progress with skeleton */}
             {isPending && (
-              <div className="mt-4 bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
+              <div className="mt-4 pro-card rounded-2xl p-5">
                 <PromptGenerationSkeleton step={loadingStep} total={LOADING_STEPS_COUNT} message={loadingMessage} />
               </div>
             )}
@@ -427,7 +427,7 @@ export default function Home() {
 
               {/* Usage indicator */}
               {isAuthenticated && (
-                <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                <div className="pro-card rounded-2xl overflow-hidden">
                   <div className="px-5 py-3 border-b flex items-center justify-between" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Månadskvot</span>
                     <span
@@ -472,7 +472,7 @@ export default function Home() {
 
               {/* Upgrade CTA */}
               {isAuthenticated && plan !== "premium" && (
-                <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                <div className="pro-card rounded-2xl overflow-hidden">
                   <div className="px-5 py-4 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
                       {plan === "free" ? "Uppgradera" : "Uppgradera till Premium"}
@@ -558,7 +558,7 @@ export default function Home() {
 
               {/* Not logged in — sidebar CTA */}
               {!isAuthenticated && (
-                <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+                <div className="pro-card rounded-2xl overflow-hidden">
                   <div className="px-5 py-4" style={{ background: "#2D6A4F" }}>
                     <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A7F3D0" }}>Gratis konto</p>
                     <p className="text-base font-semibold mt-0.5 text-white" style={{ fontFamily: "'Lora', Georgia, serif" }}>

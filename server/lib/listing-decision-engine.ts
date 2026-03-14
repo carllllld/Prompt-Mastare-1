@@ -47,6 +47,8 @@ export interface BrokerAuditDecisionInput {
   blueprintCoverageRatio?: number;
   inputSignalCoverageRatio?: number;
   missingCriticalSignalCount?: number;
+  localNonWordViolationCount?: number;
+  analyzedQualityScore?: number;
 }
 
 export interface BrokerAuditDecisionResult {
@@ -70,7 +72,12 @@ export function chooseBestCandidate(
   const judged = judgeChoiceLabel
     ? candidates.find((candidate) => candidate.label === judgeChoiceLabel)
     : null;
-  const selected = judged || fallback;
+  const judgedPenalty = judged ? (judged.nonWordCountViolations.length - fallback.nonWordCountViolations.length) : 0;
+  const judgedQualityDelta = judged ? (judged.qualityScore - fallback.qualityScore) : 0;
+  const shouldOverrideJudged = Boolean(judged)
+    && judgedPenalty >= 2
+    && judgedQualityDelta < 0.04;
+  const selected = shouldOverrideJudged ? fallback : (judged || fallback);
 
   const publishable = selected.wordCount >= blueprint.qualityThresholds.minimumPublishableWordMin;
   const cleanEnough = selected.nonWordCountViolations.length === 0;
@@ -168,8 +175,10 @@ export function decideBrokerAuditStrategy(input: BrokerAuditDecisionInput): Brok
   const blueprintCoverageRatio = typeof input.blueprintCoverageRatio === "number" ? input.blueprintCoverageRatio : 1;
   const inputSignalCoverageRatio = typeof input.inputSignalCoverageRatio === "number" ? input.inputSignalCoverageRatio : 1;
   const missingCriticalSignalCount = typeof input.missingCriticalSignalCount === "number" ? input.missingCriticalSignalCount : 0;
+  const localNonWordViolationCount = typeof input.localNonWordViolationCount === "number" ? input.localNonWordViolationCount : 0;
+  const analyzedQualityScore = typeof input.analyzedQualityScore === "number" ? input.analyzedQualityScore : 0;
 
-  const canSkipExternalAudit = input.strongCandidateFastPath
+  const strictTopBrokerSkip = input.strongCandidateFastPath
     && input.finalMainWordCount >= input.finalStrongWordFloor
     && input.finalGenericBrokerPhraseCount === 0
     && input.finalNarrativeIntegrityIssueCount === 0
@@ -177,11 +186,21 @@ export function decideBrokerAuditStrategy(input: BrokerAuditDecisionInput): Brok
     && blueprintCoverageRatio >= 0.7
     && inputSignalCoverageRatio >= 0.55
     && missingCriticalSignalCount === 0;
+  const strongLocalSkip = input.finalMainWordCount >= input.finalStrongWordFloor
+    && input.finalGenericBrokerPhraseCount <= 1
+    && input.finalNarrativeIntegrityIssueCount === 0
+    && extraFieldViolationCount === 0
+    && localNonWordViolationCount === 0
+    && blueprintCoverageRatio >= 0.75
+    && inputSignalCoverageRatio >= 0.6
+    && missingCriticalSignalCount === 0
+    && analyzedQualityScore >= 0.82;
+  const canSkipExternalAudit = strictTopBrokerSkip || strongLocalSkip;
 
   return {
     canSkipExternalAudit,
     reason: canSkipExternalAudit
-      ? "strong local candidate satisfies top-broker criteria"
+      ? (strictTopBrokerSkip ? "strong local candidate satisfies top-broker criteria" : "strong local candidate satisfies calibrated local quality criteria")
       : "external broker audit required because local top-broker criteria are not fully satisfied",
   };
 }

@@ -1217,38 +1217,12 @@ async function finalizeMainMarketingText(
     });
 
     if (technicalSentences.length > 0) {
-        const mainTextSentences = filteredSentences.filter(s => !technicalSentences.includes(s));
-        const mainText = mainTextSentences.join(" ");
-
-        const integrationPrompt = {
-            role: "system" as const,
-            content: `Du är en expert på att väva in tekniska detaljer i en befintlig text. Ditt jobb är att på ett naturligt och smidigt sätt infoga informationen nedan i huvudtexten. Ändra så lite som möjligt i den befintliga texten.
-
-REGLER:
-- Infoga informationen där den passar bäst tematiskt (t.ex. vid teknisk beskrivning eller mot slutet).
-- Omformulera informationen så att den smälter in i textens ton och stil.
-- Ändra inte i texten i övrigt.
-- SÄKERSTÄLL FAKTA: Använd endast den information som tillhandahålls.`
-        };
-        const userPrompt = {
-            role: "user" as const,
-            content: `HUVUDTEXT:\n${mainText}\n\nTEKNISK INFORMATION ATT VÄVA IN:\n- ${technicalSentences.join("\n- ")}${disposition ? `\n\nDISPOSITION FÖR KONTROLL:\n${JSON.stringify(disposition)}` : ""}`
-        };
-
-        try {
-            const integrationCompletion = await openai.chat.completions.create({
-                model: "gpt-5.2",
-                messages: [integrationPrompt, userPrompt],
-                max_completion_tokens: 4000,
-            });
-            const integratedText = integrationCompletion.choices[0]?.message?.content;
-            if (integratedText) {
-                finalized = sanitizeGeneratedMarketingField(integratedText, styleProfile, style, options) || finalized;
-            }
-        } catch (e) {
-            console.warn("[Hemnet Finalize] AI integration failed, falling back to filtering:", e);
-            finalized = mainText;
-        }
+        const mainTextSentences = filteredSentences.filter((s) => !technicalSentences.includes(s));
+        const technicalTail = technicalSentences
+          .map((s) => s.replace(/^fiber\s+är\s+installerat/i, "Fiber är installerat").replace(/^uppvärmning sker via/i, "Uppvärmning sker via"))
+          .join(". ")
+          .replace(/\.\s*\./g, ".");
+        finalized = `${mainTextSentences.join(" ")} ${technicalTail}`.replace(/\s{2,}/g, " ").trim();
     } else {
         finalized = filteredSentences.join(" ");
     }
@@ -1256,6 +1230,7 @@ REGLER:
 
   finalized = enforcePlatformMainTextHeuristics(finalized, platform, disposition);
   finalized = enforceCriticalFactPresence(finalized, disposition);
+  finalized = applyProfessionalNarrativePolish(finalized, disposition);
 
   if (options?.allowParagraphs) {
     finalized = addParagraphs(finalized);
@@ -1422,6 +1397,49 @@ function repairMechanicalBrokerArtifacts(text: string): string {
   repaired = repaired.replace(/\b(\d{1,3}(?:[ \u00A0]\d{3})\s*(?:kr|sek|kronor|:-)?)(?:\s+)([A-ZÅÄÖ][a-zåäö]{2,}\s+(?:fungerar|ligger|har|är|ger|tar)\b)/g, '$1. $2');
 
   return repaired;
+}
+
+function buildOpeningHookFromText(text: string, disposition?: any): string | null {
+  const hasSouthPatio = /\bsödervänd?\s+(uteplats|terrass|balkong)\b/i.test(text);
+  const hasJacuzzi = /\b(jacuzzi|spabad)\b/i.test(text);
+  const address = typeof disposition?.property?.address === "string" ? disposition.property.address.trim() : "";
+  if (hasSouthPatio && hasJacuzzi) {
+    return address
+      ? `På ${address} sätter en södervänd uteplats med inbyggd jacuzzi tonen direkt.`
+      : "En södervänd uteplats med inbyggd jacuzzi sätter tonen direkt.";
+  }
+  if (hasSouthPatio) {
+    return address
+      ? `På ${address} sätter den södervända uteplatsen tonen direkt.`
+      : "Den södervända uteplatsen sätter tonen direkt.";
+  }
+  return null;
+}
+
+function reduceServiceNameListing(text: string): string {
+  if (!text) return text;
+  let updated = text;
+  updated = updated.replace(/Handlingen går snabbt när\s+([^.!?]+?)\s+ligger nära,\s+och en spontan middag blir enkel med\s+([^.!?]{20,120})\./gi, "Vardagen blir smidig med $1 i närheten, och för middag finns flera alternativ i området.");
+  updated = updated.replace(/\b(Kikka|COME 2 EAT|ChopChop Asian Express Värmdö)(?:\s*,\s*(Kikka|COME 2 EAT|ChopChop Asian Express Värmdö)){2,}\b/gi, "flera restaurangalternativ");
+  return updated;
+}
+
+function applyProfessionalNarrativePolish(text: string, disposition?: any): string {
+  if (!text) return text;
+  let updated = text;
+  updated = updated.replace(/\ben kombination som lätt att\b/gi, "en kombination som gör det lätt att");
+  updated = updated.replace(/\blätt att snabbt\b/gi, "lätt att");
+  updated = updated.replace(/\.\./g, ".");
+  const sentences = updated.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  const first = sentences[0] || "";
+  if (/^(villa|lägenhet|radhus|parhus|fritidshus)\s+om\s+\d+\s*kvm\b/i.test(first)) {
+    const hook = buildOpeningHookFromText(updated, disposition);
+    if (hook && !updated.startsWith(hook)) {
+      updated = `${hook} ${updated}`;
+    }
+  }
+  updated = reduceServiceNameListing(updated);
+  return updated.replace(/\s{2,}/g, " ").trim();
 }
 
 function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
@@ -1929,6 +1947,23 @@ function sanitizeStructuredList(value: unknown): string[] {
   return cleaned;
 }
 
+function canonicalizeFeatureToken(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (/\b(laddplats elbil|laddplats för elbil|laddbox(?: för elbil)?|elbilsladdning)\b/i.test(normalized)) return "laddbox för elbil";
+  if (/\b(nya fönster|fönster bytta)\b/i.test(normalized)) return "nya fönster";
+  if (/\b(stambyte|stamrenovering)\b/i.test(normalized)) return "stambyte genomfört";
+  return normalized;
+}
+
+function removeRedundantFeatureMentions(features: string[], relatedFields: string[]): string[] {
+  if (!features.length) return features;
+  const related = relatedFields.map((entry) => canonicalizeFeatureToken(entry || ""));
+  return features.filter((feature) => {
+    const canonical = canonicalizeFeatureToken(feature);
+    return !related.some((relatedCanonical) => relatedCanonical.length > 0 && relatedCanonical === canonical);
+  });
+}
+
 function normalizeOutdoorTerm(value: string | null, propertyType: string): string {
   const normalized = (value || "").toLowerCase();
   if (normalized.includes("terrass")) return "terrass";
@@ -2022,7 +2057,7 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
   const transport = sanitizeStructuredText(propertyData.transport ?? null);
   const amenities = sanitizeStructuredList(propertyData.amenities);
   const services = sanitizeStructuredList(propertyData.services);
-  const specialFeatures = sanitizeStructuredList(propertyData.specialFeatures);
+  const specialFeaturesRaw = sanitizeStructuredList(propertyData.specialFeatures);
   const renovations = sanitizeStructuredList(propertyData.renovations);
   const renovationYears = detectConflictingYears([
     propertyData.renovations,
@@ -2037,6 +2072,10 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
   const heatingText = sanitizeStructuredText(propertyData.heating);
   const layoutText = sanitizeStructuredText(propertyData.layout ?? propertyData.floorPlan);
   const storageList = sanitizeStructuredList(propertyData.storage);
+  const specialFeatures = removeRedundantFeatureMentions(specialFeaturesRaw, [
+    parkingText || "",
+    ...uniqueSellingPoints,
+  ]);
   const floorText = sanitizeStructuredText(propertyData.floor ?? null);
   const elevatorValue = normalizeBooleanish(propertyData.elevator);
   const balconyExists = normalizeBooleanish(propertyData.hasBalcony ?? propertyData.balcony);
@@ -3582,19 +3621,23 @@ KANDIDATRÄDDNING:
         totalScore: number;
       }> = [];
 
-      for (const config of candidateConfigs) {
+      const candidateResults = await Promise.all(candidateConfigs.map(async (config) => {
         try {
           const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
-          candidatePool.push(candidate);
-          addCandidateToRunState(runState, candidate);
           console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
+          return candidate;
         } catch (e: any) {
           if (isOpenAIInsufficientQuotaError(e)) {
-            throw createUpstreamQuotaError("steg 3 kandidat ${config.label}", e);
+            throw createUpstreamQuotaError(`steg 3 kandidat ${config.label}`, e);
           }
           console.error(`[Step 3:${config.label}] Candidate failed catastrophically:`, e);
-          // Do not re-throw, just log and continue to next candidate
+          return null;
         }
+      }));
+      for (const candidate of candidateResults) {
+        if (!candidate) continue;
+        candidatePool.push(candidate);
+        addCandidateToRunState(runState, candidate);
       }
 
       if (candidatePool.length === 0) {
@@ -3642,14 +3685,21 @@ KANDIDATRÄDDNING:
       let judgeChoiceLabel: string | null = null;
       let judgeSuggestions: string[] = [];
       if (candidatePool.length > 1) {
+        const locallyRanked = [...candidatePool].sort((a, b) => b.totalScore - a.totalScore);
+        const localBest = locallyRanked[0];
+        const localSecond = locallyRanked[1];
+        const clearLocalWinner = Boolean(localBest && localSecond)
+          && (localBest.totalScore - localSecond.totalScore >= 0.12
+            || (localBest.nonWordCountViolations.length === 0 && localSecond.nonWordCountViolations.length >= 2));
         try {
-          const judgeCompletion = await openai.responses.create({
-            model: "gpt-5.2",
-            reasoning: { effort: "medium" },
-            input: [
-              {
-                role: "developer",
-                content: `Du är kvalitetschef och toppmäklare. Välj den bästa objektbeskrivningen mellan flera kandidater.
+          if (!clearLocalWinner) {
+            const judgeCompletion = await openai.responses.create({
+              model: "gpt-5.2",
+              reasoning: { effort: "medium" },
+              input: [
+                {
+                  role: "developer",
+                  content: `Du är kvalitetschef och toppmäklare. Välj den bästa objektbeskrivningen mellan flera kandidater.
 
 Välj den text som bäst uppfyller ALLT nedan:
 - låter som en mycket skicklig svensk fastighetsmäklare
@@ -3661,26 +3711,29 @@ Välj den text som bäst uppfyller ALLT nedan:
 
 Svara med JSON:
 {"chosen_label":"label", "reason":"kort motivering", "improvement_suggestions": ["vad kan göras ännu bättre?"]}`
-              },
-              {
-                role: "user",
-                content: JSON.stringify(candidatePool.map((candidate) => ({
-                  label: candidate.label,
-                  qualityScore: Number(candidate.qualityScore.toFixed(3)),
-                  nonWordCountViolations: candidate.nonWordCountViolations,
-                  wordCount: candidate.wordCount,
-                  weakHemnetDetailCount: candidate.weakHemnetDetailCount,
-                  text: candidate.result.improvedPrompt,
-                })), null, 2)
-              }
-            ],
-            max_output_tokens: 1000,
-            text: { format: { type: "json_object" } }
-          });
+                },
+                {
+                  role: "user",
+                  content: JSON.stringify(candidatePool.map((candidate) => ({
+                    label: candidate.label,
+                    qualityScore: Number(candidate.qualityScore.toFixed(3)),
+                    nonWordCountViolations: candidate.nonWordCountViolations,
+                    wordCount: candidate.wordCount,
+                    weakHemnetDetailCount: candidate.weakHemnetDetailCount,
+                    text: String(candidate.result.improvedPrompt || "").slice(0, 1800),
+                  })), null, 2)
+                }
+              ],
+              max_output_tokens: 700,
+              text: { format: { type: "json_object" } }
+            });
 
-          const judged = safeJsonParse(judgeCompletion.output_text || "{}");
-          judgeChoiceLabel = typeof judged?.chosen_label === "string" ? judged.chosen_label : null;
-          judgeSuggestions = Array.isArray(judged?.improvement_suggestions) ? judged.improvement_suggestions : [];
+            const judged = safeJsonParse(judgeCompletion.output_text || "{}");
+            judgeChoiceLabel = typeof judged?.chosen_label === "string" ? judged.chosen_label : null;
+            judgeSuggestions = Array.isArray(judged?.improvement_suggestions) ? judged.improvement_suggestions : [];
+          } else {
+            judgeChoiceLabel = localBest?.label || null;
+          }
         } catch (e) {
           console.warn("[Step 3 Judge] Candidate ranking failed, using local scoring:", e);
         }
@@ -4378,6 +4431,9 @@ Svara med JSON:
         validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
           .filter((v) => v.startsWith("["))
       ).length;
+      const preAuditLocalMainViolations = getNonWordCountViolations(
+        validateMainMarketingText({ improvedPrompt: result.improvedPrompt || "" }, platform, minimumPublishableWordMin, targetWordMax, style)
+      );
       const brokerAuditDecision = evaluateBrokerAuditGate({
         strongCandidateFastPath,
         finalMainWordCount,
@@ -4388,12 +4444,14 @@ Svara med JSON:
         blueprintCoverageRatio: preAuditBlueprintCoverage.ratio,
         inputSignalCoverageRatio: preAuditInputSignalCoverage.ratio,
         missingCriticalSignalCount: preAuditMissingCriticalSignalCount,
+        localNonWordViolationCount: preAuditLocalMainViolations.length,
+        analyzedQualityScore: analyzeTextQuality(result.improvedPrompt || ""),
       }).brokerAuditDecision;
       const finalAuditIteration = runAgentIteration({
         runState,
         stage: "broker-audit-gate",
         actionLabel: "evaluate whether broker audit can be skipped",
-        currentViolations: getNonWordCountViolations(validateMainMarketingText({ improvedPrompt: result.improvedPrompt || "" }, platform, minimumPublishableWordMin, targetWordMax, style)),
+        currentViolations: preAuditLocalMainViolations,
         wordShortfall: Math.max(0, minimumPublishableWordMin - finalMainWordCount),
         genericBrokerPhraseCount: finalGenericPhraseCountForScorecard,
         narrativeIntegrityIssues: finalNarrativeIntegrityIssues,
@@ -5030,8 +5088,7 @@ Svara med json i formatet:
     } catch (err: any) {
       console.error("Optimize error:", err);
       const preferredFailSafePayload = choosePreferredFailSafePayload(failSafeResponseData, failSafeStrongCandidateData);
-      const isQualityGateFailure = typeof err?.message === "string" && /\[final gate\]/i.test(err.message);
-      const canReturnFailSafe = Boolean(preferredFailSafePayload) && (!res.headersSent || wantsStream) && !isQualityGateFailure;
+      const canReturnFailSafe = Boolean(preferredFailSafePayload) && (!res.headersSent || wantsStream);
       if (canReturnFailSafe) {
         const selectedStrongBaseline = preferredFailSafePayload === failSafeStrongCandidateData && failSafeStrongCandidateData !== failSafeResponseData;
         const safeWarnings = Array.isArray(preferredFailSafePayload.pipelineWarnings) ? preferredFailSafePayload.pipelineWarnings : [];

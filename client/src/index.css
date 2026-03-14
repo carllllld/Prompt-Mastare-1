@@ -8,20 +8,20 @@
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-display: 'Lora', Georgia, serif;
 
-  --background: 40 20% 98%;
-  --foreground: 220 20% 14%;
+  --background: 38 30% 98%;
+  --foreground: 216 27% 16%;
 
   --card: 0 0% 100%;
   --card-foreground: 220 20% 14%;
 
-  --primary: 160 40% 32%;
+  --primary: 152 40% 28%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 38 30% 94%;
+  --secondary: 36 27% 95%;
   --secondary-foreground: 220 20% 14%;
 
-  --muted: 40 15% 94%;
-  --muted-foreground: 220 10% 46%;
+  --muted: 36 22% 95%;
+  --muted-foreground: 216 12% 42%;
 
   --accent: 38 30% 94%;
   --accent-foreground: 220 20% 14%;
@@ -29,9 +29,9 @@
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: 40 12% 88%;
-  --input: 40 12% 88%;
-  --ring: 160 40% 32%;
+  --border: 34 20% 86%;
+  --input: 34 20% 86%;
+  --ring: 152 40% 28%;
 
   --radius: 0.5rem;
 }
@@ -59,6 +59,26 @@
   }
   .animate-slide-up {
     animation: slideUp 0.35s ease-out both;
+  }
+  .app-shell-bg {
+    background:
+      radial-gradient(1000px 500px at 0% -10%, hsl(34 48% 92% / 0.45), transparent 60%),
+      radial-gradient(900px 500px at 100% -10%, hsl(152 35% 86% / 0.32), transparent 55%),
+      hsl(38 33% 97%);
+  }
+  .pro-card {
+    background: hsl(0 0% 100% / 0.9);
+    border: 1px solid hsl(34 20% 86% / 0.9);
+    box-shadow:
+      0 1px 2px hsl(220 20% 10% / 0.04),
+      0 10px 28px hsl(220 20% 10% / 0.06);
+    backdrop-filter: blur(6px);
+  }
+  .pro-card-soft {
+    background: hsl(0 0% 100% / 0.72);
+    border: 1px solid hsl(34 18% 86% / 0.78);
+    box-shadow: 0 1px 2px hsl(220 20% 10% / 0.03);
+    backdrop-filter: blur(4px);
   }
 }
 
