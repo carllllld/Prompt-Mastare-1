@@ -15,6 +15,11 @@ import {
   shouldSkipFinalRescueRewrite,
   validateOptimizationResult,
 } from '../routes';
+import {
+  buildBrokerLanguagePolicyPrompt,
+  getBrokerLanguageEvidenceSnapshot,
+  shouldBlockPhraseForStyle,
+} from '../lib/text-rules';
 
 describe('AI Pipeline Tests', () => {
   describe('Prompt Optimization', () => {
@@ -384,6 +389,31 @@ describe('AI Pipeline Tests', () => {
 
       expect(violations.some((v) => v.includes('Factual-stil'))).toBe(false);
       expect(violations.some((v) => v.includes('Förbjuden fras: "smakfullt"'))).toBe(false);
+    });
+
+    it('should keep evidence-backed language policy consistent across styles', () => {
+      expect(shouldBlockPhraseForStyle('välkommen till', 'balanced')).toBe(true);
+      expect(shouldBlockPhraseForStyle('välkommen till', 'selling')).toBe(true);
+      expect(shouldBlockPhraseForStyle('smakfullt', 'factual')).toBe(true);
+      expect(shouldBlockPhraseForStyle('smakfullt', 'selling')).toBe(false);
+      expect(shouldBlockPhraseForStyle('skapar en känsla av', 'selling', 'hemnet')).toBe(true);
+      expect(shouldBlockPhraseForStyle('skapar en känsla av', 'selling', 'booli')).toBe(false);
+    });
+
+    it('should expose evidence snapshot with accepted and cliché phrase buckets', () => {
+      const snapshot = getBrokerLanguageEvidenceSnapshot('balanced');
+      expect(snapshot.accepted.length).toBeGreaterThan(0);
+      expect(snapshot.cliches.length).toBeGreaterThan(0);
+      expect(snapshot.accepted.some((entry) => entry.phrase.includes('renoverat kök'))).toBe(true);
+      expect(snapshot.cliches.some((entry) => entry.phrase.includes('välkommen till'))).toBe(true);
+    });
+
+    it('should build language policy prompt containing both accepted and blocked guidance', () => {
+      const policy = buildBrokerLanguagePolicyPrompt('selling', 'hemnet');
+      expect(policy).toContain('SPRÅKPOLICY (EVIDENSBASERAD)');
+      expect(policy).toContain('accepterade uttryck');
+      expect(policy).toContain('klyschor att undvika');
+      expect(policy).toContain('Plattformsviktning');
     });
 
     it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {

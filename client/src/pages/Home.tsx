@@ -61,7 +61,7 @@ function BeforeAfterDemo() {
   const item = BEFORE_AFTER[activeTab];
 
   return (
-    <div className="pro-card rounded-2xl overflow-hidden">
+    <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
       <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: "#E8E5DE" }}>
         <div className="flex items-center gap-2 mb-3">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
@@ -457,7 +457,7 @@ export default function Home() {
 
           {/* ── LEFT: Form ── */}
           <div className="lg:col-span-7">
-            <div className="pro-card rounded-2xl p-5 sm:p-6">
+            <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -468,7 +468,7 @@ export default function Home() {
 
             {/* Loading progress with skeleton */}
             {isPending && (
-              <div className="mt-4 pro-card rounded-2xl p-5">
+              <div className="mt-4 pro-card pro-card-premium rounded-2xl p-5">
                 <div className="mb-3 flex items-center justify-between text-xs" style={{ color: "#6B7280" }}>
                   <span className="font-medium">Generering pågår — steg {progressStep}/{LOADING_STEPS_COUNT}</span>
                   <span>{progressPercent}%</span>
@@ -502,7 +502,7 @@ export default function Home() {
 
               {/* Usage indicator */}
               {isAuthenticated && (
-                <div className="pro-card rounded-2xl overflow-hidden">
+                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
                   <div className="px-5 py-3 border-b flex items-center justify-between" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Månadskvot</span>
                     <span
@@ -547,7 +547,7 @@ export default function Home() {
 
               {/* Upgrade CTA */}
               {isAuthenticated && plan !== "premium" && (
-                <div className="pro-card rounded-2xl overflow-hidden">
+                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
                   <div className="px-5 py-4 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
                       {plan === "free" ? "Uppgradera" : "Uppgradera till Premium"}
@@ -636,7 +636,7 @@ export default function Home() {
 
               {/* Not logged in — sidebar CTA */}
               {!isAuthenticated && (
-                <div className="pro-card rounded-2xl overflow-hidden">
+                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
                   <div className="px-5 py-4" style={{ background: "#2D6A4F" }}>
                     <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#A7F3D0" }}>Gratis konto</p>
                     <p className="text-base font-semibold mt-0.5 text-white" style={{ fontFamily: "'Lora', Georgia, serif" }}>

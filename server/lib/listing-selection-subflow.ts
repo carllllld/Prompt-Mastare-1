@@ -1,3 +1,5 @@
+import { buildBrokerLanguagePolicyPrompt, type WritingStyle } from "./text-rules";
+
 export function buildPolishedCandidateResult(params: {
   currentResult: any;
   polishedRaw: any;
@@ -113,6 +115,8 @@ export function buildCandidatePolishRequestInput(params: {
   targetMinWords?: number;
   personalStylePrompt?: string;
   propertyType?: string;
+  writingStyle?: WritingStyle;
+  platform?: string;
 }) {
   const compactJson = (value: unknown, maxChars: number): string => {
     if (value === undefined || value === null) return "";
@@ -151,6 +155,8 @@ export function buildCandidatePolishRequestInput(params: {
   const wordContext = params.targetMinWords
     ? `\n\nORDANTAL: Behåll minst ${params.targetMinWords} ord. Om texten är kort, utveckla stycken mer istället för att korta.`
     : '';
+  const style: WritingStyle = params.writingStyle || "balanced";
+  const languagePolicy = buildBrokerLanguagePolicyPrompt(style, params.platform);
 
   return [
     {
@@ -186,6 +192,8 @@ FÖRBÄTTRA SÅ HÄR:
 - Om öppningen börjar med råfakta ("Villa om..."), skriv om första meningen till en mer lockande krok utan att tappa fakta.
 - Om grammatik ser bruten ut ("som lätt att", dubbelpunkter, sönderfallna satser), reparera fullt ut.
 - Om listor över service/restauranger blir för uppradade, väv ihop till berättande vardagsprosa.
+
+${languagePolicy}
 
 DU FÅR INTE:
 - Ändra fakta eller hitta på nya detaljer.

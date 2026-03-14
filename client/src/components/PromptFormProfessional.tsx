@@ -87,10 +87,10 @@ const GARDEN_CHIPS = [
   "Fruktträd", "Insynsskyddat", "Förråd/bod", "Pergola", "Eldstad ute",
 ];
 const USP_CHIPS = [
-  "Söderläge", "Tyst läge", "Fri utsikt", "Ingen insyn",
+  "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
-  "Nära kommunikationer", "Nära service", "Barnvänligt läge",
-  "Hög standard", "Renoverat senaste 5 åren",
+  "Renoverat kök med årtal", "Renoverat badrum med årtal",
+  "Nära pendling", "Garage/laddbox", "Flera badrum",
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
@@ -314,15 +314,24 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const conditionValue = form.watch("condition");
   const uspValue = form.watch("uniqueSellingPoints");
   const layoutValue = form.watch("layoutDescription");
+  const kitchenValue = form.watch("kitchenDescription");
+  const bathroomValue = form.watch("bathroomDescription");
+  const transportValue = form.watch("transport");
+  const neighborhoodValue = form.watch("neighborhood");
+  const viewValue = form.watch("view");
   const isApartmentType = selectedType === "apartment" || selectedType === "townhouse";
   const isHouseType = selectedType === "house" || selectedType === "villa";
+  const hasKitchenBathroomFacts = Boolean(kitchenValue?.trim() || bathroomValue?.trim() || kitchenChips.length > 0 || bathroomChips.length > 0);
+  const hasLocationFacts = Boolean(transportValue?.trim() || neighborhoodValue?.trim());
+  const hasStrongDifferentiator = Boolean(uspValue?.trim() || uspChips.length > 0 || viewValue?.trim());
   const priorityChecklist = [
     Boolean(addressValue?.trim()),
-    Boolean(areaValue?.trim()),
     Boolean(livingAreaValue?.trim()),
-    Boolean(conditionValue?.trim()),
-    Boolean(uspValue?.trim() || uspChips.length > 0),
-    Boolean(layoutValue?.trim()),
+    Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0),
+    hasKitchenBathroomFacts,
+    hasLocationFacts,
+    hasStrongDifferentiator,
+    Boolean(layoutValue?.trim() || conditionValue?.trim()),
   ];
   const priorityCompleted = priorityChecklist.filter(Boolean).length;
 
@@ -639,7 +648,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Snabbast väg till bra text</p>
-                  <p className="text-sm font-semibold mt-1" style={{ color: "#1D2939" }}>Fyll de viktigaste uppgifterna först</p>
+                  <p className="text-sm font-semibold mt-1" style={{ color: "#1D2939" }}>Fyll det som styr huvudtexten först</p>
                 </div>
                 <div className="px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#ECFDF5", color: "#2D6A4F" }}>
                   {priorityCompleted}/6 klara
@@ -648,11 +657,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                 {[
                   ["Adress", Boolean(addressValue?.trim())],
-                  ["Område", Boolean(areaValue?.trim())],
                   ["Boarea", Boolean(livingAreaValue?.trim())],
-                  ["Skick", Boolean(conditionValue?.trim())],
-                  ["Det som gör objektet speciellt", Boolean(uspValue?.trim() || uspChips.length > 0)],
-                  ["Planlösning / rumsflöde", Boolean(layoutValue?.trim())],
+                  ["Rum och badrum", Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0)],
+                  ["Kök/badrum med fakta", hasKitchenBathroomFacts],
+                  ["Kommunikation/läge", hasLocationFacts],
+                  ["Särskiljande styrkor", hasStrongDifferentiator],
+                  ["Planlösning/skick", Boolean(layoutValue?.trim() || conditionValue?.trim())],
                 ].map(([label, done]) => (
                   <div key={String(label)} className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: done ? "#F0FDF4" : "#FAFAF7", color: done ? "#166534" : "#4B5563" }}>
                     <div className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: done ? "#DCFCE7" : "#E5E7EB", color: done ? "#166534" : "#6B7280" }}>
@@ -665,23 +675,19 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
 
             <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
-              <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Skriv så här för mäklarkvalitet</p>
-              <div className="space-y-2 text-xs" style={{ color: "#4B5563" }}>
-                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Kök / badrum</span>
-                  <span> — skriv bara det som inte redan täcks av valda chips.</span>
+              <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Så används dina fält i modellen</p>
+              <div className="space-y-2 text-xs">
+                <div className="rounded-lg px-3 py-2" style={{ background: "#EEFDF3", color: "#166534" }}>
+                  <span className="font-semibold">Direkt i huvudtexten:</span>
+                  <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
                 </div>
-                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Standard vs särskiljande</span>
-                  <span> — skriv inte självklarheter om de inte är ovanligt bra eller ovanligt svaga i objektet.</span>
+                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7", color: "#4B5563" }}>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
+                  <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
                 </div>
-                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Planlösning</span>
-                  <span> — fokusera på flöde, rumssamband och användning, inte på att upprepa rena fakta.</span>
-                </div>
-                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Undvik dubbelinfo</span>
-                  <span> — lägg laddbox under Parkering och undvik att upprepa samma punkt i flera fält.</span>
+                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7", color: "#4B5563" }}>
+                  <span className="font-semibold" style={{ color: "#1D2939" }}>Regel:</span>
+                  <span> lägg laddbox under Parkering och undvik att upprepa samma fakta i flera fält.</span>
                 </div>
               </div>
             </div>
@@ -1111,6 +1117,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
           {/* ── SECTION 6: MER DETALJER (expandable) ── */}
           <div className="border-t pt-4" style={{ borderColor: "#E8E5DE" }}>
+            <p className="text-[10px] text-gray-400 mb-2">
+              Detaljerna här fungerar främst som kontext. De skrivs ut i huvudtexten när de stärker beslutsvärdet.
+            </p>
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
@@ -1358,7 +1367,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
             <div className="rounded-lg border px-3.5 py-3" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
               <span className="text-xs font-medium" style={{ color: "#4B5563" }}>
-                Välj plattform och textstil innan generering så blir tonalitet och struktur rätt från början.
+                Hemnet använder hårdast klyschfilter. Booli/Egen sida tillåter mer berättande ton när fakta förblir konkreta.
               </span>
             </div>
 

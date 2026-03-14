@@ -31,7 +31,7 @@ import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
 import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
 import { pipelineObservability } from "./lib/listing-pipeline-observability";
 import OpenAI from "openai";
-import { FORBIDDEN_PHRASES, getExemptPhrases, type WritingStyle } from "./lib/text-rules";
+import { FORBIDDEN_PHRASES, buildBrokerLanguagePolicyPrompt, countEvidenceBackedBlockedPhrases, getBrokerLanguageEvidenceSnapshot, shouldBlockPhraseForStyle, type WritingStyle } from "./lib/text-rules";
 import { findRuleViolations, validateOptimizationResult } from "./lib/text-validation";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
@@ -1031,11 +1031,11 @@ function isDispositionLikeOutput(text: string): boolean {
   return colonHitCount >= 5 || (headingLineCount >= 3 && lineCount >= 8);
 }
 
-function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, style: WritingStyle = "balanced", options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean }): string | null {
+function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, style: WritingStyle = "balanced", options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean }, platform?: string): string | null {
   if (typeof text !== "string") return null;
   const sourceHadParagraphBreaks = /\n\s*\n/.test(text);
 
-  let cleaned = cleanForbiddenPhrases(text, styleProfile, style).trim();
+  let cleaned = cleanForbiddenPhrases(text, styleProfile, style, platform).trim();
   if (!cleaned) return null;
   if (isDispositionLikeOutput(cleaned)) {
     return options?.nullIfInvalid ? null : cleaned;
@@ -1077,12 +1077,12 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   return cleaned.trim() || null;
 }
 
-function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", text: unknown, style: WritingStyle = "balanced"): string | null {
+function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", text: unknown, style: WritingStyle = "balanced", platform?: string): string | null {
   if (typeof text !== "string") return null;
   let value = text.trim();
   if (!value) return null;
 
-  value = cleanForbiddenPhrases(value, null, style).trim();
+  value = cleanForbiddenPhrases(value, null, style, platform).trim();
   if (!value) return null;
   value = replaceWholePhrase(value, "inom räckhåll", "nära");
   value = value.replace(/\b(laddplats(?: för elbil)?|laddbox(?: installerad)?)\b/gi, "laddbox för elbil");
@@ -1403,7 +1403,7 @@ async function finalizeMainMarketingText(
   options?: { allowParagraphs?: boolean; nullIfInvalid?: boolean },
   disposition?: any
 ): Promise<string | null> {
-  const sanitized = sanitizeGeneratedMarketingField(text, styleProfile, style, options);
+  const sanitized = sanitizeGeneratedMarketingField(text, styleProfile, style, options, platform);
   if (!sanitized) return null;
 
   let finalized = stripPlatformDisallowedMainTextSentences(sanitized, platform);
@@ -1660,7 +1660,7 @@ function applyProfessionalNarrativePolish(text: string, disposition?: any, style
   return updated.replace(/\s{2,}/g, " ").trim();
 }
 
-function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced"): string {
+function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced", platform?: string): string {
   if (!text) return text;
   let cleaned = text;
 
@@ -1728,16 +1728,13 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
   });
 
   // === STAGE 2: Replace forbidden phrases (filtered by writing style) ===
-  const exempt = getExemptPhrases(style);
   for (const [phrase, replacement] of PHRASE_REPLACEMENTS) {
     const normalizedPhrase = phrase.trim();
     const isSingleWordPhrase = /^[A-Za-zÅÄÖåäö0-9-]+$/.test(normalizedPhrase);
     const criticalSingleWordPhrases = new Set(["erbjuder", "erbjuds", "fantastisk", "underbar", "magisk", "otrolig"]);
 
     if (style !== "factual" && isSingleWordPhrase && !criticalSingleWordPhrases.has(normalizedPhrase.toLowerCase())) continue;
-
-    // Skip if phrase is exempt for this writing style
-    if (exempt.has(phrase.toLowerCase())) continue;
+    if (!shouldBlockPhraseForStyle(normalizedPhrase, style, platform)) continue;
     // Skip if phrase is in allowed phrases (respect broker's personal style)
     if (styleProfile?.allowedPhrases?.some((allowed: string) => phrase.toLowerCase().includes(allowed.toLowerCase()))) {
       continue;
@@ -3217,9 +3214,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Fixed model: All users get GPT-5.2 with thinking mode where appropriate
       const aiModel = "gpt-5.2";
-      const exemptCount = getExemptPhrases(style).size;
+      const activeBlockedCount = countEvidenceBackedBlockedPhrases(style, platform);
+      const languageEvidence = getBrokerLanguageEvidenceSnapshot(style, platform);
       console.log(`[Model] Plan: ${plan}, Using: ${aiModel} (fixed)`);
-      console.log(`[Style] ${style} — ${FORBIDDEN_PHRASES.length - exemptCount} aktiva förbjudna fraser (${exemptCount} undantagna)`);
+      console.log(`[Style] ${style} — ${activeBlockedCount} aktiva förbjudna fraser (evidensstyrda)`);
+      console.log(`[Language Data] accepted=${languageEvidence.accepted.length}, cliches=${languageEvidence.cliches.length}`);
 
       // === REASONING EFFORT PER STIL ===
       // Responses API med reasoning (o1/o3-modeller) stödjer INTE temperature.
@@ -3669,9 +3668,10 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const compactNegativeExample = compactExamplesForPrompt([negativeExample], 1, 900)[0] || negativeExample;
       const compactPositiveExample = compactExamplesForPrompt([positiveExample], 1, 1500)[0] || positiveExample;
       const compactRetryExamples = compactExamplesForPrompt(matchedExamples, 3, 950);
+      const brokerLanguagePolicyPrompt = buildBrokerLanguagePolicyPrompt(style, platform);
 
       // Build content strings once — reused for primary generation and quality gate retry
-      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
+      const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${brokerLanguagePolicyPrompt}\n\n${blueprintDeveloperAddendum}`;
       const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - använd som struktur, inte som checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${compactRetryExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${compactNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${compactPositiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
@@ -4161,6 +4161,8 @@ Svara med JSON:
               targetMinWords: Math.max(selectedCandidate.wordCount, minimumPublishableWordMin),
               personalStylePrompt,
               propertyType: resolvedBlueprint.propertyType,
+              writingStyle: style,
+              platform,
             }),
             max_output_tokens: 5000,
             text: { format: { type: "json_object" } }
@@ -4170,7 +4172,7 @@ Svara med JSON:
             outputText: polishCompletion.output_text,
             parseJson: safeJsonParse,
             extractMarketingText: extractGeneratedMarketingText,
-            finalizeText: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }),
+            finalizeText: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }, platform),
           });
           const polishedText = polishedDraftText
             ? await finalizeMainMarketingText(polishedDraftText, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition)
@@ -4180,7 +4182,7 @@ Svara med JSON:
               currentResult: result,
               polishedRaw,
               polishedText,
-              sanitizeField: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { nullIfInvalid: true }),
+              sanitizeField: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { nullIfInvalid: true }, platform),
               validateResult: (value) => validateOptimizationResult(value, platform, minimumPublishableWordMin, targetWordMax, style),
               getNonWordCountViolations,
               analyzeTextQuality,
@@ -4314,8 +4316,8 @@ Svara med JSON:
       // Rensa alla extra textfält också
       for (const field of ['socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd', 'headline']) {
         if (result[field]) {
-          const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
-          result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", sanitized, style);
+          const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true }, platform);
+          result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd" | "headline", sanitized, style, platform);
         }
       }
 
@@ -4360,6 +4362,7 @@ Svara med JSON:
               {
                 styleProfile: personalStyle?.styleProfile,
                 writingStyle: style,
+                platform,
                 propertyType: resolvedBlueprint.propertyType,
                 personalStylePrompt,
                 targetAudience: resolvedBlueprint.audience,
@@ -4475,6 +4478,7 @@ Svara med JSON:
             {
               styleProfile: personalStyle?.styleProfile,
               writingStyle: style,
+              platform,
               propertyType: resolvedBlueprint.propertyType,
               personalStylePrompt,
               targetAudience: resolvedBlueprint.audience,
@@ -4618,7 +4622,7 @@ Svara med JSON:
             input: [
               {
                 role: "developer",
-                content: FACT_CHECK_PROMPT
+                content: `${FACT_CHECK_PROMPT}\n\n${buildBrokerLanguagePolicyPrompt(style, platform)}`
               },
               {
                 role: "user",
@@ -4756,14 +4760,15 @@ Svara med JSON:
 
       finalShowingInvitation = polishAuxFieldText(
         "showingInvitation",
-        sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true }),
-        style
+        sanitizeGeneratedMarketingField(finalShowingInvitation, personalStyle?.styleProfile, style, { nullIfInvalid: true }, platform),
+        style,
+        platform
       );
       result.showingInvitation = finalShowingInvitation;
 
       for (const field of ['socialCopy', 'instagramCaption', 'shortAd', 'headline']) {
-        const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true });
-        result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "shortAd" | "headline", sanitized, style);
+        const sanitized = sanitizeGeneratedMarketingField(result[field], personalStyle?.styleProfile, style, { nullIfInvalid: true }, platform);
+        result[field] = polishAuxFieldText(field as "socialCopy" | "instagramCaption" | "shortAd" | "headline", sanitized, style, platform);
       }
 
       result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
@@ -4947,6 +4952,7 @@ Svara med JSON:
               {
                 styleProfile: personalStyle?.styleProfile,
                 writingStyle: style,
+                platform,
                 propertyType: resolvedBlueprint.propertyType,
                 personalStylePrompt,
                 targetAudience: resolvedBlueprint.audience,
@@ -4967,7 +4973,7 @@ Svara med JSON:
               outputText: rescueCompletion.choices[0]?.message?.content,
               parseJson: safeJsonParse,
               extractMarketingText: extractGeneratedMarketingText,
-              finalizeText: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }),
+              finalizeText: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }, platform),
             });
             const rescuedText = rescuedDraftText
               ? await finalizeMainMarketingText(rescuedDraftText, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition)
@@ -4977,7 +4983,7 @@ Svara med JSON:
                 currentResult: result,
                 rescueRaw,
                 rescuedText,
-                sanitizeField: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { nullIfInvalid: true }),
+                sanitizeField: (value) => sanitizeGeneratedMarketingField(value, personalStyle?.styleProfile, style, { nullIfInvalid: true }, platform),
                 validateResult: (value) => validateMainMarketingText(value, platform, minimumPublishableWordMin, targetWordMax, style),
                 getNonWordCountViolations,
                 analyzeTextQuality,
@@ -5119,7 +5125,7 @@ Svara med JSON:
           const targetedTextCandidateRaw = extractImprovedPromptFromLooseJson(targetedParsed)
             || (typeof targetedParsed?.improvedPrompt === "string" ? targetedParsed.improvedPrompt : "")
             || targetedRaw;
-          const targetedTextCandidateSanitized = sanitizeGeneratedMarketingField(targetedTextCandidateRaw, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true });
+          const targetedTextCandidateSanitized = sanitizeGeneratedMarketingField(targetedTextCandidateRaw, personalStyle?.styleProfile, style, { allowParagraphs: true, nullIfInvalid: true }, platform);
           const targetedTextCandidate = targetedTextCandidateSanitized
             ? await finalizeMainMarketingText(targetedTextCandidateSanitized, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition)
             : null;
@@ -5533,7 +5539,7 @@ Svara med json i formatet:
         emergencyText = fallbackPrompt;
       }
       const sanitizedEmergencyText = emergencyText
-        ? (sanitizeGeneratedMarketingField(emergencyText, undefined, fallbackStyle, { allowParagraphs: true, nullIfInvalid: true }) || addParagraphs(emergencyText))
+        ? (sanitizeGeneratedMarketingField(emergencyText, undefined, fallbackStyle, { allowParagraphs: true, nullIfInvalid: true }, req.body?.platform) || addParagraphs(emergencyText))
         : "";
       if (sanitizedEmergencyText && !res.headersSent) {
         const emergencyPayload = {
@@ -5685,7 +5691,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
       let parsed: any;
       try { parsed = safeJsonParse(raw); } catch { parsed = {}; }
 
-      const rewritten = sanitizeGeneratedMarketingField(parsed.rewritten, personalStyle?.styleProfile, style) || selectedText;
+      const rewritten = sanitizeGeneratedMarketingField(parsed.rewritten, personalStyle?.styleProfile, style, undefined, req.body?.platform) || selectedText;
 
       // More robust text replacement - handle edge cases
       let newFullText = fullText;
@@ -6647,7 +6653,7 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
       rawImprovedText = rawImprovedText.replace(/^```[\s\S]*?\n/, "").replace(/\n```$/, ""); // code blocks
       rawImprovedText = rawImprovedText.replace(/^[""\u201C]|[""\u201D]$/g, ""); // smart quotes
       rawImprovedText = rawImprovedText.replace(/^"|"$/g, ""); // regular quotes
-      const improvedText = sanitizeGeneratedMarketingField(rawImprovedText.trim(), personalStyle?.styleProfile, style) || selectedText;
+      const improvedText = sanitizeGeneratedMarketingField(rawImprovedText.trim(), personalStyle?.styleProfile, style, undefined, req.body?.platform) || selectedText;
 
       // Track text edit usage
       await storage.incrementUsage(user.id, 'textEdits');

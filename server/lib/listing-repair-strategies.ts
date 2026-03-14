@@ -1,3 +1,5 @@
+import { buildBrokerLanguagePolicyPrompt, type WritingStyle } from "./text-rules";
+
 export type ListingRepairStrategy =
   | "opening_rewrite"
   | "location_rewrite"
@@ -119,6 +121,7 @@ export function buildSpecializedRepairPrompt(
     context: {
         styleProfile?: any;
         writingStyle: string;
+        platform?: string;
         propertyType: string;
         personalStylePrompt?: string;
         targetAudience?: string | null;
@@ -131,12 +134,15 @@ export function buildSpecializedRepairPrompt(
     const requiredFactsNote = Array.isArray(context.requiredFacts) && context.requiredFacts.length > 0
         ? `FAKTA SOM MÅSTE BEVARAS:\n- ${context.requiredFacts.join("\n- ")}`
         : "";
+    const style: WritingStyle = context.writingStyle === "factual" || context.writingStyle === "selling" ? context.writingStyle : "balanced";
+    const languagePolicyNote = buildBrokerLanguagePolicyPrompt(style, context.platform);
 
     const baseSystem = `Du är en expert på att förfina svenska fastighetstexter för ${context.propertyType}. 
 ${writingStyleNote}
 ${styleNote}
 ${audienceNote}
 ${requiredFactsNote}
+${languagePolicyNote}
 
 Din uppgift är att korrigera ett specifikt problem i texten nedan. Ändra bara det som är nödvändigt för att lösa problemet och behåll resten av texten intakt. Det är extremt viktigt att du bibehåller användarens personliga stil även under reparationen.`;
 

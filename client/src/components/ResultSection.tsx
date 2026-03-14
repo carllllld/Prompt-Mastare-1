@@ -26,7 +26,7 @@ function CopyCard({ title, icon: Icon, text, iconColor, delay }: {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: delay }}>
+    <div className="pro-card pro-card-premium rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: delay }}>
       <div className="px-5 py-3 border-b flex justify-between items-center" style={{ borderColor: "#E8E5DE" }}>
         <div className="flex items-center gap-2">
           <Icon className="w-3.5 h-3.5" style={{ color: iconColor }} />
@@ -323,7 +323,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       )}
 
       {/* ── 2. OBJEKTBESKRIVNING (editable) ── */}
-      <div className="bg-white rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
+      <div className="pro-card pro-card-premium rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
         <div className="px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4" style={{ color: "#2D6A4F" }} />
