@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { sessions } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { SESSION_COOKIE_NAME } from "./config";
 
 interface Client {
   ws: WebSocket;
@@ -206,7 +207,7 @@ async function getSessionUserId(req: IncomingMessage): Promise<string | null> {
       if (key) cookies[key.trim()] = decodeURIComponent(val.join("="));
     });
 
-    const rawSid = cookies["connect.sid"] || "";
+    const rawSid = cookies[SESSION_COOKIE_NAME] || cookies["connect.sid"] || "";
     if (!rawSid) return null;
 
     // Strip the s: prefix added by cookie-session signing

@@ -77,16 +77,52 @@ export const insertPersonalStyleSchema = createInsertSchema(personalStyles).omit
 export type PersonalStyle = typeof personalStyles.$inferSelect;
 export type InsertPersonalStyle = z.infer<typeof insertPersonalStyleSchema>;
 
-export const optimizeRequestSchema = z.object({
-  prompt: z.string().min(1, "Please enter a prompt to optimize"),
-  type: z.string(),
-  platform: z.string(),
+const optimizeRequestBaseSchema = z.object({
+  prompt: z.string().trim().min(1, "Please enter a prompt to optimize").max(12000, "Prompt is too long"),
+  type: z.string().trim().min(1, "Type is required").max(50, "Type is too long"),
+  platform: z.preprocess(
+    (value) => typeof value === "string" ? value.trim().toLowerCase() : value,
+    z.enum(["hemnet", "booli"])
+  ),
   writingStyle: z.enum(["factual", "balanced", "selling"]).default("balanced"),
-  wordCountMin: z.number().optional(),
-  wordCountMax: z.number().optional(),
-  imageUrls: z.array(z.string()).optional(),
+  wordCountMin: z.number().int().min(50).max(1200).optional(),
+  wordCountMax: z.number().int().min(50).max(1200).optional(),
+  imageUrls: z.array(z.string().url("Invalid image URL").max(2000, "Image URL too long")).max(5, "Maximum 5 images allowed").optional(),
   propertyData: z.record(z.any()).optional(),
-  model: z.string().optional(), // Legacy field — always GPT-5.2
+  model: z.string().optional(),
+});
+
+export const optimizeRequestSchema = optimizeRequestBaseSchema.superRefine((data, ctx) => {
+  if (
+    typeof data.wordCountMin === "number"
+    && typeof data.wordCountMax === "number"
+    && data.wordCountMin > data.wordCountMax
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "wordCountMin cannot be greater than wordCountMax",
+      path: ["wordCountMin"],
+    });
+  }
+
+  if (data.propertyData) {
+    const keys = Object.keys(data.propertyData);
+    if (keys.length > 120) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "propertyData has too many fields",
+        path: ["propertyData"],
+      });
+    }
+    const serialized = JSON.stringify(data.propertyData);
+    if (serialized.length > 120_000) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "propertyData payload is too large",
+        path: ["propertyData"],
+      });
+    }
+  }
 });
 
 export const optimizeResponseSchema = z.object({

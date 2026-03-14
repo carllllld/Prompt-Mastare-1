@@ -95,8 +95,17 @@ if (isProduction) {
 
 if (isProduction) app.use(securityHeaders);
 app.use(sanitizeInput);
-app.use("/auth", authRateLimit);
-app.use("/api", apiRateLimit);
+app.use("/auth/login", authRateLimit);
+app.use("/auth/register", authRateLimit);
+app.use("/auth/forgot-password", authRateLimit);
+app.use("/auth/resend-verification", authRateLimit);
+app.use("/auth/reset-password", authRateLimit);
+app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+  if (req.path === "/stripe/webhook" || req.path.startsWith("/email/webhooks")) {
+    return next();
+  }
+  return apiRateLimit(req, res, next);
+});
 app.use("/api/optimize", aiRateLimit);
 
 function validateEnvForProduction() {

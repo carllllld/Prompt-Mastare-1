@@ -1,8 +1,10 @@
 import type { Express } from "express";
 import type { Server } from "http";
+import { randomUUID, timingSafeEqual } from "crypto";
 import Stripe from "stripe";
 import { createClient, type RedisClientType } from "redis";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { analyzeMarketPosition, getMarketTrends2025 } from "./market-intelligence";
 import { analyzeArchitecturalValue } from "./architectural-intelligence";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, MODEL_TEXT_EDIT_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
@@ -27,6 +29,7 @@ import { evaluateBlueprintCoverage } from "./lib/listing-blueprint-coverage";
 import { evaluateInputSignalCoverage } from "./lib/listing-input-signal-coverage";
 import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
 import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
+import { pipelineObservability } from "./lib/listing-pipeline-observability";
 import OpenAI from "openai";
 import { FORBIDDEN_PHRASES, getExemptPhrases, type WritingStyle } from "./lib/text-rules";
 import { findRuleViolations, validateOptimizationResult } from "./lib/text-validation";
@@ -42,6 +45,58 @@ const openai = new OpenAI({
 });
 
 import { extractFirstJsonObject, safeJsonParse, extractGeneratedMarketingText, extractImprovedPromptFromLooseJson } from "./lib/json-guards";
+
+function isValidAdminKey(provided: unknown, expected: string | undefined): boolean {
+  if (!expected || typeof provided !== "string" || !provided) return false;
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const providedBuf = Buffer.from(provided, "utf8");
+  if (expectedBuf.length !== providedBuf.length) return false;
+  return timingSafeEqual(expectedBuf, providedBuf);
+}
+
+let stripeWebhookTableEnsured = false;
+
+async function ensureStripeWebhookTable(): Promise<void> {
+  if (stripeWebhookTableEnsured) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+      event_id text PRIMARY KEY,
+      status text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT NOW(),
+      processed_at timestamptz
+    )
+  `);
+  stripeWebhookTableEnsured = true;
+}
+
+async function acquireStripeWebhookEventLock(eventId: string): Promise<boolean> {
+  await ensureStripeWebhookTable();
+  const result = await pool.query(
+    `INSERT INTO stripe_webhook_events (event_id, status)
+     VALUES ($1, 'processing')
+     ON CONFLICT (event_id) DO NOTHING
+     RETURNING event_id`,
+    [eventId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+async function finalizeStripeWebhookEvent(eventId: string): Promise<void> {
+  await pool.query(
+    `UPDATE stripe_webhook_events
+     SET status = 'processed', processed_at = NOW()
+     WHERE event_id = $1`,
+    [eventId]
+  );
+}
+
+async function releaseStripeWebhookEventLock(eventId: string): Promise<void> {
+  await pool.query(
+    `DELETE FROM stripe_webhook_events
+     WHERE event_id = $1 AND status = 'processing'`,
+    [eventId]
+  );
+}
 
 function isOpenAIInsufficientQuotaError(error: unknown): boolean {
   const err = error as any;
@@ -3048,6 +3103,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
     let failSafeResponseData: any = null;
     let failSafeStrongCandidateData: any = null;
+    let observabilityRunStarted = false;
+    let observabilityRunCompleted = false;
+    const finalizeObservabilityRun = (success: boolean, metrics?: { qualityScore?: number; wordCount?: number }) => {
+      if (!observabilityRunStarted || observabilityRunCompleted) return;
+      observabilityRunCompleted = true;
+      try {
+        pipelineObservability.endRun(success, metrics);
+      } catch (obsErr) {
+        console.warn("[Observability] Failed to end run:", obsErr);
+      }
+    };
     const choosePreferredFailSafePayload = (latest: any, strongest: any) => {
       if (!latest) return strongest;
       if (!strongest) return latest;
@@ -3072,9 +3138,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const user = (req as any).user as User;
       const plan = (user.plan as PlanType) || "free";
+      const incomingPropertyData = req.body?.propertyData;
+      const structuredDataInput = Boolean(incomingPropertyData && typeof incomingPropertyData === "object" && incomingPropertyData.address);
+      pipelineObservability.startRun({
+        runId: randomUUID(),
+        userId: user.id,
+        plan,
+        style: String(req.body?.writingStyle || "balanced"),
+        platform: String(req.body?.platform || "hemnet"),
+        propertyType: typeof incomingPropertyData?.propertyType === "string" ? incomingPropertyData.propertyType : undefined,
+        structuredData: structuredDataInput,
+      });
+      observabilityRunStarted = true;
+      pipelineObservability.startStep("preflight", "input");
 
       // Rate limit check (per minute) — BEFORE stream starts so we can return proper HTTP status
       if (!(await checkOptimizeRateLimit(user.id))) {
+        pipelineObservability.endStep({
+          success: false,
+          actionTaken: "blocked_rate_limit",
+          decisionReason: "optimize rate limit reached",
+        });
+        finalizeObservabilityRun(false);
         return res.status(429).json({
           message: "För många förfrågningar. Vänta en minut och försök igen.",
         });
@@ -3091,6 +3176,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const limits = PLAN_LIMITS[plan];
       if (usage.textsGenerated >= limits.texts) {
+        pipelineObservability.endStep({
+          success: false,
+          actionTaken: "blocked_monthly_limit",
+          decisionReason: "monthly usage limit reached",
+        });
+        finalizeObservabilityRun(false);
         const upgradeMsg = plan === "free"
           ? `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Pro för 10 genereringar per månad!`
           : `Du har nått din månadsgräns av ${limits.texts} genereringar. Uppgradera till Premium för 25 genereringar per månad!`;
@@ -3110,6 +3201,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           }
         });
       }
+      pipelineObservability.endStep({
+        success: true,
+        actionTaken: "preflight_passed",
+      });
 
       const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls } = req.body;
       const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
@@ -3263,6 +3358,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       console.log(`[Config] Publishable min words for style ${style}: ${minimumPublishableWordMin}`);
 
       sendProgress(1, 7, "Förbereder generering...");
+      pipelineObservability.startStep("disposition_and_plan_prep", "generation");
 
       // === LEGACY AI PIPELINE (FULL PROMPT ENGINEERING) ===
       const propertyData = req.body.propertyData;
@@ -3313,6 +3409,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           throw new Error("[Step 1] Extraktion misslyckades: kunde inte bygga disposition från fri text.");
         }
       }
+      pipelineObservability.endStep({
+        success: true,
+        actionTaken: propertyData && propertyData.address ? "structured_data_fast_path" : "ai_extraction_path",
+        cacheHit: Boolean(propertyData && propertyData.address),
+      });
 
       sendProgress(2, 7, "Analyserar fastighetsdata...");
 
@@ -5318,6 +5419,22 @@ Svara med json i formatet:
         console.warn("[Pipeline Warnings]", warnings);
       }
       console.log("[Agent Run Summary]", summarizeAgentRun(runState));
+      if (strongCandidateFastPath) {
+        pipelineObservability.recordFastPath();
+      }
+      if (factCheckExecuted) {
+        pipelineObservability.recordFeature("fact-check");
+      }
+      if (plan !== "free" && !strongCandidateFastPath) {
+        pipelineObservability.recordFeature("final-broker-audit");
+      }
+      if (warnings.some((warning) => warning.includes("[Final Broker Audit Rescue]"))) {
+        pipelineObservability.recordRescueAttempt();
+      }
+      finalizeObservabilityRun(true, {
+        qualityScore: typeof finalBrokerAuditScore === "number" ? finalBrokerAuditScore : analyzeTextQuality(result.improvedPrompt || ""),
+        wordCount: responseData.wordCount,
+      });
 
       let responseSettled = false;
       let successfulDeliverySent = false;
@@ -5364,6 +5481,7 @@ Svara med json i formatet:
       }
     } catch (err: any) {
       console.error("Optimize error:", err);
+      pipelineObservability.recordError("optimize_pipeline", err instanceof Error ? err : String(err), true, "fail-safe-or-error-response");
       const preferredFailSafePayload = choosePreferredFailSafePayload(failSafeResponseData, failSafeStrongCandidateData);
       const canReturnFailSafe = Boolean(preferredFailSafePayload) && (!res.headersSent || wantsStream);
       if (canReturnFailSafe) {
@@ -5388,6 +5506,10 @@ Svara med json i formatet:
         } else {
           res.json(safePayload);
         }
+        finalizeObservabilityRun(true, {
+          qualityScore: typeof safePayload?.fail_safe_meta?.qualityScore === "number" ? safePayload.fail_safe_meta.qualityScore : undefined,
+          wordCount: typeof safePayload?.wordCount === "number" ? safePayload.wordCount : undefined,
+        });
         return;
       }
       const fallbackStyle: WritingStyle = req.body?.writingStyle === "factual" || req.body?.writingStyle === "selling"
@@ -5439,6 +5561,10 @@ Svara med json i formatet:
         } else {
           res.json(emergencyPayload);
         }
+        finalizeObservabilityRun(true, {
+          qualityScore: analyzeTextQuality(sanitizedEmergencyText),
+          wordCount: emergencyPayload.wordCount,
+        });
         return;
       }
       if (wantsStream) {
@@ -5450,6 +5576,7 @@ Svara med json i formatet:
       } else {
         res.status(err.statusCode || 500).json({ message: err.message || "Optimering misslyckades", code: err.code || null, upstreamQuota: Boolean(err.upstreamQuota) });
       }
+      finalizeObservabilityRun(false);
     }
   });
 
@@ -5766,10 +5893,11 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
   // Admin password reset (requires ADMIN_KEY)
   app.post("/api/admin/reset-password", async (req, res) => {
     try {
-      const adminKey = req.headers['x-admin-key'] as string || req.query.adminKey as string;
+      const adminHeader = req.headers["x-admin-key"];
+      const adminKey = Array.isArray(adminHeader) ? adminHeader[0] : adminHeader;
       const expectedKey = process.env.ADMIN_KEY;
 
-      if (!expectedKey || adminKey !== expectedKey) {
+      if (!isValidAdminKey(adminKey, expectedKey)) {
         return res.status(403).json({ message: "Invalid admin key" });
       }
 
@@ -5907,6 +6035,16 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
     }
 
     try {
+      const eventId = event.id;
+      if (!eventId) {
+        return res.status(400).json({ message: "Webhook event saknar ID" });
+      }
+
+      const lockAcquired = await acquireStripeWebhookEventLock(eventId);
+      if (!lockAcquired) {
+        return res.json({ received: true, duplicate: true });
+      }
+
       switch (event.type) {
         case "checkout.session.completed": {
           const session = event.data.object as Stripe.Checkout.Session;
@@ -5985,8 +6123,16 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         }
       }
 
+      await finalizeStripeWebhookEvent(eventId);
       res.json({ received: true });
     } catch (err) {
+      try {
+        if (event?.id) {
+          await releaseStripeWebhookEventLock(event.id);
+        }
+      } catch (releaseErr) {
+        console.error("Webhook lock release error:", releaseErr);
+      }
       console.error("Webhook processing error:", err);
       res.status(500).json({ message: "Webhook processing failed" });
     }
@@ -6337,13 +6483,13 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
   // Admin endpoint to set user plan manually (no Stripe required)
   // Usage: POST /api/admin/set-plan
   // Body: { userId: "user-id", plan: "pro" } OR { email: "user@example.com", plan: "pro" }
-  // Query param: ?adminKey=YOUR_SECRET_KEY (set ADMIN_KEY env variable)
   app.post("/api/admin/set-plan", async (req, res) => {
     try {
-      const adminKey = req.headers['x-admin-key'] as string || req.query.adminKey as string;
+      const adminHeader = req.headers["x-admin-key"];
+      const adminKey = Array.isArray(adminHeader) ? adminHeader[0] : adminHeader;
       const expectedKey = process.env.ADMIN_KEY;
 
-      if (!expectedKey || adminKey !== expectedKey) {
+      if (!isValidAdminKey(adminKey, expectedKey)) {
         return res.status(403).json({ message: "Invalid admin key" });
       }
 

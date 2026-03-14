@@ -36,6 +36,7 @@ function run(): number {
   const securityMiddleware = exists("server/middleware/security.ts") ? read("server/middleware/security.ts") : "";
   const monitoring = exists("server/lib/monitoring.ts") ? read("server/lib/monitoring.ts") : "";
   const replitConfig = exists(".replit") ? read(".replit") : "";
+  const sharedSchema = exists("shared/schema.ts") ? read("shared/schema.ts") : "";
 
   const requiredScripts = ["test", "check", "build", "start"];
   const missingScripts = requiredScripts.filter((name) => !scripts[name]);
@@ -97,6 +98,32 @@ function run(): number {
     detail: hasEmailSignatureImplementation ? "Signaturverifiering verkar implementerad." : "Signaturverifiering är inte implementerad.",
   });
 
+  const allowsAdminKeyQuery = includesAny(routesTs, [
+    "req.query.adminKey",
+    "Query param: ?adminKey=",
+  ]);
+  results.push({
+    id: "admin-key-header-only",
+    level: allowsAdminKeyQuery ? "fail" : "pass",
+    title: "Adminnyckel endast via header",
+    detail: allowsAdminKeyQuery
+      ? "Adminnyckel kan skickas via query-param."
+      : "Adminnyckel kräver x-admin-key header.",
+  });
+
+  const hasStripeIdempotency = includesAny(routesTs, [
+    "acquireStripeWebhookEventLock(",
+    "finalizeStripeWebhookEvent(",
+  ]);
+  results.push({
+    id: "stripe-webhook-idempotency",
+    level: hasStripeIdempotency ? "pass" : "fail",
+    title: "Stripe webhook-idempotens",
+    detail: hasStripeIdempotency
+      ? "Webhook events dedupliceras innan processning."
+      : "Webhook-idempotens saknas.",
+  });
+
   const securityMiddlewareDefined = securityMiddleware.length > 0;
   const securityMiddlewareUsed = includesAny(indexTs + routesTs, [
     "securityHeaders",
@@ -114,6 +141,71 @@ function run(): number {
     detail: securityMiddlewareDefined && securityMiddlewareUsed
       ? "Definierad middleware används i appflödet."
       : "Säkerhetsmiddleware finns men full koppling kan saknas.",
+  });
+
+  const hasAuthGlobalLimit = indexTs.includes('app.use("/auth", authRateLimit)');
+  const hasScopedAuthLimits = includesAny(indexTs, [
+    'app.use("/auth/login", authRateLimit)',
+    'app.use("/auth/register", authRateLimit)',
+  ]);
+  results.push({
+    id: "auth-rate-limit-scoped",
+    level: hasAuthGlobalLimit || !hasScopedAuthLimits ? "warn" : "pass",
+    title: "Auth rate-limit scoped",
+    detail: hasAuthGlobalLimit || !hasScopedAuthLimits
+      ? "Auth rate-limit är inte tydligt scoped till riskendpoints."
+      : "Auth rate-limit är scoped till login/register/reset.",
+  });
+
+  const hasStrictOptimizeSchema = includesAny(sharedSchema, [
+    'z.enum(["hemnet", "booli"])',
+    "Invalid image URL",
+    "Maximum 5 images allowed",
+    "wordCountMin cannot be greater than wordCountMax",
+  ]);
+  results.push({
+    id: "optimize-schema-hardening",
+    level: hasStrictOptimizeSchema ? "pass" : "warn",
+    title: "Optimize-schema härdning",
+    detail: hasStrictOptimizeSchema
+      ? "Inputschema för optimize har plattformsvalidering, URL-validering och gränskontroller."
+      : "Optimize-schema saknar någon av de viktiga gränskontrollerna.",
+  });
+
+  const hasObservabilityWiring = includesAny(routesTs, [
+    "pipelineObservability.startRun(",
+    "pipelineObservability.startStep(",
+    "finalizeObservabilityRun(",
+  ]);
+  results.push({
+    id: "pipeline-observability-wiring",
+    level: hasObservabilityWiring ? "pass" : "warn",
+    title: "Pipeline-observability koppling",
+    detail: hasObservabilityWiring
+      ? "Optimize-pipeline är kopplad till run/step-observability."
+      : "Observability är definierad men koppling i optimize-pipeline saknas.",
+  });
+
+  const hasQuotaRefillScript = typeof scripts["quota:refill"] === "string"
+    && scripts["quota:refill"].includes("script/refill-quota.ts")
+    && exists("script/refill-quota.ts");
+  results.push({
+    id: "quota-refill-operations-script",
+    level: hasQuotaRefillScript ? "pass" : "warn",
+    title: "Kvotpåfyllning via shell-script",
+    detail: hasQuotaRefillScript
+      ? "Driftscript för kvotpåfyllning finns och är kopplat i package scripts."
+      : "Kvotpåfyllningsscript saknas eller är inte kopplat i package scripts.",
+  });
+
+  const hasOperationsRunbook = exists("docs/operations-runbook.md");
+  results.push({
+    id: "operations-runbook",
+    level: hasOperationsRunbook ? "pass" : "warn",
+    title: "Operativ runbook",
+    detail: hasOperationsRunbook
+      ? "Runbook för incident, release och quota-åtgärder finns."
+      : "Operativ runbook saknas.",
   });
 
   const hasSimulatedMonitoring = includesAny(monitoring, [
