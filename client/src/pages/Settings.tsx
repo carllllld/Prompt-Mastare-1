@@ -199,22 +199,28 @@ export default function Settings() {
 
   const planBenefits: Record<AccountDetails["plan"], string[]> = {
     free: [
-      "2 genereringar per månad",
-      "5 textformat per generering",
+      "2 genereringar per månad (5 texter per generering)",
+      "Klyschfilter för svensk mäklarprosa",
       "Textlängd 300–450 ord",
     ],
     pro: [
-      "10 genereringar per månad",
+      "10 genereringar per månad (5 texter per generering)",
       "40 AI-textredigeringar per månad",
-      "Personlig skrivstil och adressuppslag",
+      "Adressuppslag (läge, kollektivtrafik, närområde)",
+      "Bildanalys (valfritt)",
+      "Personlig skrivstil",
       "Team-samarbete",
+      "Kvalitetskontroll och förbättringsförslag (vid behov)",
       "Textlängd 200–600 ord",
     ],
     premium: [
-      "25 genereringar per månad",
+      "25 genereringar per månad (5 texter per generering)",
       "120 AI-textredigeringar per månad",
-      "Personlig skrivstil och adressuppslag",
+      "Adressuppslag (läge, kollektivtrafik, närområde)",
+      "Bildanalys (valfritt)",
+      "Personlig skrivstil",
       "Team-samarbete",
+      "Kvalitetskontroll och förbättringsförslag (vid behov)",
       "Textlängd 200–800 ord",
     ],
   };

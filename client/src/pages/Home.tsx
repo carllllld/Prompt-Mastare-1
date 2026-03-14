@@ -26,18 +26,33 @@ import { useToast } from "@/hooks/use-toast";
 const BEFORE_AFTER = [
   {
     label: "Objektbeskrivning",
-    before: `Välkommen till denna fantastiska bostad med ljus och rymd. Här bor du i ett attraktivt område med närhet till det mesta och ett kök som passar både vardag och fest. Planlösningen är väl genomtänkt och hemmet erbjuder allt du kan önska för ett bekvämt boende. Kontakta mäklaren för mer information.`,
-    after: `På Storgatan 12, 3 tr väntar en välplanerad trea om 76 kvm med balkong i söderläge och ett lugnt gårdsläge. Vardagsrummet får fint ljus från tre fönsterpartier och har ekparkett samt plats för både soffgrupp och matbord. Köket renoverades 2022 med Ballingslöv-luckor, kvartskomposit och vitvaror från Siemens.\n\nSovrummen ligger avskilt mot gård, och badrummet är helkaklat samt uppdaterat 2020. Föreningen är stabil med avgift om 3 900 kr/mån. Läget gör vardagen enkel med Resecentrum på cirka fem minuter och service inom kort promenad.`,
+    before: `Välkommen till denna fantastiska bostad med ljus och rymd. Här bor du i ett attraktivt område med närhet till det mesta. Köket passar både vardag och fest och planlösningen är väl genomtänkt. Missa inte chansen att uppleva denna unika möjlighet!`,
+    after: `Storgatan 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett, plats för soffgrupp och matbord samt utgång till balkong. Köket renoverades 2022 med god arbetsyta, induktionshäll och plats för matbord vid fönster.\n\nTvå sovrum ligger avskilt. Badrummet är helkaklat och uppdaterat 2020. Avgift 3 900 kr/mån.\n\nKommunikationer och service nås inom kort promenad.`,
+  },
+  {
+    label: "Rubrik",
+    before: `Drömboende i toppskick!`,
+    after: `Trea med söderbalkong och renoverat kök`,
   },
   {
     label: "Socialt inlägg",
-    before: `Nu finns en fin lägenhet till salu i ett bra område! Ljus bostad med öppen planlösning och bra känsla. Passar perfekt för dig som vill bo centralt och ha nära till allt. Hör av dig för mer information! #bostad #lägenhet #nytthem`,
-    after: `Storgatan 12, Uppsala — trea om 76 kvm med balkong i söderläge och kök renoverat 2022.\nEkparkett, lugnt gårdsläge och badrum uppdaterat 2020. Avgift 3 900 kr/mån.\nResecentrum ca 5 min bort.\n\n#Uppsala #lägenhet #balkong #tillsalu #hemnet`,
+    before: `Nu finns en fin lägenhet till salu i ett bra område! Ljus och fräsch med perfekt läge. Hör av dig för mer information! #bostad #lägenhet`,
+    after: `Storgatan 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #balkong`,
+  },
+  {
+    label: "Instagram",
+    before: `Drömmer du om ditt nya hem? Den här pärlan måste upplevas på plats! ✨\n\n#nytthem #drömboende`,
+    after: `🏡 Storgatan 12 — trea om 76 kvm med söderbalkong.\n🍳 Kök renoverat 2022 och helkaklat badrum (uppdaterat 2020).\n💬 Avgift 3 900 kr/mån.\n\nVälkommen på visning: [TID].`,
   },
   {
     label: "Visningsinbjudan",
     before: `Varmt välkommen på visning av denna fantastiska lägenhet! Här får du ett hem med härlig känsla och smart planlösning i ett attraktivt område.\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]`,
-    after: `Visning — Storgatan 12, 3 tr, Uppsala.\nTrea om 76 kvm med söderbalkong, kök renoverat 2022 och uppdaterat badrum från 2020.\nLugnt gårdsläge och kort gångavstånd till service och kommunikationer.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]`,
+    after: `Visning — Storgatan 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]`,
+  },
+  {
+    label: "Kortannons",
+    before: `Fin trea i bra område. Balkong. Måste ses!`,
+    after: `Storgatan 12, 3 tr — trea om 76 kvm. Söderbalkong och kök renoverat 2022. Avgift 3 900 kr/mån. Visning: [TID].`,
   },
 ];
 
@@ -372,7 +387,7 @@ export default function Home() {
                 <p className="text-sm font-semibold" style={{ color: "#9A3412" }}>Månadskvoten är slut</p>
                 <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
                   {plan === "free"
-                    ? "Pro ger 10 genereringar, 40 AI-redigeringar, personlig skrivstil, adressuppslag och team-samarbete."
+                    ? "Pro ger 10 genereringar, 40 AI-redigeringar, adressuppslag, bildanalys, personlig skrivstil och team-samarbete."
                     : `Återställs ${userStatus?.resetTime ? new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }) : "nästa månad"}`}
                 </p>
               </div>
@@ -553,7 +568,8 @@ export default function Home() {
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
                               <span>10 texter / mån</span>
                               <span>40 AI-redigeringar</span>
-                              <span>Personlig skrivstil</span>
+                              <span>Adressuppslag</span>
+                              <span>Bildanalys</span>
                               <span>Team-samarbete</span>
                             </div>
                           </div>
@@ -579,6 +595,8 @@ export default function Home() {
                           <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
                             <span>25 texter / mån</span>
                             <span>120 AI-redigeringar</span>
+                            <span>Adressuppslag</span>
+                            <span>Bildanalys</span>
                             <span>Team-samarbete</span>
                             <span>800 ord / text</span>
                           </div>

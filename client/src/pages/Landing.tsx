@@ -3,21 +3,113 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Crown, Check, ArrowRight, Zap, Shield, FileText,
-  Sparkles, BarChart3, Pen, Menu, X,
+  Sparkles, BarChart3, Pen, Menu, X, Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
 
-// ─── BEFORE / AFTER DEMO ───
-const BEFORE_TEXT = `Välkommen till denna fantastiska lägenhet som erbjuder generösa ytor och en härlig balkong. Bostaden präglas av ljusa och luftiga rum som bjuder på en underbar känsla. Det moderna köket är perfekt för den som älskar att laga mat. Här kan du njuta av lugnet i ett attraktivt och eftertraktat område. Missa inte denna unika möjlighet!`;
+const DEMO = [
+  {
+    label: "Rubrik",
+    before: "Drömboende i toppskick!",
+    after: "Trea med söderbalkong och renoverat kök",
+  },
+  {
+    label: "Objektbeskrivning",
+    before:
+      "Välkommen till denna fantastiska lägenhet med generösa ytor och en härlig balkong. Här bor du i ett attraktivt läge med närhet till allt du kan önska. Köket är perfekt för matlagning och hemmet bjuder på en underbar känsla. Missa inte denna unika möjlighet!",
+    after:
+      "Storgatan 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett, plats för soffgrupp och matbord samt utgång till balkong. Köket renoverades 2022 med god arbetsyta, induktionshäll och plats för matbord vid fönster.\n\nTvå sovrum ligger avskilt. Badrummet är helkaklat och uppdaterat 2020. Avgift 3 900 kr/mån.\n\nKommunikationer och service nås inom kort promenad. Visning: [TID].",
+  },
+  {
+    label: "Social text",
+    before:
+      "Nu finns en fin lägenhet till salu! Ljus, fräsch och perfekt för dig som vill bo centralt. Hör av dig för mer information! #bostad #lägenhet",
+    after:
+      "Storgatan 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #balkong",
+  },
+  {
+    label: "Visningsinbjudan",
+    before:
+      "Varmt välkommen på visning av denna fantastiska lägenhet! Ett hem med härlig känsla och smart planlösning.\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]",
+    after:
+      "Visning — Storgatan 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]",
+  },
+  {
+    label: "Kortannons",
+    before: "Fin trea i bra område. Balkong. Måste ses!",
+    after:
+      "Storgatan 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022 och uppdaterat badrum 2020. Avgift 3 900 kr/mån. Visning: [TID].",
+  },
+];
 
-const AFTER_TEXT = `Storgatan 15, 3 tr, Vasastan. Trea om 78 kvm med genomgående planlösning och balkong mot innergård.
+function DemoTabs() {
+  const [activeTab, setActiveTab] = useState(1);
+  const item = DEMO[activeTab];
 
-Köket renoverat 2022 med induktionshäll, kvartskomposit och plats för matbord vid fönstret. Vardagsrummet 24 kvm med fiskbensparkett och stuckaturer — balkongdörr mot söder.
+  return (
+    <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: "#E8E5DE", background: "#F8F6F1" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+            Exempeloutput (förkortad)
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {DEMO.map((t, i) => (
+            <button
+              key={t.label}
+              onClick={() => setActiveTab(i)}
+              className="px-2.5 py-1 text-[11px] rounded-full border transition-all font-medium"
+              style={{
+                background: activeTab === i ? "#2D6A4F" : "#fff",
+                color: activeTab === i ? "#fff" : "#6B7280",
+                borderColor: activeTab === i ? "#2D6A4F" : "#E8E5DE",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-Två sovrum: 14 kvm respektive 10 kvm. Badrum med kakel och golvvärme, renoverat 2020. Avgift 4 200 kr/mån, förening utan lån.
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+        <div className="p-6 border-b md:border-b-0 md:border-r" style={{ borderColor: "#F3F4F6" }}>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-semibold mb-3" style={{ background: "#FEE2E2", color: "#991B1B" }}>
+            Typisk chatt-AI
+          </div>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#4B5563" }}>
+            {item.before}
+          </p>
+          <div className="mt-4 pt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "#F3F4F6" }}>
+            {["generös", "fantastisk", "bjuder på", "unik möjlighet", "perfekt"].map((w) => (
+              <span key={w} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: "#FEE2E2", color: "#991B1B" }}>
+                {w}
+              </span>
+            ))}
+          </div>
+        </div>
 
-Visning söndag 13–14.`;
+        <div className="p-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-semibold mb-3" style={{ background: "#DCFCE7", color: "#166534" }}>
+            OptiPrompt
+          </div>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#4B5563" }}>
+            {item.after}
+          </p>
+          <div className="mt-4 pt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "#F3F4F6" }}>
+            {["fakta först", "plattformstext", "klyschfilter", "redo att publicera"].map((w) => (
+              <span key={w} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: "#DCFCE7", color: "#166534" }}>
+                {w}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── FEATURES ───
 const FEATURES = [
@@ -28,8 +120,8 @@ const FEATURES = [
   },
   {
     icon: Shield,
-    title: "Faktagranskning med AI",
-    desc: "Automatisk kontroll att texten stämmer med dina indata. Fångar faktafel innan publicering. (Pro/Premium)",
+    title: "Kvalitetskontroll mot dina uppgifter",
+    desc: "Kontrollerar texten mot dina indata och korrigerar bara det som avviker. Körs vid behov. (Pro/Premium)",
   },
   {
     icon: Pen,
@@ -38,8 +130,13 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: "Adressuppslag & områdesinfo",
-    desc: "Fyller på kollektivtrafik och närområde från adressen för snabbare, mer relevant lägesdel. (Pro/Premium)",
+    title: "Adressuppslag: läge på 1 klick",
+    desc: "Fyller i kollektivtrafik och närområde från adressen för snabbare, mer relevant lägesdel. (Pro/Premium)",
+  },
+  {
+    icon: Image,
+    title: "Bildanalys (valfritt)",
+    desc: "Lägg till bilder så fångar verktyget detaljer som kan lyftas i texten. (Pro/Premium)",
   },
   {
     icon: Sparkles,
@@ -63,7 +160,7 @@ const PLANS = [
     features: [
       "2 genereringar / månad",
       "5 textformat per generering",
-      "Hemnet + Booli-anpassad huvudtext",
+      "Klyschfilter för svensk mäklarprosa",
       "300–450 ord per text",
     ],
     cta: "Kom igång gratis",
@@ -78,10 +175,11 @@ const PLANS = [
     features: [
       "10 genereringar / månad",
       "40 AI-textredigeringar / månad",
+      "Adressuppslag (läge, kollektivtrafik, närområde)",
+      "Bildanalys (valfritt)",
       "Personlig skrivstil",
-      "Adressuppslag & områdesinfo",
       "Team-samarbete",
-      "Faktagranskning",
+      "Kvalitetskontroll & förbättringsförslag (vid behov)",
       "Valfri textlängd (200–600 ord)",
     ],
     cta: "Välj Pro",
@@ -96,12 +194,12 @@ const PLANS = [
     features: [
       "25 genereringar / månad",
       "120 AI-textredigeringar / månad",
+      "Adressuppslag (läge, kollektivtrafik, närområde)",
+      "Bildanalys (valfritt)",
       "Personlig skrivstil",
-      "Adressuppslag & områdesinfo",
       "Team-samarbete",
-      "Faktagranskning",
+      "Kvalitetskontroll & förbättringsförslag (vid behov)",
       "Valfri textlängd (200–800 ord)",
-      "Förbättringsförslag per text",
     ],
     cta: "Välj Premium",
     tier: "premium" as "premium",
@@ -240,7 +338,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
               { step: "1", title: "Fyll i fastighetsdata", desc: "Adress, yta, rum, skick, balkong, renovering — allt i ett strukturerat formulär." },
-              { step: "2", title: "AI genererar 5 texter", desc: "7-stegs pipeline: extraktion → analys → textgenerering → klyschfilter → expansion → faktagranskning → förbättringsförslag." },
+              { step: "2", title: "AI bygger och skriver", desc: "Disposition + skrivplan → textgenerering → klyschfilter. Pro/Premium får även kvalitetskontroll och förbättringsfeedback vid behov." },
               { step: "3", title: "Kopiera & publicera", desc: "Texterna är redo för Hemnet, Booli, Instagram och visningsinbjudan. Redigera om du vill." },
             ].map((s) => (
               <div key={s.step} className="text-center">
@@ -266,47 +364,10 @@ export default function Landing() {
               Ser du skillnaden?
             </h2>
             <p className="text-sm" style={{ color: "#6B7280" }}>
-              Vänster: typisk AI-text full av klyschor. Höger: OptiPrompt-resultat med faktabaserad svenska.
+              Vänster: generisk chatt-AI. Höger: OptiPrompt som skriver från dina uppgifter och levererar i rätt format.
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* BEFORE */}
-            <div className="bg-white rounded-xl border-2 p-6 relative" style={{ borderColor: "#FCA5A5" }}>
-              <div className="absolute -top-3 left-4 px-3 py-0.5 rounded-full text-xs font-bold" style={{ background: "#FEE2E2", color: "#991B1B" }}>
-                ✗ TYPISK AI-TEXT
-              </div>
-              <p className="text-sm leading-relaxed mt-2" style={{ color: "#4B5563" }}>
-                {BEFORE_TEXT}
-              </p>
-              <div className="mt-4 pt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "#F3F4F6" }}>
-                {["fantastiska", "generösa ytor", "bjuder på", "präglas av", "perfekt", "unika möjlighet", "Välkommen"].map((w) => (
-                  <span key={w} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: "#FEE2E2", color: "#991B1B" }}>
-                    {w}
-                  </span>
-                ))}
-              </div>
-              <p className="text-[10px] mt-2" style={{ color: "#9CA3AF" }}>7 AI-klyschor hittade</p>
-            </div>
-
-            {/* AFTER */}
-            <div className="bg-white rounded-xl border-2 p-6 relative" style={{ borderColor: "#86EFAC" }}>
-              <div className="absolute -top-3 left-4 px-3 py-0.5 rounded-full text-xs font-bold" style={{ background: "#DCFCE7", color: "#166534" }}>
-                ✓ OPTIPROMPT
-              </div>
-              <p className="text-sm leading-relaxed mt-2 whitespace-pre-line" style={{ color: "#4B5563" }}>
-                {AFTER_TEXT}
-              </p>
-              <div className="mt-4 pt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "#F3F4F6" }}>
-                {["adress först", "exakta mått", "årtal", "konkret fakta", "kort & tydligt"].map((w) => (
-                  <span key={w} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: "#DCFCE7", color: "#166534" }}>
-                    {w}
-                  </span>
-                ))}
-              </div>
-              <p className="text-[10px] mt-2" style={{ color: "#6B7280" }}>Faktastyrd och klyschfri ton.</p>
-            </div>
-          </div>
+          <DemoTabs />
         </div>
       </section>
 
@@ -318,7 +379,7 @@ export default function Landing() {
               Byggt för svenska mäklare
             </h2>
             <p className="text-sm max-w-xl mx-auto" style={{ color: "#6B7280" }}>
-              Inte ytterligare ett "klistra in i ChatGPT"-verktyg. OptiPrompt är en 7-stegs AI-pipeline specifikt byggd för svensk fastighetsmarknad.
+              Inte en chatt. Ett publiceringsflöde för objektsbeskrivningar — med klyschfilter, formatmallar och kvalitetskontroller.
             </p>
           </div>
 

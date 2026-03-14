@@ -44,9 +44,9 @@ export default function Terms() {
           <section>
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#1D2939" }}>3. Planer och betalning</h2>
             <ul className="list-disc pl-5 space-y-1">
-              <li><strong>Gratis:</strong> 2 textgenereringar per månad. Ingen betalning krävs.</li>
-              <li><strong>Pro (299 kr/mån):</strong> 10 textgenereringar, personlig skrivstil, områdesanalys, textredigering.</li>
-              <li><strong>Premium (599 kr/mån):</strong> 25 textgenereringar per månad, faktagranskning, förbättringsförslag och längre texter (upp till 800 ord).</li>
+              <li><strong>Gratis:</strong> 2 textgenereringar per månad (5 textformat per generering). Ingen betalning krävs.</li>
+              <li><strong>Pro (299 kr/mån):</strong> 10 textgenereringar, 40 AI-textredigeringar, personlig skrivstil, adressuppslag (läge/kommunikationer/närområde), bildanalys (valfritt) och team-samarbete.</li>
+              <li><strong>Premium (599 kr/mån):</strong> 25 textgenereringar per månad, 120 AI-textredigeringar, längre texter (upp till 800 ord) samt samma Pro-funktioner.</li>
             </ul>
             <p>Betalning sker via Stripe. Prenumerationer förnyas automatiskt varje månad. Du kan avsluta din prenumeration när som helst via kundportalen — den gäller då till slutet av den betalda perioden.</p>
           </section>
