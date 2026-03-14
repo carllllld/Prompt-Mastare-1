@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState } from "react";
 import { api, type OptimizeRequest, type OptimizeResponse } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { ErrorHandler } from "@/lib/error-handler";
@@ -20,6 +20,15 @@ interface ProgressEvent {
 }
 
 export type ProgressCallback = (event: ProgressEvent) => void;
+
+export interface OptimizeUiError {
+  title: string;
+  message: string;
+  code?: string;
+  canRetry: boolean;
+  actionLabel?: string;
+  actionType?: "upgrade" | "wait";
+}
 
 async function streamOptimize(
   data: OptimizeRequest,
@@ -114,12 +123,20 @@ async function streamOptimize(
 export function useOptimize() {
   const { toast } = useToast();
   const progressCallbackRef = useRef<ProgressCallback | undefined>(undefined);
+  const [lastError, setLastError] = useState<OptimizeUiError | null>(null);
 
   const setProgressCallback = useCallback((cb: ProgressCallback | undefined) => {
     progressCallbackRef.current = cb;
   }, []);
 
+  const clearLastError = useCallback(() => {
+    setLastError(null);
+  }, []);
+
   const mutation = useMutation({
+    onMutate: () => {
+      setLastError(null);
+    },
     mutationFn: async (data: OptimizeRequest): Promise<OptimizeResponse> => {
       return streamOptimize(data, progressCallbackRef.current);
     },
@@ -135,15 +152,31 @@ export function useOptimize() {
           description: error.message || 'Du har nått din månadsgräns. Uppgradera för fler genereringar.',
           variant: 'destructive',
         });
+        setLastError({
+          title: "Månadskvot uppnådd",
+          message: error.message || "Du har nått din månadsgräns. Uppgradera för fler genereringar.",
+          code: error.code,
+          canRetry: false,
+          actionLabel: "Uppgradera konto",
+          actionType: "upgrade",
+        });
       } else {
         const appError = ErrorHandler.classifyError(error);
         ErrorHandler.logError(appError, 'useOptimize');
 
         const toastConfig = ErrorHandler.getToastConfig(appError);
         toast(toastConfig);
+        setLastError({
+          title: String(toastConfig.title || "Fel"),
+          message: error.message || appError.userMessage,
+          code: error.code || appError.code,
+          canRetry: !error.upgradeRequired,
+          actionLabel: error.upgradeRequired ? "Uppgradera konto" : error.upstreamQuota ? "Vänta en stund och försök igen" : undefined,
+          actionType: error.upgradeRequired ? "upgrade" : error.upstreamQuota ? "wait" : undefined,
+        });
       }
     },
   });
 
-  return { ...mutation, setProgressCallback };
+  return { ...mutation, setProgressCallback, lastError, clearLastError };
 }

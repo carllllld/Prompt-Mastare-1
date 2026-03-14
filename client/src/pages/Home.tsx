@@ -14,7 +14,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -98,7 +98,7 @@ function BeforeAfterDemo() {
 }
 
 export default function Home() {
-  const { mutate, isPending, setProgressCallback } = useOptimize();
+  const { mutate, isPending, setProgressCallback, lastError, clearLastError } = useOptimize();
   const { data: userStatus } = useUserStatus();
   const { mutate: startCheckout, isPending: isCheckoutPending } = useStripeCheckout();
   const { mutate: openPortal, isPending: isPortalPending } = useStripePortal();
@@ -151,6 +151,8 @@ export default function Home() {
 
   const [loadingMessage, setLoadingMessage] = useState("Förbereder generering...");
   const LOADING_STEPS_COUNT = 7;
+  const progressStep = Math.min(Math.max(loadingStep + 1, 1), LOADING_STEPS_COUNT);
+  const progressPercent = Math.round((progressStep / LOADING_STEPS_COUNT) * 100);
 
   // Wire up real-time streaming progress from the server pipeline
   useEffect(() => {
@@ -189,9 +191,11 @@ export default function Home() {
     setLoadingStep(0);
     setLoadingMessage("Förbereder generering...");
     setLastSubmitData(data);
+    clearLastError();
     mutate(data, {
       onSuccess: (res: OptimizeResponse) => {
         setResult(res);
+        clearLastError();
         queryClient.invalidateQueries({ queryKey: ["/api/user/status"] });
         setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
       },
@@ -387,6 +391,52 @@ export default function Home() {
           </div>
         )}
 
+        {isAuthenticated && lastError && !isPending && (
+          <div className="mb-6 rounded-xl border overflow-hidden" style={{ borderColor: "#FECACA" }}>
+            <div className="px-5 py-4" style={{ background: "#FEF2F2" }}>
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 mt-0.5" style={{ color: "#DC2626" }} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: "#991B1B" }}>{lastError.title}</p>
+                  <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>{lastError.message}</p>
+                  {lastError.code && (
+                    <p className="text-[11px] mt-1.5" style={{ color: "#B91C1C" }}>Kod: {lastError.code}</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    {lastSubmitData && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSubmit(lastSubmitData)}
+                        disabled={isPending}
+                        className="text-xs"
+                        style={{ borderColor: "#FCA5A5", color: "#991B1B", background: "#fff" }}
+                      >
+                        Försök igen
+                      </Button>
+                    )}
+                    {lastError.actionType === "upgrade" && (
+                      <Button
+                        size="sm"
+                        onClick={() => startCheckout(plan === "free" ? "pro" : "premium")}
+                        disabled={isCheckoutPending}
+                        className="text-xs font-semibold"
+                        style={{ background: "#2D6A4F", color: "#fff" }}
+                      >
+                        {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin mr-1.5" /> : null}
+                        {lastError.actionLabel || "Uppgradera konto"}
+                      </Button>
+                    )}
+                    <Link href="/settings" className="text-xs font-medium hover:underline" style={{ color: "#7F1D1D" }}>
+                      Öppna inställningar
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main grid — 12 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-7 items-start">
 
@@ -404,6 +454,16 @@ export default function Home() {
             {/* Loading progress with skeleton */}
             {isPending && (
               <div className="mt-4 pro-card rounded-2xl p-5">
+                <div className="mb-3 flex items-center justify-between text-xs" style={{ color: "#6B7280" }}>
+                  <span className="font-medium">Generering pågår — steg {progressStep}/{LOADING_STEPS_COUNT}</span>
+                  <span>{progressPercent}%</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "#E8E5DE" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${progressPercent}%`, background: "#2D6A4F" }}
+                  />
+                </div>
                 <PromptGenerationSkeleton step={loadingStep} total={LOADING_STEPS_COUNT} message={loadingMessage} />
               </div>
             )}

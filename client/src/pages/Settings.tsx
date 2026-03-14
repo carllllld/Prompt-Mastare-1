@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   FileText, ArrowLeft, User, Crown, Shield, Trash2, Loader2,
-  Check, KeyRound, CreditCard, Calendar, BarChart2,
+  Check, KeyRound, CreditCard, Calendar, BarChart2, Copy,
 } from "lucide-react";
 
 const AVATAR_COLORS = [
@@ -117,6 +117,7 @@ export default function Settings() {
   const [displayName, setDisplayName] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [profileDirty, setProfileDirty] = useState(false);
+  const [userIdCopied, setUserIdCopied] = useState(false);
 
   const { data: details, isLoading } = useQuery<AccountDetails>({
     queryKey: ["/api/account/details"],
@@ -480,6 +481,38 @@ export default function Settings() {
                   <KeyRound className="w-3 h-3 mr-1" />
                   Ändra
                 </Button>
+              </div>
+
+              <div className="py-2 border-b" style={{ borderColor: "#F3F4F6" }}>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-700">User ID</p>
+                    <p className="text-xs text-gray-400 mt-0.5 break-all">{user?.id || "—"}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (!user?.id) return;
+                      try {
+                        await navigator.clipboard.writeText(user.id);
+                        setUserIdCopied(true);
+                        setTimeout(() => setUserIdCopied(false), 1800);
+                        toast({ title: "User ID kopierat" });
+                      } catch {
+                        toast({ title: "Fel", description: "Kunde inte kopiera User ID", variant: "destructive" });
+                      }
+                    }}
+                    disabled={!user?.id}
+                    className="text-xs shrink-0"
+                  >
+                    {userIdCopied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                    {userIdCopied ? "Kopierat" : "Kopiera"}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  Hittas även via /auth/me eller i klienten med useAuth().user.id.
+                </p>
               </div>
 
               <div className="flex items-center justify-between py-2">
