@@ -179,6 +179,17 @@ describe('AI Pipeline Tests', () => {
       expect(cleaned?.toLowerCase()).toContain('laddbox för elbil');
     });
 
+    it('should sanitize forbidden phrase and duplicate punctuation in auxiliary text', () => {
+      const cleaned = polishAuxFieldText(
+        'socialCopy',
+        'Service finns inom räckhåll.. Bussen tar dig till Slussen på cirka 25 minuter..'
+      );
+
+      expect(cleaned?.toLowerCase()).not.toContain('inom räckhåll');
+      expect(cleaned).not.toContain('..');
+      expect(cleaned?.endsWith('.')).toBe(true);
+    });
+
 
     it('should validate AI output quality against the current helper rules', () => {
       const goodOutput = 'Trea om 76 kvm med balkong i västerläge på Storgatan 12, 3 tr, Linköping. Köket renoverades 2022.';

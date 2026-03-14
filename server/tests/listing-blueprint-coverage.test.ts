@@ -31,4 +31,19 @@ describe("listing blueprint coverage", () => {
     expect(result.matched).toBeLessThanOrEqual(1);
     expect(result.missing.length).toBeGreaterThan(1);
   });
+
+  it("counts Swedish number words as coverage for numeric required facts", () => {
+    const result = evaluateBlueprintCoverage(
+      "Planlösningen rymmer fem rum och boarea är 146 kvm med södervänd uteplats.",
+      [
+        "146 kvm",
+        "5 rum",
+      ]
+    );
+
+    expect(result.required).toBe(2);
+    expect(result.matched).toBe(2);
+    expect(result.ratio).toBe(1);
+    expect(result.missing).toHaveLength(0);
+  });
 });

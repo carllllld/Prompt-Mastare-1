@@ -956,6 +956,7 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
   cleaned = replaceWholePhrase(cleaned, "gör det möjligt att", "möjliggör att");
   cleaned = cleaned.replace(/\bunderlättar att ta sig till och från\b/gi, "ger smidiga resvägar");
   cleaned = cleaned.replace(/\bmöjliggör att ta sig till och från\b/gi, "ger smidiga resvägar");
+  cleaned = cleaned.replace(/([.!?]){2,}/g, "$1");
 
   // NYA REGLER FÖR PERFEKTION:
   // 1. Ta bort parentetiska förklaringar (t.ex. "ICA (matbutik)" -> "ICA")
@@ -979,10 +980,14 @@ function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingI
   let value = text.trim();
   if (!value) return null;
 
+  value = cleanForbiddenPhrases(value, null, "balanced").trim();
+  if (!value) return null;
+  value = replaceWholePhrase(value, "inom räckhåll", "nära");
   value = value.replace(/\b(laddplats(?: för elbil)?|laddbox(?: installerad)?)\b/gi, "laddbox för elbil");
   value = value.replace(/\bladdbox för elbil(?:\s+med\s+)?laddbox för elbil\b/gi, "laddbox för elbil");
   value = value.replace(/\b(Söder|Väster|Öster|Norr)\b/g, (m) => m.toLowerCase());
   value = collapseRepeatedPhraseRuns(value);
+  value = value.replace(/([.!?]){2,}/g, "$1");
   value = value.replace(/\s{2,}/g, " ").trim();
 
   if (field === "socialCopy" || field === "instagramCaption") {
@@ -5025,7 +5030,8 @@ Svara med json i formatet:
     } catch (err: any) {
       console.error("Optimize error:", err);
       const preferredFailSafePayload = choosePreferredFailSafePayload(failSafeResponseData, failSafeStrongCandidateData);
-      const canReturnFailSafe = Boolean(preferredFailSafePayload) && (!res.headersSent || wantsStream);
+      const isQualityGateFailure = typeof err?.message === "string" && /\[final gate\]/i.test(err.message);
+      const canReturnFailSafe = Boolean(preferredFailSafePayload) && (!res.headersSent || wantsStream) && !isQualityGateFailure;
       if (canReturnFailSafe) {
         const selectedStrongBaseline = preferredFailSafePayload === failSafeStrongCandidateData && failSafeStrongCandidateData !== failSafeResponseData;
         const safeWarnings = Array.isArray(preferredFailSafePayload.pipelineWarnings) ? preferredFailSafePayload.pipelineWarnings : [];
