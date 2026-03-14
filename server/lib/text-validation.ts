@@ -46,6 +46,20 @@ function detectNarrativeIntegrityIssues(text: string): string[] {
   return issues;
 }
 
+function hasHarmfulRepeatedPhraseRun(text: string): boolean {
+  if (!text) return false;
+  const repeatedPattern = /\b([A-Za-zÅÄÖåäö]{2,}(?:\s+[A-Za-zÅÄÖåäö]{2,}){0,2})\s+\1(?:\s+\1)+\b/gu;
+  for (const match of text.matchAll(repeatedPattern)) {
+    const phrase = String(match[1] || "").trim();
+    if (!phrase) continue;
+    if (/^[A-ZÅÄÖ\s]+$/.test(phrase)) continue;
+    const words = phrase.split(/\s+/).filter(Boolean);
+    if (words.every((word) => word.length <= 2)) continue;
+    return true;
+  }
+  return false;
+}
+
 export function findRuleViolations(text: string, platform: string = "hemnet", style: WritingStyle = "balanced"): string[] {
   const violations: string[] = [];
   const lowerText = text.toLowerCase().trim();
@@ -94,12 +108,14 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     [/\bavgift(?:en)?\s+på\s+\d{1,6}(?!\s*(?:kr|:-|\/mån|\/år|sek))\b/i, 'Avgift saknar enhet (kr/mån, kr/år)'],
     [/\b(?:avgift|driftkostnad|driftskostnad|månadskostnad|kostnad)(?:en)?\s+(?:om|på)\s+(?:\d{1,3}(?:[ \u00A0]\d{3})*|\d{4,7})(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per månad|per år))\b/i, 'Kostnad saknar enhet (kr/mån, kr/år)'],
     [/\b\d{1,3}(?:[ \u00A0]\d{3})?\s+[A-ZÅÄÖ][a-zåäö]{2,}\s+(?:fungerar|ligger|har|är|ger|tar)\b/u, 'Sannolik saknad punkt mellan siffra och ny mening'],
-    [/\b([A-Za-zÅÄÖåäö]{2,}(?:\s+[A-Za-zÅÄÖåäö]{2,}){0,2})\s+\1(?:\s+\1)+\b/u, 'Upprepad fras flera gånger i rad'],
   ];
   for (const [pattern, message] of mechanicalQualityPatterns) {
     if (pattern.test(text)) {
       violations.push(message);
     }
+  }
+  if (hasHarmfulRepeatedPhraseRun(text)) {
+    violations.push('Upprepad fras flera gånger i rad');
   }
 
   const narrativeIntegrityIssues = detectNarrativeIntegrityIssues(text);
@@ -110,6 +126,18 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   const genericBrokerPhraseCount = countGenericBrokerPhrases(text);
   if (genericBrokerPhraseCount >= 2) {
     violations.push(`För många generiska mäklarabstraktioner i huvudtexten (${genericBrokerPhraseCount} träffar)`);
+  }
+
+  if (style === "factual") {
+    const factualStyleDriftPatterns: Array<[RegExp, string]> = [
+      [/\b(charmig|elegant|stilfull|smakfull|lyxig|magisk|underbar|otrolig|fantastisk|drömboende)\b/gi, "Factual-stil: värdeladdade adjektiv ska undvikas."],
+      [/\b(inbjuder till|andas|skapar en känsla av|för den som|livsstil)\b/gi, "Factual-stil: säljande/berättande fraser ska undvikas."],
+    ];
+    for (const [pattern, message] of factualStyleDriftPatterns) {
+      if (pattern.test(text)) {
+        violations.push(message);
+      }
+    }
   }
 
   const exempt = getExemptPhrases(style);

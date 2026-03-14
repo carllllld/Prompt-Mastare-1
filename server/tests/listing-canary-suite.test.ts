@@ -53,6 +53,23 @@ describe("listing canary suite", () => {
         transport: "tunnelbana tio minuter",
       },
     },
+    {
+      name: "villa booli selling",
+      style: "selling" as const,
+      input: {
+        propertyType: "villa",
+        address: "Ekorrvägen 10, Mörtnäs, Värmdö",
+        livingArea: 146,
+        rooms: 6,
+        bedrooms: 3,
+        bathrooms: 2,
+        kitchen: "renoverat kök med köksö",
+        bathroom: "helkaklat badrum",
+        transport: "buss 25 minuter till Slussen",
+        uniqueSellingPoints: "södervänd uteplats, inbyggd jacuzzi, lugnt läge",
+        amenities: ["Willys Värmdö", "Kikka"],
+      },
+    },
   ];
 
   it("keeps canary scenarios publishable without severe non-word violations", () => {

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildGoldenBrokerExamples,
+  computeChatCompletionTokenBudget,
+  computeInlineEditOutputTokenBudget,
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
   countGenericBrokerPhrases,
@@ -10,6 +12,7 @@ import {
   polishAuxFieldText,
   safeJsonParse,
   sanitizeGeneratedMarketingField,
+  shouldSkipFinalRescueRewrite,
   validateOptimizationResult,
 } from '../routes';
 
@@ -23,6 +26,26 @@ describe('AI Pipeline Tests', () => {
       expect(hemnetExamples.toLowerCase()).toContain('villa om');
       expect(booliExamples).toContain('Referensexempel 1');
       expect(booliExamples.toLowerCase()).toContain('vardagsfunktion');
+    });
+
+    it('should scale chat completion token budget by mode and plan', () => {
+      const proRescue = computeChatCompletionTokenBudget(380, 'rescue', 'pro');
+      const premiumRescue = computeChatCompletionTokenBudget(380, 'rescue', 'premium');
+      const proExpansion = computeChatCompletionTokenBudget(380, 'expansion', 'pro');
+
+      expect(premiumRescue).toBeGreaterThanOrEqual(proRescue);
+      expect(proRescue).toBeGreaterThanOrEqual(proExpansion);
+    });
+
+    it('should keep inline edit output budget within bounded range and plan-aware', () => {
+      const selected = 'Köket renoverades 2021 med luckor från Ballingslöv och bänkskiva i komposit.';
+      const proImprove = computeInlineEditOutputTokenBudget(selected, 'pro', 'improve');
+      const premiumImprove = computeInlineEditOutputTokenBudget(selected, 'premium', 'improve');
+      const proRewrite = computeInlineEditOutputTokenBudget(selected, 'pro', 'rewrite');
+
+      expect(proImprove).toBeGreaterThanOrEqual(360);
+      expect(premiumImprove).toBeGreaterThanOrEqual(proImprove);
+      expect(proRewrite).toBeGreaterThanOrEqual(proImprove);
     });
 
     it('should build structured pipeline input from property data', () => {
@@ -302,6 +325,22 @@ describe('AI Pipeline Tests', () => {
       expect(violations.some((v) => v.includes('Upprepad fras'))).toBe(true);
     });
 
+    it('should not flag acronym repetitions as harmful phrase loops', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'BRF BRF BRF med låg belåning och stabil ekonomi.'
+      }, 'hemnet', 1, 500, 'balanced');
+
+      expect(violations.some((v) => v.includes('Upprepad fras'))).toBe(false);
+    });
+
+    it('should flag selling drift in factual style', () => {
+      const violations = validateOptimizationResult({
+        improvedPrompt: 'Lägenheten är charmig och stilfull med planlösning som inbjuder till sociala kvällar.'
+      }, 'booli', 1, 600, 'factual');
+
+      expect(violations.some((v) => v.includes('Factual-stil'))).toBe(true);
+    });
+
     it('should reject a generic or too-thin text as a strong publishable candidate offline', () => {
       const genericThinText = 'En trea om 76 kvm. Kök renoverat 2022. ICA nära.';
 
@@ -414,6 +453,88 @@ describe('AI Pipeline Tests', () => {
       expect(text).not.toContain('..');
     });
 
+    it('should rewrite weak location-list ending into contextual closing during finalization', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Storgatan 12, Linköping. En ljus trea med bra planlösning och renoverat kök. ICA Supermarket.',
+        'hemnet',
+        undefined,
+        'balanced',
+        { allowParagraphs: true },
+        {
+          property: {
+            size: 76,
+            rooms: 3,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            area: 'Centrala Linköping',
+            transport: 'Resecentrum fem minuter bort',
+            amenities: ['ICA Supermarket'],
+          },
+        }
+      );
+
+      const text = finalized || '';
+      const lastSentence = text.split(/(?<=[.!?])\s+/).filter(Boolean).slice(-1)[0] || '';
+      expect(lastSentence.toLowerCase()).not.toMatch(/^(ica|coop|willys|hemköp|matbutik)\b/);
+      expect(lastSentence.toLowerCase()).toMatch(/vardag|kommunikation|resecentrum|smidig/);
+    });
+
+    it('should keep factual style free from narrative hook phrasing in finalization', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Villa om 146 kvm på Ekorrvägen 10 med södervänd uteplats och inbyggd jacuzzi.',
+        'booli',
+        undefined,
+        'factual',
+        { allowParagraphs: true },
+        {
+          property: {
+            address: 'Ekorrvägen 10, Mörtnäs, Värmdö',
+            size: 146,
+            rooms: 5,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+        }
+      );
+
+      const text = (finalized || '').toLowerCase();
+      expect(text).not.toContain('sätter tonen direkt');
+    });
+
+    it('should strengthen weak opening in selling style using disposition anchors', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Detta är en välplanerad bostad med bra känsla i rummen.',
+        'booli',
+        undefined,
+        'selling',
+        { allowParagraphs: true },
+        {
+          property: {
+            type: 'villa',
+            address: 'Ekorrvägen 10, Mörtnäs, Värmdö',
+            size: 146,
+            layout: 'öppna sociala ytor',
+            preferred_outdoor_term: 'södervänd uteplats',
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+          unique_features: ['inbyggd jacuzzi'],
+        }
+      );
+
+      const text = finalized || '';
+      const firstSentence = text.split(/(?<=[.!?])\s+/).find(Boolean) || '';
+      expect(firstSentence.toLowerCase()).toMatch(/ekorrvägen 10|villa om 146|södervänd uteplats/);
+    });
+
     it('should flag generic broker abstractions that lack concrete evidentiary density', () => {
       const genericCount = countGenericBrokerPhrases(
         'Planlösningen skapar naturliga flöden och ger flexibla användningsmöjligheter. Helheten känns lättmöblerad och väl placerad för ett vardagsliv med trevligt umgänge.'
@@ -426,6 +547,30 @@ describe('AI Pipeline Tests', () => {
       const borderlineText = 'Tallstigen 4, Värmdö. Villa med uteplats i söderläge och trädgård. Köket renoverades 2021 och badrummet uppdaterades 2020. Planlösningen skapar naturliga flöden mellan rummen och ger flexibla användningsmöjligheter för familjen. Vardagsrummet har plats för både soffgrupp och matbord medan sovrummen ligger samlade i den mer privata delen av huset. Uteplatsen blir en självklar del av huset under sommarhalvåret och tomten ger bra förutsättningar för sol. Läget är väl placerat för ett vardagsliv där skola, service och kommunikationer gör det lätt att kombinera pendling, ärenden och fritid. Fiber finns installerat och parkering finns på tomten.';
 
       expect(isStrongPublishableCandidate(borderlineText, 'hemnet', 195, 450, 'balanced', 'pro')).toBe(false);
+    });
+
+    it('should skip final rescue rewrite for advisory-only audit issues when local score is high', () => {
+      const decision = shouldSkipFinalRescueRewrite({
+        publish_ready: false,
+        issues: [
+          'Öppningen kunde vara mer direkt.',
+          'Lägesstycket känns något uppradande.'
+        ]
+      }, 0.89);
+
+      expect(decision).toBe(true);
+    });
+
+    it('should not skip final rescue rewrite when audit issues suggest factual risk', () => {
+      const decision = shouldSkipFinalRescueRewrite({
+        publish_ready: false,
+        issues: [
+          'Fakta om boarea motsäger dispositionen.',
+          'Avgift saknar enhet.'
+        ]
+      }, 0.91);
+
+      expect(decision).toBe(false);
     });
   });
 

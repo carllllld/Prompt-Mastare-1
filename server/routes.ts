@@ -230,6 +230,55 @@ function getStrongPublishableWordFloor(minimumPublishableWordMin: number, plan: 
   return minimumPublishableWordMin;
 }
 
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function computeOutputTokenBudget(targetWordMax: number, includeAuxFields: boolean): number {
+  const safeWordMax = Number.isFinite(targetWordMax) && targetWordMax > 0 ? targetWordMax : 500;
+  const mainTextTokenBudget = Math.round(safeWordMax * 2.4);
+  const auxTokenBudget = includeAuxFields ? 950 : 240;
+  return clampNumber(
+    mainTextTokenBudget + auxTokenBudget,
+    includeAuxFields ? 2200 : 900,
+    includeAuxFields ? 5200 : 2600
+  );
+}
+
+function computeChatCompletionTokenBudget(targetWordMax: number, mode: "surgical" | "expansion" | "rescue", plan: PlanType = "pro"): number {
+  const safeWordMax = Number.isFinite(targetWordMax) && targetWordMax > 0 ? targetWordMax : 500;
+  const planMultiplier = plan === "premium" ? 1.14 : plan === "pro" ? 1.0 : 0.9;
+  if (mode === "expansion") {
+    return clampNumber(Math.round(safeWordMax * 4.2 * planMultiplier), 1300, plan === "premium" ? 3600 : 3200);
+  }
+  if (mode === "surgical") {
+    return clampNumber(Math.round(safeWordMax * 3.6 * planMultiplier), 1600, plan === "premium" ? 4500 : 4200);
+  }
+  return clampNumber(Math.round(safeWordMax * 4.4 * planMultiplier), 2000, plan === "premium" ? 5000 : 4400);
+}
+
+function computeInlineEditOutputTokenBudget(selectedText: string, plan: PlanType, mode: "rewrite" | "improve"): number {
+  const selectedWordCount = (selectedText || "").split(/\s+/).filter(Boolean).length;
+  const baseFromText = Math.round(Math.max(40, selectedWordCount) * 2.4);
+  const planBoost = plan === "premium" ? 220 : plan === "pro" ? 140 : 80;
+  if (mode === "rewrite") {
+    return clampNumber(baseFromText + planBoost + 260, 420, plan === "premium" ? 1400 : 1100);
+  }
+  return clampNumber(baseFromText + planBoost, 360, plan === "premium" ? 1150 : 900);
+}
+
+function compactExamplesForPrompt(examples: string[], maxExamples: number, maxCharsPerExample: number): string[] {
+  return examples
+    .slice(0, Math.max(1, maxExamples))
+    .map((example) => {
+      const normalized = example.replace(/[^\S\r\n]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+      if (normalized.length <= maxCharsPerExample) return normalized;
+      const paragraphCut = normalized.lastIndexOf("\n\n", maxCharsPerExample);
+      const hardCut = paragraphCut > 320 ? paragraphCut : maxCharsPerExample;
+      return `${normalized.slice(0, hardCut).trim()}\n\n[...]`;
+    });
+}
+
 function buildDeterministicFallbackDescription(disposition: any, style: WritingStyle): string {
   const property = disposition?.property || {};
   const location = disposition?.location || {};
@@ -1082,6 +1131,98 @@ function enforcePlatformMainTextHeuristics(text: string, platform: string, dispo
   return sentences.join(" ");
 }
 
+function enforceOpeningStrengthByStyle(text: string, style: WritingStyle, disposition?: any): string {
+  if (!text || style === "factual") return text;
+  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  if (sentences.length === 0) return text;
+
+  const firstSentence = sentences[0];
+  const hasStrongSignal = /(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående|jacuzzi|köksö)/i.test(firstSentence);
+  const firstWordCount = firstSentence.split(/\s+/).filter(Boolean).length;
+  if (hasStrongSignal && firstWordCount >= 8) return text;
+
+  const property = disposition?.property || {};
+  const address = typeof property.address === "string" && property.address.trim().length > 0 ? property.address.trim() : "";
+  const propertyType = normalizePropertyTypeLabel(property.type || disposition?.propertyType) || "bostad";
+  const size = getNumericFact(property.size);
+  const preferredOutdoor = typeof property.preferred_outdoor_term === "string" ? property.preferred_outdoor_term.trim() : "";
+  const uniqueFeature = Array.isArray(disposition?.unique_features)
+    ? disposition.unique_features.find((item: unknown) => typeof item === "string" && item.trim().length > 0)
+    : null;
+  const layout = typeof property.layout === "string" && property.layout.trim().length > 0 ? property.layout.trim() : "";
+  const strongest = preferredOutdoor || (typeof uniqueFeature === "string" ? uniqueFeature.trim() : "") || layout;
+  if (!strongest) return text;
+
+  const lead = `${address ? `${address}. ` : ""}${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)}${size ? ` om ${size} kvm` : ""} med ${strongest}.`
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!lead) return text;
+
+  sentences[0] = lead;
+  return sentences.join(" ").replace(/\s{2,}/g, " ").trim();
+}
+
+function enforceLocationClosingQuality(text: string, platform: string, disposition?: any): string {
+  if (!text) return text;
+  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+  if (sentences.length === 0) return text;
+
+  const lastSentence = sentences[sentences.length - 1] || "";
+  const weakLocationEnding = /^\b(ica|coop|willys|hemköp|lidl|centrum|skola|förskola|resecentrum|centralstationen?|matbutik)\b/i.test(lastSentence)
+    || /^\b\d+\s*(meter|minuter)\b/i.test(lastSentence);
+  const alreadyContextual = /(promenad|buss|cykel|pendling|vardag|nära|kvarter|kommunikation)/i.test(lastSentence);
+  if (!weakLocationEnding || alreadyContextual) return text;
+
+  const location = disposition?.location || {};
+  const property = disposition?.property || {};
+  const transport = typeof (property.transport || location.transport) === "string" ? String(property.transport || location.transport).trim() : "";
+  const area = typeof location.area === "string" && location.area.trim().length > 0
+    ? location.area.trim()
+    : (typeof location.municipality === "string" ? location.municipality.trim() : "");
+  const amenities = Array.isArray(location.amenities)
+    ? location.amenities.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
+    : [];
+  const services = Array.isArray(location.services)
+    ? location.services.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
+    : [];
+  const nearby = [...amenities, ...services].slice(0, 1).map((item) => String(item).replace(/\s*\([^)]*\)\s*/g, "").trim()).filter(Boolean);
+
+  let improvedClosing = "";
+  if (area && transport) {
+    improvedClosing = `${area} ger smidig vardagslogistik med ${toLowerStart(transport)}.`;
+  } else if (transport) {
+    improvedClosing = `Kommunikationerna fungerar smidigt med ${toLowerStart(transport)}.`;
+  } else if (nearby.length > 0) {
+    improvedClosing = `I närområdet finns ${nearby[0]} som underlättar vardagen.`;
+  } else if ((platform || "").toLowerCase() === "booli") {
+    improvedClosing = "Läget fungerar väl i vardagen med närhet till service och kommunikationer.";
+  } else {
+    improvedClosing = "Läget ger en vardag med närhet till service och smidiga kommunikationer.";
+  }
+
+  sentences[sentences.length - 1] = improvedClosing;
+  return sentences.join(" ").replace(/\s{2,}/g, " ").trim();
+}
+
+function shouldSkipFinalRescueRewrite(finalBrokerAudit: any, localScore: number): boolean {
+  if (finalBrokerAudit?.publish_ready !== false) return false;
+  if (!Array.isArray(finalBrokerAudit?.issues) || finalBrokerAudit.issues.length === 0) return false;
+  if (localScore < 0.84) return false;
+
+  const hardFailureSignals = /\b(fakta|felaktig|motsäger|påhitt|halluc|saknar|boarea|avgift|rum|sovrum|badrum|adress|juridisk|otillåten|enhet)\b/i;
+  const advisorySignals = /\b(öppning|stil|ton|flyt|prioritering|lägesstycke|kunde vara|något|uppradande|prosa|berättande)\b/i;
+
+  const issues = finalBrokerAudit.issues
+    .filter((issue: unknown): issue is string => typeof issue === "string" && issue.trim().length > 0)
+    .slice(0, 8);
+  if (issues.length === 0) return false;
+
+  const hasHardFailure = issues.some((issue: string) => hardFailureSignals.test(issue));
+  if (hasHardFailure) return false;
+
+  return issues.every((issue: string) => advisorySignals.test(issue));
+}
+
 function toLowerStart(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return trimmed;
@@ -1234,8 +1375,10 @@ async function finalizeMainMarketingText(
   }
 
   finalized = enforcePlatformMainTextHeuristics(finalized, platform, disposition);
+  finalized = enforceOpeningStrengthByStyle(finalized, style, disposition);
   finalized = enforceCriticalFactPresence(finalized, disposition);
-  finalized = applyProfessionalNarrativePolish(finalized, disposition);
+  finalized = applyProfessionalNarrativePolish(finalized, disposition, style, platform);
+  finalized = enforceLocationClosingQuality(finalized, platform, disposition);
 
   if (options?.allowParagraphs) {
     finalized = addParagraphs(finalized);
@@ -1429,7 +1572,7 @@ function reduceServiceNameListing(text: string): string {
   return updated;
 }
 
-function applyProfessionalNarrativePolish(text: string, disposition?: any): string {
+function applyProfessionalNarrativePolish(text: string, disposition?: any, style: WritingStyle = "balanced", platform: string = "hemnet"): string {
   if (!text) return text;
   let updated = text;
   updated = updated.replace(/\ben kombination som lätt att\b/gi, "en kombination som gör det lätt att");
@@ -1437,13 +1580,22 @@ function applyProfessionalNarrativePolish(text: string, disposition?: any): stri
   updated = updated.replace(/\.\./g, ".");
   const sentences = updated.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   const first = sentences[0] || "";
-  if (/^(villa|lägenhet|radhus|parhus|fritidshus)\s+om\s+\d+\s*kvm\b/i.test(first)) {
+  if (style !== "factual" && /^(villa|lägenhet|radhus|parhus|fritidshus)\s+om\s+\d+\s*kvm\b/i.test(first)) {
     const hook = buildOpeningHookFromText(updated, disposition);
     if (hook && !updated.startsWith(hook)) {
       updated = `${hook} ${updated}`;
     }
   }
   updated = reduceServiceNameListing(updated);
+  if (style === "factual") {
+    updated = updated
+      .replace(/\bsätter tonen direkt\b/gi, "är en tydlig styrka")
+      .replace(/\bVardagen blir smidig med\b/gi, "I närområdet finns");
+  }
+  if ((platform || "").toLowerCase() === "hemnet") {
+    updated = updated.replace(/\benergiklass(?:en)?\s+[A-G]\b/gi, "");
+    updated = updated.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
+  }
   return updated.replace(/\s{2,}/g, " ").trim();
 }
 
@@ -2356,7 +2508,7 @@ Villa om 146 kvm i Mörtnäs med södervänd uteplats och inbyggd jacuzzi.
 
 Planlösningen är genomgående med öppna sociala ytor mellan kök och vardagsrum, samtidigt som tre sovrum ligger mer avskilt. Köket är renoverat och materialvalen håller en enhetlig nivå med ekparkett i större delen av huset.
 
-Fönster är bytta och huset har tilläggsisolerats i samband med renovering. Energiklass B och laddbox för elbil stärker vardagsfunktionen över tid.
+Fönster är bytta och huset har tilläggsisolerats i samband med renovering. Laddbox för elbil stärker vardagsfunktionen över tid.
 
 Mörtnäs ger ett lugnt läge nära service och med smidig pendling mot Slussen.`,
     `EXEMPEL B:
@@ -3407,15 +3559,23 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const compactDispositionJson = JSON.stringify(cleanDisposition);
       const compactToneAnalysisJson = JSON.stringify(cleanToneAnalysis);
       const compactWritingPlanJson = JSON.stringify(cleanWritingPlan);
+      const compactNegativeExample = compactExamplesForPrompt([negativeExample], 1, 900)[0] || negativeExample;
+      const compactPositiveExample = compactExamplesForPrompt([positiveExample], 1, 1500)[0] || positiveExample;
+      const compactRetryExamples = compactExamplesForPrompt(matchedExamples, 3, 950);
 
       // Build content strings once — reused for primary generation and quality gate retry
       const systemContent = `${personalStylePrompt}\n\n${textPrompt}${styleInstruction}\n\n${blueprintDeveloperAddendum}`;
-      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - använd som struktur, inte som checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${matchedExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+      const userContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (MÅSTE FÖLJAS - använd som struktur, inte som checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${compactRetryExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${compactNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${compactPositiveExample}`;
 
       sendProgress(4, 7, "Skriver objektbeskrivning...");
       console.log("[Step 3] Generating text. System:", systemContent.length, "chars. User:", userContent.length, "chars.");
 
       const wordTargetCenter = (minimumPublishableWordMin + targetWordMax) / 2;
+      const candidateOutputTokenBudget = computeOutputTokenBudget(targetWordMax, true);
+      const correctiveOutputTokenBudget = computeOutputTokenBudget(targetWordMax, false);
+      const surgicalCompletionTokenBudget = computeChatCompletionTokenBudget(targetWordMax, "surgical", plan);
+      const expansionCompletionTokenBudget = computeChatCompletionTokenBudget(targetWordMax, "expansion", plan);
+      const rescueCompletionTokenBudget = computeChatCompletionTokenBudget(targetWordMax, "rescue", plan);
       const candidateConfigs = [
         { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, effort: "high" as const, exampleCount: 3, minimalFields: false },
         { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, effort: "high" as const, exampleCount: 2, minimalFields: false },
@@ -3423,15 +3583,15 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const runState = createListingRunState();
 
       const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
-        const candidateExamples = matchedExamples.slice(0, Math.max(1, exampleCount));
-        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${negativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${positiveExample}`;
+        const candidateExamples = compactExamplesForPrompt(matchedExamples, exampleCount, 1200);
+        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${compactNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${compactPositiveExample}`;
         const fieldMinimizationInstruction = minimalFields
           ? '\n- Returnera endast fälten "headline" och "improvedPrompt". Uteslut alla övriga fält helt för att undvika trunkering.'
           : '';
         const completion = await openai.responses.create({
           model: "gpt-5.2",
           reasoning: { effort },
-          max_output_tokens: 12000, // Prevent truncation
+          max_output_tokens: minimalFields ? Math.min(candidateOutputTokenBudget, 3000) : candidateOutputTokenBudget,
           input: [
             {
               role: "developer", content: `${systemContent}${developerSuffix}
@@ -3543,7 +3703,7 @@ KRAV FÖR DETTA FÖRSÖK:
 - ingen faktalista`
               }
             ],
-            max_output_tokens: 8000,
+            max_output_tokens: correctiveOutputTokenBudget,
             text: { format: { type: "json_object" } }
           });
 
@@ -3578,7 +3738,7 @@ KANDIDATRÄDDNING:
                   content: `DISPOSITION:\n${JSON.stringify(cleanDisposition, null, 2)}\n\nTEXT SOM MÅSTE RÄDDAS:\n${candidateResult.improvedPrompt}`
                 }
               ],
-              max_output_tokens: 4000,
+              max_output_tokens: correctiveOutputTokenBudget,
               text: { format: { type: "json_object" } }
             });
 
@@ -3645,24 +3805,67 @@ KANDIDATRÄDDNING:
         weakHemnetDetailCount: number;
         totalScore: number;
       }> = [];
+      const primaryConfig = candidateConfigs[0];
+      let primaryCandidate: {
+        label: string;
+        result: any;
+        qualityScore: number;
+        nonWordCountViolations: string[];
+        wordCount: number;
+        weakHemnetDetailCount: number;
+        totalScore: number;
+      } | null = null;
 
-      const candidateResults = await Promise.all(candidateConfigs.map(async (config) => {
-        try {
-          const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
-          console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
-          return candidate;
-        } catch (e: any) {
-          if (isOpenAIInsufficientQuotaError(e)) {
-            throw createUpstreamQuotaError(`steg 3 kandidat ${config.label}`, e);
-          }
-          console.error(`[Step 3:${config.label}] Candidate failed catastrophically:`, e);
-          return null;
+      try {
+        primaryCandidate = await generateCandidateWithGuard(
+          primaryConfig.label,
+          primaryConfig.developerSuffix,
+          primaryConfig.effort,
+          primaryConfig.exampleCount,
+          primaryConfig.minimalFields
+        );
+        console.log(`[Step 3:${primaryConfig.label}] Candidate ready. Score ${primaryCandidate.qualityScore.toFixed(2)}, violations ${primaryCandidate.nonWordCountViolations.length}, words ${primaryCandidate.wordCount}`);
+        candidatePool.push(primaryCandidate);
+        addCandidateToRunState(runState, primaryCandidate);
+      } catch (e: any) {
+        if (isOpenAIInsufficientQuotaError(e)) {
+          throw createUpstreamQuotaError(`steg 3 kandidat ${primaryConfig.label}`, e);
         }
-      }));
-      for (const candidate of candidateResults) {
-        if (!candidate) continue;
-        candidatePool.push(candidate);
-        addCandidateToRunState(runState, candidate);
+        console.error(`[Step 3:${primaryConfig.label}] Candidate failed catastrophically:`, e);
+      }
+
+      const primaryStrongEnough = Boolean(primaryCandidate) && isStrongPublishableCandidate(
+        primaryCandidate?.result?.improvedPrompt || "",
+        platform,
+        minimumPublishableWordMin,
+        targetWordMax,
+        style,
+        plan
+      );
+      const shouldGenerateAlternatives = !primaryStrongEnough;
+
+      if (shouldGenerateAlternatives) {
+        const alternativeConfigs = candidateConfigs.slice(1);
+        const alternativeResults = await Promise.all(alternativeConfigs.map(async (config) => {
+          try {
+            const candidate = await generateCandidateWithGuard(config.label, config.developerSuffix, config.effort, config.exampleCount, config.minimalFields);
+            console.log(`[Step 3:${config.label}] Candidate ready. Score ${candidate.qualityScore.toFixed(2)}, violations ${candidate.nonWordCountViolations.length}, words ${candidate.wordCount}`);
+            return candidate;
+          } catch (e: any) {
+            if (isOpenAIInsufficientQuotaError(e)) {
+              throw createUpstreamQuotaError(`steg 3 kandidat ${config.label}`, e);
+            }
+            console.error(`[Step 3:${config.label}] Candidate failed catastrophically:`, e);
+            return null;
+          }
+        }));
+        for (const candidate of alternativeResults) {
+          if (!candidate) continue;
+          candidatePool.push(candidate);
+          addCandidateToRunState(runState, candidate);
+        }
+      } else {
+        console.log("[Step 3] Primary candidate met strong threshold, skipping alternative generation.");
       }
 
       if (candidatePool.length === 0) {
@@ -4064,7 +4267,7 @@ Svara med JSON:
             const correctionCompletion = await openai.chat.completions.create({
               model: "gpt-5.2",
               messages: correctionMessages,
-              max_completion_tokens: 4500,
+              max_completion_tokens: surgicalCompletionTokenBudget,
               response_format: { type: "json_object" },
             });
 
@@ -4182,7 +4385,7 @@ Svara med JSON:
                   { role: "system" as const, content: expansionSystem },
                   { role: "user" as const, content: expansionUser },
                 ],
-                max_completion_tokens: 3000,
+                max_completion_tokens: expansionCompletionTokenBudget,
                 response_format: { type: "json_object" },
               });
 
@@ -4600,6 +4803,10 @@ Svara med JSON:
       }
 
       if (finalBrokerAudit?.publish_ready === false && typeof result?.improvedPrompt === "string" && result.improvedPrompt.trim()) {
+        const preRescueLocalScore = analyzeTextQuality(result.improvedPrompt || "");
+        if (shouldSkipFinalRescueRewrite(finalBrokerAudit, preRescueLocalScore)) {
+          warnings.push("[Final Broker Audit Rescue] Rescue rewrite hoppades över: audit-issues var rådgivande och lokal kvalitetsnivå var hög.");
+        } else {
         try {
           const finalAuditRescueGate = evaluateFinalAuditRescueGate({
             publishReady: finalBrokerAudit?.publish_ready,
@@ -4644,7 +4851,7 @@ Svara med JSON:
                 { role: "system" as const, content: rescueSystem },
                 { role: "user" as const, content: rescueUser },
               ],
-              max_completion_tokens: 5000,
+              max_completion_tokens: rescueCompletionTokenBudget,
               response_format: { type: "json_object" },
             });
 
@@ -4727,6 +4934,7 @@ Svara med JSON:
           }
         } catch (e) {
           console.warn("[Final Broker Audit Rescue] Rescue rewrite failed, keeping pre-audit text:", e);
+        }
         }
       }
 
@@ -5288,6 +5496,7 @@ Svara med json i formatet:
 
       const rewriteCompletion = await openai.responses.create({
         model: "gpt-5.2",
+        reasoning: { effort: rewritePlan === "premium" ? "high" : "medium" },
         input: [
           {
             role: "developer",
@@ -5334,6 +5543,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
             content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`
           }
         ],
+        max_output_tokens: computeInlineEditOutputTokenBudget(selectedText, rewritePlan, "rewrite"),
         text: { format: { type: "json_object" } }
       });
 
@@ -6239,7 +6449,7 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
 
       const completion = await openai.responses.create({
         model: "gpt-5.2",
-        reasoning: { effort: "medium" },
+        reasoning: { effort: plan === "premium" ? "high" : "medium" },
         input: [
           {
             role: "developer",
@@ -6268,7 +6478,7 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
             content: `HELA TEXTEN (för kontext):\n${originalText}\n\nVALD TEXT ATT FÖRBÄTTRA:\n"${selectedText}"${context ? `\n\nEXTRA KONTEXT: ${context}` : ''}`
           }
         ],
-        max_output_tokens: 500,
+        max_output_tokens: computeInlineEditOutputTokenBudget(selectedText, plan, "improve"),
         text: { format: { type: "json_object" } }
       });
 
@@ -6306,12 +6516,15 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
 
 export {
   buildGoldenBrokerExamples,
+  computeChatCompletionTokenBudget,
+  computeInlineEditOutputTokenBudget,
   buildDeterministicFallbackDescription,
   buildDispositionFromStructuredData,
   countGenericBrokerPhrases,
   detectNarrativeIntegrityIssues,
   finalizeMainMarketingText,
   isStrongPublishableCandidate,
+  shouldSkipFinalRescueRewrite,
   safeJsonParse,
   sanitizeGeneratedMarketingField,
   polishAuxFieldText,
