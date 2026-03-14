@@ -68,6 +68,22 @@ describe('AI Pipeline Tests', () => {
       expect(result.disposition.property.bathrooms).toBe(2);
     });
 
+    it('should map kitchenDescription and bathroomDescription aliases from form payload', () => {
+      const result = buildDispositionFromStructuredData({
+        propertyType: 'villa',
+        address: 'Ekorrvägen 10, Värmdö',
+        livingArea: 146,
+        totalRooms: 5,
+        bedrooms: 3,
+        bathrooms: 2,
+        kitchenDescription: 'renoverat kök med köksö',
+        bathroomDescription: 'helkaklat badrum med golvvärme',
+      });
+
+      expect(result.disposition.property.kitchen).toContain('renoverat kök');
+      expect(result.disposition.property.bathroom).toContain('helkaklat badrum');
+    });
+
     it('should deduplicate laddbox across parking and special features in structured disposition', () => {
       const result = buildDispositionFromStructuredData({
         propertyType: 'villa',

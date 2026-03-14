@@ -88,10 +88,13 @@ export function applyStageQualityBudget(params: {
     if (qualityDrop > 0.02) {
       blockingReasons.push(`polish försämrade kvalitetspoängen för mycket (${qualityDrop.toFixed(3)})`);
     }
+    if (hasQualitySignals && qualityDrop < 0 && Math.abs(qualityDrop) < 0.015 && changeRatio > 0.38) {
+      blockingReasons.push("polish skrev om för mycket utan tydlig kvalitetsvinst");
+    }
     if (violationDelta > 0) {
       blockingReasons.push("polish introducerade nya kvalitetsfel");
     }
-    if (changeRatio > 0.55) {
+    if (changeRatio > 0.48) {
       blockingReasons.push("polish skrev om för stor del av texten");
     }
   }

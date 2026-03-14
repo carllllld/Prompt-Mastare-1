@@ -1166,8 +1166,13 @@ function enforceCriticalFactPresence(text: string, disposition?: any): string {
   const kitchen = typeof property.kitchen === "string" && property.kitchen.trim().length > 0
     ? property.kitchen.trim()
     : (typeof property?.materials?.kitchen === "string" ? property.materials.kitchen.trim() : "");
+  const kitchenDetail = kitchen.replace(/^kök(?:et)?\s*/i, "").trim();
   if (kitchen && !/\b(kök|köket|köks)\b/i.test(text)) {
-    sentences.push(`Köket har ${toLowerStart(kitchen)}.`);
+    if (kitchenDetail.length > 0 && kitchenDetail.length < kitchen.length) {
+      sentences.push(`Köket är ${toLowerStart(kitchenDetail)}.`);
+    } else {
+      sentences.push(`Köket har ${toLowerStart(kitchen)}.`);
+    }
   }
 
   const bathroom = typeof property.bathroom === "string" && property.bathroom.trim().length > 0
@@ -2065,12 +2070,12 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
     propertyData.bathroom,
     propertyData.otherInfo,
   ]);
-  const kitchenText = sanitizeStructuredText(propertyData.kitchen);
-  const bathroomText = sanitizeStructuredText(propertyData.bathroom);
+  const kitchenText = sanitizeStructuredText(propertyData.kitchen ?? propertyData.kitchenDescription ?? null);
+  const bathroomText = sanitizeStructuredText(propertyData.bathroom ?? propertyData.bathroomDescription ?? null);
   const flooringText = sanitizeStructuredText(propertyData.flooring ?? propertyData.floors);
   const parkingText = sanitizeStructuredText(propertyData.parking);
   const heatingText = sanitizeStructuredText(propertyData.heating);
-  const layoutText = sanitizeStructuredText(propertyData.layout ?? propertyData.floorPlan);
+  const layoutText = sanitizeStructuredText(propertyData.layout ?? propertyData.layoutDescription ?? propertyData.floorPlan);
   const storageList = sanitizeStructuredList(propertyData.storage);
   const specialFeatures = removeRedundantFeatureMentions(specialFeaturesRaw, [
     parkingText || "",
@@ -2128,6 +2133,8 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
         kitchen: kitchenText,
         bathroom: bathroomText,
       },
+      kitchen: kitchenText,
+      bathroom: bathroomText,
       balcony: {
         exists: balconyExists,
         direction: balconyDirection,
@@ -3596,9 +3603,27 @@ KANDIDATRÄDDNING:
         const qualityScore = analyzeTextQuality(sanitizedPrompt);
         const wordCount = sanitizedPrompt.split(/\s+/).filter(Boolean).length;
         const weakHemnetDetailCount = countWeakHemnetDetailSignals(sanitizedPrompt, platform);
+        const candidateCoverage = evaluateInputSignalCoverage(sanitizedPrompt, cleanDisposition);
+        const candidateCriticalExpectations = [
+          { path: "property.address", present: typeof cleanDisposition?.property?.address === "string" && cleanDisposition.property.address.trim().length > 0 },
+          { path: "property.size", present: cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null },
+          { path: "property.rooms", present: (cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null) || (cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null) },
+          { path: "property.kitchen", present: typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0 },
+          { path: "property.bathroom", present: typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0 },
+          { path: "property.transport", present: typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0 },
+        ];
+        const missingCriticalSignalCount = candidateCriticalExpectations
+          .filter((entry) => entry.present)
+          .filter((entry) => !candidateCoverage.critical.some((critical) => critical.path === entry.path && critical.used))
+          .length;
         const shortfallPenalty = Math.max(0, minimumPublishableWordMin - wordCount) / Math.max(minimumPublishableWordMin, 1);
         const wordDistancePenalty = Math.abs(wordCount - wordTargetCenter) / Math.max(wordTargetCenter, 1);
-        const totalScore = qualityScore - (nonWordCountViolations.length * 0.08) - (wordDistancePenalty * 0.12) - (shortfallPenalty * 0.22) - (weakHemnetDetailCount * 0.05);
+        const totalScore = qualityScore
+          - (nonWordCountViolations.length * 0.08)
+          - (wordDistancePenalty * 0.12)
+          - (shortfallPenalty * 0.22)
+          - (weakHemnetDetailCount * 0.05)
+          - (missingCriticalSignalCount * 0.07);
 
         return {
           label,
@@ -3878,8 +3903,52 @@ Svara med JSON:
             for (const warning of polishQualityBudget.warnings) {
               warnings.push(`[Step 3 Polish Budget] ${warning}`);
             }
+            const beforePolishCoverage = evaluateInputSignalCoverage(result.improvedPrompt || "", cleanDisposition);
+            const afterPolishCoverage = evaluateInputSignalCoverage(polishedText, cleanDisposition);
+            const requiredCriticalPaths = [
+              "property.address",
+              "property.size",
+              "property.rooms",
+              "property.kitchen",
+              "property.bathroom",
+              "property.transport",
+            ];
+            const beforeMissingCritical = requiredCriticalPaths.filter((path) => {
+              const hasSource = path === "property.kitchen"
+                ? typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0
+                : path === "property.bathroom"
+                  ? typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0
+                  : path === "property.transport"
+                    ? typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0
+                    : path === "property.rooms"
+                      ? (cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null) || (cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null)
+                      : path === "property.size"
+                        ? cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null
+                        : typeof cleanDisposition?.property?.address === "string" && cleanDisposition.property.address.trim().length > 0;
+              if (!hasSource) return false;
+              return !beforePolishCoverage.critical.some((critical) => critical.path === path && critical.used);
+            });
+            const afterMissingCritical = requiredCriticalPaths.filter((path) => {
+              const hasSource = path === "property.kitchen"
+                ? typeof (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen) === "string" && (cleanDisposition?.property?.kitchen || cleanDisposition?.property?.materials?.kitchen).trim().length > 0
+                : path === "property.bathroom"
+                  ? typeof (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom) === "string" && (cleanDisposition?.property?.bathroom || cleanDisposition?.property?.materials?.bathroom).trim().length > 0
+                  : path === "property.transport"
+                    ? typeof (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport) === "string" && (cleanDisposition?.property?.transport || cleanDisposition?.location?.transport).trim().length > 0
+                    : path === "property.rooms"
+                      ? (cleanDisposition?.property?.rooms !== undefined && cleanDisposition?.property?.rooms !== null) || (cleanDisposition?.property?.bedrooms !== undefined && cleanDisposition?.property?.bedrooms !== null)
+                      : path === "property.size"
+                        ? cleanDisposition?.property?.size !== undefined && cleanDisposition?.property?.size !== null
+                        : typeof cleanDisposition?.property?.address === "string" && cleanDisposition.property.address.trim().length > 0;
+              if (!hasSource) return false;
+              return !afterPolishCoverage.critical.some((critical) => critical.path === path && critical.used);
+            });
+            const polishDroppedCriticalSignals = afterMissingCritical.length > beforeMissingCritical.length;
+            if (polishDroppedCriticalSignals) {
+              warnings.push(`[Step 3 Polish Budget] polish tappade kritiska signaler (${beforeMissingCritical.length} -> ${afterMissingCritical.length})`);
+            }
 
-            if (polishDecisionArtifacts.shouldApplyPolish && polishQualityBudget.accept) {
+            if (polishDecisionArtifacts.shouldApplyPolish && polishQualityBudget.accept && !polishDroppedCriticalSignals) {
               result = polishedResult;
               strongCandidateFastPath = isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan);
               setSelectedCandidate(runState, selectedCandidate.label, result, strongCandidateFastPath);

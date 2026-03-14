@@ -64,6 +64,25 @@ describe("listing quality guards", () => {
     expect(decision.blockingReasons.some((reason) => reason.includes("polish försämrade kvalitetspoängen"))).toBe(true);
   });
 
+  it("rejects polish proposals with large rewrite and weak quality gain", () => {
+    const decision = applyStageQualityBudget({
+      improvementKind: "polish",
+      beforeText: "Ekorrvägen 10 i Mörtnäs med södervänd uteplats, kök med köksö och buss till Slussen.",
+      afterText: "På Ekorrvägen 10 möter ett boende med trivsam känsla där helheten är balanserad, vardagsrummet samspelar med övriga ytor och området erbjuder flera vardagsfunktioner i närheten för ett smidigt liv.",
+      beforeWordCount: 14,
+      afterWordCount: 31,
+      beforeViolations: [],
+      afterViolations: [],
+      beforeQualityScore: 0.88,
+      afterQualityScore: 0.892,
+      hasCorruptedArtifactsAfter: false,
+      minimumPublishableWordMin: 195,
+    });
+
+    expect(decision.accept).toBe(false);
+    expect(decision.blockingReasons.some((reason) => reason.includes("utan tydlig kvalitetsvinst"))).toBe(true);
+  });
+
   it("reports final gate A/B recommendation for manual review when all gates fail", () => {
     const report = evaluateFinalGateAB({
       wordCount: 105,
