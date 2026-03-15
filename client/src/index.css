@@ -87,6 +87,18 @@
       0 2px 6px hsl(220 20% 10% / 0.05),
       0 22px 48px hsl(220 20% 10% / 0.08);
   }
+  .pro-section-card {
+    background: hsl(0 0% 100% / 0.96);
+    border: 1px solid hsl(34 18% 86% / 0.92);
+    border-radius: 0.9rem;
+    padding: 1rem;
+    box-shadow: 0 1px 2px hsl(220 20% 10% / 0.04);
+  }
+  .pro-muted-panel {
+    background: hsl(36 24% 97%);
+    border: 1px solid hsl(34 16% 88%);
+    border-radius: 0.75rem;
+  }
 }
 
 @keyframes fadeIn {

@@ -454,6 +454,18 @@ export default function Home() {
 
         {/* Main grid — 12 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-7 items-start">
+          <div className="hidden lg:flex lg:col-span-7 items-center justify-between px-1">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Input</p>
+              <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Objektdata och skrivinställningar</p>
+            </div>
+          </div>
+          <div className="hidden lg:flex lg:col-span-5 items-center justify-between px-1">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Output</p>
+              <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Resultat, kvot och arbetsyta</p>
+            </div>
+          </div>
 
           {/* ── LEFT: Form ── */}
           <div className="lg:col-span-7">
@@ -486,7 +498,7 @@ export default function Home() {
 
           {/* ── RIGHT: Result or sidebar ── */}
           <div ref={resultRef} className="lg:col-span-5">
-            <div className="space-y-5 lg:sticky lg:top-24">
+            <div className="space-y-6 lg:sticky lg:top-24">
               {result ? (
                 <div className="animate-fade-in">
                   <ResultSection
@@ -626,12 +638,28 @@ export default function Home() {
 
               {/* History panel — logged in users */}
               {isAuthenticated && (
-                <HistoryPanel />
+                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Historik</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>Tidigare genereringar</p>
+                  </div>
+                  <div className="p-4">
+                    <HistoryPanel />
+                  </div>
+                </div>
               )}
 
               {/* Personal Style — Pro & Premium users */}
               {isAuthenticated && (plan === "pro" || plan === "premium") && (
-                <PersonalStyle />
+                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>Kalibrera tonalitet med dina exempel</p>
+                  </div>
+                  <div className="p-4">
+                    <PersonalStyle />
+                  </div>
+                </div>
               )}
 
               {/* Not logged in — sidebar CTA */}

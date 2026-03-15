@@ -131,7 +131,9 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       )}
 
       {/* ── STATUS BAR ── */}
-      <div className="flex items-center gap-3 flex-wrap animate-slide-up">
+      <div className="pro-muted-panel px-3 py-3 animate-slide-up">
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2" style={{ color: "#9CA3AF" }}>Snabbstatus</p>
+        <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ background: "#F0EDE6", color: "#4B5563" }}>
           <BarChart3 className="w-3 h-3" />
           {wordCount} ord
@@ -170,6 +172,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
             Fail-safe leverans
           </div>
         )}
+        </div>
       </div>
 
       {isFailSafeDelivery && (

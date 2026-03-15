@@ -627,9 +627,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   return (
     <TooltipProvider>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-0">
+        <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
 
-          <div className="mb-5 rounded-xl border px-4 py-3.5" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+          <div className="mb-1 rounded-xl border px-4 py-3.5 pro-muted-panel">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
                 <CheckCircle2 className="w-4 h-4" />
@@ -644,14 +644,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           <div className="mb-5 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-3">
-            <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
+            <div className="pro-section-card">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Snabbast väg till bra text</p>
                   <p className="text-sm font-semibold mt-1" style={{ color: "#1D2939" }}>Fyll det som styr huvudtexten först</p>
                 </div>
                 <div className="px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#ECFDF5", color: "#2D6A4F" }}>
-                  {priorityCompleted}/6 klara
+                  {priorityCompleted}/{priorityChecklist.length} klara
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
@@ -674,7 +674,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
 
-            <div className="rounded-xl border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
+            <div className="pro-section-card">
               <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Så används dina fält i modellen</p>
               <div className="space-y-2 text-xs">
                 <div className="rounded-lg px-3 py-2" style={{ background: "#EEFDF3", color: "#166534" }}>
@@ -694,7 +694,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 1: OBJEKTTYP ── */}
-          <div className="pb-5">
+          <div className="pro-section-card">
             <div className="flex items-center justify-between mb-2.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
                 Objekttyp
@@ -729,7 +729,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 2: GRUNDFAKTA ── */}
-          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
@@ -1042,7 +1042,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
-          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card">
             <label className="text-[11px] font-semibold uppercase tracking-wider block mb-3" style={{ color: "#9CA3AF" }}>
               Kök & Badrum
             </label>
@@ -1077,7 +1077,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 4: SÄLJPUNKTER (prominent!) ── */}
-          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card">
             <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "#2D6A4F" }}>
               ★ Vad gör objektet speciellt?
             </label>
@@ -1099,7 +1099,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 5: PLANLÖSNING (optional freetext) ── */}
-          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card">
             <FormField control={form.control} name="layoutDescription" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-xs text-gray-500">Planlösning & rumsbeskrivning (valfritt)</FormLabel>
@@ -1116,7 +1116,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 6: MER DETALJER (expandable) ── */}
-          <div className="border-t pt-4" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card">
             <p className="text-[10px] text-gray-400 mb-2">
               Detaljerna här fungerar främst som kontext. De skrivs ut i huvudtexten när de stärker beslutsvärdet.
             </p>
@@ -1150,7 +1150,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </button>
 
             {showDetails && (
-              <div className="pb-5 space-y-4">
+              <div className="mt-3 pb-1 space-y-4 pro-muted-panel p-4">
                 {/* Flooring chips */}
                 <div>
                   <span className="text-xs text-gray-500 font-medium block mb-2">Golv</span>
@@ -1276,7 +1276,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 6b: VISNINGSINFORMATION ── */}
-          <div className="border-t pt-5 pb-5" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card">
             <div className="flex items-center justify-between mb-3">
               <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
                 Visningsinformation
@@ -1306,10 +1306,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
 
           {/* ── SECTION 7: PLATTFORM, STIL & SUBMIT ── */}
-          <div className="border-t pt-5 space-y-4" style={{ borderColor: "#E8E5DE" }}>
+          <div className="pro-section-card space-y-4">
 
             {/* Platform + Writing style — compact */}
-            <div className="flex flex-wrap gap-6">
+            <div className="flex flex-wrap gap-6 pro-muted-panel px-3.5 py-3">
               <div>
                 <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Plattform</span>
                 <div className="flex gap-1.5">

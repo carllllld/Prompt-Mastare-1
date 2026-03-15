@@ -105,14 +105,7 @@ async function run(): Promise<void> {
   const user = userResult.rows[0];
   const period = computePeriodKey(user.plan_start_at ? new Date(user.plan_start_at) : null, user.created_at ? new Date(user.created_at) : null);
 
-  await pool.query(
-    `INSERT INTO usage_tracking (user_id, month, year, plan_type, texts_generated, area_searches_used, text_edits_used, personal_style_analyses)
-     VALUES ($1, $2, $3, $4, 0, 0, 0, 0)
-     ON CONFLICT (user_id, month, year) DO NOTHING`,
-    [user.id, period.month, period.year, user.plan || "free"],
-  );
-
-  const beforeResult = await pool.query(
+  let beforeResult = await pool.query(
     `SELECT texts_generated, area_searches_used, text_edits_used, personal_style_analyses
      FROM usage_tracking
      WHERE user_id = $1 AND month = $2 AND year = $3
@@ -121,7 +114,30 @@ async function run(): Promise<void> {
   );
 
   if (beforeResult.rowCount === 0) {
-    throw new Error("Kunde inte läsa usage-rad efter upsert");
+    try {
+      await pool.query(
+        `INSERT INTO usage_tracking (user_id, month, year, plan_type, texts_generated, area_searches_used, text_edits_used, personal_style_analyses)
+         VALUES ($1, $2, $3, $4, 0, 0, 0, 0)`,
+        [user.id, period.month, period.year, user.plan || "free"],
+      );
+    } catch (error: unknown) {
+      const maybeCode = (error as { code?: string } | null)?.code;
+      if (maybeCode !== "23505") {
+        throw error;
+      }
+    }
+
+    beforeResult = await pool.query(
+      `SELECT texts_generated, area_searches_used, text_edits_used, personal_style_analyses
+       FROM usage_tracking
+       WHERE user_id = $1 AND month = $2 AND year = $3
+       LIMIT 1`,
+      [user.id, period.month, period.year],
+    );
+  }
+
+  if (beforeResult.rowCount === 0) {
+    throw new Error("Kunde inte läsa usage-rad för vald period");
   }
 
   const before = beforeResult.rows[0];
@@ -136,9 +152,10 @@ async function run(): Promise<void> {
          area_searches_used = $2,
          text_edits_used = $3,
          personal_style_analyses = $4,
+         plan_type = $8,
          updated_at = NOW()
      WHERE user_id = $5 AND month = $6 AND year = $7`,
-    [nextTexts, nextAreaSearches, nextTextEdits, nextStyleAnalyses, user.id, period.month, period.year],
+    [nextTexts, nextAreaSearches, nextTextEdits, nextStyleAnalyses, user.id, period.month, period.year, user.plan || "free"],
   );
 
   const afterResult = await pool.query(
