@@ -296,7 +296,7 @@ function computeOutputTokenBudget(targetWordMax: number, includeAuxFields: boole
   return clampNumber(
     mainTextTokenBudget + auxTokenBudget,
     includeAuxFields ? 2200 : 900,
-    includeAuxFields ? 5200 : 2600
+    includeAuxFields ? 6500 : 2600  // Raised from 5200 → 6500 to prevent JSON truncation on full aux output
   );
 }
 
@@ -1340,12 +1340,19 @@ function hasCountLabelMention(text: string, count: number | null, labels: string
 
 function buildTransportFallbackSentence(transport: string): string {
   const cleaned = transport.trim().replace(/\.$/, "");
+  // If already a well-formed sentence, return as-is with period
+  if (/^(med\s+buss|kommunikationerna|pendeltåg|t-bana|spårvagn)/i.test(cleaned)) {
+    return `${cleaned}.`;
+  }
   const hasBus = /\bbuss\b/i.test(cleaned);
   const hasMinute = /\b\d+\s*minuter?\b/i.test(cleaned);
   const hasTo = /\btill\b/i.test(cleaned);
   if (hasBus && hasMinute && hasTo) {
+    // Strip any leading "buss" AND any embedded "med buss" to avoid duplication
     const withoutLeadingBus = cleaned.replace(/^\s*buss\s*/i, "").trim();
-    return `Med buss tar det ${toLowerStart(withoutLeadingBus || cleaned)}.`;
+    // Remove "med buss" from the middle if it would create a double
+    const deduped = withoutLeadingBus.replace(/\bmed\s+buss\b/gi, "").replace(/\s{2,}/g, " ").trim();
+    return `Med buss tar det ${toLowerStart(deduped || cleaned)}.`;
   }
   return `Kommunikationerna fungerar smidigt med ${toLowerStart(cleaned)}.`;
 }
@@ -1374,7 +1381,7 @@ function enforceCriticalFactPresence(text: string, disposition?: any): string {
     sentences.push(`Planlösningen rymmer ${bedrooms} sovrum.`);
   }
   if (bathrooms && !hasBathroomsCount) {
-    sentences.push(`Bostaden har ${bathrooms} badrum.`);
+    sentences.push(`Planlösningen inkluderar ${bathrooms} badrum.`);
   }
 
   const kitchen = typeof property.kitchen === "string" && property.kitchen.trim().length > 0
@@ -3702,15 +3709,25 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const runState = createListingRunState();
 
       const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
-        const candidateExamples = compactExamplesForPrompt(matchedExamples, exampleCount, 1200);
-        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${compactNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${compactPositiveExample}`;
-        const fieldMinimizationInstruction = minimalFields
+        // Limit example count and size to prevent token budget exhaustion:
+        // primary: max 2 examples at 700 chars, alternative: max 1 example at 700 chars
+        const cappedExampleCount = label === "primary" ? Math.min(exampleCount, 2) : Math.min(exampleCount, 1);
+        const candidateExamples = compactExamplesForPrompt(matchedExamples, cappedExampleCount, 700);
+        const cappedNegativeExample = compactNegativeExample.slice(0, 500);
+        const cappedPositiveExample = compactPositiveExample.slice(0, 900);
+        const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${cappedNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${cappedPositiveExample}`;
+        // Auto-downgrade to minimalFields if combined prompt is too large (prevents reasoning token starvation)
+        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 18000);
+        if (!minimalFields && effectiveMinimalFields) {
+          console.warn(`[Step 3:${label}] Prompt too large (${systemContent.length + candidateUserContent.length} chars) — switching to minimalFields mode.`);
+        }
+        const fieldMinimizationInstruction = effectiveMinimalFields
           ? '\n- Returnera endast fälten "headline" och "improvedPrompt". Uteslut alla övriga fält helt för att undvika trunkering.'
           : '';
         const completion = await openai.responses.create({
           model: "gpt-5.2",
           reasoning: { effort },
-          max_output_tokens: minimalFields ? Math.min(candidateOutputTokenBudget, 3000) : candidateOutputTokenBudget,
+          max_output_tokens: effectiveMinimalFields ? Math.min(candidateOutputTokenBudget, 3000) : candidateOutputTokenBudget,
           input: [
             {
               role: "developer", content: `${systemContent}${developerSuffix}

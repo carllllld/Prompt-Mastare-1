@@ -327,7 +327,9 @@ function findAuxFieldViolations(
 
   if (field === "headline") {
     if (words.length > 9) violations.push("Rubrik är för lång (max 9 ord).");
-    if (/[.!?…]$/.test(text.trim())) violations.push("Rubrik ska inte avslutas med punkt eller utropstecken.");
+    // Strip trailing punctuation before checking — polishAuxFieldText does this too, but validation runs first
+    const headlineForCheck = text.trim().replace(/[.!?…]+$/, "");
+    if (/[.!?…]$/.test(text.trim()) && headlineForCheck.length > 0) violations.push("Rubrik ska inte avslutas med punkt eller utropstecken.");
     if (/[#@]/.test(text)) violations.push("Rubrik ska vara ren annonsrubrik utan hashtags eller @-taggar.");
   }
 

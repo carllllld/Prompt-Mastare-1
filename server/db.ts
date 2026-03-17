@@ -113,6 +113,54 @@ export async function initializeDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_presence_sessions_user ON presence_sessions (user_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_shared_prompts_team ON shared_prompts (team_id, updated_at DESC)`);
 
+    // Create pipeline_metrics table for tracking generation quality over time
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pipeline_metrics (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id),
+        session_id TEXT,
+        platform TEXT,
+        plan TEXT,
+        style TEXT,
+        input_signal_coverage NUMERIC,
+        quality_score NUMERIC,
+        word_count INTEGER,
+        violation_count INTEGER,
+        generation_time_ms INTEGER,
+        steps_completed INTEGER,
+        fallback_triggered BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create experiment_assignments table for A/B testing
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS experiment_assignments (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id),
+        experiment_id TEXT NOT NULL,
+        variant TEXT NOT NULL,
+        assigned_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Create experiment_results table for A/B test outcome tracking
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS experiment_results (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id),
+        experiment_id TEXT NOT NULL,
+        variant TEXT NOT NULL,
+        metric TEXT NOT NULL,
+        value NUMERIC,
+        recorded_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_metrics_user ON pipeline_metrics (user_id, created_at DESC)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_assignments_user ON experiment_assignments (user_id, experiment_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_results_experiment ON experiment_results (experiment_id, variant)`);
+
     console.log("Database tables initialized");
   } catch (error) {
     console.error("Error initializing database:", error);
