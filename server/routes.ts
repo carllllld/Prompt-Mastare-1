@@ -295,8 +295,8 @@ function computeOutputTokenBudget(targetWordMax: number, includeAuxFields: boole
   const auxTokenBudget = includeAuxFields ? 1200 : 240;
   return clampNumber(
     mainTextTokenBudget + auxTokenBudget,
-    includeAuxFields ? 4800 : 900,  // Floor raised significantly: 3800 → 4800 to prevent truncation with medium effort
-    includeAuxFields ? 7000 : 2600   // Ceiling raised: 6500 → 7000 for premium/long texts
+    includeAuxFields ? 5500 : 900,  // Floor raised: 4800 → 5500 to prevent truncation with medium effort + aux fields
+    includeAuxFields ? 8000 : 2600   // Ceiling raised: 7000 → 8000 for premium/long texts with many details
   );
 }
 
@@ -3720,8 +3720,8 @@ Fakta i fokus med naturlig rytm och professionell ton.
         const cappedPositiveExample = compactPositiveExample.slice(0, 800);  // Reduced from 900
         const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${cappedNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${cappedPositiveExample}`;
         // Auto-downgrade to minimalFields if combined prompt is truly enormous (prevents reasoning token starvation)
-        // Threshold lowered from 24000 to 22000 for earlier intervention
-        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 22000);
+        // Threshold set to 30000 - with raised token budget (5500+) we can handle larger prompts without quality loss
+        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 30000);
         if (!minimalFields && effectiveMinimalFields) {
           console.warn(`[Step 3:${label}] Prompt very large (${systemContent.length + candidateUserContent.length} chars) — switching to minimalFields mode.`);
         }
@@ -4138,6 +4138,86 @@ Svara med JSON:
       }));
 
       let result: any = selectedCandidate.result;
+      
+      // === AUX FIELD GENERATION: ALWAYS ensure aux fields exist before delivery ===
+      // This runs regardless of minimalFields mode to guarantee complete response
+      console.log("[Step 3:Aux Fields] Checking aux fields:", {
+        hasSocialCopy: !!result.socialCopy,
+        hasInstagramCaption: !!result.instagramCaption,
+        hasShowingInvitation: !!result.showingInvitation,
+        hasShortAd: !!result.shortAd,
+        hasHeadline: !!result.headline,
+        hasImprovedPrompt: !!result.improvedPrompt
+      });
+      
+      const missingAuxFields = !result.socialCopy || !result.instagramCaption || !result.showingInvitation || !result.shortAd;
+      const missingHeadline = !result.headline;
+      
+      if ((missingAuxFields || missingHeadline) && result.improvedPrompt) {
+        console.log("[Step 3:Aux Fields] Generating missing aux fields...");
+        try {
+          const auxFieldCompletion = await openai.responses.create({
+            model: "gpt-5.2",
+            reasoning: { effort: "low" },  // Low effort sufficient for aux fields
+            input: [
+              {
+                role: "developer",
+                content: `Du är en erfaren svensk mäklare. Generera kompletterande marknadstext baserat på huvudtexten.
+
+RETURNERA JSON MED DESSA FÄLT:
+{
+  "headline": "Kort, stark rubrik (max 9 ord, ingen punkt i slutet)",
+  "socialCopy": "2-3 meningar för Facebook/LinkedIn (avsluta med punkt)",
+  "instagramCaption": "2-3 meningar med relevant emoji (🏡✨🌿☀️)",
+  "showingInvitation": "Inbjudan till visning (nämn 'visning' tydligt)",
+  "shortAd": "Mycket kort annons, max 2 meningar, max 32 ord"
+}
+
+REGLER:
+- Basera allt på huvudtexten nedan
+- Håll samma ton och stil som huvudtexten
+- Inga AI-klyschor ("erbjuder", "välkommen till", "perfekt för")
+- Inga upprepningar från huvudtexten
+- Alla fält måste vara kompletta och publicerbara
+- Headline: Max 9 ord, ingen punkt
+- SocialCopy: 2-3 meningar, avsluta med punkt
+- InstagramCaption: 2-3 meningar med 1-2 emojis
+- ShowingInvitation: Måste innehålla ordet "visning"
+- ShortAd: Max 32 ord totalt`
+              },
+              {
+                role: "user",
+                content: `HUVUDTEXT:\n${result.improvedPrompt}\n\nADRESS: ${cleanDisposition?.property?.address || ""}\nPLATTFORM: ${platform}`
+              }
+            ],
+            max_output_tokens: 1200,
+            text: { format: { type: "json_object" } }
+          });
+
+          const auxFields = safeJsonParse(auxFieldCompletion.output_text || "{}");
+          
+          // Merge aux fields into result, keeping any existing fields
+          if (!result.headline && auxFields.headline) result.headline = auxFields.headline;
+          if (!result.socialCopy && auxFields.socialCopy) result.socialCopy = auxFields.socialCopy;
+          if (!result.instagramCaption && auxFields.instagramCaption) result.instagramCaption = auxFields.instagramCaption;
+          if (!result.showingInvitation && auxFields.showingInvitation) result.showingInvitation = auxFields.showingInvitation;
+          if (!result.shortAd && auxFields.shortAd) result.shortAd = auxFields.shortAd;
+          
+          console.log("[Step 3:Aux Fields] Successfully generated missing aux fields:", {
+            generatedHeadline: !!auxFields.headline,
+            generatedSocialCopy: !!auxFields.socialCopy,
+            generatedInstagramCaption: !!auxFields.instagramCaption,
+            generatedShowingInvitation: !!auxFields.showingInvitation,
+            generatedShortAd: !!auxFields.shortAd
+          });
+        } catch (auxError) {
+          console.warn("[Step 3:Aux Fields] Failed to generate aux fields, continuing without them:", auxError);
+          // Continue without aux fields - not critical for delivery
+        }
+      } else {
+        console.log("[Step 3:Aux Fields] All aux fields already present, skipping generation.");
+      }
+      
       snapshotFailSafeResponse("candidate-selection", result, {
         warnings,
         meta: {

@@ -176,16 +176,20 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
 
   const detFinnsCount = (lowerText.match(/\bdet finns\b/g) || []).length;
   const denHarCount = (lowerText.match(/\bden har\b/g) || []).length;
-  if (detFinnsCount > 2) {  // Raised from 1 to 2 - "det finns" twice is acceptable in longer texts
-    violations.push(`"Det finns" upprepas ${detFinnsCount} gånger (max 2). Variera meningsstarter.`);
+  // Raised thresholds: Allow more natural repetition in longer texts
+  // "det finns" 2→3: Natural Swedish can use this phrase 3 times in 300+ word texts
+  if (detFinnsCount > 3) {
+    violations.push(`"Det finns" upprepas ${detFinnsCount} gånger (max 3). Variera meningsstarter.`);
   }
-  if (denHarCount > 3) {  // Raised from 2 to 3 - more lenient for natural flow
-    violations.push(`"Den har" upprepas ${denHarCount} gånger (max 3). Variera meningsstarter.`);
+  // "den har" 3→4: More lenient for natural flow in longer descriptions
+  if (denHarCount > 4) {
+    violations.push(`"Den har" upprepas ${denHarCount} gånger (max 4). Variera meningsstarter.`);
   }
 
   const liggerCount = (lowerText.match(/\bligger\s+\d+/g) || []).length;
-  if (liggerCount > 2) {  // Raised from 1 to 2 - can mention distance twice in different contexts
-    violations.push(`"ligger [avstånd]" upprepas ${liggerCount} gånger (max 2). Variera avståndsformat.`);
+  // Raised from 2 to 3 - can mention distance three times in different contexts (work, school, shopping)
+  if (liggerCount > 3) {
+    violations.push(`"ligger [avstånd]" upprepas ${liggerCount} gånger (max 3). Variera avståndsformat.`);
   }
 
   if (sentences.length >= 5) {
@@ -197,8 +201,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
       }
     }
     for (const [word, count] of Object.entries(starters)) {
-      // Raised threshold from 3 to 4 - more lenient, and only warn for texts with 8+ sentences
-      if (count >= 4 && sentences.length >= 8 && !['brf', 'avgift', 'bostaden', 'lägenheten'].includes(word)) {
+      // Raised threshold from 4 to 5 repetitions, and from 8+ to 10+ sentences - more lenient for natural Swedish
+      if (count >= 5 && sentences.length >= 10 && !['brf', 'avgift', 'bostaden', 'lägenheten', 'köket', 'badrummet'].includes(word)) {
         violations.push(`Monoton meningsstart: "${word}" börjar ${count} meningar. Variera.`);
       }
     }
@@ -226,8 +230,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   }
 
   const vilketCount = (lowerText.match(/\bvilket\b/g) || []).length;
-  if (vilketCount > 2) {  // Raised from 1 to 2 - "vilket" twice is acceptable in Swedish prose
-    violations.push(`"vilket" upprepas ${vilketCount} gånger (max 2). Dela upp i korta meningar.`);
+  if (vilketCount > 3) {  // Raised from 2 to 3 - "vilket" three times is acceptable in longer Swedish prose
+    violations.push(`"vilket" upprepas ${vilketCount} gånger (max 3). Dela upp i korta meningar.`);
   }
 
   const slashTerms = (text.match(/\b[A-Za-zÅÄÖåäö]+\s*\/\s*[A-Za-zÅÄÖåäö]+\b/g) || []).slice(0, 3);

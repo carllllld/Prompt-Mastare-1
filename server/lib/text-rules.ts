@@ -20,11 +20,8 @@ export const FORBIDDEN_PHRASES = [
   "och visning",
 
   // === "ERBJUDER" I ALLA FORMER (AI-favorit, mäklare säger "har"/"finns") ===
-  " erbjuder ",
-  " erbjuds ",
-  "erbjuder en bra plats",
-  "erbjuder en perfekt",
-  "erbjuder en fantastisk",
+  "erbjuder",
+  "erbjuds",
 
   // === EMOTIONELLA AI-VERB (aldrig i riktig mäklartext) ===
   "inbjuder till",
@@ -117,7 +114,6 @@ export const FORBIDDEN_PHRASES = [
 
   // === LÄGES-KLYSCHOR (AI-överdrift) ===
   "eftertraktat boendealternativ",
-  "attraktivt med närhet",
   "inom räckhåll",
   "stadens puls",
 
@@ -129,35 +125,26 @@ export const FORBIDDEN_PHRASES = [
   "ger en rymlig",
   "ger en härlig",
   "ger en luftig",
-  "rymlig känsla",
-  "rymligt intryck",
 
   // === PLATS FÖR/HÄRLIG PLATS (AI-konstruktioner) ===
   "härlig plats för",
   "plats för avkoppling",
-  "njutning av",
-  "njut av",
 
   // === MÖJLIGHET ATT/FORMA (AI-filosofi) ===
   "möjlighet att påverka",
-  "forma framtiden",
 
   // === SÖDERVÄNDA PLACERINGEN (specifik AI-fras) ===
-  "den södervända placeringen",
   "den södervända placeringen ger",
 
   // === "ÄR ETT/EN BRA/PERFEKT" (AI-värderingar) ===
   "är ett bra val",
   "är ett bra val för",
   "är en perfekt plats",
-  "är en bra plats",
-  "är en bra plats för",
 
   // === SKAPA MINNEN OCH LIKNANDE (AI-emotionalitet) ===
   "skapa minnen",
   "utmärkt val",
   "lek och avkoppling",
-  "bekvämt boende",
 
   // === FACILITETER (ovanligt ord i svensk mäklartext) ===
   "faciliteter",
@@ -165,10 +152,8 @@ export const FORBIDDEN_PHRASES = [
 
   // === -MÖJLIGHETER SUFFIX (AI-favorit, mäklare säger det mer direkt) ===
   "förvaringsmöjligheter inkluderar",
-  "förvaringsmöjligheter",
   "odlingsmöjligheter",
   "boendmöjligheter",
-  "parkeringsmöjligheter",
   "utemöjligheter",
   "lagringsmöjligheter",
   "rekreationsmöjligheter",
@@ -194,8 +179,6 @@ export const FORBIDDEN_PHRASES = [
   "utan också",
 
   // === COMPOUND ADJEKTIV-PAR (AI-markör) ===
-  "ljus och luftig",
-  "ljust och luftigt",
   "stilrent och modernt",
   "stilren och modern",
   "modernt och stilrent",
@@ -210,8 +193,6 @@ export const FORBIDDEN_PHRASES = [
   "livsstil",
   "livsföring",
   "livskvalitet",
-  "hög standard",
-  "hög kvalitet",
   "stor potential",
   "stor möjlighet",
   "drömmar",
@@ -224,10 +205,6 @@ export const FORBIDDEN_PHRASES = [
   "noggrant utvalt",
   "noggrant utvalda",
   "omsorgsfullt",
-  "genomtänkt",
-  "smakfullt",
-  "stilfullt",
-  "elegant",
   "exklusivt",
   "lyxigt",
   "imponerande",
@@ -247,11 +224,8 @@ export const FORBIDDEN_PHRASES = [
 
   // === ÖVERDRIVNA PLATS-BESKRIVNINGAR (AI-poetik) ===
   "eftertraktat område",
-  "populärt område",
   "omtyckt område",
-  "familjevänligt område",
   "barnvänligt område",
-  "naturskönt läge",
   "natursköna omgivningar",
   "grön oas",
   "en oas",
@@ -273,14 +247,11 @@ export const FORBIDDEN_PHRASES = [
   "med sin charm",
   "med mycket charm",
   "präglad av",
-  "trivsamt boende",
-  "trivsam bostad",
   "en bostad som",
   "en lägenhet som",
   "ett hem som",
   "strategiskt placerad",
   "strategiskt läge",
-  "attraktivt läge",
 
   // === GÖR DET ENKELT/MÖJLIGT (AI-konstruktion) ===
   "gör det enkelt att",
@@ -291,11 +262,19 @@ export const FORBIDDEN_PHRASES = [
 const BALANCED_EXEMPT = new Set([
   "genomtänkt", "smakfullt", "stilfullt", "elegant",
   "attraktivt läge", "naturskönt läge", "populärt område", "familjevänligt område",
-  "hög standard",
+  "hög standard", "hög kvalitet",
   "ljus och luftig", "ljust och luftigt",
   "trivsamt boende", "trivsam bostad",
   "rofyllt", "rofylld",
   "genomtänkt planlösning", "smakfullt renoverat", "stilfullt renoverat",
+  "rymlig känsla", "rymligt intryck",
+  "attraktivt med närhet",
+  "är en bra plats", "är en bra plats för",
+  "den södervända placeringen",
+  "bekvämt boende",
+  "njutning av", "njut av",
+  "forma framtiden",
+  "förvaringsmöjligheter", "parkeringsmöjligheter",
   // Legitima mäklarfraser som inte är AI-klyschor:
   "kommunikationer", "närhet till service", "smidig pendling",
   "i mycket gott skick", "gott om utrymme",
