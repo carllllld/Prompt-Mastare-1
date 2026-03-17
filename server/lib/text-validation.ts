@@ -382,14 +382,19 @@ export function validateOptimizationResult(result: any, platform: string = "hemn
     }
   }
 
-  const textFields = [result?.improvedPrompt, result?.socialCopy, result?.instagramCaption, result?.showingInvitation, result?.shortAd, result?.headline]
-    .filter((value): value is string => typeof value === "string" && value.trim().length > 0);
-
-  const joinedText = textFields.join("\n").toLowerCase();
-  const outdoorTerms = ["balkong", "terrass", "altan", "uteplats"].filter((term) => joinedText.includes(term));
-  if (outdoorTerms.length > 1) {
-    violations.push(`Blandad uteplatsterminologi mellan textfält: ${outdoorTerms.join(", ")}`);
+  // Check outdoor terminology consistency within the main text only
+  // (aux fields like instagramCaption may legitimately use different terms for variety)
+  if (typeof result?.improvedPrompt === "string" && result.improvedPrompt.length > 0) {
+    const mainTextLower = result.improvedPrompt.toLowerCase();
+    const outdoorTerms = ["balkong", "terrass", "altan", "uteplats"].filter((term) => mainTextLower.includes(term));
+    if (outdoorTerms.length > 1) {
+      violations.push(`Blandad uteplatsterminologi i huvudtexten: ${outdoorTerms.join(", ")}`);
+    }
   }
+
+  const joinedText = [result?.improvedPrompt, result?.socialCopy, result?.instagramCaption, result?.showingInvitation, result?.shortAd, result?.headline]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join("\n").toLowerCase();
 
   const riskNotes = Array.isArray(result?.analysis?.risk_notes)
     ? result.analysis.risk_notes.join(" ").toLowerCase()

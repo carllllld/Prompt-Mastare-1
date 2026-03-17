@@ -1406,7 +1406,7 @@ function enforceCriticalFactPresence(text: string, disposition?: any): string {
   const transport = typeof property.transport === "string" && property.transport.trim().length > 0
     ? property.transport.trim()
     : (typeof location.transport === "string" ? location.transport.trim() : "");
-  if (transport && !/\b(kommunikation|kommunikationer|buss|t-bana|tbana|pendeltåg|spårvagn|resecentrum|station)\b/i.test(text)) {
+  if (transport && !/\b(kommunikation|kommunikationer|buss|bussen|t-bana|tbana|pendeltåg|spårvagn|resecentrum|station)\b/i.test(text)) {
     sentences.push(buildTransportFallbackSentence(transport));
   }
 
@@ -3716,10 +3716,10 @@ Fakta i fokus med naturlig rytm och professionell ton.
         const cappedNegativeExample = compactNegativeExample.slice(0, 500);
         const cappedPositiveExample = compactPositiveExample.slice(0, 900);
         const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${cappedNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${cappedPositiveExample}`;
-        // Auto-downgrade to minimalFields if combined prompt is too large (prevents reasoning token starvation)
-        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 18000);
+        // Auto-downgrade to minimalFields if combined prompt is truly enormous (prevents reasoning token starvation)
+        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 24000);
         if (!minimalFields && effectiveMinimalFields) {
-          console.warn(`[Step 3:${label}] Prompt too large (${systemContent.length + candidateUserContent.length} chars) — switching to minimalFields mode.`);
+          console.warn(`[Step 3:${label}] Prompt very large (${systemContent.length + candidateUserContent.length} chars) — switching to minimalFields mode.`);
         }
         const fieldMinimizationInstruction = effectiveMinimalFields
           ? '\n- Returnera endast fälten "headline" och "improvedPrompt". Uteslut alla övriga fält helt för att undvika trunkering.'
@@ -3895,7 +3895,9 @@ KANDIDATRÄDDNING:
         }
 
         const sanitizedResult = { ...candidateResult, improvedPrompt: sanitizedPrompt };
-        const nonWordCountViolations = getNonWordCountViolations(validateOptimizationResult(sanitizedResult, platform, minimumPublishableWordMin, targetWordMax, style));
+        // Score candidates on main text only — aux field violations (headline, socialCopy, etc.)
+        // are polished in post-processing and must not block the strong-candidate fast path
+        const nonWordCountViolations = getNonWordCountViolations(validateMainMarketingText(sanitizedResult, platform, minimumPublishableWordMin, targetWordMax, style));
         const qualityScore = analyzeTextQuality(sanitizedPrompt);
         const wordCount = sanitizedPrompt.split(/\s+/).filter(Boolean).length;
         const weakHemnetDetailCount = countWeakHemnetDetailSignals(sanitizedPrompt, platform);

@@ -117,18 +117,23 @@ export async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS pipeline_metrics (
         id SERIAL PRIMARY KEY,
-        user_id TEXT REFERENCES users(id),
-        session_id TEXT,
-        platform TEXT,
-        plan TEXT,
-        style TEXT,
-        input_signal_coverage NUMERIC,
-        quality_score NUMERIC,
-        word_count INTEGER,
-        violation_count INTEGER,
-        generation_time_ms INTEGER,
-        steps_completed INTEGER,
-        fallback_triggered BOOLEAN DEFAULT false,
+        run_id TEXT NOT NULL,
+        user_id TEXT REFERENCES users(id) NOT NULL,
+        plan TEXT NOT NULL,
+        success BOOLEAN NOT NULL,
+        total_duration_ms INTEGER NOT NULL,
+        total_ai_calls INTEGER NOT NULL,
+        total_tokens_used INTEGER,
+        total_cost_usd TEXT,
+        final_quality_score INTEGER,
+        final_word_count INTEGER,
+        rescue_attempts INTEGER NOT NULL DEFAULT 0,
+        polish_attempts INTEGER NOT NULL DEFAULT 0,
+        fast_path_taken BOOLEAN NOT NULL DEFAULT false,
+        structured_data_used BOOLEAN NOT NULL DEFAULT false,
+        features_used JSONB NOT NULL DEFAULT '[]',
+        error_count INTEGER NOT NULL DEFAULT 0,
+        steps JSONB NOT NULL DEFAULT '[]',
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
@@ -137,10 +142,11 @@ export async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS experiment_assignments (
         id SERIAL PRIMARY KEY,
-        user_id TEXT REFERENCES users(id),
+        user_id TEXT REFERENCES users(id) NOT NULL,
         experiment_id TEXT NOT NULL,
-        variant TEXT NOT NULL,
-        assigned_at TIMESTAMP DEFAULT NOW()
+        variant_id TEXT NOT NULL,
+        assigned_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (user_id, experiment_id)
       )
     `);
 
@@ -148,12 +154,11 @@ export async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS experiment_results (
         id SERIAL PRIMARY KEY,
-        user_id TEXT REFERENCES users(id),
         experiment_id TEXT NOT NULL,
-        variant TEXT NOT NULL,
-        metric TEXT NOT NULL,
-        value NUMERIC,
-        recorded_at TIMESTAMP DEFAULT NOW()
+        variant_id TEXT NOT NULL,
+        user_id TEXT REFERENCES users(id) NOT NULL,
+        metrics JSONB NOT NULL,
+        timestamp TIMESTAMP DEFAULT NOW()
       )
     `);
 
