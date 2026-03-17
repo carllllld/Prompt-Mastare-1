@@ -1315,8 +1315,8 @@ function hasRoomsMention(text: string, rooms: number | null): boolean {
     9: ["nio"],
     10: ["tio"],
   };
-  if (new RegExp(`\\b${rooms}\\b\\s*(rum|sovrum|rok)`, "i").test(text)) return true;
-  return (numberWords[rooms] || []).some((word) => new RegExp(`\\b${word}\\b\\s*(rum|sovrum)`, "i").test(text));
+  if (new RegExp(`(^|[^\\p{L}\\p{N}])${rooms}\\s*(rum|sovrum|rok)(?=$|[^\\p{L}\\p{N}])`, "iu").test(text)) return true;
+  return (numberWords[rooms] || []).some((word) => new RegExp(`(^|[^\\p{L}\\p{N}])${word}\\s*(rum|sovrum)(?=$|[^\\p{L}\\p{N}])`, "iu").test(text));
 }
 
 function hasCountLabelMention(text: string, count: number | null, labels: string[]): boolean {
@@ -1334,8 +1334,20 @@ function hasCountLabelMention(text: string, count: number | null, labels: string
     10: ["tio"],
   };
   const labelsPattern = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-  if (new RegExp(`\\b${count}\\b\\s*(?:${labelsPattern})`, "i").test(text)) return true;
-  return (numberWords[count] || []).some((word) => new RegExp(`\\b${word}\\b\\s*(?:${labelsPattern})`, "i").test(text));
+  if (new RegExp(`(^|[^\\p{L}\\p{N}])${count}\\s*(?:${labelsPattern})(?=$|[^\\p{L}\\p{N}])`, "iu").test(text)) return true;
+  return (numberWords[count] || []).some((word) => new RegExp(`(^|[^\\p{L}\\p{N}])${word}\\s*(?:${labelsPattern})(?=$|[^\\p{L}\\p{N}])`, "iu").test(text));
+}
+
+function buildTransportFallbackSentence(transport: string): string {
+  const cleaned = transport.trim().replace(/\.$/, "");
+  const hasBus = /\bbuss\b/i.test(cleaned);
+  const hasMinute = /\b\d+\s*minuter?\b/i.test(cleaned);
+  const hasTo = /\btill\b/i.test(cleaned);
+  if (hasBus && hasMinute && hasTo) {
+    const withoutLeadingBus = cleaned.replace(/^\s*buss\s*/i, "").trim();
+    return `Med buss tar det ${toLowerStart(withoutLeadingBus || cleaned)}.`;
+  }
+  return `Kommunikationerna fungerar smidigt med ${toLowerStart(cleaned)}.`;
 }
 
 function enforceCriticalFactPresence(text: string, disposition?: any): string {
@@ -1388,7 +1400,7 @@ function enforceCriticalFactPresence(text: string, disposition?: any): string {
     ? property.transport.trim()
     : (typeof location.transport === "string" ? location.transport.trim() : "");
   if (transport && !/\b(kommunikation|kommunikationer|buss|t-bana|tbana|pendeltåg|spårvagn|resecentrum|station)\b/i.test(text)) {
-    sentences.push(`Kommunikationerna omfattar ${toLowerStart(transport)}.`);
+    sentences.push(buildTransportFallbackSentence(transport));
   }
 
   if (sentences.length === 0) return text;

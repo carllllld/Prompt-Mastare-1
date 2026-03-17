@@ -495,6 +495,60 @@ describe('AI Pipeline Tests', () => {
       expect(text.toLowerCase()).toMatch(/kommunikation|buss|slussen/);
     });
 
+    it('should not append duplicate bathrooms fact when text already says två badrum', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Villa om 146 kvm på Ekorrvägen 10 i Mörtnäs med genomgående planlösning, tre sovrum och två badrum.',
+        'hemnet',
+        undefined,
+        'balanced',
+        { allowParagraphs: true },
+        {
+          property: {
+            size: 146,
+            rooms: 5,
+            bedrooms: 3,
+            bathrooms: 2,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+        }
+      );
+
+      const text = (finalized || '').toLowerCase();
+      expect(text).not.toContain('bostaden har 2 badrum.');
+      expect(text).toContain('två badrum');
+    });
+
+    it('should phrase enforced transport naturally when source is bus minutes to destination', async () => {
+      const finalized = await finalizeMainMarketingText(
+        'Ekorrvägen 10 i Mörtnäs med södervänd uteplats och inbyggd jacuzzi.',
+        'hemnet',
+        undefined,
+        'balanced',
+        { allowParagraphs: true },
+        {
+          property: {
+            size: 146,
+            rooms: 5,
+            bedrooms: 3,
+            bathrooms: 2,
+            kitchen: 'renoverat kök',
+            bathroom: 'helkaklat badrum',
+          },
+          location: {
+            transport: 'buss 25 minuter till Slussen',
+          },
+        }
+      );
+
+      const text = (finalized || '').toLowerCase();
+      expect(text).toContain('med buss tar det 25 minuter till slussen');
+      expect(text).not.toContain('kommunikationerna omfattar');
+    });
+
     it('should rewrite raw-fact opening and reduce service list feel during finalization', async () => {
       const finalized = await finalizeMainMarketingText(
         'Villa om 146 kvm på Ekorrvägen 10 i Mörtnäs, Värmdö med södervänd uteplats och inbyggd jacuzzi. Planlösningen rymmer fem rum med tre sovrum och två badrum, en kombination som lätt att snabbt justera temperaturen. Handlingen går snabbt när Willys Värmdö ligger nära, och en spontan middag blir enkel med Kikka, COME 2 EAT och ChopChop Asian Express Värmdö.',
