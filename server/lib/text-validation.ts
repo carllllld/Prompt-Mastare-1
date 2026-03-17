@@ -176,16 +176,16 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
 
   const detFinnsCount = (lowerText.match(/\bdet finns\b/g) || []).length;
   const denHarCount = (lowerText.match(/\bden har\b/g) || []).length;
-  if (detFinnsCount > 1) {
-    violations.push(`"Det finns" upprepas ${detFinnsCount} gånger (max 1). Variera meningsstarter.`);
+  if (detFinnsCount > 2) {  // Raised from 1 to 2 - "det finns" twice is acceptable in longer texts
+    violations.push(`"Det finns" upprepas ${detFinnsCount} gånger (max 2). Variera meningsstarter.`);
   }
-  if (denHarCount > 2) {
-    violations.push(`"Den har" upprepas ${denHarCount} gånger (max 2). Variera meningsstarter.`);
+  if (denHarCount > 3) {  // Raised from 2 to 3 - more lenient for natural flow
+    violations.push(`"Den har" upprepas ${denHarCount} gånger (max 3). Variera meningsstarter.`);
   }
 
   const liggerCount = (lowerText.match(/\bligger\s+\d+/g) || []).length;
-  if (liggerCount > 1) {
-    violations.push(`"ligger [avstånd]" upprepas ${liggerCount} gånger (max 1). Variera avståndsformat.`);
+  if (liggerCount > 2) {  // Raised from 1 to 2 - can mention distance twice in different contexts
+    violations.push(`"ligger [avstånd]" upprepas ${liggerCount} gånger (max 2). Variera avståndsformat.`);
   }
 
   if (sentences.length >= 5) {
@@ -197,7 +197,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
       }
     }
     for (const [word, count] of Object.entries(starters)) {
-      if (count >= 3 && !['brf', 'avgift'].includes(word)) {
+      // Raised threshold from 3 to 4 - more lenient, and only warn for texts with 8+ sentences
+      if (count >= 4 && sentences.length >= 8 && !['brf', 'avgift', 'bostaden', 'lägenheten'].includes(word)) {
         violations.push(`Monoton meningsstart: "${word}" börjar ${count} meningar. Variera.`);
       }
     }
@@ -225,8 +226,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   }
 
   const vilketCount = (lowerText.match(/\bvilket\b/g) || []).length;
-  if (vilketCount > 1) {
-    violations.push(`"vilket" upprepas ${vilketCount} gånger (max 1). Dela upp i korta meningar.`);
+  if (vilketCount > 2) {  // Raised from 1 to 2 - "vilket" twice is acceptable in Swedish prose
+    violations.push(`"vilket" upprepas ${vilketCount} gånger (max 2). Dela upp i korta meningar.`);
   }
 
   const slashTerms = (text.match(/\b[A-Za-zÅÄÖåäö]+\s*\/\s*[A-Za-zÅÄÖåäö]+\b/g) || []).slice(0, 3);

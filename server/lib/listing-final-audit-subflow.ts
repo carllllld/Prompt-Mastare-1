@@ -252,12 +252,28 @@ export function finalizeFinalMainValidation(params: {
   }
 
   if (params.finalNonWordCountViolations.length > 0) {
-    // Check if violations are only "corrupted artifacts" which can be false positives
+    // Check if violations are only "corrupted artifacts" or style/rhythm issues which should warn, not block
+    const styleOnlyViolations = new Set([
+      "Monoton meningsstart",
+      '"vilket" upprepas',
+      '"Det finns" upprepas',
+      '"Den har" upprepas',
+      '"ligger [avstånd]" upprepas',
+      "Saknar tydlig styckeindelning",
+    ]);
     const seriousViolations = params.finalNonWordCountViolations.filter(
       v => !v.includes("corrupted") && !v.includes("Trasigt") && !v.includes("artefakt")
+        && !Array.from(styleOnlyViolations).some(s => v.startsWith(s))
     );
     if (seriousViolations.length > 0) {
       throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i huvudtexten: ${seriousViolations.slice(0, 5).join(" | ")}`);
+    }
+    // Style violations become warnings only
+    const styleWarnings = params.finalNonWordCountViolations.filter(
+      v => Array.from(styleOnlyViolations).some(s => v.startsWith(s))
+    );
+    if (styleWarnings.length > 0) {
+      warnings.push(`[Final Gate] Stilanmärkningar (blockerar inte leverans): ${styleWarnings.slice(0, 5).join(" | ")}`);
     }
   }
 

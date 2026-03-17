@@ -138,6 +138,34 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Migrate existing pipeline_metrics table — add any missing columns from schema updates
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS run_id TEXT`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS success BOOLEAN`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS total_duration_ms INTEGER`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS total_ai_calls INTEGER`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS total_tokens_used INTEGER`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS total_cost_usd TEXT`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS final_quality_score INTEGER`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS final_word_count INTEGER`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS rescue_attempts INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS polish_attempts INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS fast_path_taken BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS structured_data_used BOOLEAN DEFAULT false`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS features_used JSONB DEFAULT '[]'`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS error_count INTEGER DEFAULT 0`);
+    await pool.query(`ALTER TABLE pipeline_metrics ADD COLUMN IF NOT EXISTS steps JSONB DEFAULT '[]'`);
+    // Remove old columns that no longer exist in schema (ignore errors if they don't exist)
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS session_id`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS platform`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS style`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS input_signal_coverage`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS quality_score`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS word_count`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS violation_count`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS generation_time_ms`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS steps_completed`); } catch {}
+    try { await pool.query(`ALTER TABLE pipeline_metrics DROP COLUMN IF EXISTS fallback_triggered`); } catch {}
+
     // Create experiment_assignments table for A/B testing
     await pool.query(`
       CREATE TABLE IF NOT EXISTS experiment_assignments (

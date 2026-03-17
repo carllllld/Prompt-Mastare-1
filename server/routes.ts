@@ -292,11 +292,11 @@ function clampNumber(value: number, min: number, max: number): number {
 function computeOutputTokenBudget(targetWordMax: number, includeAuxFields: boolean): number {
   const safeWordMax = Number.isFinite(targetWordMax) && targetWordMax > 0 ? targetWordMax : 500;
   const mainTextTokenBudget = Math.round(safeWordMax * 2.4);
-  const auxTokenBudget = includeAuxFields ? 950 : 240;
+  const auxTokenBudget = includeAuxFields ? 1200 : 240;
   return clampNumber(
     mainTextTokenBudget + auxTokenBudget,
-    includeAuxFields ? 2200 : 900,
-    includeAuxFields ? 6500 : 2600  // Raised from 5200 → 6500 to prevent JSON truncation on full aux output
+    includeAuxFields ? 4800 : 900,  // Floor raised significantly: 3800 → 4800 to prevent truncation with medium effort
+    includeAuxFields ? 7000 : 2600   // Ceiling raised: 6500 → 7000 for premium/long texts
   );
 }
 
@@ -3703,21 +3703,25 @@ Fakta i fokus med naturlig rytm och professionell ton.
       const expansionCompletionTokenBudget = computeChatCompletionTokenBudget(targetWordMax, "expansion", plan);
       const rescueCompletionTokenBudget = computeChatCompletionTokenBudget(targetWordMax, "rescue", plan);
       const candidateConfigs = [
-        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, effort: "high" as const, exampleCount: 3, minimalFields: false },
-        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, effort: "high" as const, exampleCount: 2, minimalFields: false },
+        { label: "primary", developerSuffix: `\n\nVARIANTMÅL: Skriv en excellent, fullständig text på ${targetWordMin}-${targetWordMax} ord med naturlig rytm och selektiv betoning. Första stycket ska bära annonsen.`, effort: "medium" as const, exampleCount: 3, minimalFields: false },
+        { label: "alternative", developerSuffix: `\n\nVARIANTMÅL: Alternativ approach - fokusera på att skriva som en erfaren mäklare som berättar om bostaden, inte listar fakta. Mål: ${targetWordMin}-${targetWordMax} ord.`, effort: "medium" as const, exampleCount: 2, minimalFields: false },
       ];
       const runState = createListingRunState();
 
       const generateCandidateWithGuard = async (label: string, developerSuffix: string, effort: "low" | "medium" | "high", exampleCount: number, minimalFields: boolean) => {
-        // Limit example count and size to prevent token budget exhaustion:
-        // primary: max 2 examples at 700 chars, alternative: max 1 example at 700 chars
+        // Aggressive prompt optimization to prevent token exhaustion:
+        // primary: max 2 examples at 600 chars (reduced from 700)
+        // alternative: max 1 example at 600 chars (reduced from 700)
+        // emergency: max 1 example at 500 chars
         const cappedExampleCount = label === "primary" ? Math.min(exampleCount, 2) : Math.min(exampleCount, 1);
-        const candidateExamples = compactExamplesForPrompt(matchedExamples, cappedExampleCount, 700);
-        const cappedNegativeExample = compactNegativeExample.slice(0, 500);
-        const cappedPositiveExample = compactPositiveExample.slice(0, 900);
+        const exampleCharLimit = label === "emergency" ? 500 : 600;
+        const candidateExamples = compactExamplesForPrompt(matchedExamples, cappedExampleCount, exampleCharLimit);
+        const cappedNegativeExample = compactNegativeExample.slice(0, 400);  // Reduced from 500
+        const cappedPositiveExample = compactPositiveExample.slice(0, 800);  // Reduced from 900
         const candidateUserContent = `DISPOSITION:\n${compactDispositionJson}\n\nTONALITET:\n${compactToneAnalysisJson}\n\nSKRIVPLAN (struktur, inte checklista):\n${compactWritingPlanJson}\n\n${blueprintUserAddendum}\n\nORDMÅL: ${targetWordMin}-${targetWordMax} ord\n\nPLATTFORM: ${platform}\n\n${competitorAnalysis ? `POSITIONERING:\n${competitorAnalysis}\n\n` : ""}${imageAnalysis ? `BILDANALYS:\n${imageAnalysis}\n\n` : ""}MATCHADE EXEMPEL (imitera stilen EXAKT):\n${candidateExamples.join("\n\n---\n\n")}\n\nNEGATIVT EXEMPEL (skriv ALDRIG så här):\n${cappedNegativeExample}\n\nPOSITIVT EXEMPEL (skriv exakt så här):\n${cappedPositiveExample}`;
         // Auto-downgrade to minimalFields if combined prompt is truly enormous (prevents reasoning token starvation)
-        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 24000);
+        // Threshold lowered from 24000 to 22000 for earlier intervention
+        const effectiveMinimalFields = minimalFields || (systemContent.length + candidateUserContent.length > 22000);
         if (!minimalFields && effectiveMinimalFields) {
           console.warn(`[Step 3:${label}] Prompt very large (${systemContent.length + candidateUserContent.length} chars) — switching to minimalFields mode.`);
         }
@@ -4020,13 +4024,19 @@ KANDIDATRÄDDNING:
         console.warn("[Step 3] All candidate variants failed. Entering emergency fallback generation.");
 
         try {
-          // Robust nödfalls-generering som använder vår felsäkra guard-funktion
+          // Emergency fallback: use medium effort with full aux fields for quality, but simpler prompt
           const emergencyCandidate = await generateCandidateWithGuard(
             "emergency",
-            "\n\nNÖDLÄGE:\n- Du måste nu leverera en färdig svensk objektsbeskrivning även om tidigare försök har misslyckats.\n- Prioritera robust leverans över perfektion.\n- Returnera ENDAST giltig JSON.\n- improvedPrompt måste innehålla 3-5 stycken sammanhängande löpande prosa.\n- Skriv aldrig disposition, lista, rådata, rubriker eller kolonrader.\n- Om underlaget är tunt ska du ändå skriva en trygg, saklig och publicerbar objektsbeskrivning utan att hitta på fakta.",
-            "low",
-            0,
-            true // minimalFields för maximal stabilitet i nödläge
+            `\n\nNÖDFALLSGENERERING:
+- Tidigare försök misslyckades tekniskt — du måste nu leverera en komplett, publicerbar objektsbeskrivning.
+- Skriv som en erfaren svensk mäklare: naturlig prosa, inga listor, inga upprepningar.
+- Första stycket ska fånga bostadens starkaste kvalitet direkt.
+- Lägesstycket ska vara selektivt — välj 2-3 relevanta platser och beskriv dem naturligt, aldrig som lista.
+- Ordmål: ${targetWordMin}-${targetWordMax} ord.
+- Returnera komplett JSON med alla fält: improvedPrompt, headline, socialCopy, instagramCaption, showingInvitation, shortAd.`,
+            "medium",  // Medium effort for balance between quality and reliability
+            1,         // Use 1 example for guidance
+            false      // Generate all aux fields for complete delivery
           );
 
           if (emergencyCandidate) {
