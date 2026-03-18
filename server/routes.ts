@@ -1098,7 +1098,9 @@ function polishAuxFieldText(field: "socialCopy" | "instagramCaption" | "showingI
   }
 
   if (field === "headline") {
-    value = value.replace(/[.!?…]+$/g, "").trim();
+    // Remove ALL punctuation everywhere (not just trailing) and emojis
+    value = value.replace(/[.!?…]+/g, "").trim();
+    value = value.replace(/[\u{1F300}-\u{1F9FF}]/gu, "").trim();
     const words = value.split(/\s+/).filter(Boolean);
     if (words.length > 9) value = words.slice(0, 9).join(" ");
   } else if (field === "instagramCaption") {
@@ -3126,6 +3128,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     let failSafeResponseData: any = null;
     let failSafeStrongCandidateData: any = null;
     let observabilityRunStarted = false;
+    
+    // Define optimizationRecord outside try block so it's accessible in catch for fail-safe quota tracking
+    let optimizationRecord: any = null;
     let observabilityRunCompleted = false;
     const finalizeObservabilityRun = (success: boolean, metrics?: { qualityScore?: number; wordCount?: number }) => {
       if (!observabilityRunStarted || observabilityRunCompleted) return;
@@ -4166,23 +4171,25 @@ Svara med JSON:
 
 RETURNERA JSON MED DESSA FÄLT:
 {
-  "headline": "Kort, stark rubrik (max 9 ord, ingen punkt i slutet)",
+  "headline": "Kort, stark rubrik (max 9 ord, ingen punkt, inga emojis)",
   "socialCopy": "2-3 meningar för Facebook/LinkedIn (avsluta med punkt)",
   "instagramCaption": "2-3 meningar med relevant emoji (🏡✨🌿☀️)",
-  "showingInvitation": "Inbjudan till visning (nämn 'visning' tydligt)",
+  "showingInvitation": "Inbjudan till visning (nämn 'visning' tydligt, skriv färdig text)",
   "shortAd": "Mycket kort annons, max 2 meningar, max 32 ord"
 }
 
-REGLER:
+KRITISKA REGLER:
+- INGA PLATSHÅLLARE som [TID], [KONTAKT], [DATUM], [ADRESS] - skriv FÄRDIG text
+- Om du inte har exakt information, skriv generellt: "Välkommen på visning" istället för "Visning [TID]"
 - Basera allt på huvudtexten nedan
 - Håll samma ton och stil som huvudtexten
 - Inga AI-klyschor ("erbjuder", "välkommen till", "perfekt för")
 - Inga upprepningar från huvudtexten
 - Alla fält måste vara kompletta och publicerbara
-- Headline: Max 9 ord, ingen punkt
+- Headline: Max 9 ord, ingen punkt, inga emojis
 - SocialCopy: 2-3 meningar, avsluta med punkt
 - InstagramCaption: 2-3 meningar med 1-2 emojis
-- ShowingInvitation: Måste innehålla ordet "visning"
+- ShowingInvitation: Måste innehålla ordet "visning", inga platshållare, färdig text
 - ShortAd: Max 32 ord totalt`
               },
               {
@@ -4195,6 +4202,30 @@ REGLER:
           });
 
           const auxFields = safeJsonParse(auxFieldCompletion.output_text || "{}");
+          
+          // Validate and fix placeholders in generated aux fields
+          if (auxFields.showingInvitation && /\[(?:TID|DATUM|KONTAKT|ADRESS|MÄKLARE)\]/i.test(auxFields.showingInvitation)) {
+            console.log("[Step 3:Aux Fields] ShowingInvitation contains placeholders, replacing with generic text");
+            auxFields.showingInvitation = "Välkommen på visning. Kontakta ansvarig mäklare för tid och mer information.";
+          }
+          if (auxFields.headline && /\[.*?\]/i.test(auxFields.headline)) {
+            console.log("[Step 3:Aux Fields] Headline contains placeholders, removing");
+            auxFields.headline = auxFields.headline.replace(/\[.*?\]/g, "").trim();
+          }
+          // Remove placeholders from all other fields
+          for (const field of ['socialCopy', 'instagramCaption', 'shortAd']) {
+            if (auxFields[field] && /\[.*?\]/i.test(auxFields[field])) {
+              console.log(`[Step 3:Aux Fields] ${field} contains placeholders, removing`);
+              auxFields[field] = auxFields[field].replace(/\[.*?\]/g, "").trim();
+            }
+          }
+          
+          // Polish aux fields BEFORE merging into result
+          if (auxFields.headline) auxFields.headline = polishAuxFieldText("headline", auxFields.headline, style, platform);
+          if (auxFields.socialCopy) auxFields.socialCopy = polishAuxFieldText("socialCopy", auxFields.socialCopy, style, platform);
+          if (auxFields.instagramCaption) auxFields.instagramCaption = polishAuxFieldText("instagramCaption", auxFields.instagramCaption, style, platform);
+          if (auxFields.showingInvitation) auxFields.showingInvitation = polishAuxFieldText("showingInvitation", auxFields.showingInvitation, style, platform);
+          if (auxFields.shortAd) auxFields.shortAd = polishAuxFieldText("shortAd", auxFields.shortAd, style, platform);
           
           // Merge aux fields into result, keeping any existing fields
           if (!result.headline && auxFields.headline) result.headline = auxFields.headline;
@@ -5345,6 +5376,42 @@ Svara med JSON:
         validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
           .filter((v) => v.startsWith("["))
       );
+      
+      // CRITICAL: Attempt to repair aux field violations BEFORE final validation throws error
+      if (finalExtraFieldViolations.length > 0 && plan !== "free") {
+        console.log(`[Final Gate Repair] Found ${finalExtraFieldViolations.length} aux field violations, attempting repair...`);
+        
+        // Attempt to repair each aux field by re-polishing
+        for (const field of ['headline', 'socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd']) {
+          if (result[field]) {
+            const polished = polishAuxFieldText(
+              field as "headline" | "socialCopy" | "instagramCaption" | "showingInvitation" | "shortAd",
+              result[field],
+              style,
+              platform
+            );
+            if (polished) {
+              result[field] = polished;
+              console.log(`[Final Gate Repair] Re-polished ${field}`);
+            }
+          }
+        }
+        
+        // Re-validate after repair
+        const repairedExtraFieldViolations = getNonWordCountViolations(
+          validateOptimizationResult(result, platform, minimumPublishableWordMin, targetWordMax, style)
+            .filter((v) => v.startsWith("["))
+        );
+        
+        if (repairedExtraFieldViolations.length < finalExtraFieldViolations.length) {
+          console.log(`[Final Gate Repair] Reduced violations from ${finalExtraFieldViolations.length} to ${repairedExtraFieldViolations.length}`);
+        }
+        
+        // Update finalExtraFieldViolations with repaired result
+        finalExtraFieldViolations.length = 0;
+        finalExtraFieldViolations.push(...repairedExtraFieldViolations);
+      }
+      
       const finalNarrativeIssues = detectNarrativeIntegrityIssues(result.improvedPrompt);
       const finalMainValidation = finalizeFinalMainValidation({
         resultText: result?.improvedPrompt,
@@ -5488,7 +5555,7 @@ Svara med json i formatet:
         dimensions: brokerRealismScorecard.dimensions,
         improvements: brokerRealismScorecard.improvements,
       });
-      const optimizationRecord = {
+      optimizationRecord = {
         userId: user.id,
         originalPrompt: prompt,
         improvedPrompt: result.improvedPrompt,
@@ -5631,6 +5698,23 @@ Svara med json i formatet:
           fail_safe_reason: err.message || "okänt fel",
         };
         console.warn("[Optimize Fail-Safe] Returning best available draft instead of hard failure.");
+        
+        // CRITICAL: Fail-safe deliveries should count towards quota since user receives usable text
+        if (optimizationRecord) {
+          try {
+            await storage.createOptimization({
+              ...optimizationRecord,
+              improvedPrompt: safePayload.improvedPrompt || "",
+              fail_safe_delivery: true,
+              fail_safe_stage: safePayload.fail_safe_stage || "unknown",
+            });
+            await storage.incrementUsage(user.id, 'texts');
+            console.log("[Optimize Fail-Safe] Quota incremented for fail-safe delivery");
+          } catch (persistError) {
+            console.error("[Optimize Fail-Safe] Failed to persist fail-safe optimization:", persistError);
+          }
+        }
+        
         if (wantsStream) {
           try {
             ensureStreamStarted();
@@ -5686,6 +5770,23 @@ Svara med json i formatet:
           fail_safe_reason: err.message || "okänt fel",
         };
         console.warn("[Optimize Fail-Safe] Returning deterministic emergency reserve text.");
+        
+        // CRITICAL: Emergency reserve deliveries should count towards quota since user receives usable text
+        if (optimizationRecord) {
+          try {
+            await storage.createOptimization({
+              ...optimizationRecord,
+              improvedPrompt: sanitizedEmergencyText,
+              fail_safe_delivery: true,
+              fail_safe_stage: "emergency-reserve",
+            });
+            await storage.incrementUsage(user.id, 'texts');
+            console.log("[Optimize Fail-Safe] Quota incremented for emergency reserve delivery");
+          } catch (persistError) {
+            console.error("[Optimize Fail-Safe] Failed to persist emergency reserve:", persistError);
+          }
+        }
+        
         if (wantsStream) {
           try {
             ensureStreamStarted();

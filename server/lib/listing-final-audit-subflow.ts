@@ -288,6 +288,8 @@ export function finalizeFinalMainValidation(params: {
 
   if (params.finalExtraFieldViolations.length > 0) {
     if (params.strictExtraFieldValidation) {
+      // Don't throw immediately - let caller attempt repair first
+      // This error will be caught and trigger repair logic in routes.ts
       throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i extratexter: ${params.finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
     }
     warnings.push(`[Final Gate] Extratexter har kvarvarande kvalitetsanmärkningar men blockerar inte huvudtexten: ${params.finalExtraFieldViolations.slice(0, 5).join(" | ")}`);

@@ -111,6 +111,9 @@ export const FORBIDDEN_PHRASES = [
   "underlättar vardagen",
   "bekvämlighet i vardagen",
   "god natts sömn",
+  "löser sig",
+  "fixar sig",
+  "ordnar sig",
 
   // === LÄGES-KLYSCHOR (AI-överdrift) ===
   "eftertraktat boendealternativ",
@@ -129,6 +132,8 @@ export const FORBIDDEN_PHRASES = [
   // === PLATS FÖR/HÄRLIG PLATS (AI-konstruktioner) ===
   "härlig plats för",
   "plats för avkoppling",
+  "gör steget mellan",
+  "steget mellan",
 
   // === MÖJLIGHET ATT/FORMA (AI-filosofi) ===
   "möjlighet att påverka",

@@ -86,6 +86,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     [/\bsovrumetför att\b/gi, 'Trasigt ord: "sovrumetför att"'],
     [/\bbadrummetför att\b/gi, 'Trasigt ord: "badrummetför att"'],
     [/\bhallenför att\b/gi, 'Trasigt ord: "hallenför att"'],
+    [/\bläför att\b/gi, 'Trasigt ord: "läför att"'],
+    [/\b\w{4,}för att\b/gi, 'Trasigt ord: sammansatt ord + "för att" utan mellanslag'],
     [/\bsödterass\b/gi, 'Felstavat ord: "södterass"'],
     [/\bvälsköför att\b/gi, 'Trasigt ord: "välsköför att"'],
     [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
@@ -101,13 +103,16 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     [/\benergiklass\s+[A-G]\.\s+fiber\s+är\s+installerat\b/i, 'Mekanisk teknikrad efter energiklass'],
     [/\bparkering\s+har\s+(?:laddplats|garage|carport|plats)\b/i, 'Mekanisk parkeringsfras: "Parkering har ..."'],
     [/\bnär det passar med en måltid\s+buss\s+tar\b/i, 'Saknad meningsgräns före kommunikationsmening'],
-    [/\b(kikka|come 2 eat|chopchop asian express värmdö)[^.!?\n]{0,90}när det passar med en måltid\b/i, 'Svag servicefras i lägesstycke'],
+    [/\b(?:kikka|come 2 eat|chopchop asian express|restaurang\w+\s+\w+\s+\w+)\b/i, 'Undvik specifika restaurangnamn i löptext - håll lägesbeskrivning generell ("restauranger", "matställen")'],
     [/\bbörja\s+[A-ZÅÄÖ][a-zåäö]+\b/i, 'Avhuggen mening efter "börja"'],
     [/\bavgift\s+om\s+\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\b/, 'Trasig avgiftsmening: saknar enhet (kr/mån, kr/år) och meningsgräns'],
     [/\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\s+ligger\s+nära\b/i, 'Trasig meningsövergång: siffra direkt följt av nytt stycke utan punkt'],
     [/\bavgift(?:en)?\s+på\s+\d{1,6}(?!\s*(?:kr|:-|\/mån|\/år|sek))\b/i, 'Avgift saknar enhet (kr/mån, kr/år)'],
     [/\b(?:avgift|driftkostnad|driftskostnad|månadskostnad|kostnad)(?:en)?\s+(?:om|på)\s+(?:\d{1,3}(?:[ \u00A0]\d{3})*|\d{4,7})(?!\s*(?:kr|kronor|sek|:-|\/mån|\/månad|\/år|per månad|per år))\b/i, 'Kostnad saknar enhet (kr/mån, kr/år)'],
     [/\b\d{1,3}(?:[ \u00A0]\d{3})?\s+[A-ZÅÄÖ][a-zåäö]{2,}\s+(?:fungerar|ligger|har|är|ger|tar)\b/u, 'Sannolik saknad punkt mellan siffra och ny mening'],
+    [/\b(?:planlösningen|bostaden|lägenheten|villan|huset)\s+inkluderar\s+\d+\b/i, 'Mekanisk fakta-rad: "X inkluderar Y antal" - skriv som naturlig prosa'],
+    [/\b(?:totalt|sammanlagt)\s+finns\s+\d+\s+(?:rum|sovrum|badrum)\b/i, 'Mekanisk fakta-rad: "Totalt finns X rum" - integrera i löptext'],
+    [/\b(?:när barnen har somnat|efter att barnen|när familjen sover|när alla)\b/i, 'För privat/intimt språk - beskriv möjligheter istället för specifika situationer'],
   ];
   for (const [pattern, message] of mechanicalQualityPatterns) {
     if (pattern.test(text)) {
@@ -328,7 +333,12 @@ function findAuxFieldViolations(
 ): string[] {
   const violations = findRuleViolations(text, platform, style).filter((violation) => !isMainTextOnlyViolation(violation));
   const words = text.split(/\s+/).filter(Boolean);
-  const sentenceCount = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean).length;
+  // More robust sentence counting: handle punctuation with optional whitespace and filter out non-sentences
+  const sentenceCount = text
+    .split(/(?<=[.!?])\s*/)
+    .map((s) => s.trim())
+    .filter(s => s.length > 0 && /[a-zåäöA-ZÅÄÖ]/.test(s))
+    .length;
 
   if (field === "headline") {
     if (words.length > 9) violations.push("Rubrik är för lång (max 9 ord).");
