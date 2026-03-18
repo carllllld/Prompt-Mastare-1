@@ -8,6 +8,7 @@ import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus
 import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -67,7 +68,7 @@ const KITCHEN_CHIPS = [
 ];
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
-  "Badkar", "Golvvärme", "Tvättmaskin", "Torktumlare",
+  "Badkar", "Tvättmaskin", "Torktumlare",
 ];
 const FLOORING_CHIPS = [
   "Ekparkett", "Originalparkett", "Björkparkett",
@@ -115,11 +116,12 @@ const exampleCompactInputClass = "h-9 text-xs rounded-lg border-slate-200 bg-whi
 const exampleTextareaClass = "min-h-[56px] resize-none text-sm rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
 
 // ── HELPER: Chip Selector ──
-function ChipSelector({ chips, selected, onToggle, variant = "default" }: {
+function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips }: {
   chips: string[];
   selected: string[];
   onToggle: (chip: string) => void;
   variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
+  tooltips?: Record<string, string>;
 }) {
   const getColors = (isOn: boolean) => {
     if (!isOn) return { background: "#FFFFFF", color: "#556170", borderColor: "#DAD8D1" };
@@ -140,22 +142,51 @@ function ChipSelector({ chips, selected, onToggle, variant = "default" }: {
     return colors[variant];
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent, chip: string) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      onToggle(chip);
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-1.5">
       {chips.map((chip) => {
         const isOn = selected.includes(chip);
         const colors = getColors(isOn);
-        return (
+        const tooltip = tooltips?.[chip];
+        
+        const chipButton = (
           <button
             key={chip}
             type="button"
             onClick={() => onToggle(chip)}
-            className="px-2.5 py-1 text-[11px] rounded-full border transition-all font-medium select-none"
+            onKeyDown={(e) => handleKeyDown(e, chip)}
+            role="checkbox"
+            aria-checked={isOn}
+            aria-label={chip}
+            className="px-2.5 py-1 md:py-2 md:px-3 text-xs rounded-full border transition-all font-medium select-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 inline-flex items-center gap-1"
             style={colors}
           >
+            {isOn && <CheckCircle2 className="w-3 h-3" />}
             {chip}
           </button>
         );
+        
+        if (tooltip) {
+          return (
+            <Tooltip key={chip}>
+              <TooltipTrigger asChild>
+                {chipButton}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        
+        return chipButton;
       })}
     </div>
   );
@@ -211,6 +242,244 @@ interface PromptFormProps {
   isPro?: boolean;
 }
 
+// PriorityChecklist Component
+interface PriorityItem {
+  label: string;
+  completed: boolean;
+  fieldName: string;
+  priority: 'critical' | 'important' | 'optional';
+}
+
+interface PriorityChecklistProps {
+  items: PriorityItem[];
+  onItemClick?: (fieldName: string) => void;
+}
+
+function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
+  const completedCount = items.filter(item => item.completed).length;
+  const totalCount = items.length;
+  const percentage = Math.round((completedCount / totalCount) * 100);
+  
+  const getProgressLevel = () => {
+    if (percentage < 40) return { label: "Grundläggande", color: "text-orange-600" };
+    if (percentage < 70) return { label: "Bra", color: "text-green-600" };
+    return { label: "Utmärkt", color: "text-green-700" };
+  };
+  
+  const progressLevel = getProgressLevel();
+  
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'border-orange-500 bg-orange-50';
+      case 'important': return 'border-green-500 bg-green-50';
+      case 'optional': return 'border-gray-400 bg-gray-50';
+      default: return 'border-gray-400 bg-gray-50';
+    }
+  };
+  
+  const getPriorityAccent = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'bg-orange-500';
+      case 'important': return 'bg-green-500';
+      case 'optional': return 'bg-gray-400';
+      default: return 'bg-gray-400';
+    }
+  };
+  
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-900">Prioriterade fält</h3>
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium ${progressLevel.color}`}>
+            {progressLevel.label}
+          </span>
+          <span className="text-sm text-gray-600">
+            {completedCount}/{totalCount}
+          </span>
+        </div>
+      </div>
+      
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+        <div 
+          className={`h-2 rounded-full transition-all duration-300 ${
+            percentage < 40 ? 'bg-orange-500' : percentage < 70 ? 'bg-green-500' : 'bg-green-600'
+          }`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+      
+      <div className="space-y-2">
+        {items.map((item, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => onItemClick?.(item.fieldName)}
+            className={`w-full flex items-center gap-3 p-2 rounded border transition-all ${
+              getPriorityColor(item.priority)
+            } ${!item.completed ? 'animate-pulse' : ''} hover:shadow-sm`}
+          >
+            <div className={`w-1 h-6 rounded ${getPriorityAccent(item.priority)}`} />
+            <div className="flex-1 text-left">
+              <span className="text-sm text-gray-900">{item.label}</span>
+            </div>
+            {item.completed ? (
+              <CheckCircle2 className="w-4 h-4 text-green-600" />
+            ) : (
+              <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// FieldGroup Component
+interface FieldGroupProps {
+  title: string;
+  icon?: React.ReactNode;
+  priority?: 'critical' | 'important' | 'optional';
+  defaultExpanded?: boolean;
+  persistKey?: string;
+  children: React.ReactNode;
+  helpText?: string;
+}
+
+function FieldGroup({ 
+  title, 
+  icon, 
+  priority = 'optional', 
+  defaultExpanded = true, 
+  persistKey,
+  children,
+  helpText 
+}: FieldGroupProps) {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (!persistKey) return defaultExpanded;
+    try {
+      const saved = localStorage.getItem(`fieldgroup-${persistKey}`);
+      return saved !== null ? saved === 'true' : defaultExpanded;
+    } catch {
+      return defaultExpanded;
+    }
+  });
+  
+  const toggleExpanded = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    if (persistKey) {
+      try {
+        localStorage.setItem(`fieldgroup-${persistKey}`, String(newState));
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+  };
+  
+  const getPriorityColor = () => {
+    switch (priority) {
+      case 'critical': return 'bg-orange-50 border-orange-200';
+      case 'important': return 'bg-green-50 border-green-200';
+      case 'optional': return 'bg-gray-50 border-gray-200';
+      default: return 'bg-gray-50 border-gray-200';
+    }
+  };
+  
+  const getPriorityAccent = () => {
+    switch (priority) {
+      case 'critical': return 'text-orange-600';
+      case 'important': return 'text-green-600';
+      case 'optional': return 'text-gray-600';
+      default: return 'text-gray-600';
+    }
+  };
+  
+  return (
+    <div className={`rounded-lg border p-4 ${getPriorityColor()}`}>
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className="w-full flex items-center justify-between mb-3"
+      >
+        <div className="flex items-center gap-2">
+          {icon && <span className={getPriorityAccent()}>{icon}</span>}
+          <h3 className={`text-sm font-semibold ${getPriorityAccent()}`}>{title}</h3>
+        </div>
+        {isExpanded ? (
+          <ChevronUp className="w-4 h-4 text-gray-500" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-500" />
+        )}
+      </button>
+      
+      {helpText && isExpanded && (
+        <p className="text-xs text-gray-600 mb-3">{helpText}</p>
+      )}
+      
+      {isExpanded && <div className="space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+// FieldImpactBadge Component
+type TextImpact = 'huvudtext' | 'rubrik' | 'socialt' | 'alla' | 'metadata' | 'juridiskt';
+
+interface FieldImpactBadgeProps {
+  impacts: TextImpact[];
+  examples?: string[];
+}
+
+function FieldImpactBadge({ impacts, examples }: FieldImpactBadgeProps) {
+  const getImpactLabel = (impact: TextImpact) => {
+    switch (impact) {
+      case 'huvudtext': return 'Huvudtext';
+      case 'rubrik': return 'Rubrik';
+      case 'socialt': return 'Socialt';
+      case 'alla': return 'Alla texter';
+      case 'metadata': return 'Metadata';
+      case 'juridiskt': return 'Juridiskt';
+      default: return impact;
+    }
+  };
+  
+  const getImpactColor = (impact: TextImpact) => {
+    switch (impact) {
+      case 'huvudtext': return 'bg-blue-100 text-blue-700';
+      case 'rubrik': return 'bg-purple-100 text-purple-700';
+      case 'socialt': return 'bg-pink-100 text-pink-700';
+      case 'alla': return 'bg-green-100 text-green-700';
+      case 'metadata': return 'bg-gray-100 text-gray-700';
+      case 'juridiskt': return 'bg-orange-100 text-orange-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+  
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {impacts.map((impact, index) => (
+        <Tooltip key={index}>
+          <TooltipTrigger asChild>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getImpactColor(impact)}`}>
+              {getImpactLabel(impact)}
+            </span>
+          </TooltipTrigger>
+          {examples && examples.length > 0 && (
+            <TooltipContent>
+              <p className="text-xs font-semibold mb-1">Påverkar:</p>
+              <ul className="text-xs space-y-0.5">
+                {examples.map((example, i) => (
+                  <li key={i}>• {example}</li>
+                ))}
+              </ul>
+            </TooltipContent>
+          )}
+        </Tooltip>
+      ))}
+    </div>
+  );
+}
+
 export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = false }: PromptFormProps) {
   const { toast } = useToast();
 
@@ -228,6 +497,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // UI state
   const [showDetails, setShowDetails] = useState(false);
+  const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
 
   const modelLimits = { min: 200, max: 600, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
@@ -324,19 +595,91 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const hasKitchenBathroomFacts = Boolean(kitchenValue?.trim() || bathroomValue?.trim() || kitchenChips.length > 0 || bathroomChips.length > 0);
   const hasLocationFacts = Boolean(transportValue?.trim() || neighborhoodValue?.trim());
   const hasStrongDifferentiator = Boolean(uspValue?.trim() || uspChips.length > 0 || viewValue?.trim());
-  const priorityChecklist = [
-    Boolean(addressValue?.trim()),
-    Boolean(livingAreaValue?.trim()),
-    Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0),
-    hasKitchenBathroomFacts,
-    hasLocationFacts,
-    hasStrongDifferentiator,
-    Boolean(layoutValue?.trim() || conditionValue?.trim()),
+  
+  // Priority checklist items with field references for scroll-to functionality
+  const priorityItems: PriorityItem[] = [
+    { label: "Adress", completed: Boolean(addressValue?.trim()), fieldName: "address", priority: "critical" },
+    { label: "Boarea", completed: Boolean(livingAreaValue?.trim()), fieldName: "livingArea", priority: "critical" },
+    { label: "Rum & badrum", completed: Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0), fieldName: "totalRooms", priority: "critical" },
+    { label: "Kök & badrum", completed: hasKitchenBathroomFacts, fieldName: "kitchenDescription", priority: "important" },
+    { label: "Läge & transport", completed: hasLocationFacts, fieldName: "transport", priority: "important" },
+    { label: "Försäljningsargument", completed: hasStrongDifferentiator, fieldName: "uniqueSellingPoints", priority: "critical" },
+    { label: "Planlösning & skick", completed: Boolean(layoutValue?.trim() || conditionValue?.trim()), fieldName: "layout", priority: "important" },
   ];
+  
+  const priorityChecklist = priorityItems.map(item => item.completed);
   const priorityCompleted = priorityChecklist.filter(Boolean).length;
+  
+  // Scroll to field handler
+  const handleScrollToField = useCallback((fieldName: string) => {
+    const element = document.querySelector(`[name="${fieldName}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Add temporary highlight
+      element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+      }, 2000);
+    }
+  }, []);
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
   const onLocalSubmit = (values: PropertyFormData) => {
+    // Check if priority fields are incomplete (less than 4 completed)
+    if (priorityCompleted < 4) {
+      setPendingFormData(values);
+      setShowIncompleteDialog(true);
+      return;
+    }
+    
+    // Proceed with submission
+    submitForm(values);
+  };
+  
+  const submitForm = (values: PropertyFormData) => {
+    // Canonical rules for chip normalization - maps aliases to canonical forms
+    const CANONICAL_RULES: Array<{ canonical: string; pattern: RegExp }> = [
+      // Laddning för elbilar
+      { canonical: "Laddbox för elbil", pattern: /\b(laddplats elbil|laddplats för elbil|laddbox(?: installerad)?|elbilsladdare)\b/i },
+      
+      // Fönster
+      { canonical: "Nya fönster", pattern: /\b(fönster bytta|nya fönster|fönsterbyte|uppdaterade fönster)\b/i },
+      
+      // Stammar
+      { canonical: "Stambyte genomfört", pattern: /\b(stambyte|stamrenovering|nya stammar)\b/i },
+      
+      // Golvvärme (kan finnas i både badrum och uppvärmning)
+      { canonical: "Golvvärme", pattern: /\b(golvvärme|varmvatten i golv)\b/i },
+      
+      // Balkong/uteplats
+      { canonical: "Balkong", pattern: /\b(balkong|uteplats på balkong)\b/i },
+      { canonical: "Altan", pattern: /\b(altan|uteplats)\b/i },
+      
+      // Parkering
+      { canonical: "Garage", pattern: /\b(garage|carport med garage)\b/i },
+      { canonical: "Carport", pattern: /\b(carport|biltak)\b/i },
+      
+      // Kök
+      { canonical: "Öppen planlösning", pattern: /\b(öppen planlösning|öppet kök|kök öppet mot vardagsrum)\b/i },
+      { canonical: "Vitvaror uppdaterade", pattern: /\b(vitvaror uppdaterade|nya vitvaror|moderna vitvaror)\b/i },
+      
+      // Badrum
+      { canonical: "Renoverat badrum", pattern: /\b(renoverat badrum|nyrenoverat badrum|badrum renoverat)\b/i },
+      { canonical: "Helkaklat", pattern: /\b(helkaklat|helkaklat badrum)\b/i },
+      
+      // Golv
+      { canonical: "Ekparkett", pattern: /\b(ekparkett|parkett i ek)\b/i },
+      { canonical: "Massivt trägolv", pattern: /\b(massivt trägolv|massiv parkett)\b/i },
+      
+      // Uppvärmning
+      { canonical: "Fjärrvärme", pattern: /\b(fjärrvärme|stadsvärme)\b/i },
+      { canonical: "Bergvärme", pattern: /\b(bergvärme|bergvärmepump)\b/i },
+      
+      // Trädgård
+      { canonical: "Stor trädgård", pattern: /\b(stor trädgård|rymlig trädgård|generös trädgård)\b/i },
+      { canonical: "Altan", pattern: /\b(altan|uteplats|terrass)\b/i },
+    ];
+
     const normalizeListText = (value: string) => {
       if (!value) return "";
       const parts = value
@@ -344,15 +687,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
         .map((part) => part.trim())
         .filter(Boolean);
 
-      const aliasRules: Array<{ canonical: string; pattern: RegExp }> = [
-        { canonical: "Laddbox för elbil", pattern: /\b(laddplats elbil|laddplats för elbil|laddbox(?: installerad)?)\b/i },
-        { canonical: "Nya fönster", pattern: /\b(fönster bytta|nya fönster)\b/i },
-        { canonical: "Stambyte genomfört", pattern: /\b(stambyte|stamrenovering)\b/i },
-      ];
-
       const seen = new Set<string>();
       const normalized = parts.map((part) => {
-        for (const rule of aliasRules) {
+        for (const rule of CANONICAL_RULES) {
           if (rule.pattern.test(part)) return rule.canonical;
         }
         return part;
@@ -366,7 +703,38 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       return normalized.join(", ");
     };
 
-    const mergeChipsAndText = (chips: string[], text: string) => {
+    const mergeChipsAndText = (chips: string[], text: string, fieldName?: string) => {
+      // Detect conflicts: same info in both chips and freetext
+      if (chips.length > 0 && text.trim()) {
+        const textLower = text.toLowerCase();
+        const conflicts: string[] = [];
+        
+        chips.forEach(chip => {
+          const chipLower = chip.toLowerCase();
+          // Check if chip text appears in freetext
+          if (textLower.includes(chipLower)) {
+            conflicts.push(chip);
+          }
+          
+          // Check canonical aliases
+          for (const rule of CANONICAL_RULES) {
+            if (rule.pattern.test(chip) && rule.pattern.test(text)) {
+              if (!conflicts.includes(chip)) {
+                conflicts.push(chip);
+              }
+            }
+          }
+        });
+        
+        if (conflicts.length > 0 && fieldName) {
+          toast({
+            title: "Dubblerad information upptäckt",
+            description: `"${conflicts.join('", "')}" finns både som chip och i fritexten för ${fieldName}. Detta kommer normaliseras automatiskt.`,
+            variant: "default",
+          });
+        }
+      }
+      
       const parts = [chips.join(", "), text].filter(Boolean);
       return normalizeListText(parts.join(". "));
     };
@@ -376,15 +744,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       totalRooms: String(rooms),
       bedrooms: String(bedrooms),
       bathrooms: String(bathrooms),
-      kitchenDescription: mergeChipsAndText(kitchenChips, values.kitchenDescription),
-      bathroomDescription: mergeChipsAndText(bathroomChips, values.bathroomDescription),
-      flooring: mergeChipsAndText(flooringChips, values.flooring),
+      kitchenDescription: mergeChipsAndText(kitchenChips, values.kitchenDescription, "kök"),
+      bathroomDescription: mergeChipsAndText(bathroomChips, values.bathroomDescription, "badrum"),
+      flooring: mergeChipsAndText(flooringChips, values.flooring, "golv"),
       heating: normalizeListText(heatingChips.length > 0 ? heatingChips.join(", ") : values.heating),
-      specialFeatures: mergeChipsAndText(specialChips, values.specialFeatures),
-      gardenDescription: mergeChipsAndText(gardenChips, values.gardenDescription),
-      uniqueSellingPoints: mergeChipsAndText(uspChips, values.uniqueSellingPoints),
-      parking: mergeChipsAndText(parkingChips, values.parking),
-      konstruktionMaterial: mergeChipsAndText(materialChips, values.konstruktionMaterial),
+      specialFeatures: mergeChipsAndText(specialChips, values.specialFeatures, "specialfunktioner"),
+      gardenDescription: mergeChipsAndText(gardenChips, values.gardenDescription, "trädgård"),
+      uniqueSellingPoints: mergeChipsAndText(uspChips, values.uniqueSellingPoints, "försäljningsargument"),
+      parking: mergeChipsAndText(parkingChips, values.parking, "parkering"),
+      konstruktionMaterial: mergeChipsAndText(materialChips, values.konstruktionMaterial, "konstruktionsmaterial"),
       taktyp: normalizeListText(roofChips.length > 0 ? roofChips.join(", ") : values.taktyp),
       balconyArea: hasBalcony ? values.balconyArea : "",
       balconyDirection: hasBalcony ? values.balconyDirection : "",
@@ -642,6 +1010,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
           </div>
+
+          {/* Priority Checklist */}
+          <PriorityChecklist items={priorityItems} onItemClick={handleScrollToField} />
 
           <div className="mb-5 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-3">
             <div className="pro-section-card">
@@ -1494,6 +1865,38 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
         </form>
       </Form>
+      
+      {/* Incomplete Priority Fields Dialog */}
+      <AlertDialog open={showIncompleteDialog} onOpenChange={setShowIncompleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Ofullständig information</AlertDialogTitle>
+            <AlertDialogDescription>
+              Du har bara fyllt i {priorityCompleted} av {priorityItems.length} prioriterade fält. 
+              Detta kan påverka kvaliteten på den genererade texten negativt.
+              <br /><br />
+              Vill du fortsätta ändå eller gå tillbaka och fylla i mer information?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowIncompleteDialog(false);
+              setPendingFormData(null);
+            }}>
+              Gå tillbaka
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowIncompleteDialog(false);
+              if (pendingFormData) {
+                submitForm(pendingFormData);
+                setPendingFormData(null);
+              }
+            }}>
+              Fortsätt ändå
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }
