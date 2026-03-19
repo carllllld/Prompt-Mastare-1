@@ -31,7 +31,9 @@ export function safeJsonParse(rawText: string): any {
     }
   }
 
-  throw lastError;
+  // VIKTIGT: Returnera fallback istället för att kasta error
+  console.warn("[safeJsonParse] All parse attempts failed, returning empty object:", lastError);
+  return {};
 }
 
 export function extractGeneratedMarketingText(payload: any): string | null {

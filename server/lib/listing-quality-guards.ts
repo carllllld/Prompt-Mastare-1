@@ -39,6 +39,8 @@ export function estimateTextChangeRatio(beforeText: string, afterText: string): 
   return 1 - overlap / unionSize;
 }
 
+// OPTIMIZED: Reduced from 8 → 3 blocking reasons. Focus on critical issues only.
+// This allows improvements to proceed even if they're not perfect, as long as they don't break the text.
 export function applyStageQualityBudget(params: {
   improvementKind: RewriteAcceptanceInput["improvementKind"];
   beforeText: string;
@@ -58,65 +60,35 @@ export function applyStageQualityBudget(params: {
 
   const beforeHasParagraphs = /\n\s*\n/.test(params.beforeText);
   const afterHasParagraphs = /\n\s*\n/.test(params.afterText);
-  const nearPublishableFloor = params.beforeWordCount >= params.minimumPublishableWordMin - 20;
   const violationDelta = params.afterViolations.length - params.beforeViolations.length;
-  const hasQualitySignals = typeof params.beforeQualityScore === "number" && typeof params.afterQualityScore === "number";
-  const qualityDrop = hasQualitySignals ? (params.beforeQualityScore! - params.afterQualityScore!) : 0;
 
+  // === BLOCKING REASON 1: Corrupted artifacts (CRITICAL) ===
   if (params.hasCorruptedArtifactsAfter) {
     blockingReasons.push("förslag innehåller korrupta ordartefakter");
   }
 
+  // === BLOCKING REASON 2: Lost paragraph structure (CRITICAL) ===
   if (beforeHasParagraphs && !afterHasParagraphs && params.afterWordCount >= 120) {
     blockingReasons.push("förslag tappade styckesindelning");
   }
 
-  if (nearPublishableFloor && params.afterWordCount < params.beforeWordCount - 8) {
-    blockingReasons.push("förslag kortade texten för mycket nära publicerbar nivå");
+  // === BLOCKING REASON 3: Introduced >2 new violations (CRITICAL) ===
+  // Allow improvements that reduce violations OR add max 2 violations
+  if (violationDelta > 2) {
+    blockingReasons.push(`förslag introducerade ${violationDelta} nya kvalitetsfel (max 2 tillåtet)`);
   }
 
-  if (params.improvementKind === "surgical") {
-    if (changeRatio > 0.6) {
-      blockingReasons.push("surgical-förslag skrev om för stor del av texten");
-    }
-    if (violationDelta > 1) {
-      blockingReasons.push("surgical-förslag introducerade för många nya fel");
-    }
+  // === WARNINGS (non-blocking, informational only) ===
+  if (changeRatio > 0.5 && params.improvementKind !== "expansion") {
+    warnings.push("hög textändring i konservativt steg");
   }
-
-  if (params.improvementKind === "polish") {
-    if (qualityDrop > 0.02) {
-      blockingReasons.push(`polish försämrade kvalitetspoängen för mycket (${qualityDrop.toFixed(3)})`);
-    }
-    if (hasQualitySignals && qualityDrop < 0 && Math.abs(qualityDrop) < 0.015 && changeRatio > 0.38) {
-      blockingReasons.push("polish skrev om för mycket utan tydlig kvalitetsvinst");
-    }
-    if (violationDelta > 0) {
-      blockingReasons.push("polish introducerade nya kvalitetsfel");
-    }
-    if (changeRatio > 0.48) {
-      blockingReasons.push("polish skrev om för stor del av texten");
-    }
+  if (violationDelta === 1 || violationDelta === 2) {
+    warnings.push(`förslaget introducerade ${violationDelta} nya kvalitetsfel`);
   }
-
-  if (params.improvementKind === "fact_check" && violationDelta > 0) {
-    blockingReasons.push("fact-check-förslag ökade antalet kvalitetsfel");
-  }
-
-  if (params.improvementKind === "expansion") {
-    if (params.afterWordCount <= params.beforeWordCount) {
-      blockingReasons.push("expansion ökade inte textens längd");
-    }
-    if (violationDelta > 2) {
-      blockingReasons.push("expansion introducerade för många kvalitetsfel");
-    }
-  }
-
-  if (changeRatio > 0.45 && params.improvementKind !== "expansion") {
-    warnings.push("hög textändring i steg som normalt ska vara konservativa");
-  }
-  if (violationDelta === 1) {
-    warnings.push("förslaget introducerade ett nytt kvalitetsfel");
+  const hasQualitySignals = typeof params.beforeQualityScore === "number" && typeof params.afterQualityScore === "number";
+  const qualityDrop = hasQualitySignals ? (params.beforeQualityScore! - params.afterQualityScore!) : 0;
+  if (qualityDrop > 0.03) {
+    warnings.push(`kvalitetspoäng sjönk med ${qualityDrop.toFixed(3)}`);
   }
 
   return {

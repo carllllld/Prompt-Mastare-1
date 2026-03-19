@@ -1,6 +1,8 @@
 export type WritingStyle = "factual" | "balanced" | "selling";
 export type TargetPlatform = "hemnet" | "booli" | "general";
 
+// OPTIMIZED: Reduced from 195 → 75 phrases. Removed legitimate realtor language, kept only REAL AI clichés.
+// This prevents blocking good broker text while still catching AI-generated patterns.
 export const FORBIDDEN_PHRASES = [
   // === KRITISKA AI-ÖPPNINGAR (aldrig i riktig mäklartext) ===
   "välkommen till",
@@ -11,13 +13,8 @@ export const FORBIDDEN_PHRASES = [
   "missa inte",
   "unik möjlighet",
   "unik chans",
-  "sällsynt tillfälle",
-  "finner du",
-  "utmärkt möjlighet",
-  "stor potential",
   "kontakta oss",
   "för mer information",
-  "och visning",
 
   // === "ERBJUDER" I ALLA FORMER (AI-favorit, mäklare säger "har"/"finns") ===
   "erbjuder",
@@ -26,50 +23,28 @@ export const FORBIDDEN_PHRASES = [
   // === EMOTIONELLA AI-VERB (aldrig i riktig mäklartext) ===
   "inbjuder till",
   "bjuder in till",
-  "lockar till",
-  "inspirerar till",
   "bjuder på",
   "präglas av",
   "genomsyras av",
   "andas lugn",
   "andas charm",
   "andas historia",
-  "andas modernitet",
-  "andas stil",
   "utstrålar",
 
   // === ABSTRAKT AI-KÄNSLOSSPRÅK ===
   "ger en känsla av",
   "skapar en känsla av",
-  "ger ett intryck av",
   "skapar en harmonisk",
   "skapar en inbjudande",
-  "ger ett lyxigt intryck",
-  "bidrar till en",
-  "förstärker känslan",
   "adderar en touch",
   "ger en touch",
-  "skapar en",
-  "skapar en miljö",
-  "skapar en avkopplande",
 
-  // === "VILKET GER/GÖR" KONSTRUKTIONER (AI-meningsbyggnad) ===
-  "vilket gör det enkelt",
-  "vilket gör det smidigt",
-  "vilket gör det lätt",
-  "vilket ger en",
-  "vilket ger ytterligare",
-  "vilket ger ytterligare utrymme",
-  "vilket säkerställer",
-
-  // === "FÖR DEN SOM" OCH LIKNANDE (AI-signatur) ===
+  // === "FÖR DEN SOM" (AI-signatur) ===
   "för den som",
-  "den matlagningsintresserade",
 
   // === HJÄRTA-KLYSCHOR (poetisk AI) ===
   "i hjärtat av",
   "hjärtat av",
-  "hjärtat i hemmet",
   "husets hjärta",
   "hemmets hjärta",
 
@@ -83,92 +58,13 @@ export const FORBIDDEN_PHRASES = [
   "drömhem",
   "en sann pärla",
 
-  // === ATMOSFÄR/LUFTIG-FRASER (AI-poetik) ===
-  "trivsam atmosfär",
-  "härlig atmosfär",
-  "mysig atmosfär",
-  "inbjudande atmosfär",
-  "luftig atmosfär",
-  "luftig och",
-
-  // === TRYGG/ROFYLLD (AI-abstraktioner) ===
-  "rofyllt",
-  "rofylld",
-  "trygg boendemiljö",
-  "trygg boendeekonomi",
-  "tryggt boende",
-
-  // === SOCIALA KLYSCHOR (AI-abstraktioner) ===
-  "sociala sammanhang",
-  "sociala tillställningar",
-  "socialt umgänge",
-
-  // === KOMFORT-FRASER (AI-överdrift) ===
-  "extra komfort",
-  "maximal komfort",
-
-  // === VARDAGS-KLYSCHOR (AI-abstraktioner) ===
-  "underlättar vardagen",
-  "bekvämlighet i vardagen",
-  "god natts sömn",
-  "löser sig",
-  "fixar sig",
-  "ordnar sig",
-
   // === LÄGES-KLYSCHOR (AI-överdrift) ===
-  "eftertraktat boendealternativ",
-  "inom räckhåll",
   "stadens puls",
 
-  // === GENERÖSA/RYMLIGA (AI-favoriter) ===
-  "generösa ytor",
-  "generös takhöjd",
-  "generöst tilltaget",
-  "generöst med",
-  "ger en rymlig",
-  "ger en härlig",
-  "ger en luftig",
-
-  // === PLATS FÖR/HÄRLIG PLATS (AI-konstruktioner) ===
-  "härlig plats för",
-  "plats för avkoppling",
-  "gör steget mellan",
-  "steget mellan",
-
-  // === MÖJLIGHET ATT/FORMA (AI-filosofi) ===
-  "möjlighet att påverka",
-
-  // === SÖDERVÄNDA PLACERINGEN (specifik AI-fras) ===
-  "den södervända placeringen ger",
-
-  // === "ÄR ETT/EN BRA/PERFEKT" (AI-värderingar) ===
-  "är ett bra val",
-  "är ett bra val för",
-  "är en perfekt plats",
-
-  // === SKAPA MINNEN OCH LIKNANDE (AI-emotionalitet) ===
+  // === SKAPA MINNEN (AI-emotionalitet) ===
   "skapa minnen",
-  "utmärkt val",
-  "lek och avkoppling",
 
-  // === FACILITETER (ovanligt ord i svensk mäklartext) ===
-  "faciliteter",
-  "nyrenoverade faciliteter",
-
-  // === -MÖJLIGHETER SUFFIX (AI-favorit, mäklare säger det mer direkt) ===
-  "förvaringsmöjligheter inkluderar",
-  "odlingsmöjligheter",
-  "boendmöjligheter",
-  "utemöjligheter",
-  "lagringsmöjligheter",
-  "rekreationsmöjligheter",
-  "fritidsmöjligheter",
-  "aktivitetsmöjligheter",
-  "umgängesmöjligheter",
-  "utvecklingsmöjligheter",
-  "utbyggnadsmöjligheter",
-
-  // === SAMMANFATTNINGS-/VÄRDERINGS-FRASER (AI-slutsatser) ===
+  // === SAMMANFATTNINGS-FRASER (AI-slutsatser) ===
   "sammanfattningsvis",
   "med andra ord",
   "kort sagt",
@@ -176,45 +72,19 @@ export const FORBIDDEN_PHRASES = [
   "detta gör bostaden till",
   "detta gör lägenheten till",
   "detta gör villan till",
-  "allt detta gör",
-  "det bästa av",
 
   // === "INTE BARA... UTAN OCKSÅ" (AI-signatur) ===
   "inte bara",
   "utan också",
 
-  // === COMPOUND ADJEKTIV-PAR (AI-markör) ===
-  "stilrent och modernt",
-  "stilren och modern",
-  "modernt och stilrent",
-  "elegant och tidlös",
-  "tidlös och elegant",
-  "mysigt och ombonat",
-  "charmigt och välplanerat",
-  "praktiskt och snyggt",
-  "fräscht och modernt",
-
   // === ABSTRAKT LIVSSTIL/KÄNSLA (AI-filosofi) ===
   "livsstil",
   "livsföring",
-  "livskvalitet",
-  "stor potential",
-  "stor möjlighet",
   "drömmar",
   "vision",
   "med en vision",
   "ett smart val",
   "klok investering",
-
-  // === ÖVERDRIVNA ADVERB (AI-favoriter) ===
-  "noggrant utvalt",
-  "noggrant utvalda",
-  "omsorgsfullt",
-  "exklusivt",
-  "lyxigt",
-  "imponerande",
-  "magnifikt",
-  "praktfullt",
 
   // === PASSIVA/BYRÅKRATISKA KONSTRUKTIONER (AI-stil) ===
   "det kan konstateras",
@@ -222,20 +92,11 @@ export const FORBIDDEN_PHRASES = [
   "det ska tilläggas",
   "värt att nämna",
   "värt att notera",
-  "som en bonus",
-  "en extra fördel",
-  "en stor fördel",
-  "en klar fördel",
 
   // === ÖVERDRIVNA PLATS-BESKRIVNINGAR (AI-poetik) ===
-  "eftertraktat område",
-  "omtyckt område",
-  "barnvänligt område",
-  "natursköna omgivningar",
   "grön oas",
   "en oas",
   "en fristad",
-  "en pärla",
   "ett stenkast från",
 
   // === HEM-FILOSOFI (AI-emotionalitet) ===
@@ -246,41 +107,25 @@ export const FORBIDDEN_PHRASES = [
   "ett hem att trivas i",
 
   // === ANDRA AI-FAVORITER ===
-  "stark efterfrågan",
-  "goda arbetsytor",
-  "stor charm",
-  "med sin charm",
-  "med mycket charm",
-  "präglad av",
   "en bostad som",
   "en lägenhet som",
   "ett hem som",
-  "strategiskt placerad",
-  "strategiskt läge",
-
-  // === GÖR DET ENKELT/MÖJLIGT (AI-konstruktion) ===
-  "gör det enkelt att",
-  "gör det möjligt att",
-  "ett område för familjer",
 ];
 
 const BALANCED_EXEMPT = new Set([
+  // Legitimate broker language that's allowed in balanced style
   "genomtänkt", "smakfullt", "stilfullt", "elegant",
   "attraktivt läge", "naturskönt läge", "populärt område", "familjevänligt område",
   "hög standard", "hög kvalitet",
   "ljus och luftig", "ljust och luftigt",
   "trivsamt boende", "trivsam bostad",
-  "rofyllt", "rofylld",
   "genomtänkt planlösning", "smakfullt renoverat", "stilfullt renoverat",
   "rymlig känsla", "rymligt intryck",
   "attraktivt med närhet",
   "är en bra plats", "är en bra plats för",
-  "den södervända placeringen",
   "bekvämt boende",
   "njutning av", "njut av",
-  "forma framtiden",
   "förvaringsmöjligheter", "parkeringsmöjligheter",
-  // Legitima mäklarfraser som inte är AI-klyschor:
   "kommunikationer", "närhet till service", "smidig pendling",
   "i mycket gott skick", "gott om utrymme",
   "ligger centralt i",
@@ -290,28 +135,11 @@ const BALANCED_EXEMPT = new Set([
 
 const SELLING_EXEMPT = new Set([
   ...Array.from(BALANCED_EXEMPT),
-  "fantastisk", "fantastiskt", "underbar", "imponerande",
-  "exklusivt", "lyxigt", "magnifikt", "praktfullt",
-  "stilren", "noggrant utvalt", "noggrant utvalda", "omsorgsfullt",
+  // Additional phrases allowed in selling style
+  "fantastisk", "fantastiskt", "underbar",
+  "stilren",
   "en sann pärla",
-  "stilrent och modernt", "stilren och modern",
-  "modernt och stilrent", "elegant och tidlös", "tidlös och elegant",
-  "mysigt och ombonat", "charmigt och välplanerat",
-  "praktiskt och snyggt", "fräscht och modernt",
-  "trivsam atmosfär", "härlig atmosfär", "mysig atmosfär",
-  "inbjudande atmosfär", "luftig atmosfär", "luftig och",
-  "stor charm", "med sin charm", "med mycket charm", "charm",
   "drömboende", "drömlägenhet", "drömhem",
-  "eftertraktat område", "barnvänligt område",
-  "natursköna omgivningar", "en pärla",
-  "attraktivt med närhet",
-  "hög kvalitet", "livsstil", "livskvalitet",
-  "extra komfort", "maximal komfort",
-  "trygg boendemiljö", "trygg boendeekonomi", "tryggt boende",
-  "inbjuder till", "bjuder in till", "inspirerar till",
-  "sociala sammanhang", "sociala tillställningar",
-  "omsorgsfullt renoverat", "smakfullt inrett",
-  "exklusivt utförande", "lyxigt badrum", "imponerande takhöjd",
 ]);
 
 export function getExemptPhrases(style: WritingStyle): Set<string> {

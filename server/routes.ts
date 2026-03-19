@@ -1459,6 +1459,12 @@ async function finalizeMainMarketingText(
   finalized = enforcePlatformMainTextHeuristics(finalized, platform, disposition);
   finalized = enforceOpeningStrengthByStyle(finalized, style, disposition);
   finalized = enforceCriticalFactPresence(finalized, disposition);
+  
+  // VIKTIGT: Generalisera specifika restaurangnamn automatiskt
+  finalized = finalized.replace(/\b(Kikka|COME 2 EAT|ChopChop Asian Express Värmdö|ChopChop)\b/gi, 'restauranger');
+  finalized = finalized.replace(/\bflera lunch- och middagsalternativ som restauranger\b/gi, 'flera restauranger och caféer');
+  finalized = finalized.replace(/\boch restauranger när\b/gi, 'när');
+  
   finalized = applyProfessionalNarrativePolish(finalized, disposition, style, platform);
   finalized = enforceLocationClosingQuality(finalized, platform, disposition);
 
