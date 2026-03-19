@@ -293,11 +293,13 @@ export function finalizeFinalMainValidation(params: {
   }
 
   if (params.finalExtraFieldViolations.length > 0) {
-    if (params.strictExtraFieldValidation) {
-      // Don't throw immediately - let caller attempt repair first
-      // This error will be caught and trigger repair logic in routes.ts
+    // OPTIMIZATION: Allow ≤2 aux field violations with warning (don't block delivery)
+    // This prevents fail-safe mode activation for Grade A texts with minor aux field issues
+    if (params.strictExtraFieldValidation && params.finalExtraFieldViolations.length > 2) {
+      // Only throw for >2 violations (severe quality issues)
       throw new Error(`[Final Gate] Kvarvarande kvalitetsfel i extratexter: ${params.finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
     }
+    // ≤2 violations: warn but don't block (consistent with main text logic)
     warnings.push(`[Final Gate] Extratexter har kvarvarande kvalitetsanmärkningar men blockerar inte huvudtexten: ${params.finalExtraFieldViolations.slice(0, 5).join(" | ")}`);
   }
 

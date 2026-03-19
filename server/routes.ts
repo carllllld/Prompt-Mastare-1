@@ -264,6 +264,8 @@ function detectNarrativeIntegrityIssues(text: string): string[] {
   const integrityPatterns: Array<[RegExp, string]> = [
     [/\b(börja|fortsätta|avsluta|skapa|leva|njuta|använda|samla)\s+[A-ZÅÄÖ][a-zåäö]+(?:en|et|ar|or)?\s+(?:är|har|ger|blir|finns)\b/g, 'Avhuggen eller felaktigt sammanfogad mening'],
     [/\b[A-ZÅÄÖ][a-zåäö]+\s+Den\s+[a-zåäö]+\b/g, 'Felaktig satsövergång i löptext'],
+    // CRITICAL FIX: Catch missing punctuation before capital letter (e.g., "utan I Mörtnäs")
+    [/\b(utan|med|för|till|från|vid|hos)\s+[A-ZÅÄÖ][a-zåäö]+\s+[a-zåäö]+/g, 'Saknad punkt eller felaktig meningsövergång'],
   ];
 
   for (const [pattern, message] of integrityPatterns) {
@@ -1464,6 +1466,11 @@ async function finalizeMainMarketingText(
   finalized = finalized.replace(/\b(Kikka|COME 2 EAT|ChopChop Asian Express Värmdö|ChopChop)\b/gi, 'restauranger');
   finalized = finalized.replace(/\bflera lunch- och middagsalternativ som restauranger\b/gi, 'flera restauranger och caféer');
   finalized = finalized.replace(/\boch restauranger när\b/gi, 'när');
+  
+  // CRITICAL FIX: Deduplicate repeated restaurant/café terms after generalization
+  // "restauranger, restauranger och restauranger" → "restauranger"
+  finalized = finalized.replace(/\b(restauranger|caféer|matställen)(?:\s*,\s*\1)+(?:\s+och\s+\1)?/gi, '$1');
+  finalized = finalized.replace(/\b(restauranger|caféer|matställen)\s+och\s+\1\b/gi, '$1');
   
   finalized = applyProfessionalNarrativePolish(finalized, disposition, style, platform);
   finalized = enforceLocationClosingQuality(finalized, platform, disposition);
@@ -4252,7 +4259,39 @@ KRITISKA REGLER:
           // Continue without aux fields - not critical for delivery
         }
       } else {
-        console.log("[Step 3:Aux Fields] All aux fields already present, skipping generation.");
+        console.log("[Step 3:Aux Fields] All aux fields already present, validating and polishing...");
+        
+        // CRITICAL FIX: Validate and fix aux fields even if they came from initial generation
+        // This ensures placeholders are removed and fields are polished
+        
+        // Fix placeholders in showingInvitation
+        if (result.showingInvitation && /\[(?:TID|DATUM|KONTAKT|ADRESS|MÄKLARE)\]/i.test(result.showingInvitation)) {
+          console.log("[Step 3:Aux Fields] ShowingInvitation contains placeholders, replacing with generic text");
+          result.showingInvitation = "Välkommen på visning. Kontakta ansvarig mäklare för tid och mer information.";
+        }
+        
+        // Fix placeholders in headline
+        if (result.headline && /\[.*?\]/i.test(result.headline)) {
+          console.log("[Step 3:Aux Fields] Headline contains placeholders, removing");
+          result.headline = result.headline.replace(/\[.*?\]/g, "").trim();
+        }
+        
+        // Fix placeholders in other fields
+        for (const field of ['socialCopy', 'instagramCaption', 'shortAd']) {
+          if (result[field] && /\[.*?\]/i.test(result[field])) {
+            console.log(`[Step 3:Aux Fields] ${field} contains placeholders, removing`);
+            result[field] = result[field].replace(/\[.*?\]/g, "").trim();
+          }
+        }
+        
+        // Polish all aux fields to ensure quality
+        if (result.headline) result.headline = polishAuxFieldText("headline", result.headline, style, platform);
+        if (result.socialCopy) result.socialCopy = polishAuxFieldText("socialCopy", result.socialCopy, style, platform);
+        if (result.instagramCaption) result.instagramCaption = polishAuxFieldText("instagramCaption", result.instagramCaption, style, platform);
+        if (result.showingInvitation) result.showingInvitation = polishAuxFieldText("showingInvitation", result.showingInvitation, style, platform);
+        if (result.shortAd) result.shortAd = polishAuxFieldText("shortAd", result.shortAd, style, platform);
+        
+        console.log("[Step 3:Aux Fields] Validation and polishing complete.");
       }
       
       snapshotFailSafeResponse("candidate-selection", result, {
@@ -4548,7 +4587,10 @@ KRITISKA REGLER:
               const isNearPublishableMinimum = originalWords >= minimumPublishableWordMin - 20;
               const correctionShortensTooMuchNearMinimum = correctedWords < originalWords - 8 && isNearPublishableMinimum;
 
-              if (wordDiff / originalWords < 0.3) {
+              // OPTIMIZED: Allow up to 65% change if violations decrease
+              // Old threshold was 30%, too restrictive for effective surgical corrections
+              // First check word diff threshold, then validate violations inside
+              if (wordDiff / originalWords < 0.65) {
                 const sanitizedCorrected = await finalizeMainMarketingText(corrected.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
                 if (sanitizedCorrected) {
                   const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
@@ -4605,9 +4647,74 @@ KRITISKA REGLER:
                   }
                 }
               } else {
-                console.warn(`[Step 5] Correction changed too much (${Math.round(wordDiff / originalWords * 100)}%), keeping original`);
-                // Kör ändå cleanForbiddenPhrases som fallback
-                result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
+                // Word diff too large, but check if violations decreased significantly
+                const sanitizedCorrected = await finalizeMainMarketingText(corrected.corrected_text, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition);
+                if (sanitizedCorrected) {
+                  const correctedViolations = getNonWordCountViolations(validateOptimizationResult({ ...result, improvedPrompt: sanitizedCorrected }, platform, minimumPublishableWordMin, targetWordMax, style));
+                  const violationDelta = correctedViolations.length - textViolations.length;
+                  
+                  // Allow large changes if violations decreased
+                  if (violationDelta < 0) {
+                    const sanitizedCorrectedWordCount = sanitizedCorrected.split(/\s+/).filter(Boolean).length;
+                    const correctedDropsBelowUsableFloor = isNearPublishableMinimum && sanitizedCorrectedWordCount < minimumPublishableWordMin - 10;
+                    const correctedHasCorruption = hasCorruptedWordArtifacts(sanitizedCorrected);
+                    const surgicalEvaluation = evaluateRewriteCandidate({
+                      current: {
+                        qualityScore: analyzeTextQuality(result.improvedPrompt || ""),
+                        nonWordCountViolations: textViolations,
+                        wordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+                        isStrongPublishableCandidate: isStrongPublishableCandidate(result.improvedPrompt || "", platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                      },
+                      proposed: {
+                        qualityScore: analyzeTextQuality(sanitizedCorrected),
+                        nonWordCountViolations: correctedViolations,
+                        wordCount: sanitizedCorrectedWordCount,
+                        isStrongPublishableCandidate: isStrongPublishableCandidate(sanitizedCorrected, platform, minimumPublishableWordMin, targetWordMax, style, plan),
+                        hasCorruptedArtifacts: correctedHasCorruption,
+                      },
+                      minimumPublishableWordMin,
+                      improvementKind: "surgical",
+                    });
+                    const surgicalQualityBudget = applyStageQualityBudget({
+                      improvementKind: "surgical",
+                      beforeText: result.improvedPrompt || "",
+                      afterText: sanitizedCorrected,
+                      beforeWordCount: (result.improvedPrompt || "").split(/\s+/).filter(Boolean).length,
+                      afterWordCount: sanitizedCorrectedWordCount,
+                      beforeViolations: textViolations,
+                      afterViolations: correctedViolations,
+                      hasCorruptedArtifactsAfter: correctedHasCorruption,
+                      minimumPublishableWordMin,
+                    });
+                    for (const warning of surgicalQualityBudget.warnings) {
+                      warnings.push(`[Step 5 Budget] ${warning}`);
+                    }
+
+                    if (surgicalEvaluation.acceptance.accept && surgicalQualityBudget.accept && !correctionShortensTooMuchNearMinimum && !correctedDropsBelowUsableFloor) {
+                      result.improvedPrompt = sanitizedCorrected;
+                      setLastRepairKind(runState, "surgical");
+                      
+                      setAgenticFeedback(runState, [
+                        ...correctedViolations,
+                        ...judgeSuggestions.filter(s => !correctedViolations.includes(s))
+                      ]);
+
+                      console.log(`[Step 5] Surgical correction applied despite large change (${combinedFeedback.length} -> ${correctedViolations.length} violations, ${wordDiff} words changed)`);
+                    } else {
+                      const budgetReason = surgicalQualityBudget.blockingReasons.join(" | ");
+                      console.warn(`[Step 5] Correction rejected: ${surgicalEvaluation.acceptance.reason}${budgetReason ? ` | budget: ${budgetReason}` : ""} (${textViolations.length} -> ${correctedViolations.length} violations, words ${originalWords} -> ${sanitizedCorrectedWordCount})`);
+                    }
+                  } else {
+                    const changePercent = Math.round(wordDiff / originalWords * 100);
+                    console.warn(`[Step 5] Correction changed too much (${changePercent}%), violations ${textViolations.length} -> ${correctedViolations.length} (delta: ${violationDelta}). Keeping original.`);
+                    // Kör ändå cleanForbiddenPhrases som fallback
+                    result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
+                  }
+                } else {
+                  const changePercent = Math.round(wordDiff / originalWords * 100);
+                  console.warn(`[Step 5] Correction changed too much (${changePercent}%) and sanitization failed. Keeping original.`);
+                  result.improvedPrompt = await finalizeMainMarketingText(result.improvedPrompt, platform, personalStyle?.styleProfile, style, { allowParagraphs: true }, cleanDisposition) || result.improvedPrompt;
+                }
               }
             }
           }
