@@ -17,6 +17,19 @@ import { PerfectSwedishOrchestrator } from "./lib/perfect-swedish-orchestrator";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
+// No-op observability stub — the old listing-pipeline-observability module was removed.
+// All calls are silently ignored; real metrics flow through Sentry and the DB.
+const pipelineObservability = {
+  startRun: (_opts: any) => {},
+  endRun: (_success: boolean, _metrics?: any) => {},
+  startStep: (_step: string, _phase?: string) => {},
+  endStep: (_opts: any) => {},
+  recordFastPath: () => {},
+  recordFeature: (_feature: string) => {},
+  recordRescueAttempt: () => {},
+  recordError: (_location: string, _err: any, _fatal?: boolean, _action?: string) => {},
+};
+
 // Rate limiting for /api/optimize (per user, per minute)
 import { checkOptimizeRateLimit } from "./lib/rate-limiter";
 
