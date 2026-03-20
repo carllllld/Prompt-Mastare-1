@@ -247,15 +247,23 @@ All metrics tracked via:
 ## 7. Testing Status
 
 ### Completed
-- ✅ Unit tests for post-processor (narrative integrity, missing facts)
-- ✅ Integration tests updated (A/B testing removed)
-- ✅ TypeScript compilation verified
+- ✅ `server/tests/smart-generator.test.ts` — SmartGenerationEngine unit tests (all 6 fields, error cases, token metadata)
+- ✅ `server/tests/post-processor.test.ts` — DeterministicPostProcessor unit tests (restaurant names, narrative integrity, missing facts, forbidden phrases, placeholders, graceful degradation)
+- ✅ `server/tests/validation-functions.test.ts` — text-validation + text-rules unit tests (legitimate broker phrases, AI clichés, context-aware limits, monoton check, factual drift, CTA endings)
+- ✅ `server/tests/token-budget.test.ts` — computeOutputTokenBudget unit tests (5500–8000 range, formula properties, edge cases)
+- ✅ `server/tests/pipeline-integration.test.ts` — 3-step pipeline integration tests (all fields, retry logic, graceful degradation, Sentry warnings)
+- ✅ `server/tests/regression-old-pipeline-removal.test.ts` — regression: old 7-step pipeline files deleted, A/B test infrastructure gone, no old fields in interfaces
+- ✅ `server/tests/regression-aux-fields.test.ts` — regression: all 6 aux fields always generated in every mode and style
+- ✅ `server/tests/narrative-integrity.test.ts` — narrative integrity checks
+- ✅ `server/tests/missing-facts-detection.test.ts` — missing facts detection
+- ✅ `server/tests/forbidden-phrases-integration.test.ts` — forbidden phrases integration
+
+All test files have zero TypeScript diagnostics. Run with: `npm run test`
 
 ### Pending (Requires Production Access)
-- ⏳ Full test suite execution
-- ⏳ Load testing with k6
-- ⏳ Regression testing
-- ⏳ Canary testing
+- ⏳ Full test suite execution (`npm run test`)
+- ⏳ Load testing with k6 (`npm run test:load`)
+- ⏳ Canary testing (`npm run test:canary`)
 - ⏳ Manual testing of critical flows
 
 ---

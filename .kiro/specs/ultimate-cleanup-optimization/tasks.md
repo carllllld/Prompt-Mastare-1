@@ -204,8 +204,8 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
 
 ### Fas 5: Testing & Validation (1 dag)
 
-- [ ] 10. Skriv och kör unit tests
-  - [ ] 10.1 Skriv unit tests för Smart_Generator
+- [x] 10. Skriv och kör unit tests
+  - [x] 10.1 Skriv unit tests för Smart_Generator
     - Test: ska generera alla 6 required fields
     - Test: ska kasta error om fält saknas
     - Test: ska använda korrekt token budget
@@ -213,7 +213,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Mock OpenAI responses för testbarhet
     - _Requirements: 13.1-13.9, 22.1_
   
-  - [ ] 10.2 Skriv unit tests för Post_Processor
+  - [x] 10.2 Skriv unit tests för Post_Processor
     - Test: ska validera och ersätta restaurangnamn
     - Test: ska fixa narrativ integritet
     - Test: ska lägga till saknade fakta
@@ -221,7 +221,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Test: ska hantera graceful degradation
     - _Requirements: 8.1-8.7, 9.1-9.6, 10.1-10.7, 22.2_
   
-  - [ ] 10.3 Skriv unit tests för validation functions
+  - [x] 10.3 Skriv unit tests för validation functions
     - Test: ska tillåta legitima mäklarfraser
     - Test: ska flagga verkliga AI-klyschor
     - Test: ska använda context-aware gränser
@@ -229,49 +229,49 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Test: ska vara idempotent
     - _Requirements: 6.1-6.8, 7.1-7.19, 22.4_
   
-  - [ ] 10.4 Skriv unit tests för token budget calculation
+  - [x] 10.4 Skriv unit tests för token budget calculation
     - Test: ska returnera minimum 5500 tokens
     - Test: ska returnera maximum 8000 tokens
     - Test: ska beräkna korrekt för olika targetWordMax
     - Test: ska clampa korrekt
     - _Requirements: 4.1-4.7, 22.5_
 
-- [ ] 11. Skriv och kör integration tests
-  - [ ] 11.1 Skriv integration test för komplett pipeline
+- [x] 11. Skriv och kör integration tests
+  - [x] 11.1 Skriv integration test för komplett pipeline
     - Test: ska komplettera full pipeline i <20s
     - Test: ska generera alla aux-fält
     - Test: ska inte ha referenser till gamla systemet
     - Test: ska spara metrics korrekt
     - _Requirements: 11.1-11.9, 13.1-13.9, 22.6_
   
-  - [ ] 11.2 Skriv integration test för retry logic
+  - [x] 11.2 Skriv integration test för retry logic
     - Test: ska retry upp till 2 gånger vid retryable errors
     - Test: ska använda exponential backoff
     - Test: ska inte retry vid non-retryable errors
     - Test: ska logga retry count i metrics
     - _Requirements: 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 22.7_
   
-  - [ ] 11.3 Skriv integration test för graceful degradation
+  - [x] 11.3 Skriv integration test för graceful degradation
     - Test: ska fortsätta med unprocessed text om Post_Processor failar
     - Test: ska fortsätta utan analysis om Expert_Analyzer failar
     - Test: ska logga warnings till Sentry
     - Test: ska markera degradation i metrics
     - _Requirements: 14.1-14.8, 22.8_
 
-- [ ] 12. Skriv och kör regression tests
-  - [ ] 12.1 Skriv regression test för gamla pipeline removal
+- [x] 12. Skriv och kör regression tests
+  - [x] 12.1 Skriv regression test för gamla pipeline removal
     - Test: ska inte använda gamla pipeline-komponenter
     - Test: ska inte ha variant eller fallbackUsed i result
     - Test: ska alltid använda Perfect_Swedish_Orchestrator
     - _Requirements: 1.1-1.10, 2.1-2.7, 22.9_
   
-  - [ ] 12.2 Skriv regression test för aux fields generation
+  - [x] 12.2 Skriv regression test för aux fields generation
     - Test: ska alltid generera alla 6 aux-fält
     - Test: ska ha 100% aux fields coverage
     - Test: ska generera aux-fält även i minimal mode
     - _Requirements: 13.1-13.9, 22.10_
   
-  - [ ] 12.3 Kör befintliga regression tests
+  - [x] 12.3 Kör befintliga regression tests
     - Kör `npm run test:regression`
     - Kör `npm run test:canary`
     - Verifiera att alla tester passerar
