@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PerfectSwedishOrchestrator } from '../lib/perfect-swedish-orchestrator';
-import { ABTestManager } from '../lib/perfect-swedish-ab-test';
 import { SmartGenerationEngine } from '../lib/perfect-swedish-generator';
 import { DeterministicPostProcessor } from '../lib/perfect-swedish-post-processor';
 import { ExpertAIAnalyzer } from '../lib/perfect-swedish-analyzer';
@@ -52,7 +51,6 @@ vi.mock('../db', () => ({
 
 describe('Perfect Swedish Pipeline Integration Tests', () => {
   let orchestrator: PerfectSwedishOrchestrator;
-  let abTestManager: ABTestManager;
 
   const mockDisposition = {
     property: {
@@ -90,7 +88,6 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
 
   beforeEach(() => {
     orchestrator = new PerfectSwedishOrchestrator();
-    abTestManager = new ABTestManager();
     vi.clearAllMocks();
   });
 
@@ -126,11 +123,6 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
       expect(result.metrics.success).toBe(true);
       expect(result.metrics.totalDuration).toBeGreaterThan(0);
       expect(result.metrics.retryCount).toBe(0);
-
-      // Verify variant assignment
-      expect(result.variant).toBeDefined();
-      expect(['control', 'treatment']).toContain(result.variant);
-      expect(result.fallbackUsed).toBe(false);
     }, 30000); // 30 second timeout for full pipeline
 
     it('should generate text with correct Swedish characters', async () => {
@@ -226,37 +218,7 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
     }, 30000);
   });
 
-  describe('A/B Testing', () => {
-    it('should assign variant consistently within session', async () => {
-      const userId = 'test-user-123';
-      const sessionId = 'test-session-456';
-
-      const variant1 = await abTestManager.assignVariant(userId, sessionId);
-      const variant2 = await abTestManager.assignVariant(userId, sessionId);
-
-      expect(variant1).toBe(variant2);
-      expect(['control', 'treatment']).toContain(variant1);
-    });
-
-    it('should respect manual override', async () => {
-      const userId = 'test-user-123';
-      const sessionId = 'test-session-789';
-
-      const variant = await abTestManager.assignVariant(userId, sessionId, 'treatment');
-      expect(variant).toBe('treatment');
-    });
-
-    it('should return control when feature is disabled', async () => {
-      // Feature is disabled by default in test environment
-      const userId = 'test-user-123';
-      const sessionId = 'test-session-999';
-
-      const variant = await abTestManager.assignVariant(userId, sessionId);
-      expect(variant).toBe('control');
-    });
-  });
-
-  describe('Error Handling and Fallback', () => {
+  describe('Error Handling and Graceful Degradation', () => {
     it('should handle graceful degradation when post-processor fails', async () => {
       // Mock post-processor to throw error
       const postProcessor = new DeterministicPostProcessor();
@@ -443,8 +405,6 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
       expect(result).toHaveProperty('showingInvitation');
       expect(result).toHaveProperty('shortAd');
       expect(result).toHaveProperty('metrics');
-      expect(result).toHaveProperty('variant');
-      expect(result).toHaveProperty('fallbackUsed');
 
       // New field (optional)
       // expertAnalysis is optional and may not be present
@@ -470,8 +430,6 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
       expect(typeof result.instagramCaption).toBe('string');
       expect(typeof result.showingInvitation).toBe('string');
       expect(typeof result.shortAd).toBe('string');
-      expect(typeof result.variant).toBe('string');
-      expect(typeof result.fallbackUsed).toBe('boolean');
       expect(typeof result.metrics).toBe('object');
       expect(typeof result.metrics.totalDuration).toBe('number');
       expect(typeof result.metrics.success).toBe('boolean');
@@ -674,125 +632,6 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
         // Verify waterfront is highlighted
         const text = result.improvedPrompt.toLowerCase();
         expect(text).toMatch(/vatten|strand|sjö|hav|brygga/);
-      }, 30000);
-    });
-
-    describe('A/B Variant Assignment and Metrics Tracking', () => {
-      it('should track metrics separately per variant', async () => {
-        const request = {
-          disposition: mockDisposition,
-          style: 'balanced' as WritingStyle,
-          platform: 'hemnet',
-          targetWordMin: 150,
-          targetWordMax: 250,
-          userId: 'test-user-metrics',
-          sessionId: 'test-session-metrics'
-        };
-
-        const result = await orchestrator.execute(request);
-
-        // Verify metrics are collected
-        expect(result.metrics).toBeDefined();
-        expect(result.metrics.totalDuration).toBeGreaterThan(0);
-        expect(result.metrics.step1Duration).toBeGreaterThan(0);
-        expect(result.metrics.step2Duration).toBeGreaterThanOrEqual(0);
-        expect(result.metrics.retryCount).toBeGreaterThanOrEqual(0);
-        expect(result.metrics.success).toBe(true);
-        expect(result.metrics.timestamp).toBeInstanceOf(Date);
-        
-        // Verify variant is tracked
-        expect(['control', 'treatment']).toContain(result.variant);
-      });
-
-      it('should maintain session consistency across multiple requests', async () => {
-        const userId = 'test-user-consistency';
-        const sessionId = 'test-session-consistency';
-
-        // First request
-        const variant1 = await abTestManager.assignVariant(userId, sessionId);
-        
-        // Second request in same session
-        const variant2 = await abTestManager.assignVariant(userId, sessionId);
-        
-        // Third request in same session
-        const variant3 = await abTestManager.assignVariant(userId, sessionId);
-
-        // All should be the same
-        expect(variant1).toBe(variant2);
-        expect(variant2).toBe(variant3);
-      });
-
-      it('should allow different variants for different sessions', async () => {
-        const userId = 'test-user-multi-session';
-        
-        const variant1 = await abTestManager.assignVariant(userId, 'session-1');
-        const variant2 = await abTestManager.assignVariant(userId, 'session-2');
-        
-        // Both should be valid variants (may or may not be the same)
-        expect(['control', 'treatment']).toContain(variant1);
-        expect(['control', 'treatment']).toContain(variant2);
-      });
-    });
-
-    describe('Fallback Mechanism', () => {
-      it('should fall back to old pipeline when all retries fail', async () => {
-        // Mock OpenAI to fail consistently
-        const mockOpenAI = vi.mocked((await import('openai')).default);
-        mockOpenAI.mockImplementationOnce(() => ({
-          chat: {
-            completions: {
-              create: vi.fn().mockRejectedValue(new Error('OpenAI service unavailable'))
-            }
-          }
-        } as any));
-
-        const request = {
-          disposition: mockDisposition,
-          style: 'balanced' as WritingStyle,
-          platform: 'hemnet',
-          targetWordMin: 150,
-          targetWordMax: 250,
-          userId: 'test-user-fallback',
-          sessionId: 'test-session-fallback'
-        };
-
-        // Should throw since fallback is not implemented yet
-        await expect(orchestrator.execute(request)).rejects.toThrow();
-      }, 30000);
-
-      it('should log fallback events with proper context', async () => {
-        const consoleSpy = vi.spyOn(console, 'error');
-
-        // Mock OpenAI to fail
-        const mockOpenAI = vi.mocked((await import('openai')).default);
-        mockOpenAI.mockImplementationOnce(() => ({
-          chat: {
-            completions: {
-              create: vi.fn().mockRejectedValue(new Error('Rate limit exceeded'))
-            }
-          }
-        } as any));
-
-        const request = {
-          disposition: mockDisposition,
-          style: 'balanced' as WritingStyle,
-          platform: 'hemnet',
-          targetWordMin: 150,
-          targetWordMax: 250,
-          userId: 'test-user-logging',
-          sessionId: 'test-session-logging'
-        };
-
-        try {
-          await orchestrator.execute(request);
-        } catch (error) {
-          // Expected to fail
-        }
-
-        // Verify error was logged
-        expect(consoleSpy).toHaveBeenCalled();
-        
-        consoleSpy.mockRestore();
       }, 30000);
     });
 

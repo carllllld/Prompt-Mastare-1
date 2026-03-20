@@ -1,6 +1,6 @@
-import { SmartGenerationEngine, GenerationRequest, GenerationResult } from './perfect-swedish-generator';
-import { DeterministicPostProcessor, PostProcessRequest, PostProcessResult } from './perfect-swedish-post-processor';
-import { ExpertAIAnalyzer, AnalysisRequest, ExpertAnalysis } from './perfect-swedish-analyzer';
+import { SmartGenerationEngine, GenerationResult } from './perfect-swedish-generator';
+import { DeterministicPostProcessor, PostProcessResult } from './perfect-swedish-post-processor';
+import { ExpertAIAnalyzer, ExpertAnalysis } from './perfect-swedish-analyzer';
 import { WritingStyle } from './text-rules';
 import pRetry from 'p-retry';
 import * as Sentry from '@sentry/node';
@@ -14,7 +14,6 @@ export interface PipelineRequest {
   targetWordMax: number;
   userId: string;
   sessionId: string;
-  forceVariant?: 'control' | 'treatment';
 }
 
 export interface PipelineResult {
@@ -26,8 +25,6 @@ export interface PipelineResult {
   shortAd: string;
   expertAnalysis?: ExpertAnalysis;
   metrics: PipelineMetrics;
-  variant: 'control' | 'treatment';
-  fallbackUsed: boolean;
 }
 
 export interface PipelineMetrics {
@@ -45,7 +42,7 @@ export interface PipelineMetrics {
 export type ProgressEmitter = (sessionId: string, event: ProgressEvent) => void;
 
 export interface ProgressEvent {
-  type: 'progress' | 'completion' | 'fallback';
+  type: 'progress' | 'completion';
   step?: 'smart_generation' | 'post_processing' | 'expert_analysis';
   progress?: number;
   message: string;
@@ -118,62 +115,51 @@ export class PerfectSwedishOrchestrator {
           retryCount,
           success: true,
           timestamp: new Date()
-        },
-        variant: 'treatment',
-        fallbackUsed: false
+        }
       };
     } catch (error) {
       const totalDuration = Date.now() - startTime;
       
-      console.error('Pipeline failed after retries, falling back to old pipeline:', {
+      console.error('Pipeline execution failed after all retries:', {
         error: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
         retryCount,
-        duration: totalDuration
+        duration: totalDuration,
+        userId: request.userId,
+        sessionId: request.sessionId,
+        style: request.style,
+        platform: request.platform
       });
 
-      // Capture error in Sentry
+      // Capture error in Sentry with detailed context
       Sentry.captureException(error, {
         tags: {
           component: 'perfect-swedish-orchestrator',
           pipeline_step: 'execute',
-          fallback_triggered: 'true'
+          user_plan: 'unknown', // Could be enriched with actual plan
+          style: request.style,
+          platform: request.platform
         },
         extra: {
           userId: request.userId,
           sessionId: request.sessionId,
           retryCount,
           totalDuration,
-          style: request.style,
-          platform: request.platform
+          targetWordMin: request.targetWordMin,
+          targetWordMax: request.targetWordMax,
+          hasPersonalStyle: !!request.personalStylePrompt
         }
       });
 
-      // Emit fallback event
-      this.emitProgress(request.sessionId, {
-        type: 'fallback',
-        message: 'Använder alternativ metod för att säkerställa resultat',
-        timestamp: new Date()
-      });
-
-      // Fall back to old pipeline
-      const fallbackResult = await this.fallbackToOldPipeline(request);
-
-      return {
-        ...fallbackResult,
-        metrics: {
-          totalDuration,
-          retryCount,
-          success: false,
-          errorType: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date()
-        },
-        variant: 'control',
-        fallbackUsed: true
-      };
+      // Re-throw with user-friendly message
+      throw new Error(
+        `Textgenerering misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}. ` +
+        `Försök igen om en stund eller kontakta support om problemet kvarstår.`
+      );
     }
   }
 
-  private async executeNewPipeline(request: PipelineRequest): Promise<Omit<PipelineResult, 'variant' | 'fallbackUsed'>> {
+  private async executeNewPipeline(request: PipelineRequest): Promise<PipelineResult> {
     // Step 1: Smart Generation
     this.emitProgress(request.sessionId, {
       type: 'progress',
@@ -370,16 +356,6 @@ export class PerfectSwedishOrchestrator {
     }
 
     return false;
-  }
-
-  private async fallbackToOldPipeline(request: PipelineRequest): Promise<Omit<PipelineResult, 'metrics' | 'variant' | 'fallbackUsed'>> {
-    // This would call the existing 7-step pipeline
-    // For now, return a placeholder that indicates fallback was used
-    // In production, this would integrate with the existing listing-orchestrator.ts
-    
-    console.log('Fallback to old pipeline not yet implemented, returning error state');
-    
-    throw new Error('Fallback to old pipeline not yet implemented');
   }
 
   private emitProgress(sessionId: string, event: ProgressEvent): void {

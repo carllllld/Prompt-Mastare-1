@@ -88,7 +88,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Behåll ~20 rena AI-klyschor (välkommen till, erbjuder, bjuder på, etc.)
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10-7.19_
 
-- [ ] 5. Förbättra post-processor
+- [x] 5. Förbättra post-processor
   - [x] 5.1 Implementera restaurangnamn-validering i perfect-swedish-post-processor.ts
     - Lägg till regex pattern `/\b(restaurang|café|fik)\s+([A-ZÅÄÖ][a-zåäö]+)/gi`
     - Validera restaurangnamn mot disposition data
@@ -96,7 +96,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Logga alla transformationer
     - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7_
   
-  - [ ] 5.2 Implementera narrativ integritet check i perfect-swedish-post-processor.ts
+  - [x] 5.2 Implementera narrativ integritet check i perfect-swedish-post-processor.ts
     - Detektera ofullständiga meningar med pattern matching
     - Detektera saknade bullet points
     - Detektera abrupta endings
@@ -104,7 +104,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Logga alla fixes
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6_
   
-  - [ ] 5.3 Implementera saknade fakta detection i perfect-swedish-post-processor.ts
+  - [x] 5.3 Implementera saknade fakta detection i perfect-swedish-post-processor.ts
     - Detektera saknad energiklass i text
     - Detektera saknat värmesystem i text
     - Lägg till saknade fakta från disposition i naturlig språk
@@ -112,8 +112,8 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Graceful degradation om fakta inte kan läggas till
     - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7_
 
-- [ ] 6. Uppdatera orchestrator
-  - [ ] 6.1 Förenkla perfect-swedish-orchestrator.ts
+- [x] 6. Uppdatera orchestrator
+  - [x] 6.1 Förenkla perfect-swedish-orchestrator.ts
     - Ta bort `fallbackToOldPipeline()` method
     - Ta bort `forceVariant` parameter från PipelineRequest
     - Ta bort `variant` tracking från PipelineResult
@@ -121,7 +121,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Förbättra error messages för tydligare debugging
     - _Requirements: 2.3, 2.4, 2.5, 2.7, 14.7_
   
-  - [ ] 6.2 Förbättra error handling i orchestrator
+  - [x] 6.2 Förbättra error handling i orchestrator
     - Implementera graceful degradation för Post_Processor failures
     - Implementera graceful degradation för Expert_Analyzer failures
     - Logga warnings till Sentry med context
@@ -167,8 +167,8 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
 
 ### Fas 4: Documentation Cleanup (0.5 dag)
 
-- [ ] 9. Ta bort obsolet dokumentation
-  - [ ] 9.1 Ta bort gamla planerings-dokument från root
+- [x] 9. Ta bort obsolet dokumentation
+  - [x] 9.1 Ta bort gamla planerings-dokument från root
     - Ta bort `ACTION_PLAN.md`
     - Ta bort `AI_FIRST_REDESIGN.md`
     - Ta bort `DEEP_THINKING_PROMPT_STRATEGY.md`
@@ -186,7 +186,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Ta bort `DIAGNOSTIK.md`
     - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8, 20.9, 20.10, 20.11, 20.12, 20.13_
   
-  - [ ] 9.2 Ta bort gamla task completion summaries
+  - [x] 9.2 Ta bort gamla task completion summaries
     - Ta bort alla `TASK_*_COMPLETION_SUMMARY.md` från `.kiro/specs/perfect-swedish-pipeline/`
     - Ta bort `TASKS_*_IMPLEMENTATION.md` från `.kiro/specs/perfect-swedish-pipeline/`
     - Ta bort `IMPLEMENTATION_COMPLETE.md` från `.kiro/specs/perfect-swedish-pipeline/`
@@ -194,7 +194,7 @@ Implementation följer 6 faser: Preparation, Backend Cleanup, Database Migration
     - Behåll operationella dokument (DEPLOYMENT_GUIDE, OPERATIONS_RUNBOOK, etc.)
     - _Requirements: 20.14-20.20_
   
-  - [ ] 9.3 Skapa cleanup changelog
+  - [x] 9.3 Skapa cleanup changelog
     - Skapa `CLEANUP_CHANGELOG.md` med sammanfattning av alla ändringar
     - Dokumentera borttagna filer (kod, tester, dokumentation)
     - Dokumentera optimeringar (token budget, validation rules)

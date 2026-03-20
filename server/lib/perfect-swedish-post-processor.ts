@@ -24,7 +24,7 @@ export interface PostProcessResult {
 }
 
 export interface Transformation {
-  type: 'placeholder' | 'formatting' | 'forbidden_phrase' | 'normalization' | 'generalization';
+  type: 'placeholder' | 'formatting' | 'forbidden_phrase' | 'normalization' | 'generalization' | 'narrative_integrity' | 'missing_facts';
   field: string;
   before: string;
   after: string;
@@ -78,6 +78,12 @@ export class DeterministicPostProcessor {
 
       // 5. Generalize and deduplicate
       result = this.generalizeAndDeduplicate(result, transformations);
+
+      // 6. Check narrative integrity
+      result = this.checkNarrativeIntegrity(result, transformations);
+
+      // 7. Add missing facts
+      result = this.addMissingFacts(result, request.disposition, transformations);
 
       const duration = Date.now() - startTime;
 
@@ -355,6 +361,270 @@ export class DeterministicPostProcessor {
       }
 
       result[field] = text;
+    }
+
+    return result;
+  }
+
+  private checkNarrativeIntegrity(
+    request: PostProcessRequest,
+    transformations: Transformation[]
+  ): PostProcessRequest {
+    const result = { ...request };
+
+    // Process each field
+    for (const field of ['improvedPrompt', 'headline', 'socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd'] as const) {
+      let text = result[field];
+      const originalText = text;
+
+      try {
+        // 1. Detect and fix incomplete sentences
+        text = this.fixIncompleteSentences(text, field, transformations);
+
+        // 2. Detect and fix missing bullet points
+        text = this.fixMissingBulletPoints(text, field, transformations);
+
+        // 3. Detect and fix abrupt endings
+        text = this.fixAbruptEndings(text, field, transformations);
+
+        result[field] = text;
+      } catch (error) {
+        // Graceful degradation: log warning but continue with original text
+        console.warn(`Narrative integrity check failed for ${field}:`, {
+          error: error instanceof Error ? error.message : String(error),
+          field
+        });
+        result[field] = originalText;
+      }
+    }
+
+    return result;
+  }
+
+  private fixIncompleteSentences(
+    text: string,
+    field: string,
+    transformations: Transformation[]
+  ): string {
+    let result = text;
+
+    // Pattern 1: Sentence ending with comma or dash instead of period
+    const incompleteEndingPattern = /([a-zåäö]+)[,\-]\s*$/gm;
+    const incompleteMatches = result.match(incompleteEndingPattern);
+    if (incompleteMatches) {
+      const before = result;
+      result = result.replace(incompleteEndingPattern, '$1.');
+      
+      if (result !== before) {
+        transformations.push({
+          type: 'narrative_integrity',
+          field,
+          before: 'Incomplete sentence ending',
+          after: 'Added proper punctuation'
+        });
+      }
+    }
+
+    // Pattern 2: Missing period between sentences (lowercase followed by uppercase without punctuation)
+    const missingPeriodPattern = /([a-zåäö])\s+([A-ZÅÄÖ])/g;
+    const periodMatches = [...result.matchAll(missingPeriodPattern)];
+    if (periodMatches.length > 0) {
+      const before = result;
+      result = result.replace(missingPeriodPattern, '$1. $2');
+      
+      if (result !== before) {
+        transformations.push({
+          type: 'narrative_integrity',
+          field,
+          before: 'Missing period between sentences',
+          after: 'Added missing periods'
+        });
+      }
+    }
+
+    // Pattern 3: Sentence fragments (very short sentences without proper structure)
+    const sentences = result.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const hasFragments = sentences.some(s => {
+      const words = s.trim().split(/\s+/);
+      return words.length > 0 && words.length < 3 && !s.match(/^\d+/); // Ignore numbers
+    });
+
+    if (hasFragments) {
+      transformations.push({
+        type: 'narrative_integrity',
+        field,
+        before: 'Detected sentence fragments',
+        after: 'Fragments detected but not auto-fixed (manual review needed)'
+      });
+    }
+
+    return result;
+  }
+
+  private fixMissingBulletPoints(
+    text: string,
+    field: string,
+    transformations: Transformation[]
+  ): string {
+    let result = text;
+
+    // Pattern 1: Incomplete list (e.g., "Bostaden har: kök, badrum" without proper ending)
+    const incompleteListPattern = /:\s*([a-zåäö][^.!?]*[,])\s*$/gm;
+    const listMatches = result.match(incompleteListPattern);
+    if (listMatches) {
+      const before = result;
+      // Add "och mer" to complete the list
+      result = result.replace(incompleteListPattern, ': $1 och mer.');
+      
+      if (result !== before) {
+        transformations.push({
+          type: 'narrative_integrity',
+          field,
+          before: 'Incomplete list',
+          after: 'Completed list with proper ending'
+        });
+      }
+    }
+
+    // Pattern 2: Bullet points without proper formatting
+    const bulletPattern = /^[-•]\s*([a-zåäö])/gm;
+    const bulletMatches = [...result.matchAll(bulletPattern)];
+    if (bulletMatches.length > 0) {
+      const before = result;
+      // Capitalize first letter after bullet
+      result = result.replace(bulletPattern, (match, firstChar) => {
+        return match.replace(firstChar, firstChar.toUpperCase());
+      });
+      
+      if (result !== before) {
+        transformations.push({
+          type: 'narrative_integrity',
+          field,
+          before: 'Bullet points with lowercase start',
+          after: 'Capitalized bullet points'
+        });
+      }
+    }
+
+    return result;
+  }
+
+  private fixAbruptEndings(
+    text: string,
+    field: string,
+    transformations: Transformation[]
+  ): string {
+    let result = text.trim();
+
+    // Pattern 1: Text ending without proper punctuation
+    const endsWithPunctuation = /[.!?]$/.test(result);
+    if (!endsWithPunctuation && result.length > 0) {
+      const before = result;
+      result = result + '.';
+      
+      transformations.push({
+        type: 'narrative_integrity',
+        field,
+        before: 'Text ending without punctuation',
+        after: 'Added period at end'
+      });
+    }
+
+    // Pattern 2: Text ending mid-sentence (e.g., "Bostaden har ett")
+    const lastSentence = result.split(/[.!?]/).pop()?.trim() || '';
+    const words = lastSentence.split(/\s+/);
+    
+    // Check if last sentence is suspiciously short and ends with preposition/article
+    const suspiciousEndings = ['ett', 'en', 'och', 'med', 'i', 'på', 'till', 'från', 'av', 'för'];
+    const lastWord = words[words.length - 1]?.toLowerCase();
+    
+    if (words.length > 0 && words.length < 4 && suspiciousEndings.includes(lastWord)) {
+      transformations.push({
+        type: 'narrative_integrity',
+        field,
+        before: `Abrupt ending detected: "${lastSentence}"`,
+        after: 'Abrupt ending detected but not auto-fixed (manual review needed)'
+      });
+    }
+
+    // Pattern 3: Text ending with conjunction or incomplete phrase
+    const incompleteConjunctionPattern = /\s+(och|eller|men|samt)\s*\.?$/i;
+    if (incompleteConjunctionPattern.test(result)) {
+      const before = result;
+      result = result.replace(incompleteConjunctionPattern, '.');
+      
+      transformations.push({
+        type: 'narrative_integrity',
+        field,
+        before: 'Text ending with conjunction',
+        after: 'Removed trailing conjunction'
+      });
+    }
+
+    return result;
+  }
+
+  private addMissingFacts(
+    request: PostProcessRequest,
+    disposition: any,
+    transformations: Transformation[]
+  ): PostProcessRequest {
+    const result = { ...request };
+
+    // Only process the main improvedPrompt field
+    let text = result.improvedPrompt;
+
+    try {
+      const missingFacts: string[] = [];
+
+      // 1. Check for missing energiklass
+      const hasEnergiklass = /energiklass/i.test(text);
+      const energiklassValue = disposition?.energiklass || disposition?.property?.energiklass;
+      
+      if (!hasEnergiklass && energiklassValue) {
+        missingFacts.push(`Bostaden har energiklass ${energiklassValue}.`);
+        transformations.push({
+          type: 'missing_facts',
+          field: 'improvedPrompt',
+          before: 'Missing energiklass',
+          after: `Added energiklass ${energiklassValue}`
+        });
+      }
+
+      // 2. Check for missing värmesystem
+      const hasVärmesystem = /värme|uppvärmning/i.test(text);
+      const värmesystemValue = disposition?.värmesystem || disposition?.property?.värmesystem || disposition?.heating;
+      
+      if (!hasVärmesystem && värmesystemValue) {
+        missingFacts.push(`Uppvärmning sker med ${värmesystemValue.toLowerCase()}.`);
+        transformations.push({
+          type: 'missing_facts',
+          field: 'improvedPrompt',
+          before: 'Missing värmesystem',
+          after: `Added värmesystem ${värmesystemValue}`
+        });
+      }
+
+      // 3. Add missing facts to text in natural language
+      if (missingFacts.length > 0) {
+        // Find a good place to insert facts - preferably after property description but before location
+        // For now, add at the end of the text
+        const factsText = ' ' + missingFacts.join(' ');
+        text = text.trim() + factsText;
+        
+        console.log('Added missing facts:', {
+          count: missingFacts.length,
+          facts: missingFacts
+        });
+      }
+
+      result.improvedPrompt = text;
+    } catch (error) {
+      // Graceful degradation: log warning but continue with original text
+      console.warn('Failed to add missing facts:', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      result.improvedPrompt = request.improvedPrompt;
     }
 
     return result;

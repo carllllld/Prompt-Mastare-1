@@ -21,7 +21,6 @@ interface ProfileResult {
   retryCount: number;
   success: boolean;
   errorType?: string;
-  fallbackUsed: boolean;
 }
 
 interface ProfileSummary {
@@ -37,7 +36,6 @@ interface ProfileSummary {
   avgStep2Duration: number;
   avgStep3Duration: number;
   totalRetries: number;
-  fallbackCount: number;
   bottlenecks: string[];
 }
 
@@ -134,8 +132,7 @@ async function profilePipeline(iterations: number = 10): Promise<ProfileResult[]
       targetWordMin: 150,
       targetWordMax: 250,
       userId: `profiler-user-${i}`,
-      sessionId: `profiler-session-${i}`,
-      forceVariant: 'treatment'
+      sessionId: `profiler-session-${i}`
     };
 
     console.log(`Iteration ${i + 1}/${iterations}: ${testCase.name}`);
@@ -151,8 +148,7 @@ async function profilePipeline(iterations: number = 10): Promise<ProfileResult[]
         step3Duration: result.metrics.step3Duration,
         retryCount: result.metrics.retryCount,
         success: result.metrics.success,
-        errorType: result.metrics.errorType,
-        fallbackUsed: result.fallbackUsed
+        errorType: result.metrics.errorType
       });
 
       // Log timing breakdown
@@ -173,8 +169,7 @@ async function profilePipeline(iterations: number = 10): Promise<ProfileResult[]
         totalDuration: 0,
         retryCount: 0,
         success: false,
-        errorType: error instanceof Error ? error.message : 'Unknown error',
-        fallbackUsed: false
+        errorType: error instanceof Error ? error.message : 'Unknown error'
       });
     }
 
@@ -215,7 +210,6 @@ function analyzResults(results: ProfileResult[]): ProfileSummary {
     avgStep2Duration: avg(step2Durations),
     avgStep3Duration: avg(step3Durations),
     totalRetries: results.reduce((sum, r) => sum + r.retryCount, 0),
-    fallbackCount: results.filter(r => r.fallbackUsed).length,
     bottlenecks: []
   };
 
@@ -252,7 +246,6 @@ function printSummary(summary: ProfileSummary) {
   console.log(`   Total Iterations: ${summary.totalIterations}`);
   console.log(`   Successful: ${summary.successfulIterations} (${(summary.successRate * 100).toFixed(1)}%)`);
   console.log(`   Failed: ${summary.failedIterations}`);
-  console.log(`   Fallbacks: ${summary.fallbackCount}`);
   console.log(`   Total Retries: ${summary.totalRetries}\n`);
 
   // Timing metrics
