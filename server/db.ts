@@ -327,6 +327,9 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Migrate pipeline_generations — add default for variant so old inserts don't crash
+    await pool.query(`ALTER TABLE pipeline_generations ALTER COLUMN variant SET DEFAULT 'treatment'`);
+
     // Create indexes for perfect-swedish-pipeline tables
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_generations_user_id ON pipeline_generations (user_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_generations_variant ON pipeline_generations (variant)`);

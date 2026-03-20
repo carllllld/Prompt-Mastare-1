@@ -3301,15 +3301,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // Save to database
       await pool.query(`
         INSERT INTO pipeline_generations (
-          user_id, session_id, disposition, style, platform,
+          user_id, session_id, variant, disposition, style, platform,
           improved_prompt, headline, social_copy, instagram_caption,
           showing_invitation, short_ad, expert_analysis,
           total_duration, step1_duration, step2_duration, step3_duration,
           retry_count, success
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       `, [
         user.id,
         sessionId,
+        'treatment', // Always treatment — A/B test removed, new pipeline is the only pipeline
         JSON.stringify(req.body.propertyData || { rawText: prompt }),
         style,
         platform || 'hemnet',
