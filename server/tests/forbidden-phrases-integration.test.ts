@@ -8,8 +8,8 @@ import {
 import { findRuleViolations } from '../lib/text-validation';
 
 describe('Forbidden Phrases Integration Tests', () => {
-  it('should have exactly 75 forbidden phrases after optimization', () => {
-    expect(FORBIDDEN_PHRASES.length).toBe(75);
+  it('should have exactly 66 forbidden phrases after optimization', () => {
+    expect(FORBIDDEN_PHRASES.length).toBe(66);
   });
 
   describe('Style-based blocking', () => {

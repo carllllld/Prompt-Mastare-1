@@ -10,31 +10,10 @@ import { analyzeArchitecturalValue } from "./architectural-intelligence";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, MODEL_TEXT_EDIT_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
-import { chooseBestCandidate, decideBrokerAuditStrategy, decideRewriteAcceptance, summarizeAgentStageDecision } from "./lib/listing-decision-engine";
-import { buildLocalBrokerAuditFallback, evaluateBrokerAuditGate, evaluateCandidatePolishGate, evaluateCandidateRecoveryGate, evaluateCandidateSelectionGate, evaluateFinalAuditRescueGate } from "./lib/listing-agent-gates";
-import { buildAgentCheckpointEvent, summarizeAgentRun } from "./lib/listing-agent-observability";
-import type { AgentLoopDecision } from "./lib/listing-agent-loop";
-import { runAgentIteration } from "./lib/listing-agent-iteration";
-import { evaluateLoopCheckpoint } from "./lib/listing-loop-coordinator";
-import { buildBlueprintDeveloperAddendum, buildBlueprintUserAddendum, buildListingGenerationBlueprint } from "./lib/listing-orchestrator";
-import { buildFinalAuditRescueOutcome, buildFinalAuditRescueRequestInput, buildFinalAuditRescueResponseArtifacts, buildFinalAuditRescueSettlement, buildFinalBrokerAuditRetryRequestInput, buildFinalBrokerAuditRetryResponseArtifacts, finalizeBrokerAuditReadiness, finalizeFinalMainValidation } from "./lib/listing-final-audit-subflow";
-import { coordinateExpansionAcceptance, coordinateFactCheckAcceptance, coordinatePolishAcceptance, coordinateRescueAcceptance } from "./lib/listing-refinement-coordinator";
-import { decideRecoveryAction } from "./lib/listing-recovery-policy";
-import { buildCandidatePolishOutcome, buildCandidatePolishRequestInput, buildCandidatePolishResponseArtifacts, buildCandidatePolishSettlement, buildStep3CandidateSnapshot } from "./lib/listing-selection-subflow";
-import { decidePostRefinementGuard } from "./lib/listing-refinement-subflow";
-import { buildRepairPromptAddendum, buildSpecializedRepairPrompt, selectRepairStrategy } from "./lib/listing-repair-strategies";
-import { applyStageQualityBudget, evaluateFinalGateAB } from "./lib/listing-quality-guards";
-import { buildBrokerRealismScorecard } from "./lib/listing-broker-realism-scorecard";
-import { evaluateBlueprintCoverage } from "./lib/listing-blueprint-coverage";
-import { evaluateInputSignalCoverage } from "./lib/listing-input-signal-coverage";
-import { evaluateRewriteCandidate } from "./lib/listing-rewrite-evaluator";
-import { addCandidateToRunState, createListingRunState, setFactCheckState, setFinalBrokerAudit, setIssueSummary, setLastRepairKind, setOpenIssues, setRunBaseline, setSelectedCandidate, setAgenticFeedback, addAgenticFeedback } from "./lib/listing-run-state";
-import { pipelineObservability } from "./lib/listing-pipeline-observability";
 import OpenAI from "openai";
 import { FORBIDDEN_PHRASES, buildBrokerLanguagePolicyPrompt, countEvidenceBackedBlockedPhrases, getBrokerLanguageEvidenceSnapshot, shouldBlockPhraseForStyle, type WritingStyle } from "./lib/text-rules";
 import { findRuleViolations, validateOptimizationResult } from "./lib/text-validation";
 import { PerfectSwedishOrchestrator } from "./lib/perfect-swedish-orchestrator";
-import { ABTestManager } from "./lib/perfect-swedish-ab-test";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
@@ -3248,169 +3227,187 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         actionTaken: "preflight_passed",
       });
 
-      // === A/B TEST: PERFECT SWEDISH PIPELINE ===
-      // Assign variant for this user session
+      // === USE NEW 3-STEP PIPELINE (ALWAYS) ===
       const sessionId = (req as any).sessionID || randomUUID();
-      const abTestManager = new ABTestManager();
-      const forceVariant = req.body.forceVariant as 'control' | 'treatment' | undefined;
-      const variant = await abTestManager.assignVariant(user.id, sessionId, forceVariant);
       
-      console.log(`[A/B Test] User ${user.id}, Session ${sessionId}, Variant: ${variant}${forceVariant ? ' (forced)' : ''}`);
-
-      // If treatment variant, use new 3-step pipeline
-      if (variant === 'treatment') {
-        console.log('[Perfect Swedish Pipeline] Using new 3-step pipeline');
+      console.log('[Perfect Swedish Pipeline] Using new 3-step pipeline');
         
-        try {
-          // Create progress emitter for WebSocket updates
-          const progressEmitter = wantsStream
-            ? (sessionId: string, event: any) => {
-                ensureStreamStarted();
-                res.write(JSON.stringify(event) + "\n");
-              }
-            : undefined;
-
-          const orchestrator = new PerfectSwedishOrchestrator(progressEmitter);
-          
-          // Get personal style if available
-          let personalStylePrompt: string | undefined;
-          try {
-            const personalStyle = await storage.getPersonalStyle(user.id);
-            if (personalStyle?.style_prompt) {
-              personalStylePrompt = personalStyle.style_prompt;
-            }
-          } catch (e) {
-            console.warn('[Perfect Swedish Pipeline] Failed to load personal style:', e);
+      // Create progress emitter for WebSocket updates
+      const progressEmitter = wantsStream
+        ? (sessionId: string, event: any) => {
+            ensureStreamStarted();
+            res.write(JSON.stringify(event) + "\n");
           }
+        : undefined;
 
-          const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax } = req.body;
-          const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
-
-          // Determine word count targets
-          let targetWordMin: number;
-          let targetWordMax: number;
-
-          if ((plan === "pro" || plan === "premium") && wordCountMin && wordCountMax) {
-            const limits = plan === "premium" ? WORD_LIMITS.premium : WORD_LIMITS.pro;
-            targetWordMin = Math.max(limits.min, Math.min(wordCountMin, limits.max));
-            targetWordMax = Math.max(limits.min, Math.min(wordCountMax, limits.max));
-          } else if (plan === "pro" || plan === "premium") {
-            const defaults = plan === "premium" ? WORD_LIMITS.premium.default : WORD_LIMITS.pro.default;
-            targetWordMin = defaults.min;
-            targetWordMax = defaults.max;
-          } else {
-            targetWordMin = WORD_LIMITS.free.min;
-            targetWordMax = WORD_LIMITS.free.max;
-          }
-
-          // Execute new pipeline
-          const result = await orchestrator.execute({
-            disposition: req.body.propertyData || { rawText: prompt },
-            style,
-            platform: platform || 'hemnet',
-            personalStylePrompt,
-            targetWordMin,
-            targetWordMax,
-            userId: user.id,
-            sessionId,
-          });
-
-          // Save to database
-          await pool.query(`
-            INSERT INTO pipeline_generations (
-              user_id, session_id, variant, disposition, style, platform,
-              improved_prompt, headline, social_copy, instagram_caption,
-              showing_invitation, short_ad, expert_analysis,
-              total_duration, step1_duration, step2_duration, step3_duration,
-              retry_count, success, fallback_used
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-          `, [
-            user.id,
-            sessionId,
-            result.variant,
-            JSON.stringify(req.body.propertyData || { rawText: prompt }),
-            style,
-            platform || 'hemnet',
-            result.improvedPrompt,
-            result.headline,
-            result.socialCopy,
-            result.instagramCaption,
-            result.showingInvitation,
-            result.shortAd,
-            JSON.stringify(result.expertAnalysis),
-            result.metrics.totalDuration,
-            result.metrics.step1Duration,
-            result.metrics.step2Duration,
-            result.metrics.step3Duration,
-            result.metrics.retryCount,
-            result.metrics.success,
-            result.fallbackUsed
-          ]);
-
-          // Increment usage counter
-          await storage.incrementUsage(user.id, 'texts');
-
-          // Save to optimization history
-          const optimizationRecord = await pool.query(
-            `INSERT INTO optimizations (user_id, original_prompt, improved_prompt, type, platform, writing_style, word_count_min, word_count_max)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-             RETURNING id, created_at`,
-            [user.id, prompt, result.improvedPrompt, type || 'listing', platform || 'hemnet', style, targetWordMin, targetWordMax]
-          );
-
-          // Finalize observability
-          finalizeObservabilityRun(true, {
-            qualityScore: result.expertAnalysis?.overallQuality,
-            wordCount: result.improvedPrompt.split(/\s+/).length,
-          });
-
-          // Send final response
-          if (wantsStream) {
-            res.write(JSON.stringify({
-              type: "complete",
-              data: {
-                originalPrompt: prompt,
-                improvedPrompt: result.improvedPrompt,
-                headline: result.headline,
-                socialCopy: result.socialCopy,
-                instagramCaption: result.instagramCaption,
-                showingInvitation: result.showingInvitation,
-                shortAd: result.shortAd,
-                expertAnalysis: result.expertAnalysis,
-                variant: result.variant,
-                fallbackUsed: result.fallbackUsed,
-                optimizationId: optimizationRecord.rows[0].id,
-                createdAt: optimizationRecord.rows[0].created_at,
-              }
-            }) + "\n");
-            return res.end();
-          } else {
-            return res.json({
-              originalPrompt: prompt,
-              improvedPrompt: result.improvedPrompt,
-              headline: result.headline,
-              socialCopy: result.socialCopy,
-              instagramCaption: result.instagramCaption,
-              showingInvitation: result.showingInvitation,
-              shortAd: result.shortAd,
-              expertAnalysis: result.expertAnalysis,
-              variant: result.variant,
-              fallbackUsed: result.fallbackUsed,
-              optimizationId: optimizationRecord.rows[0].id,
-              createdAt: optimizationRecord.rows[0].created_at,
-            });
-          }
-        } catch (error) {
-          console.error('[Perfect Swedish Pipeline] Error:', error);
-          // Fall through to old pipeline on error
-          console.log('[Perfect Swedish Pipeline] Falling back to old pipeline due to error');
+      const orchestrator = new PerfectSwedishOrchestrator(progressEmitter);
+      
+      // Get personal style if available
+      let personalStylePrompt: string | undefined;
+      try {
+        const personalStyle = await storage.getPersonalStyle(user.id);
+        if (personalStyle?.style_prompt) {
+          personalStylePrompt = personalStyle.style_prompt;
         }
+      } catch (e) {
+        console.warn('[Perfect Swedish Pipeline] Failed to load personal style:', e);
       }
 
-      // === CONTROL VARIANT OR FALLBACK: USE OLD 7-STEP PIPELINE ===
-      console.log(`[Pipeline] Using ${variant === 'control' ? 'control (old)' : 'fallback to old'} 7-step pipeline`);
+      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax } = req.body;
+      const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
-      const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls } = req.body;
+      // Determine word count targets
+      let targetWordMin: number;
+      let targetWordMax: number;
+
+      if ((plan === "pro" || plan === "premium") && wordCountMin && wordCountMax) {
+        const limits = plan === "premium" ? WORD_LIMITS.premium : WORD_LIMITS.pro;
+        targetWordMin = Math.max(limits.min, Math.min(wordCountMin, limits.max));
+        targetWordMax = Math.max(limits.min, Math.min(wordCountMax, limits.max));
+      } else if (plan === "pro" || plan === "premium") {
+        const defaults = plan === "premium" ? WORD_LIMITS.premium.default : WORD_LIMITS.pro.default;
+        targetWordMin = defaults.min;
+        targetWordMax = defaults.max;
+      } else {
+        targetWordMin = WORD_LIMITS.free.min;
+        targetWordMax = WORD_LIMITS.free.max;
+      }
+
+      // Execute new pipeline
+      const result = await orchestrator.execute({
+        disposition: req.body.propertyData || { rawText: prompt },
+        style,
+        platform: platform || 'hemnet',
+        personalStylePrompt,
+        targetWordMin,
+        targetWordMax,
+        userId: user.id,
+        sessionId,
+      });
+
+      // Save to database
+      await pool.query(`
+        INSERT INTO pipeline_generations (
+          user_id, session_id, disposition, style, platform,
+          improved_prompt, headline, social_copy, instagram_caption,
+          showing_invitation, short_ad, expert_analysis,
+          total_duration, step1_duration, step2_duration, step3_duration,
+          retry_count, success
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      `, [
+        user.id,
+        sessionId,
+        JSON.stringify(req.body.propertyData || { rawText: prompt }),
+        style,
+        platform || 'hemnet',
+        result.improvedPrompt,
+        result.headline,
+        result.socialCopy,
+        result.instagramCaption,
+        result.showingInvitation,
+        result.shortAd,
+        JSON.stringify(result.expertAnalysis),
+        result.metrics.totalDuration,
+        result.metrics.step1Duration,
+        result.metrics.step2Duration,
+        result.metrics.step3Duration,
+        result.metrics.retryCount,
+        result.metrics.success
+      ]);
+
+      // Increment usage counter
+      await storage.incrementUsage(user.id, 'texts');
+
+      // Save to optimization history
+      optimizationRecord = await pool.query(
+        `INSERT INTO optimizations (user_id, original_prompt, improved_prompt, type, platform, writing_style, word_count_min, word_count_max)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, created_at`,
+        [user.id, prompt, result.improvedPrompt, type || 'listing', platform || 'hemnet', style, targetWordMin, targetWordMax]
+      );
+
+      // Finalize observability
+      finalizeObservabilityRun(true, {
+        qualityScore: result.expertAnalysis?.overallQuality,
+        wordCount: result.improvedPrompt.split(/\s+/).length,
+      });
+
+      // Send final response
+      if (wantsStream) {
+        res.write(JSON.stringify({
+          type: "complete",
+          data: {
+            originalPrompt: prompt,
+            improvedPrompt: result.improvedPrompt,
+            headline: result.headline,
+            socialCopy: result.socialCopy,
+            instagramCaption: result.instagramCaption,
+            showingInvitation: result.showingInvitation,
+            shortAd: result.shortAd,
+            expertAnalysis: result.expertAnalysis,
+            optimizationId: optimizationRecord.rows[0].id,
+            createdAt: optimizationRecord.rows[0].created_at,
+          }
+        }) + "\n");
+        return res.end();
+      } else {
+        return res.json({
+          originalPrompt: prompt,
+          improvedPrompt: result.improvedPrompt,
+          headline: result.headline,
+          socialCopy: result.socialCopy,
+          instagramCaption: result.instagramCaption,
+          showingInvitation: result.showingInvitation,
+          shortAd: result.shortAd,
+          expertAnalysis: result.expertAnalysis,
+          optimizationId: optimizationRecord.rows[0].id,
+          createdAt: optimizationRecord.rows[0].created_at,
+        });
+      }
+    } catch (error: any) {
+      console.error('[Perfect Swedish Pipeline] Error:', error);
+      pipelineObservability.endStep({
+        success: false,
+        actionTaken: "error",
+        decisionReason: error.message,
+      });
+
+      // Handle different error types
+      const err = error as any;
+      if (wantsStream) {
+        try {
+          ensureStreamStarted();
+          res.write(JSON.stringify({ 
+            type: "error", 
+            message: err.message || "Optimering misslyckades", 
+            code: err.code || null, 
+            upstreamQuota: Boolean(err.upstreamQuota) 
+          }) + "\n");
+          res.end();
+        } catch { 
+          res.end(); 
+        }
+      } else {
+        res.status(err.statusCode || 500).json({ 
+          message: err.message || "Optimering misslyckades", 
+          code: err.code || null, 
+          upstreamQuota: Boolean(err.upstreamQuota) 
+        });
+      }
+      finalizeObservabilityRun(false);
+    }
+  });
+
+
+  // ── AI REWRITE: Inline text editing ──
+  app.post("/api/rewrite", requireAuth, async (req, res) => {
+    const rewriteUser = (req as any).user as User;
+    const rewritePlan = rewriteUser.plan as PlanType;
+    if (rewritePlan === "free") {
+      return res.status(403).json({ message: "Text-omskrivning är endast för Pro/Premium-användare" });
+    }
+    try {
+      const { selectedText, fullText, instruction, writingStyle } = req.body;
       const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
       // Fixed model: All users get GPT-5.2 with thinking mode where appropriate

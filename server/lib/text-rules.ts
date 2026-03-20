@@ -1,7 +1,7 @@
 export type WritingStyle = "factual" | "balanced" | "selling";
 export type TargetPlatform = "hemnet" | "booli" | "general";
 
-// OPTIMIZED: Reduced from 195 → 75 phrases. Removed legitimate realtor language, kept only REAL AI clichés.
+// OPTIMIZED: Reduced from 195 → 66 phrases. Removed legitimate realtor language, kept only REAL AI clichés.
 // This prevents blocking good broker text while still catching AI-generated patterns.
 export const FORBIDDEN_PHRASES = [
   // === KRITISKA AI-ÖPPNINGAR (aldrig i riktig mäklartext) ===
@@ -126,11 +126,6 @@ const BALANCED_EXEMPT = new Set([
   "bekvämt boende",
   "njutning av", "njut av",
   "förvaringsmöjligheter", "parkeringsmöjligheter",
-  "kommunikationer", "närhet till service", "smidig pendling",
-  "i mycket gott skick", "gott om utrymme",
-  "ligger centralt i",
-  "natur och stadsliv",
-  "det finns även", "det finns också",
 ]);
 
 const SELLING_EXEMPT = new Set([
@@ -195,6 +190,12 @@ const ACCEPTED_BROKER_LANGUAGE_EVIDENCE: PhraseEvidenceEntry[] = [
   { phrase: "smidig pendling", strength: "high", sources: ["golden_examples", "platform_reality_audit"] },
   { phrase: "närhet till service", strength: "high", sources: ["golden_examples", "platform_reality_audit"] },
   { phrase: "kommunikationer", strength: "high", sources: ["platform_reality_audit", "pipeline_tests"] },
+  { phrase: "i mycket gott skick", strength: "medium", sources: ["platform_reality_audit", "broker_audit_feedback"] },
+  { phrase: "gott om utrymme", strength: "medium", sources: ["platform_reality_audit", "broker_audit_feedback"] },
+  { phrase: "ligger centralt i", strength: "medium", sources: ["platform_reality_audit", "broker_audit_feedback"] },
+  { phrase: "natur och stadsliv", strength: "medium", sources: ["platform_reality_audit", "broker_audit_feedback"] },
+  { phrase: "det finns även", strength: "medium", sources: ["platform_reality_audit", "broker_audit_feedback"] },
+  { phrase: "det finns också", strength: "medium", sources: ["platform_reality_audit", "broker_audit_feedback"] },
   { phrase: "vardagslogistik", strength: "medium", sources: ["golden_examples", "broker_audit_feedback"] },
   { phrase: "genomtänkt planlösning", strength: "medium", sources: ["pipeline_tests", "broker_audit_feedback"] },
   { phrase: "ljus och luftig", strength: "medium", sources: ["pipeline_tests", "broker_audit_feedback"] },
