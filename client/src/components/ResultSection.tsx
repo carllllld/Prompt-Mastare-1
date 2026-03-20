@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2, Sparkles, Edit3, Info } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { TextEditor } from "./TextEditor";
 import { PdfExport } from "./PdfExport";
+import { InlineHighlights } from "./InlineHighlights";
+import { ExpertFeedbackPanel } from "./ExpertFeedbackPanel";
+import { useOneClickFix } from "@/hooks/use-one-click-fix";
+import { useToast } from "@/hooks/use-toast";
 
 interface ResultSectionProps {
   result: OptimizeResponse;
@@ -85,11 +89,135 @@ function CopyAllButton({ result }: { result: OptimizeResponse }) {
 export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
+  const [activeFeedback, setActiveFeedback] = useState<string[]>([]);
+  const { toast } = useToast();
+
+  // OneClickFix hook for applying automatic fixes
+  const { applyFix, undo, canUndo } = useOneClickFix({
+    onFixApplied: (feedbackId, newText) => {
+      setEditedText(newText);
+      setActiveFeedback(prev => prev.filter(id => id !== feedbackId));
+      toast({
+        title: "Fix applicerad",
+        description: "Texten har uppdaterats automatiskt",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Kunde inte applicera fix",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Mock expertAnalysis for demonstration (will come from backend in production)
+  const expertAnalysis = (result as any).expertAnalysis || null;
 
   // Sync editedText when result changes (e.g. regenerate)
   useEffect(() => {
     setEditedText(result.improvedPrompt);
+    setActiveFeedback([]);
   }, [result.improvedPrompt]);
+
+  // Handle feedback item click (scroll to text span)
+  const handleFeedbackClick = useCallback((feedbackId: string) => {
+    // Find the feedback item
+    const feedback = expertAnalysis?.improvements?.find((f: any) => f.id === feedbackId);
+    if (!feedback?.textSpan) return;
+
+    // Scroll to the text span (simplified - in production would need more sophisticated scrolling)
+    console.log('[ResultSection] Feedback clicked:', feedbackId, feedback);
+    
+    // Highlight the feedback temporarily
+    setActiveFeedback(prev => [...prev, feedbackId]);
+    setTimeout(() => {
+      setActiveFeedback(prev => prev.filter(id => id !== feedbackId));
+    }, 3000);
+  }, [expertAnalysis]);
+
+  // Handle fix button click
+  const handleFixClick = useCallback((feedbackId: string) => {
+    const feedback = expertAnalysis?.improvements?.find((f: any) => f.id === feedbackId);
+    if (!feedback) return;
+
+    const result = applyFix(editedText, feedback, 'improvedPrompt');
+    if (result.success && result.newText) {
+      setEditedText(result.newText);
+    }
+  }, [expertAnalysis, editedText, applyFix]);
+
+  // Handle AI suggest button click
+  const handleAISuggestClick = useCallback(async (feedbackId: string) => {
+    const feedback = expertAnalysis?.improvements?.find((f: any) => f.id === feedbackId);
+    if (!feedback?.textSpan) return;
+
+    const { start, end } = feedback.textSpan;
+    const selectedText = editedText.slice(start, end);
+
+    try {
+      const response = await fetch("/api/selection-edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          selectedText,
+          fullContext: editedText,
+          field: 'improvedPrompt',
+          style: 'balanced',
+          platform: 'hemnet'
+        }),
+      });
+
+      if (!response.ok) throw new Error("AI-förbättring misslyckades");
+      const data = await response.json();
+
+      if (data.suggestions && data.suggestions.length > 0) {
+        toast({
+          title: "AI-förslag",
+          description: `${data.suggestions.length} alternativ genererade`,
+        });
+        // In production, would show suggestions in a dialog
+        console.log('[ResultSection] AI suggestions:', data.suggestions);
+      }
+    } catch (err) {
+      console.error("AI suggest error:", err);
+      toast({
+        title: "Fel",
+        description: "Kunde inte generera AI-förslag",
+        variant: "destructive",
+      });
+    }
+  }, [expertAnalysis, editedText, toast]);
+
+  // Handle dismiss button click
+  const handleDismissClick = useCallback((feedbackId: string) => {
+    setActiveFeedback(prev => prev.filter(id => id !== feedbackId));
+    toast({
+      title: "Feedback avvisad",
+      description: "Feedbacken har tagits bort",
+    });
+  }, [toast]);
+
+  // Handle undo keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey && canUndo) {
+        e.preventDefault();
+        const result = undo();
+        if (result.success && result.text) {
+          setEditedText(result.text);
+          toast({
+            title: "Ångrad",
+            description: "Senaste ändringen har ångrats",
+          });
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, undo, toast]);
 
   // Build a live result object that reflects edits for PDF export
   const liveResult = { ...result, improvedPrompt: editedText };
@@ -325,7 +453,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
         <CopyCard title="Rubrik" icon={Type} text={result.headline} iconColor="#D4AF37" delay="0.03s" />
       )}
 
-      {/* ── 2. OBJEKTBESKRIVNING (editable) ── */}
+      {/* ── 2. OBJEKTBESKRIVNING (editable with inline highlights) ── */}
       <div className="pro-card pro-card-premium rounded-xl border overflow-hidden animate-slide-up" style={{ borderColor: "#E8E5DE", animationDelay: "0.06s" }}>
         <div className="px-6 py-4 border-b flex justify-between items-center flex-wrap gap-2" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
           <div className="flex items-center gap-2">
@@ -337,6 +465,12 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
             <div className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
               <Edit3 className="w-3 h-3" />
             </div>
+            {expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium" style={{ background: "#FEF3C7", color: "#92400E" }}>
+                <Lightbulb className="w-3 h-3" />
+                {expertAnalysis.improvements.length} förbättringar
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <PdfExport result={liveResult} />
@@ -352,13 +486,42 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <div className="mb-4 rounded-lg border px-3.5 py-3 flex items-start gap-2.5 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#6B7280" }}>
             <Info className="w-3 h-3" />
             <div>
-              <p className="font-medium" style={{ color: "#374151" }}>Direktredigering + AI-redigering</p>
-              <p className="mt-1">Skriv direkt i texten eller markera ett stycke för AI-hjälp. Alla ändringar följer med i kopiering och PDF-export.</p>
+              <p className="font-medium" style={{ color: "#374151" }}>Direktredigering + AI-redigering + Expertfeedback</p>
+              <p className="mt-1">Skriv direkt i texten, markera för AI-hjälp, eller klicka på färgade markeringar för expertförslag. Alla ändringar följer med i kopiering och PDF-export.</p>
             </div>
           </div>
-          <TextEditor text={editedText} onTextChange={setEditedText} />
+
+          {/* Show InlineHighlights if expertAnalysis is available */}
+          {expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 ? (
+            <div className="mb-4 rounded-lg border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
+              <div className="text-base leading-relaxed font-serif" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939", lineHeight: "1.6" }}>
+                <InlineHighlights
+                  text={editedText}
+                  feedback={expertAnalysis.improvements}
+                  field="improvedPrompt"
+                  onFixClick={handleFixClick}
+                  onTextChange={setEditedText}
+                />
+              </div>
+            </div>
+          ) : (
+            <TextEditor text={editedText} onTextChange={setEditedText} />
+          )}
         </div>
       </div>
+
+      {/* ── EXPERT FEEDBACK PANEL ── */}
+      {expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 && (
+        <div className="animate-slide-up" style={{ animationDelay: "0.09s" }}>
+          <ExpertFeedbackPanel
+            analysis={expertAnalysis}
+            onFeedbackClick={handleFeedbackClick}
+            onFixClick={handleFixClick}
+            onAISuggestClick={handleAISuggestClick}
+            onDismissClick={handleDismissClick}
+          />
+        </div>
+      )}
 
       {/* ── 3. SOCIALT INLÄGG ── */}
       {result.instagramCaption && (

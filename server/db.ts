@@ -194,6 +194,154 @@ export async function initializeDatabase() {
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_assignments_user ON experiment_assignments (user_id, experiment_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_results_experiment ON experiment_results (experiment_id, variant)`);
 
+    // Create pipeline_generations table for perfect-swedish-pipeline
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pipeline_generations (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) NOT NULL,
+        session_id TEXT NOT NULL,
+        variant TEXT NOT NULL CHECK (variant IN ('control', 'treatment')),
+        
+        -- Request data
+        disposition JSONB NOT NULL,
+        style TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        personal_style_prompt TEXT,
+        target_word_min INTEGER NOT NULL,
+        target_word_max INTEGER NOT NULL,
+        
+        -- Result data
+        improved_prompt TEXT,
+        headline TEXT,
+        social_copy TEXT,
+        instagram_caption TEXT,
+        showing_invitation TEXT,
+        short_ad TEXT,
+        expert_analysis JSONB,
+        
+        -- Metrics
+        total_duration INTEGER,
+        step1_duration INTEGER,
+        step2_duration INTEGER,
+        step3_duration INTEGER,
+        retry_count INTEGER DEFAULT 0,
+        success BOOLEAN NOT NULL,
+        error_type TEXT,
+        fallback_used BOOLEAN DEFAULT FALSE,
+        
+        -- Metadata
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // Create ab_test_assignments table for session consistency
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS ab_test_assignments (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) NOT NULL,
+        session_id TEXT NOT NULL,
+        variant TEXT NOT NULL CHECK (variant IN ('control', 'treatment')),
+        manual_override BOOLEAN DEFAULT FALSE,
+        assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, session_id)
+      )
+    `);
+
+    // Create pipeline_metrics_v2 table for aggregated metrics per variant
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS pipeline_metrics_v2 (
+        id SERIAL PRIMARY KEY,
+        variant TEXT NOT NULL CHECK (variant IN ('control', 'treatment')),
+        metric_date DATE NOT NULL,
+        
+        -- Success metrics
+        total_generations INTEGER NOT NULL DEFAULT 0,
+        successful_generations INTEGER NOT NULL DEFAULT 0,
+        failed_generations INTEGER NOT NULL DEFAULT 0,
+        fallback_count INTEGER NOT NULL DEFAULT 0,
+        
+        -- Performance metrics
+        avg_total_duration FLOAT,
+        p50_total_duration FLOAT,
+        p95_total_duration FLOAT,
+        p99_total_duration FLOAT,
+        
+        -- Quality metrics
+        avg_user_satisfaction FLOAT,
+        regeneration_count INTEGER NOT NULL DEFAULT 0,
+        minor_edit_count INTEGER NOT NULL DEFAULT 0,
+        
+        -- Metadata
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        
+        UNIQUE (variant, metric_date)
+      )
+    `);
+
+    // Create user_feedback table for satisfaction tracking
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_feedback (
+        id SERIAL PRIMARY KEY,
+        generation_id INTEGER REFERENCES pipeline_generations(id) NOT NULL,
+        user_id TEXT REFERENCES users(id) NOT NULL,
+        
+        -- Feedback data
+        satisfaction_score INTEGER CHECK (satisfaction_score IN (-1, 1)),
+        regenerated BOOLEAN DEFAULT FALSE,
+        edit_type TEXT CHECK (edit_type IN ('none', 'minor', 'major', 'complete_rewrite')),
+        time_to_final_text INTEGER,
+        
+        -- Optional text feedback
+        feedback_text TEXT,
+        
+        -- Metadata
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // Create expert_feedback_items table for analytics
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS expert_feedback_items (
+        id SERIAL PRIMARY KEY,
+        generation_id INTEGER REFERENCES pipeline_generations(id) NOT NULL,
+        
+        -- Feedback data
+        feedback_id TEXT NOT NULL,
+        issue TEXT NOT NULL,
+        location TEXT NOT NULL,
+        text_span JSONB,
+        suggestion TEXT NOT NULL,
+        category TEXT NOT NULL CHECK (category IN ('grammar', 'style', 'legal', 'broker_realism', 'clarity')),
+        severity TEXT NOT NULL CHECK (severity IN ('critical', 'important', 'suggestion')),
+        expert TEXT NOT NULL CHECK (expert IN ('broker', 'lawyer')),
+        actionable BOOLEAN NOT NULL,
+        auto_fix TEXT,
+        
+        -- User interaction
+        applied BOOLEAN DEFAULT FALSE,
+        dismissed BOOLEAN DEFAULT FALSE,
+        applied_at TIMESTAMPTZ,
+        
+        -- Metadata
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // Create indexes for perfect-swedish-pipeline tables
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_generations_user_id ON pipeline_generations (user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_generations_variant ON pipeline_generations (variant)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_generations_created_at ON pipeline_generations (created_at)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_generations_success ON pipeline_generations (success)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ab_test_assignments_user_id ON ab_test_assignments (user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_ab_test_assignments_session_id ON ab_test_assignments (session_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_metrics_v2_variant ON pipeline_metrics_v2 (variant)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_metrics_v2_date ON pipeline_metrics_v2 (metric_date)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_feedback_generation_id ON user_feedback (generation_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_user_feedback_user_id ON user_feedback (user_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_expert_feedback_generation_id ON expert_feedback_items (generation_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_expert_feedback_category ON expert_feedback_items (category)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_expert_feedback_severity ON expert_feedback_items (severity)`);
+
     console.log("Database tables initialized");
   } catch (error) {
     console.error("Error initializing database:", error);

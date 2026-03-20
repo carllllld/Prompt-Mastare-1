@@ -303,6 +303,13 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Setup API routes
   await registerRoutes(server, app);
 
+  // Initialize monitoring scheduler (only in production)
+  if (isProduction) {
+    const { initializeScheduler } = await import('./lib/perfect-swedish-scheduler');
+    initializeScheduler(60); // Run health checks every 60 minutes
+    log("info", "monitoring_scheduler_started", { intervalMinutes: 60 });
+  }
+
   // Setup error handler for API routes
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

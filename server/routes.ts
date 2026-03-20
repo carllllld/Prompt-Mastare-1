@@ -33,6 +33,8 @@ import { pipelineObservability } from "./lib/listing-pipeline-observability";
 import OpenAI from "openai";
 import { FORBIDDEN_PHRASES, buildBrokerLanguagePolicyPrompt, countEvidenceBackedBlockedPhrases, getBrokerLanguageEvidenceSnapshot, shouldBlockPhraseForStyle, type WritingStyle } from "./lib/text-rules";
 import { findRuleViolations, validateOptimizationResult } from "./lib/text-validation";
+import { PerfectSwedishOrchestrator } from "./lib/perfect-swedish-orchestrator";
+import { ABTestManager } from "./lib/perfect-swedish-ab-test";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
 
@@ -3246,6 +3248,168 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         actionTaken: "preflight_passed",
       });
 
+      // === A/B TEST: PERFECT SWEDISH PIPELINE ===
+      // Assign variant for this user session
+      const sessionId = (req as any).sessionID || randomUUID();
+      const abTestManager = new ABTestManager();
+      const forceVariant = req.body.forceVariant as 'control' | 'treatment' | undefined;
+      const variant = await abTestManager.assignVariant(user.id, sessionId, forceVariant);
+      
+      console.log(`[A/B Test] User ${user.id}, Session ${sessionId}, Variant: ${variant}${forceVariant ? ' (forced)' : ''}`);
+
+      // If treatment variant, use new 3-step pipeline
+      if (variant === 'treatment') {
+        console.log('[Perfect Swedish Pipeline] Using new 3-step pipeline');
+        
+        try {
+          // Create progress emitter for WebSocket updates
+          const progressEmitter = wantsStream
+            ? (sessionId: string, event: any) => {
+                ensureStreamStarted();
+                res.write(JSON.stringify(event) + "\n");
+              }
+            : undefined;
+
+          const orchestrator = new PerfectSwedishOrchestrator(progressEmitter);
+          
+          // Get personal style if available
+          let personalStylePrompt: string | undefined;
+          try {
+            const personalStyle = await storage.getPersonalStyle(user.id);
+            if (personalStyle?.style_prompt) {
+              personalStylePrompt = personalStyle.style_prompt;
+            }
+          } catch (e) {
+            console.warn('[Perfect Swedish Pipeline] Failed to load personal style:', e);
+          }
+
+          const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax } = req.body;
+          const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
+
+          // Determine word count targets
+          let targetWordMin: number;
+          let targetWordMax: number;
+
+          if ((plan === "pro" || plan === "premium") && wordCountMin && wordCountMax) {
+            const limits = plan === "premium" ? WORD_LIMITS.premium : WORD_LIMITS.pro;
+            targetWordMin = Math.max(limits.min, Math.min(wordCountMin, limits.max));
+            targetWordMax = Math.max(limits.min, Math.min(wordCountMax, limits.max));
+          } else if (plan === "pro" || plan === "premium") {
+            const defaults = plan === "premium" ? WORD_LIMITS.premium.default : WORD_LIMITS.pro.default;
+            targetWordMin = defaults.min;
+            targetWordMax = defaults.max;
+          } else {
+            targetWordMin = WORD_LIMITS.free.min;
+            targetWordMax = WORD_LIMITS.free.max;
+          }
+
+          // Execute new pipeline
+          const result = await orchestrator.execute({
+            disposition: req.body.propertyData || { rawText: prompt },
+            style,
+            platform: platform || 'hemnet',
+            personalStylePrompt,
+            targetWordMin,
+            targetWordMax,
+            userId: user.id,
+            sessionId,
+          });
+
+          // Save to database
+          await pool.query(`
+            INSERT INTO pipeline_generations (
+              user_id, session_id, variant, disposition, style, platform,
+              improved_prompt, headline, social_copy, instagram_caption,
+              showing_invitation, short_ad, expert_analysis,
+              total_duration, step1_duration, step2_duration, step3_duration,
+              retry_count, success, fallback_used
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          `, [
+            user.id,
+            sessionId,
+            result.variant,
+            JSON.stringify(req.body.propertyData || { rawText: prompt }),
+            style,
+            platform || 'hemnet',
+            result.improvedPrompt,
+            result.headline,
+            result.socialCopy,
+            result.instagramCaption,
+            result.showingInvitation,
+            result.shortAd,
+            JSON.stringify(result.expertAnalysis),
+            result.metrics.totalDuration,
+            result.metrics.step1Duration,
+            result.metrics.step2Duration,
+            result.metrics.step3Duration,
+            result.metrics.retryCount,
+            result.metrics.success,
+            result.fallbackUsed
+          ]);
+
+          // Increment usage counter
+          await storage.incrementUsage(user.id, 'texts');
+
+          // Save to optimization history
+          const optimizationRecord = await pool.query(
+            `INSERT INTO optimizations (user_id, original_prompt, improved_prompt, type, platform, writing_style, word_count_min, word_count_max)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id, created_at`,
+            [user.id, prompt, result.improvedPrompt, type || 'listing', platform || 'hemnet', style, targetWordMin, targetWordMax]
+          );
+
+          // Finalize observability
+          finalizeObservabilityRun(true, {
+            qualityScore: result.expertAnalysis?.overallQuality,
+            wordCount: result.improvedPrompt.split(/\s+/).length,
+          });
+
+          // Send final response
+          if (wantsStream) {
+            res.write(JSON.stringify({
+              type: "complete",
+              data: {
+                originalPrompt: prompt,
+                improvedPrompt: result.improvedPrompt,
+                headline: result.headline,
+                socialCopy: result.socialCopy,
+                instagramCaption: result.instagramCaption,
+                showingInvitation: result.showingInvitation,
+                shortAd: result.shortAd,
+                expertAnalysis: result.expertAnalysis,
+                variant: result.variant,
+                fallbackUsed: result.fallbackUsed,
+                optimizationId: optimizationRecord.rows[0].id,
+                createdAt: optimizationRecord.rows[0].created_at,
+              }
+            }) + "\n");
+            return res.end();
+          } else {
+            return res.json({
+              originalPrompt: prompt,
+              improvedPrompt: result.improvedPrompt,
+              headline: result.headline,
+              socialCopy: result.socialCopy,
+              instagramCaption: result.instagramCaption,
+              showingInvitation: result.showingInvitation,
+              shortAd: result.shortAd,
+              expertAnalysis: result.expertAnalysis,
+              variant: result.variant,
+              fallbackUsed: result.fallbackUsed,
+              optimizationId: optimizationRecord.rows[0].id,
+              createdAt: optimizationRecord.rows[0].created_at,
+            });
+          }
+        } catch (error) {
+          console.error('[Perfect Swedish Pipeline] Error:', error);
+          // Fall through to old pipeline on error
+          console.log('[Perfect Swedish Pipeline] Falling back to old pipeline due to error');
+        }
+      }
+
+      // === CONTROL VARIANT OR FALLBACK: USE OLD 7-STEP PIPELINE ===
+      console.log(`[Pipeline] Using ${variant === 'control' ? 'control (old)' : 'fallback to old'} 7-step pipeline`);
+
       const { prompt, type, platform, writingStyle, wordCountMin, wordCountMax, imageUrls } = req.body;
       const style: "factual" | "balanced" | "selling" = (writingStyle === "factual" || writingStyle === "selling") ? writingStyle : "balanced";
 
@@ -4540,12 +4704,16 @@ KRITISKA REGLER:
         try {
           // Filtrera bort ordräknings-violations (kan inte fixas genom textredigering)
           const textViolations = getNonWordCountViolations(violations);
+          
+          // CRITICAL FIX: Include narrative integrity issues in surgical correction
+          const narrativeIssues = detectNarrativeIntegrityIssues(result.improvedPrompt || "");
 
-          if (textViolations.length > 0 || runState.agenticFeedback.length > 0) {
+          if (textViolations.length > 0 || narrativeIssues.length > 0 || runState.agenticFeedback.length > 0) {
             // Kombinera aktuella fel med feedback från tidigare steg (t.ex. Domaren)
             const combinedFeedback = [
               ...textViolations,
-              ...runState.agenticFeedback.filter(f => !textViolations.includes(f))
+              ...narrativeIssues,
+              ...runState.agenticFeedback.filter(f => !textViolations.includes(f) && !narrativeIssues.includes(f))
             ];
 
             const surgicalRepairStrategy = selectRepairStrategy({
@@ -6049,6 +6217,102 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
     }
   });
 
+  // ── AI SELECTION EDIT: Generate alternative suggestions for selected text ──
+  app.post("/api/selection-edit", requireAuth, async (req, res) => {
+    const selectionUser = (req as any).user as User;
+    const selectionPlan = selectionUser.plan as PlanType;
+    
+    if (selectionPlan === "free") {
+      return res.status(403).json({ message: "AI-förbättringsförslag är endast för Pro/Premium-användare" });
+    }
+
+    try {
+      const { selectedText, fullContext, field, style, platform } = req.body;
+      const writingStyle: WritingStyle = style === "factual" || style === "selling" ? style : "balanced";
+
+      if (!selectedText || !fullContext) {
+        return res.status(400).json({ message: "Markerad text och kontext krävs" });
+      }
+
+      // Check textEdits usage limit
+      const selectionUsage = await storage.getMonthlyUsage(selectionUser.id, selectionUser) || {
+        textsGenerated: 0, areaSearchesUsed: 0, textEditsUsed: 0, personalStyleAnalyses: 0,
+      };
+
+      const selectionLimit = MODEL_TEXT_EDIT_LIMITS["gpt-5.2"][selectionPlan as keyof typeof MODEL_TEXT_EDIT_LIMITS["gpt-5.2"]] || PLAN_LIMITS[selectionPlan].textEdits;
+      if (selectionUsage.textEditsUsed >= selectionLimit) {
+        return res.status(429).json({
+          message: `Du har nått din gräns för AI-textredigeringar (${selectionLimit}/månad) med GPT-5.2.`,
+          limitReached: true,
+          upgradeTo: selectionPlan === "pro" ? "premium" : null,
+        });
+      }
+
+      // Load personal style for filtering
+      let personalStyle: any = null;
+      try {
+        personalStyle = await storage.getPersonalStyle(selectionUser.id);
+      } catch (e) {
+        console.warn("[SelectionEdit] Failed to load personal style:", e);
+      }
+
+      const selectionCompletion = await openai.responses.create({
+        model: "gpt-5.2",
+        reasoning: { effort: "low" }, // Fast response for better UX
+        input: [
+          {
+            role: "developer",
+            content: `Du är en erfaren fastighetsmäklare i Sverige. Du ger förbättringsförslag för objektbeskrivningar.
+
+TEXTSTIL: ${writingStyle === "factual" ? "Faktabaserad och stram" : writingStyle === "selling" ? "Säljande men konkret" : "Balanserad, professionell och naturlig"}
+
+# DIN UPPGIFT
+Ge 2-3 alternativa versioner av den markerade texten som är:
+1. Mer konkreta (lägg till mått, material, årtal om möjligt)
+2. Bättre flöde (variera meningslängd, bind ihop naturligt)
+3. Mer säljande (lyft starkaste fakta först)
+
+# REGLER
+- Behåll ALLA fakta från originaltexten
+- Hitta ALDRIG PÅ nya uppgifter
+- Varje alternativ ska vara tydligt annorlunda
+- Undvik AI-klyschor: "erbjuder", "präglas av", "generös", "bjuder på"
+- Skriv som en erfaren mäklare, inte som AI
+
+Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]}`
+          },
+          {
+            role: "user",
+            content: `HELA TEXTEN (för kontext):\n${fullContext}\n\nMARKERAD TEXT ATT FÖRBÄTTRA:\n"${selectedText}"\n\nGe 2-3 förbättrade alternativ.`
+          }
+        ],
+        max_output_tokens: computeInlineEditOutputTokenBudget(selectedText, selectionPlan, "improve"),
+        text: { format: { type: "json_object" } }
+      });
+
+      const raw = selectionCompletion.output_text || "{}";
+      let parsed: any;
+      try { parsed = safeJsonParse(raw); } catch { parsed = {}; }
+
+      const suggestions = Array.isArray(parsed.suggestions) 
+        ? parsed.suggestions.slice(0, 3).map((s: string) => 
+            sanitizeGeneratedMarketingField(s, personalStyle?.styleProfile, writingStyle, undefined, platform) || s
+          )
+        : [selectedText];
+
+      // Track text edit usage
+      await storage.incrementUsage(selectionUser.id, 'textEdits');
+
+      res.json({ 
+        suggestions,
+        duration: Date.now() - Date.now() // Placeholder for actual timing
+      });
+    } catch (err: any) {
+      console.error("Selection edit error:", err);
+      res.status(500).json({ message: err.message || "AI-förbättring misslyckades" });
+    }
+  });
+
   // ── ADDRESS LOOKUP: Auto-fill nearby places ──
   app.post("/api/address-lookup", requireAuth, async (req, res) => {
     try {
@@ -7002,6 +7266,162 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
     } catch (err: any) {
       console.error("Text improvement error:", err);
       res.status(500).json({ message: err.message || "Textförbättring misslyckades" });
+    }
+  });
+
+  // ==================== MONITORING & ALERTING ROUTES ====================
+  
+  // Import monitoring and alerting modules
+  const { PerfectSwedishMonitoring } = await import('./lib/perfect-swedish-monitoring');
+  const { PerfectSwedishAlerts } = await import('./lib/perfect-swedish-alerts');
+  
+  const monitoring = new PerfectSwedishMonitoring();
+  const alerts = new PerfectSwedishAlerts();
+
+  // Get current metrics for a variant
+  app.get("/api/monitoring/metrics/:variant", requireAuth, async (req, res) => {
+    try {
+      const variant = req.params.variant as 'control' | 'treatment';
+      if (variant !== 'control' && variant !== 'treatment') {
+        return res.status(400).json({ message: "Invalid variant. Must be 'control' or 'treatment'" });
+      }
+
+      const timeWindowHours = parseInt(req.query.hours as string) || 24;
+      const metrics = await monitoring.collectMetrics(variant, timeWindowHours);
+      
+      res.json(metrics);
+    } catch (err) {
+      console.error("Metrics collection error:", err);
+      res.status(500).json({ message: "Failed to collect metrics" });
+    }
+  });
+
+  // Get historical metrics
+  app.get("/api/monitoring/metrics", requireAuth, async (req, res) => {
+    try {
+      const query: any = {};
+      
+      if (req.query.variant) {
+        query.variant = req.query.variant as 'control' | 'treatment';
+      }
+      
+      if (req.query.startDate) {
+        query.startDate = new Date(req.query.startDate as string);
+      }
+      
+      if (req.query.endDate) {
+        query.endDate = new Date(req.query.endDate as string);
+      }
+      
+      if (req.query.minSampleSize) {
+        query.minSampleSize = parseInt(req.query.minSampleSize as string);
+      }
+
+      const metrics = await monitoring.getHistoricalMetrics(query);
+      
+      res.json(metrics);
+    } catch (err) {
+      console.error("Historical metrics error:", err);
+      res.status(500).json({ message: "Failed to get historical metrics" });
+    }
+  });
+
+  // Generate daily summary report
+  app.get("/api/monitoring/summary", requireAuth, async (req, res) => {
+    try {
+      const date = req.query.date ? new Date(req.query.date as string) : new Date();
+      const summary = await monitoring.generateDailySummary(date);
+      
+      res.json({ summary, date });
+    } catch (err) {
+      console.error("Daily summary error:", err);
+      res.status(500).json({ message: "Failed to generate daily summary" });
+    }
+  });
+
+  // Export metrics (JSON or CSV)
+  app.get("/api/monitoring/export", requireAuth, async (req, res) => {
+    try {
+      const format = (req.query.format as 'json' | 'csv') || 'json';
+      const data = await monitoring.exportMetrics(format);
+      
+      if (format === 'csv') {
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="metrics-${new Date().toISOString().split('T')[0]}.csv"`);
+      } else {
+        res.setHeader('Content-Type', 'application/json');
+      }
+      
+      res.send(data);
+    } catch (err) {
+      console.error("Metrics export error:", err);
+      res.status(500).json({ message: "Failed to export metrics" });
+    }
+  });
+
+  // Check alert thresholds
+  app.get("/api/alerts/check/:variant", requireAuth, async (req, res) => {
+    try {
+      const variant = req.params.variant as 'control' | 'treatment';
+      if (variant !== 'control' && variant !== 'treatment') {
+        return res.status(400).json({ message: "Invalid variant. Must be 'control' or 'treatment'" });
+      }
+
+      const timeWindowHours = parseInt(req.query.hours as string) || 1;
+      const alertList = await alerts.checkThresholds(variant, timeWindowHours);
+      
+      res.json({ alerts: alertList, count: alertList.length });
+    } catch (err) {
+      console.error("Alert check error:", err);
+      res.status(500).json({ message: "Failed to check alerts" });
+    }
+  });
+
+  // Check all variants
+  app.get("/api/alerts/check", requireAuth, async (req, res) => {
+    try {
+      const timeWindowHours = parseInt(req.query.hours as string) || 1;
+      const notification = await alerts.checkAllVariants(timeWindowHours);
+      
+      res.json(notification);
+    } catch (err) {
+      console.error("Alert check error:", err);
+      res.status(500).json({ message: "Failed to check alerts" });
+    }
+  });
+
+  // Get current alert thresholds
+  app.get("/api/alerts/thresholds", requireAuth, async (req, res) => {
+    try {
+      const thresholds = alerts.getThresholds();
+      res.json(thresholds);
+    } catch (err) {
+      console.error("Get thresholds error:", err);
+      res.status(500).json({ message: "Failed to get thresholds" });
+    }
+  });
+
+  // Update alert thresholds (admin only - for now just requireAuth)
+  app.put("/api/alerts/thresholds", requireAuth, async (req, res) => {
+    try {
+      const newThresholds = req.body;
+      alerts.updateThresholds(newThresholds);
+      
+      res.json({ success: true, thresholds: alerts.getThresholds() });
+    } catch (err) {
+      console.error("Update thresholds error:", err);
+      res.status(500).json({ message: "Failed to update thresholds" });
+    }
+  });
+
+  // Run health check manually
+  app.post("/api/alerts/health-check", requireAuth, async (req, res) => {
+    try {
+      const notification = await alerts.runHealthCheck();
+      res.json(notification);
+    } catch (err) {
+      console.error("Health check error:", err);
+      res.status(500).json({ message: "Failed to run health check" });
     }
   });
 

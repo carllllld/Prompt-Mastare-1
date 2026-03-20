@@ -13,6 +13,9 @@
     "test:watch": "vitest --config server/vitest.config.ts",
     "test:regression": "vitest run --config server/vitest.config.ts server/tests/regression.test.ts",
     "test:canary": "vitest run --config server/vitest.config.ts server/tests/listing-canary-suite.test.ts server/tests/listing-quality-guards.test.ts",
+    "test:profile": "tsx server/tests/load/performance-profiler.ts",
+    "test:load": "echo 'Install k6 to run load tests: brew install k6 (macOS) or see server/tests/load/README.md' && echo 'Then run: k6 run server/tests/load/k6-load-test.js'",
+    "test:load:analyze": "tsx server/tests/load/analyze-results.ts",
     "launch:gate": "tsx script/launch-gate.ts",
     "quota:refill": "tsx script/refill-quota.ts"
   },
