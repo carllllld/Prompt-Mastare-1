@@ -50,7 +50,7 @@ export class ExpertAIAnalyzer {
       const prompt = this.buildAnalysisPrompt(request);
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.2',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
         top_p: 0.8,

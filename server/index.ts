@@ -369,10 +369,19 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   const shutdown = (signal: string) => {
     log("info", "shutdown_start", { signal });
     server.close(() => {
-      pool.end().then(() => {
-        log("info", "shutdown_complete");
-        process.exit(0);
-      }).catch(() => process.exit(1));
+      // Close Redis client before DB pool
+      import('./lib/redis-cache').then(({ closeRedisClient }) => {
+        closeRedisClient().catch(() => {});
+        pool.end().then(() => {
+          log("info", "shutdown_complete");
+          process.exit(0);
+        }).catch(() => process.exit(1));
+      }).catch(() => {
+        pool.end().then(() => {
+          log("info", "shutdown_complete");
+          process.exit(0);
+        }).catch(() => process.exit(1));
+      });
     });
     // Force exit after 10s if graceful shutdown hangs
     setTimeout(() => {

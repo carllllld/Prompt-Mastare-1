@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, integer, date, varchar, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, integer, date, varchar, boolean, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -35,7 +35,9 @@ export const usageTracking = pgTable("usage_tracking", {
   planType: text("plan_type").default("free").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  userMonthYearUnique: unique("usage_tracking_user_month_year_unique").on(table.userId, table.month, table.year),
+}));
 
 export const personalStyles = pgTable("personal_styles", {
   id: serial("id").primaryKey(),

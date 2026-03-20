@@ -3260,8 +3260,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let personalStylePrompt: string | undefined;
       try {
         const personalStyle = await storage.getPersonalStyle(user.id);
-        if (personalStyle?.style_prompt) {
-          personalStylePrompt = personalStyle.style_prompt;
+        if (personalStyle?.isActive) {
+          personalStylePrompt = generatePersonalizedPrompt(personalStyle.referenceTexts, personalStyle.styleProfile);
+          console.log('[Perfect Swedish Pipeline] Applied user personal writing style');
         }
       } catch (e) {
         console.warn('[Perfect Swedish Pipeline] Failed to load personal style:', e);

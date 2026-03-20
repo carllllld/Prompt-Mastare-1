@@ -307,19 +307,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserTeams(userId: string): Promise<Team[]> {
-    const memberships = await db.select()
+    const results = await db
+      .select({ team: teams })
       .from(teamMembers)
+      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
       .where(eq(teamMembers.userId, userId));
 
-    if (memberships.length === 0) return [];
-
-    const teamIds = memberships.map(m => m.teamId);
-    const result: Team[] = [];
-    for (const teamId of teamIds) {
-      const team = await this.getTeamById(teamId);
-      if (team) result.push(team);
-    }
-    return result;
+    return results.map(r => r.team);
   }
 
   async updateTeam(teamId: number, data: Partial<InsertTeam>): Promise<Team | null> {
@@ -348,15 +342,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamMembers(teamId: number): Promise<(TeamMember & { user: User })[]> {
-    const members = await db.select().from(teamMembers).where(eq(teamMembers.teamId, teamId));
-    const results: (TeamMember & { user: User })[] = [];
-    for (const member of members) {
-      const user = await this.getUserById(member.userId);
-      if (user) {
-        results.push({ ...member, user });
-      }
-    }
-    return results;
+    const results = await db
+      .select()
+      .from(teamMembers)
+      .innerJoin(users, eq(teamMembers.userId, users.id))
+      .where(eq(teamMembers.teamId, teamId));
+
+    return results.map(row => ({
+      ...row.teamMembers,
+      user: row.users,
+    }));
   }
 
   async getUserTeamMembership(userId: string, teamId: number): Promise<TeamMember | null> {
@@ -430,19 +425,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPromptComments(promptId: number): Promise<(PromptComment & { user: User })[]> {
-    const comments = await db.select()
+    const results = await db
+      .select()
       .from(promptComments)
+      .innerJoin(users, eq(promptComments.userId, users.id))
       .where(eq(promptComments.promptId, promptId))
       .orderBy(desc(promptComments.createdAt));
 
-    const results: (PromptComment & { user: User })[] = [];
-    for (const comment of comments) {
-      const user = await this.getUserById(comment.userId);
-      if (user) {
-        results.push({ ...comment, user });
-      }
-    }
-    return results;
+    return results.map(row => ({
+      ...row.promptComments,
+      user: row.users,
+    }));
   }
 
   async deleteComment(commentId: number): Promise<void> {
@@ -481,21 +474,19 @@ export class DatabaseStorage implements IStorage {
 
   async getPromptPresence(promptId: number): Promise<(PresenceSession & { user: User })[]> {
     const threshold = new Date(Date.now() - 2 * 60 * 1000);
-    const sessions = await db.select()
+    const results = await db
+      .select()
       .from(presenceSessions)
+      .innerJoin(users, eq(presenceSessions.userId, users.id))
       .where(and(
         eq(presenceSessions.promptId, promptId),
         gt(presenceSessions.lastSeen, threshold)
       ));
 
-    const results: (PresenceSession & { user: User })[] = [];
-    for (const session of sessions) {
-      const user = await this.getUserById(session.userId);
-      if (user) {
-        results.push({ ...session, user });
-      }
-    }
-    return results;
+    return results.map(row => ({
+      ...row.presenceSessions,
+      user: row.users,
+    }));
   }
 
   async cleanupStalePresence(): Promise<void> {
@@ -661,46 +652,41 @@ export class DatabaseStorage implements IStorage {
 
     const { month, year } = this.getUsagePeriodKey(user, now);
 
-    // Try to get existing usage record
-    let usage = await this.getMonthlyUsage(userId, user);
-
-    if (!usage) {
-      // Create new usage record
-      const [newUsage] = await db.insert(usageTracking)
-        .values({
-          userId,
-          month,
-          year,
-          planType: user.plan,
-          textsGenerated: type === 'texts' ? 1 : 0,
-          areaSearchesUsed: type === 'areaSearches' ? 1 : 0,
-          textEditsUsed: type === 'textEdits' ? 1 : 0,
-          personalStyleAnalyses: type === 'personalStyleAnalyses' ? 1 : 0,
-        })
-        .returning();
-
-      return newUsage;
-    }
-
-    // Update existing record
-    const updateField = type === 'texts' ? 'textsGenerated' :
-      type === 'areaSearches' ? 'areaSearchesUsed' :
-        type === 'textEdits' ? 'textEditsUsed' :
-          'personalStyleAnalyses';
-
-    const [updatedUsage] = await db.update(usageTracking)
-      .set({
-        [updateField]: sql`${usageTracking[updateField]} + 1`,
-        updatedAt: new Date(),
+    // Atomic upsert — eliminates TOCTOU race condition where two concurrent
+    // requests could both see "no record" and both INSERT, causing duplicate
+    // key errors or double-counting.
+    const [result] = await db.insert(usageTracking)
+      .values({
+        userId,
+        month,
+        year,
+        planType: user.plan,
+        textsGenerated: type === 'texts' ? 1 : 0,
+        areaSearchesUsed: type === 'areaSearches' ? 1 : 0,
+        textEditsUsed: type === 'textEdits' ? 1 : 0,
+        personalStyleAnalyses: type === 'personalStyleAnalyses' ? 1 : 0,
       })
-      .where(and(
-        eq(usageTracking.userId, userId),
-        eq(usageTracking.month, month),
-        eq(usageTracking.year, year)
-      ))
+      .onConflictDoUpdate({
+        target: [usageTracking.userId, usageTracking.month, usageTracking.year],
+        set: {
+          textsGenerated: type === 'texts'
+            ? sql`${usageTracking.textsGenerated} + 1`
+            : sql`${usageTracking.textsGenerated}`,
+          areaSearchesUsed: type === 'areaSearches'
+            ? sql`${usageTracking.areaSearchesUsed} + 1`
+            : sql`${usageTracking.areaSearchesUsed}`,
+          textEditsUsed: type === 'textEdits'
+            ? sql`${usageTracking.textEditsUsed} + 1`
+            : sql`${usageTracking.textEditsUsed}`,
+          personalStyleAnalyses: type === 'personalStyleAnalyses'
+            ? sql`${usageTracking.personalStyleAnalyses} + 1`
+            : sql`${usageTracking.personalStyleAnalyses}`,
+          updatedAt: new Date(),
+        },
+      })
       .returning();
 
-    return updatedUsage;
+    return result;
   }
 
   async resetMonthlyUsage(userId: string): Promise<void> {

@@ -37,7 +37,7 @@ export class SmartGenerationEngine {
       const userPrompt = this.buildUserPrompt(request);
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'gpt-5.2',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }

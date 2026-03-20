@@ -551,11 +551,9 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
 // Middleware: Require Pro subscription
 export const requirePro: RequestHandler = async (req, res, next) => {
-  if (!req.session.userId) {
-    return res.status(401).json({ message: "Ej inloggad" });
-  }
+  // Reuse user already attached by requireAuth if available
+  const user = (req as any).user || (req.session.userId ? await storage.getUserById(req.session.userId) : null);
 
-  const user = await storage.getUserById(req.session.userId);
   if (!user) {
     return res.status(401).json({ message: "Ej inloggad" });
   }

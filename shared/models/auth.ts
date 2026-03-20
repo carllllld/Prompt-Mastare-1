@@ -2,7 +2,8 @@ import { sql } from "drizzle-orm";
 import { jsonb, pgTable, timestamp, varchar, integer, date, serial, text, boolean } from "drizzle-orm/pg-core";
 
 // Session storage table for express-session with connect-pg-simple
-export const sessions = pgTable("sessions", {
+// Table name matches connect-pg-simple default ("session") and createSessionTable() in server/index.ts
+export const sessions = pgTable("session", {
   sid: varchar("sid").primaryKey(),
   sess: jsonb("sess").notNull(),
   expire: timestamp("expire").notNull(),

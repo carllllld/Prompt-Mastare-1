@@ -86,9 +86,12 @@ export const sanitizeInput = (req: Request, res: Response, next: NextFunction) =
   const sanitizeString = (str: string): string => {
     return str
       .trim()
-      .replace(/[<>]/g, '') // Remove potential HTML tags
-      .replace(/javascript:/gi, '') // Remove javascript protocol
-      .replace(/on\w+=/gi, ''); // Remove event handlers
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
+      .replace(/javascript:/gi, ''); // Remove javascript protocol
+    // NOTE: We intentionally do NOT strip < > or on\w+= patterns here because
+    // they corrupt legitimate Swedish property text (e.g. "renoverat=", angle brackets in math).
+    // XSS protection is handled by helmet CSP headers and output encoding instead.
   };
 
   const sanitizeObject = (obj: any): any => {

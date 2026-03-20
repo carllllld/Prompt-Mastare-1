@@ -32,7 +32,28 @@ export interface Transformation {
 }
 
 const TEXT_FIELDS = ['improvedPrompt', 'headline', 'socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd'] as const;
-type TextField = typeof TEXT_FIELDS[number];
+
+// Special regex metacharacters that need escaping — built without string literals
+// to avoid tool-level substitution of special characters.
+const REGEX_SPECIALS: ReadonlySet<string> = new Set(
+  '\\^.|?*+()[]{}' // dollar sign added below
+    .split('')
+    .concat('\x24') // \x24 = '$'
+);
+
+/**
+ * Escapes all special regex metacharacters in a literal string.
+ * Uses a character-by-character loop so no replacement-string
+ * interpolation (e.g. backreferences) can corrupt the output.
+ */
+function escapeRegex(str: string): string {
+  let out = '';
+  for (const ch of str) {
+    if (REGEX_SPECIALS.has(ch)) out += '\\';
+    out += ch;
+  }
+  return out;
+}
 
 export class DeterministicPostProcessor {
   private readonly PLACEHOLDER_PATTERNS = {
@@ -48,8 +69,7 @@ export class DeterministicPostProcessor {
   constructor() {
     this.forbiddenPhrasePatterns = FORBIDDEN_PHRASES.map(phrase => ({
       phrase,
-      // Escape special regex characters properly using $& (the matched substring)
-      pattern: new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+      pattern: new RegExp(escapeRegex(phrase), 'gi')
     }));
   }
 
@@ -127,10 +147,10 @@ export class DeterministicPostProcessor {
     for (const field of TEXT_FIELDS) {
       let text = result[field];
 
-      // Add missing periods between sentences
+      // Add missing periods between sentences (lowercase letter followed by uppercase)
       const periodMatches = [...text.matchAll(/([a-zåäö])\s+([A-ZÅÄÖ])/g)];
       if (periodMatches.length > 0) {
-        text = text.replace(/([a-zåäö])\s+([A-ZÅÄÖ])/g, '$1. $2');
+        text = text.replace(/([a-zåäö])\s+([A-ZÅÄÖ])/g, (_, a, b) => `${a}. ${b}`);
         periodMatches.forEach(match => {
           transformations.push({ type: 'formatting', field, before: match[0], after: `${match[1]}. ${match[2]}` });
         });
@@ -228,9 +248,10 @@ export class DeterministicPostProcessor {
         }
       }
 
+      // Deduplicate repeated comma-separated words: "ord, ord, ord" -> "ord"
       const dedupeMatches = text.match(/\b(\w+)\b(?:,\s*\1\b)+/gi);
       if (dedupeMatches) {
-        text = text.replace(/\b(\w+)\b(?:,\s*\1\b)+/gi, '$1');
+        text = text.replace(/\b(\w+)\b(?:,\s*\1\b)+/gi, (_, word) => word);
         dedupeMatches.forEach(match => {
           const word = match.split(',')[0].trim();
           transformations.push({ type: 'generalization', field, before: match, after: word });
@@ -268,16 +289,14 @@ export class DeterministicPostProcessor {
   private fixIncompleteSentences(text: string, field: string, transformations: Transformation[]): string {
     let result = text;
 
-    // Sentence ending with comma or dash
     const before1 = result;
-    result = result.replace(/([a-zåäö]+)[,\-]\s*$/gm, '$1.');
+    result = result.replace(/([a-zåäö]+)[,\-]\s*$/gm, (_, w) => `${w}.`);
     if (result !== before1) {
       transformations.push({ type: 'narrative_integrity', field, before: 'Incomplete sentence ending', after: 'Added proper punctuation' });
     }
 
-    // Missing period between sentences
     const before2 = result;
-    result = result.replace(/([a-zåäö])\s+([A-ZÅÄÖ])/g, '$1. $2');
+    result = result.replace(/([a-zåäö])\s+([A-ZÅÄÖ])/g, (_, a, b) => `${a}. ${b}`);
     if (result !== before2) {
       transformations.push({ type: 'narrative_integrity', field, before: 'Missing period between sentences', after: 'Added missing periods' });
     }
@@ -288,16 +307,14 @@ export class DeterministicPostProcessor {
   private fixMissingBulletPoints(text: string, field: string, transformations: Transformation[]): string {
     let result = text;
 
-    // Incomplete list ending with comma
     const before1 = result;
-    result = result.replace(/:\s*([a-zåäö][^.!?]*[,])\s*$/gm, ': $1 och mer.');
+    result = result.replace(/:\s*([a-zåäö][^.!?]*[,])\s*$/gm, (_, list) => `: ${list} och mer.`);
     if (result !== before1) {
       transformations.push({ type: 'narrative_integrity', field, before: 'Incomplete list', after: 'Completed list with proper ending' });
     }
 
-    // Bullet points with lowercase start
     const before2 = result;
-    result = result.replace(/^[-•]\s*([a-zåäö])/gm, (match, firstChar) => match.replace(firstChar, firstChar.toUpperCase()));
+    result = result.replace(/^[-\u2022]\s*([a-zåäö])/gm, (match, firstChar) => match.replace(firstChar, firstChar.toUpperCase()));
     if (result !== before2) {
       transformations.push({ type: 'narrative_integrity', field, before: 'Bullet points with lowercase start', after: 'Capitalized bullet points' });
     }
@@ -308,13 +325,11 @@ export class DeterministicPostProcessor {
   private fixAbruptEndings(text: string, field: string, transformations: Transformation[]): string {
     let result = text.trim();
 
-    // Add period if missing
     if (result.length > 0 && !/[.!?]$/.test(result)) {
       result = result + '.';
       transformations.push({ type: 'narrative_integrity', field, before: 'Text ending without punctuation', after: 'Added period at end' });
     }
 
-    // Detect suspicious abrupt endings (log only, don't auto-fix)
     const lastSentence = result.split(/[.!?]/).pop()?.trim() || '';
     const words = lastSentence.split(/\s+/);
     const suspiciousEndings = new Set(['ett', 'en', 'och', 'med', 'i', 'på', 'till', 'från', 'av', 'för']);
@@ -323,7 +338,6 @@ export class DeterministicPostProcessor {
       transformations.push({ type: 'narrative_integrity', field, before: `Abrupt ending: "${lastSentence}"`, after: 'Detected, manual review needed' });
     }
 
-    // Remove trailing conjunction
     const before = result;
     result = result.replace(/\s+(och|eller|men|samt)\s*\.?$/i, '.');
     if (result !== before) {
@@ -342,14 +356,12 @@ export class DeterministicPostProcessor {
     let text = result.improvedPrompt;
 
     try {
-      // Energiklass — insert naturally before last sentence
       const energiklassValue = disposition?.energiklass || disposition?.property?.energiklass;
       if (energiklassValue && !/energiklass/i.test(text)) {
         text = this.insertBeforeLastSentence(text, `Bostaden har energiklass ${energiklassValue}.`);
         transformations.push({ type: 'missing_facts', field: 'improvedPrompt', before: 'Missing energiklass', after: `Added energiklass ${energiklassValue}` });
       }
 
-      // Värmesystem — insert naturally before last sentence
       const värmesystemValue: string | undefined = disposition?.värmesystem || disposition?.property?.värmesystem || disposition?.heating;
       if (värmesystemValue && !/värme|uppvärmning/i.test(text)) {
         text = this.insertBeforeLastSentence(text, `Uppvärmning sker med ${värmesystemValue.toLowerCase()}.`);
@@ -365,7 +377,6 @@ export class DeterministicPostProcessor {
     return result;
   }
 
-  // Insert a sentence before the last sentence for natural placement
   private insertBeforeLastSentence(text: string, sentence: string): string {
     const trimmed = text.trim();
     const lastPeriod = trimmed.lastIndexOf('.');

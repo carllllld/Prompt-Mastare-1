@@ -191,8 +191,12 @@ export async function initializeDatabase() {
     `);
 
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_pipeline_metrics_user ON pipeline_metrics (user_id, created_at DESC)`);
+    // Ensure atomic upsert works — add unique constraint if not already present
+    try {
+      await pool.query(`ALTER TABLE usage_tracking ADD CONSTRAINT usage_tracking_user_month_year_unique UNIQUE (user_id, month, year)`);
+    } catch { /* constraint already exists */ }
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_assignments_user ON experiment_assignments (user_id, experiment_id)`);
-    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_results_experiment ON experiment_results (experiment_id, variant)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_experiment_results_experiment ON experiment_results (experiment_id, variant_id)`);
 
     // Create pipeline_generations table for perfect-swedish-pipeline
     await pool.query(`
