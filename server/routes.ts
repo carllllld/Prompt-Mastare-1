@@ -3302,29 +3302,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await pool.query(`
         INSERT INTO pipeline_generations (
           user_id, session_id, variant, disposition, style, platform,
+          personal_style_prompt, target_word_min, target_word_max,
           improved_prompt, headline, social_copy, instagram_caption,
           showing_invitation, short_ad, expert_analysis,
           total_duration, step1_duration, step2_duration, step3_duration,
           retry_count, success
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       `, [
         user.id,
         sessionId,
-        'treatment', // Always treatment — A/B test removed, new pipeline is the only pipeline
+        'treatment',
         JSON.stringify(req.body.propertyData || { rawText: prompt }),
         style,
         platform || 'hemnet',
+        personalStylePrompt || null,
+        targetWordMin,
+        targetWordMax,
         result.improvedPrompt,
         result.headline,
         result.socialCopy,
         result.instagramCaption,
         result.showingInvitation,
         result.shortAd,
-        JSON.stringify(result.expertAnalysis),
+        result.expertAnalysis ? JSON.stringify(result.expertAnalysis) : null,
         result.metrics.totalDuration,
-        result.metrics.step1Duration,
-        result.metrics.step2Duration,
-        result.metrics.step3Duration,
+        result.metrics.step1Duration ?? null,
+        result.metrics.step2Duration ?? null,
+        result.metrics.step3Duration ?? null,
         result.metrics.retryCount,
         result.metrics.success
       ]);
