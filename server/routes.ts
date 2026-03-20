@@ -4,7 +4,8 @@ import { randomUUID, timingSafeEqual } from "crypto";
 import Stripe from "stripe";
 import { createClient, type RedisClientType } from "redis";
 import { storage } from "./storage";
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { optimizations } from "@shared/schema";
 import { analyzeMarketPosition, getMarketTrends2025 } from "./market-intelligence";
 import { analyzeArchitecturalValue } from "./architectural-intelligence";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, MODEL_TEXT_EDIT_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
@@ -3337,12 +3338,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       await storage.incrementUsage(user.id, 'texts');
 
       // Save to optimization history
-      optimizationRecord = await pool.query(
-        `INSERT INTO optimizations (user_id, original_prompt, improved_prompt, type, platform, writing_style, word_count_min, word_count_max)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, created_at`,
-        [user.id, prompt, result.improvedPrompt, type || 'listing', platform || 'hemnet', style, targetWordMin, targetWordMax]
-      );
+      {
+        const [insertedOpt] = await db.insert(optimizations).values({
+          userId: user.id,
+          originalPrompt: prompt,
+          improvedPrompt: result.improvedPrompt,
+          headline: result.headline ?? null,
+          socialCopy: result.socialCopy ?? null,
+          instagramCaption: result.instagramCaption ?? null,
+          showingInvitation: result.showingInvitation ?? null,
+          shortAd: result.shortAd ?? null,
+          category: type || 'listing',
+          improvements: [],
+          suggestions: [],
+        }).returning({ id: optimizations.id, createdAt: optimizations.createdAt });
+        optimizationRecord = { rows: [{ id: insertedOpt.id, created_at: insertedOpt.createdAt }] };
+      }
 
       // Finalize observability
       finalizeObservabilityRun(true, {
