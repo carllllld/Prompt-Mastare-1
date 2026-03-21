@@ -24,7 +24,7 @@ export interface PostProcessResult {
 }
 
 export interface Transformation {
-  type: 'placeholder' | 'formatting' | 'forbidden_phrase' | 'normalization' | 'generalization' | 'narrative_integrity' | 'missing_facts';
+  type: 'placeholder' | 'formatting' | 'forbidden_phrase' | 'normalization' | 'generalization' | 'narrative_integrity' | 'missing_facts' | 'paragraph_enforcement';
   field: string;
   before: string;
   after: string;
@@ -81,6 +81,7 @@ export class DeterministicPostProcessor {
       let result = { ...request };
 
       result = this.removePlaceholders(result, transformations);
+      result = this.enforceParagraphBreaks(result, transformations);
       result = this.applyFormatting(result, transformations);
       result = this.removeForbiddenPhrases(result, request.style, transformations);
       result = this.normalizeSwedishCharacters(result, transformations);
@@ -138,6 +139,54 @@ export class DeterministicPostProcessor {
       result[field] = text.replace(/\s{2,}/g, ' ').trim();
     }
 
+    return result;
+  }
+
+  private enforceParagraphBreaks(request: PostProcessRequest, transformations: Transformation[]): PostProcessRequest {
+    const result = { ...request };
+    let text = result.improvedPrompt;
+
+    // Count existing paragraph breaks
+    const existingBreaks = (text.match(/\n\n/g) || []).length;
+
+    // If text has fewer than 3 paragraph breaks, force them in at logical points
+    if (existingBreaks < 3) {
+      const sentences = text.split(/\.\s+/).filter(s => s.trim().length > 0);
+      
+      if (sentences.length >= 5) {
+        // Rebuild with forced paragraph breaks
+        const paragraphs: string[] = [];
+        
+        // Paragraph 1: First 1-2 sentences (USP opening)
+        paragraphs.push(sentences.slice(0, 2).join('. ') + '.');
+        
+        // Paragraph 2: Next 2-3 sentences (layout/kitchen)
+        const midStart = 2;
+        const midEnd = Math.min(sentences.length - 2, 5);
+        if (midEnd > midStart) {
+          paragraphs.push(sentences.slice(midStart, midEnd).join('. ') + '.');
+        }
+        
+        // Paragraph 3: Remaining sentences (location/economy)
+        if (sentences.length > midEnd) {
+          paragraphs.push(sentences.slice(midEnd).join('. ') + '.');
+        }
+        
+        const newText = paragraphs.join('\n\n');
+        
+        if (newText !== text) {
+          transformations.push({
+            type: 'paragraph_enforcement',
+            field: 'improvedPrompt',
+            before: `${existingBreaks} paragraph breaks`,
+            after: `${paragraphs.length - 1} paragraph breaks enforced`
+          });
+          text = newText;
+        }
+      }
+    }
+
+    result.improvedPrompt = text;
     return result;
   }
 

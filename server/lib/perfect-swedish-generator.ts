@@ -23,7 +23,7 @@ export interface GenerationResult {
 }
 
 export class SmartGenerationEngine {
-  private readonly PROMPT_VERSION = '2.4.0';
+  private readonly PROMPT_VERSION = '2.5.0';
   private _openai: OpenAI | null = null;
 
   private get openai(): OpenAI {
@@ -251,13 +251,20 @@ Innan du svarar, kontrollera:
 Svara ENDAST med JSON i denna exakta struktur:
 
 {
-  "improvedPrompt": "Huvudtext (${targetWordMin}-${targetWordMax} ord, inga förbjudna fraser)",
+  "improvedPrompt": "Huvudtext (${targetWordMin}-${targetWordMax} ord, inga förbjudna fraser, MÅSTE ha styckebrytningar med \\n\\n mellan varje stycke)",
   "headline": "Rubrik (max 10 ord, ingen punkt, inga förbjudna fraser)",
   "socialCopy": "Social media text (max 3 meningar)",
   "instagramCaption": "Instagram caption (max 2200 tecken)",
   "showingInvitation": "Visningsinbjudan (1-2 meningar)",
   "shortAd": "Kort annons (max 50 ord)"
 }
+
+KRITISKT FÖR improvedPrompt:
+- MÅSTE innehålla minst 3 styckebrytningar (\\n\\n) som separerar stycken
+- Varje stycke ska vara 2-4 meningar
+- Första stycket = USP-öppning
+- Sista stycket = läge och ekonomi
+- ALDRIG en enda lång textmassa utan radbrytningar
 
 VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
 
