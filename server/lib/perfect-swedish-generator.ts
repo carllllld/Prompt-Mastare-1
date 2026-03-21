@@ -50,7 +50,7 @@ export class SmartGenerationEngine {
         ],
         temperature: 0.7,
         top_p: 0.9,
-        max_tokens: 2500,
+        max_completion_tokens: 2500,
         response_format: { type: 'json_object' },
       });
 
