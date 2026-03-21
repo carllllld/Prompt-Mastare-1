@@ -53,7 +53,7 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10_
 
-- [-] 4. Fix for UI rendering bugs
+- [x] 4. Fix for UI rendering bugs
 
   - [x] 4.1 Implement Bug 1 fix: Replace innerText with textContent in TextEditor
     - Open `client/src/components/TextEditor.tsx`
@@ -110,7 +110,7 @@
     - _Preservation: Graceful degradation (5.8, 5.9, 5.10)_
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [-] 4.3 Verify bug condition exploration test for Bug 1 now passes
+  - [x] 4.3 Verify bug condition exploration test for Bug 1 now passes
     - **Property 1: Expected Behavior** - Paragraph Breaks Preserved
     - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
     - The test from task 1 encodes the expected behavior
@@ -121,7 +121,7 @@
     - Verify visual paragraph spacing is rendered correctly
     - _Requirements: Expected Behavior Properties 3.1, 3.2, 3.3, 3.4 from design_
 
-  - [ ] 4.4 Verify bug condition exploration test for Bug 2 now passes
+  - [x] 4.4 Verify bug condition exploration test for Bug 2 now passes
     - **Property 1: Expected Behavior** - Expert Feedback Panel Visible
     - **IMPORTANT**: Re-run the SAME test from task 2 - do NOT write a new test
     - The test from task 2 encodes the expected behavior
@@ -133,7 +133,7 @@
     - Verify InlineHighlights renders colored text spans
     - _Requirements: Expected Behavior Properties 4.1, 4.2, 4.3, 4.4 from design_
 
-  - [ ] 4.5 Verify preservation tests still pass
+  - [x] 4.5 Verify preservation tests still pass
     - **Property 2: Preservation** - Text Editing and Display Features
     - **IMPORTANT**: Re-run the SAME tests from task 3 - do NOT write new tests
     - Run preservation property tests from step 3
@@ -145,7 +145,7 @@
     - Confirm text without line breaks continues to work as before
     - Confirm all other result fields continue to render correctly
 
-- [ ] 5. Checkpoint - Ensure all tests pass
+- [x] 5. Checkpoint - Ensure all tests pass
   - Run all bug condition exploration tests - should PASS
   - Run all preservation property tests - should PASS
   - Verify paragraph breaks display correctly in browser
