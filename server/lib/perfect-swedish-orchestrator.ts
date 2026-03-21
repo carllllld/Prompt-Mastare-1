@@ -74,9 +74,13 @@ export class PerfectSwedishOrchestrator {
         },
         {
           retries: 2,
-          onFailedAttempt: (error: any) => {
-            retryCount = error.attemptNumber;
-            console.log(`Pipeline attempt ${error.attemptNumber} failed:`, error.message);
+          onFailedAttempt: (context: any) => {
+            // p-retry v6: onFailedAttempt receives {error, attemptNumber, retriesLeft, retriesConsumed}
+            const originalError = context.error ?? context;
+            const attemptNumber = context.attemptNumber ?? 1;
+            retryCount = attemptNumber;
+            const errMsg = originalError instanceof Error ? originalError.message : String(originalError);
+            console.log(`Pipeline attempt ${attemptNumber} failed:`, errMsg);
             
             // Log retry to Sentry
             Sentry.captureMessage('Pipeline retry attempt', {
@@ -84,19 +88,19 @@ export class PerfectSwedishOrchestrator {
               tags: {
                 component: 'perfect-swedish-orchestrator',
                 pipeline_step: 'retry',
-                attempt: error.attemptNumber.toString()
+                attempt: attemptNumber.toString()
               },
               extra: {
                 userId: request.userId,
                 sessionId: request.sessionId,
-                errorMessage: error.message,
-                retryable: this.isRetryableError(error)
+                errorMessage: errMsg,
+                retryable: this.isRetryableError(originalError)
               }
             });
             
             // Use AbortError to stop retrying on non-retryable errors
-            if (!this.isRetryableError(error)) {
-              throw new AbortError(error.message || String(error));
+            if (!this.isRetryableError(originalError)) {
+              throw new AbortError(originalError instanceof Error ? originalError : new Error(errMsg));
             }
           },
           minTimeout: 1000, // 1 second
@@ -152,7 +156,15 @@ export class PerfectSwedishOrchestrator {
       });
 
       // Re-throw with user-friendly message
-      const msg = error instanceof Error ? error.message : (error as any)?.message ?? String(error);
+      const msg = (() => {
+        if (error instanceof Error) return error.message;
+        if (error && typeof (error as any).message === 'string') return (error as any).message;
+        // p-retry FailedAttemptError wraps the original — try to unwrap it
+        const original = (error as any)?.originalError ?? (error as any)?.cause;
+        if (original instanceof Error) return original.message;
+        if (original && typeof original.message === 'string') return original.message;
+        return String(error);
+      })();
       throw new Error(
         `Textgenerering misslyckades: ${msg}. ` +
         `Försök igen om en stund eller kontakta support om problemet kvarstår.`
@@ -334,7 +346,9 @@ export class PerfectSwedishOrchestrator {
   }
 
   private isRetryableError(error: any): boolean {
-    const errorMessage = error.message || String(error);
+    const errorMessage = (error instanceof Error ? error.message : null) 
+      ?? (typeof error?.message === 'string' ? error.message : null)
+      ?? String(error);
 
     // Network errors
     if (errorMessage.includes('ECONNREFUSED') || 

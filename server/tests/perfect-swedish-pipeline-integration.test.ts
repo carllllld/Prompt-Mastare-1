@@ -19,7 +19,7 @@ vi.mock('openai', () => {
                 choices: [{
                   message: {
                     content: JSON.stringify({
-                      improvedPrompt: 'Ljus och välplanerad lägenhet om 75 kvm med tre rum i centrala Stockholm. Bostaden har genomtänkt planlösning med öppet kök mot vardagsrum. Sovrummen är placerade mot lugn innergård. Badrummet är helkaklat med dusch. Balkong i söderläge om 10 kvm. Hiss finns i huset. Närhet till kommunikationer och service.',
+                      improvedPrompt: 'Ljus och välplanerad lägenhet om 75 kvm med tre rum i centrala Stockholm. Bostaden har genomtänkt planlösning med öppet kök mot vardagsrum. Sovrummen är placerade mot lugn innergård med god ljudisolering. Badrummet är helkaklat med dusch och golvvärme. Balkong i söderläge om 10 kvm med plats för utemöbler. Hiss finns i huset. Föreningen är välskött med låg månadsavgift. Närhet till kommunikationer och service.',
                       headline: 'Ljus 3:a med balkong i söderläge',
                       socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge. Centralt läge med närhet till allt.',
                       instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
@@ -90,7 +90,7 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
                 choices: [{
                   message: {
                     content: JSON.stringify({
-                      improvedPrompt: 'Ljus och välplanerad lägenhet om 75 kvm med tre rum i centrala Stockholm. Bostaden har genomtänkt planlösning med öppet kök mot vardagsrum. Sovrummen är placerade mot lugn innergård. Badrummet är helkaklat med dusch. Balkong i söderläge om 10 kvm. Hiss finns i huset. Närhet till kommunikationer och service.',
+                      improvedPrompt: 'Ljus och välplanerad lägenhet om 75 kvm med tre rum i centrala Stockholm. Bostaden har genomtänkt planlösning med öppet kök mot vardagsrum. Sovrummen är placerade mot lugn innergård med god ljudisolering. Badrummet är helkaklat med dusch och golvvärme. Balkong i söderläge om 10 kvm med plats för utemöbler. Hiss finns i huset. Föreningen är välskött med låg månadsavgift. Närhet till kommunikationer och service.',
                       headline: 'Ljus 3:a med balkong i söderläge',
                       socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge. Centralt läge med närhet till allt.',
                       instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
