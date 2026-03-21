@@ -73,6 +73,55 @@ vi.mock('@sentry/node', () => ({
   captureMessage: vi.fn(),
 }));
 
+// ─── Shared mock helper ───────────────────────────────────────────────────────
+
+function makeDefaultOpenAIMock() {
+  return {
+    chat: {
+      completions: {
+        create: vi.fn().mockImplementation(async (params: any) => {
+          const isGeneratorCall = params?.messages?.[0]?.role === 'system';
+          if (isGeneratorCall) {
+            return {
+              choices: [{
+                message: {
+                  content: JSON.stringify({
+                    improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service och grönområden. Sovrummen är placerade mot lugn innergård.',
+                    headline: 'Välplanerad trea med balkong i söderläge',
+                    socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge.',
+                    instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
+                    showingInvitation: 'Välkommen på visning tisdag 18:00-19:00.',
+                    shortAd: 'Ljus 3:a, 75 kvm, balkong söderläge.',
+                  }),
+                },
+              }],
+              usage: { total_tokens: 500 },
+            };
+          }
+          return {
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  overallQuality: 8,
+                  strengths: ['Bra struktur', 'Naturligt språk'],
+                  improvements: [],
+                  legalCheck: { compliant: true, notes: '', issues: [] },
+                }),
+              },
+            }],
+            usage: { total_tokens: 200 },
+          };
+        }),
+      },
+    },
+  };
+}
+
+async function resetOpenAIMock() {
+  const OpenAI = (await import('openai')).default as any;
+  OpenAI.mockImplementation(() => makeDefaultOpenAIMock());
+}
+
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
 const BASE_DISPOSITION = {
@@ -113,8 +162,9 @@ const BASE_REQUEST = {
 describe('11.1 Complete pipeline execution', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await resetOpenAIMock();
     orchestrator = new PerfectSwedishOrchestrator();
   });
 
@@ -186,8 +236,9 @@ describe('11.1 Complete pipeline execution', () => {
 describe('11.2 Retry logic', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await resetOpenAIMock();
     orchestrator = new PerfectSwedishOrchestrator();
   });
 
@@ -300,8 +351,9 @@ describe('11.2 Retry logic', () => {
 describe('11.3 Graceful degradation', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await resetOpenAIMock();
     orchestrator = new PerfectSwedishOrchestrator();
   });
 

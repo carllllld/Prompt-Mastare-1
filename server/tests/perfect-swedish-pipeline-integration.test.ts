@@ -78,8 +78,50 @@ vi.mock('../db', () => ({
 describe('Perfect Swedish Pipeline Integration Tests', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
-  const mockDisposition = {
-    property: {
+  async function resetOpenAIMock() {
+    const OpenAI = (await import('openai')).default as any;
+    OpenAI.mockImplementation(() => ({
+      chat: {
+        completions: {
+          create: vi.fn().mockImplementation(async (params: any) => {
+            const isGeneratorCall = params?.messages?.[0]?.role === 'system';
+            if (isGeneratorCall) {
+              return {
+                choices: [{
+                  message: {
+                    content: JSON.stringify({
+                      improvedPrompt: 'Ljus och välplanerad lägenhet om 75 kvm med tre rum i centrala Stockholm. Bostaden har genomtänkt planlösning med öppet kök mot vardagsrum. Sovrummen är placerade mot lugn innergård. Badrummet är helkaklat med dusch. Balkong i söderläge om 10 kvm. Hiss finns i huset. Närhet till kommunikationer och service.',
+                      headline: 'Ljus 3:a med balkong i söderläge',
+                      socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge. Centralt läge med närhet till allt.',
+                      instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
+                      showingInvitation: 'Välkommen på visning tisdag 18:00-19:00',
+                      shortAd: 'Ljus 3:a, 75 kvm, balkong söderläge'
+                    })
+                  }
+                }],
+                usage: { total_tokens: 500 }
+              };
+            }
+            return {
+              choices: [{
+                message: {
+                  content: JSON.stringify({
+                    overallQuality: 8,
+                    strengths: ['Bra struktur', 'Naturligt språk'],
+                    improvements: [],
+                    legalCheck: { compliant: true, notes: '', issues: [] }
+                  })
+                }
+              }],
+              usage: { total_tokens: 200 }
+            };
+          })
+        }
+      }
+    }));
+  }
+
+  const mockDisposition = {    property: {
       type: 'lägenhet',
       address: 'Testgatan 1',
       living_area: 75,
@@ -112,8 +154,9 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
     }
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await resetOpenAIMock();
     orchestrator = new PerfectSwedishOrchestrator();
   });
 

@@ -2,7 +2,7 @@ import { SmartGenerationEngine, GenerationResult } from './perfect-swedish-gener
 import { DeterministicPostProcessor, PostProcessResult } from './perfect-swedish-post-processor';
 import { ExpertAIAnalyzer, ExpertAnalysis } from './perfect-swedish-analyzer';
 import { WritingStyle } from './text-rules';
-import pRetry from 'p-retry';
+import pRetry, { AbortError } from 'p-retry';
 import * as Sentry from '@sentry/node';
 
 export interface PipelineRequest {
@@ -94,9 +94,9 @@ export class PerfectSwedishOrchestrator {
               }
             });
             
-            // Only retry on retryable errors
+            // Use AbortError to stop retrying on non-retryable errors
             if (!this.isRetryableError(error)) {
-              throw error;
+              throw new AbortError(error.message || String(error));
             }
           },
           minTimeout: 1000, // 1 second
@@ -152,8 +152,9 @@ export class PerfectSwedishOrchestrator {
       });
 
       // Re-throw with user-friendly message
+      const msg = error instanceof Error ? error.message : (error as any)?.message ?? String(error);
       throw new Error(
-        `Textgenerering misslyckades: ${error instanceof Error ? error.message : 'Okänt fel'}. ` +
+        `Textgenerering misslyckades: ${msg}. ` +
         `Försök igen om en stund eller kontakta support om problemet kvarstår.`
       );
     }
