@@ -33,12 +33,10 @@ global.setInterval = vi.fn((fn, delay) => {
   return nativeSetInterval(fn, delay);
 }) as any;
 
-// Mock Date.now for consistent timestamps
+// Mock Date.now for consistent timestamps — keep the real Date constructor
+// so that `new Date() instanceof Date` remains true in tests.
 const mockDate = new nativeDate('2024-01-01T00:00:00.000Z');
-global.Date = vi.fn(() => mockDate) as any;
 global.Date.now = vi.fn(() => mockDate.getTime()) as any;
-global.Date.parse = vi.fn((date) => nativeDate.parse(date)) as any;
-global.Date.UTC = vi.fn((...args: Parameters<typeof nativeDate.UTC>) => nativeDate.UTC(...args)) as any;
 
 // Setup global test utilities
 global.testUtils = {

@@ -113,12 +113,12 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
   };
 
   beforeEach(() => {
-    orchestrator = new PerfectSwedishOrchestrator();
     vi.clearAllMocks();
+    orchestrator = new PerfectSwedishOrchestrator();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    // intentionally empty — restoreAllMocks would wipe vi.mock() module factories
   });
 
   describe('Complete Pipeline Execution', () => {

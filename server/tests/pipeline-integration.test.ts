@@ -114,8 +114,8 @@ describe('11.1 Complete pipeline execution', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
   beforeEach(() => {
-    orchestrator = new PerfectSwedishOrchestrator();
     vi.clearAllMocks();
+    orchestrator = new PerfectSwedishOrchestrator();
   });
 
   it('should return all 6 required text fields', async () => {
@@ -187,8 +187,8 @@ describe('11.2 Retry logic', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
   beforeEach(() => {
-    orchestrator = new PerfectSwedishOrchestrator();
     vi.clearAllMocks();
+    orchestrator = new PerfectSwedishOrchestrator();
   });
 
   it('should retry on ECONNREFUSED and succeed on second attempt', async () => {
@@ -301,8 +301,8 @@ describe('11.3 Graceful degradation', () => {
   let orchestrator: PerfectSwedishOrchestrator;
 
   beforeEach(() => {
-    orchestrator = new PerfectSwedishOrchestrator();
     vi.clearAllMocks();
+    orchestrator = new PerfectSwedishOrchestrator();
   });
 
   it('should continue with unprocessed text if Post_Processor throws', async () => {
