@@ -1,130 +1,81 @@
-# Production Fix v2.6.0 - Critical Issues Resolved
+# Production Fix v2.6.0 - REDIS CACHE var problemet!
 
 **Date:** 2026-03-21  
-**Status:** Ready to commit and deploy
+**Status:** ✅ FIXED
 
-## Issues Fixed
+## VARFÖR DET INTE FUNKADE TIDIGARE
 
-### 1. Expert Feedback Not Showing (CRITICAL)
+**REDIS CACHE** serverade den gamla prompten eftersom `PROMPT_VERSION` fortfarande var `2.5.0`!
 
-**Root Cause:** OpenAI API requires the lowercase English word "json" in the prompt when using `response_format: { type: 'json_object' }`.
+När du ändrar system-prompten MÅSTE du bumpa versionen så Redis hämtar den nya prompten istället för den cachade.
 
-**Error Message:**
-```
-'messages' must contain the word 'json' in some form, to use 'response_format' of type 'json_object'.
-```
-
-**Fix Applied:**
-- Changed analyzer prompt from: `Svara ENDAST med JSON i denna exakta struktur:`
-- To: `Svara ENDAST med JSON (json format) i denna exakta struktur:`
-- File: `server/lib/perfect-swedish-analyzer.ts`
-
-**Expected Result:** Expert feedback panel will now populate with quality scores, strengths, improvements, and legal check.
+Cache-nyckel: `prompt:template:smart-generation-${style}-${platform}:${version}`
+- Gammal: `....:2.5.0` (cachad gammal prompt)
+- Ny: `....:2.6.0` (bygger ny prompt)
 
 ---
 
-### 2. No Paragraph Breaks in Generated Text (CRITICAL)
+## Fixar Som Gjorts
 
-**Root Cause:** The `enforceParagraphBreaks()` method had a condition `if (sentences.length >= 5)` which was too strict. Texts with 3-4 sentences would not get paragraph breaks enforced.
+### 1. Expert Feedback Visas Inte ❌ → ✅
 
-**Production Evidence:**
-```
-Post-processing transformations: { count: 2, byType: { narrative_integrity: 2 } }
-```
-No `paragraph_enforcement` transformation was logged, meaning the method never ran.
+**Problem:** OpenAI kräver ordet "json" (lowercase) i prompten när man använder JSON response format.
 
-**Fix Applied:**
-- Changed condition from `>= 5 sentences` to `>= 3 sentences`
-- Improved paragraph splitting logic to handle texts of varying lengths:
-  - 3-4 sentences: Split into 2-3 paragraphs
-  - 5+ sentences: Split into 3-5 paragraphs with smart distribution
-- File: `server/lib/perfect-swedish-post-processor.ts`
+**Fix:**
+- Ändrat från: `Svara ENDAST med JSON i denna exakta struktur:`
+- Till: `Svara ENDAST med JSON (json format) i denna exakta struktur:`
+- Fil: `server/lib/perfect-swedish-analyzer.ts`
 
-**Expected Result:** 
-- All generated texts will have proper paragraph breaks (`\n\n`)
-- Post-processor logs will show `paragraph_enforcement` transformations
-- Texts will be visually structured with clear paragraph separation
+### 2. Inga Styckebrytningar ❌ → ✅
+
+**Problem:** `enforceParagraphBreaks()` krävde 5+ meningar, men många texter har bara 3-4 meningar.
+
+**Fix:**
+- Ändrat från `>= 5 meningar` till `>= 3 meningar`
+- Förbättrad logik för att dela upp texter av olika längder
+- Fil: `server/lib/perfect-swedish-post-processor.ts`
+
+### 3. PROMPT_VERSION Bump ❌ → ✅ (VIKTIGAST!)
+
+**Problem:** Redis cachade den gamla prompten, så dina ändringar användes aldrig.
+
+**Fix:**
+- Bumpat `PROMPT_VERSION` från `2.5.0` till `2.6.0`
+- Fil: `server/lib/perfect-swedish-generator.ts`
 
 ---
 
-## Files Changed
+## Filer Som Ändrats
 
-1. `server/lib/perfect-swedish-analyzer.ts` - Added "json" keyword to prompt
-2. `server/lib/perfect-swedish-post-processor.ts` - Fixed paragraph enforcement logic
+1. `server/lib/perfect-swedish-analyzer.ts` - JSON keyword
+2. `server/lib/perfect-swedish-post-processor.ts` - Styckebrytningar (3+ meningar)
+3. `server/lib/perfect-swedish-generator.ts` - PROMPT_VERSION 2.6.0
 
 ---
 
-## Next Steps
-
-### To Deploy:
+## Deploya Nu
 
 ```bash
-# Stage changes
-git add server/lib/perfect-swedish-analyzer.ts server/lib/perfect-swedish-post-processor.ts
-
-# Commit
-git commit -m "Fix critical production issues: analyzer JSON keyword + paragraph enforcement
-
-- Add lowercase 'json' keyword to analyzer prompt (OpenAI requirement)
-- Fix enforceParagraphBreaks to work with 3+ sentences (was requiring 5+)
-- Improve paragraph splitting logic for texts of varying lengths
-- Version: post-processor v2.6.0"
-
-# Push to trigger Render auto-deploy
+git add server/lib/*.ts PRODUCTION_FIX_v2.6.0.md script/test-pipeline-fixes.ts
+git commit -m "Fix v2.6.0: JSON keyword + styckebrytningar + cache invalidation"
 git push origin main
 ```
 
-### Verification After Deploy:
+---
 
-1. **Expert Feedback Test:**
-   - Generate a new text
-   - Check that the expert feedback panel appears on the right side
-   - Verify it shows: overall quality score, strengths list, improvements list, legal check
+## Verifiera Efter Deploy
 
-2. **Paragraph Breaks Test:**
-   - Generate a new text
-   - Check that the main text (`improvedPrompt`) has visible paragraph breaks
-   - Count the number of paragraphs - should be 3-5 depending on text length
-   - Check server logs for: `Post-processing transformations: { count: X, byType: { paragraph_enforcement: 1, ... } }`
-
-3. **Production Logs:**
-   - Watch Render logs during next generation
-   - Should NOT see: `Expert analysis failed: 400 'messages' must contain the word 'json'`
-   - Should see: `Post-processing transformations` with `paragraph_enforcement` in the byType object
+1. **Expert Feedback:** Ska synas i högra panelen
+2. **Styckebrytningar:** Texten ska ha 3-5 stycken med tomrader mellan
+3. **Loggar:** Ska visa `paragraph_enforcement` i transformations
 
 ---
 
-## Technical Details
+## Varför Redis Var Problemet
 
-### Why the "json" keyword is required:
+Redis cachar prompter med version i nyckeln. När du ändrar prompten men inte bumpar versionen:
+- Redis returnerar gammal cachad prompt (TTL: 1 timme)
+- Dina ändringar når aldrig OpenAI
+- Produktionen fortsätter använda gammalt beteende
 
-OpenAI's API validates that when you use `response_format: { type: 'json_object' }`, the word "json" (case-insensitive) must appear somewhere in the messages array. This is a safety check to ensure the model understands it should output JSON.
-
-### Why paragraph enforcement wasn't working:
-
-The original logic required at least 5 sentences to enforce paragraph breaks. However:
-- Many property descriptions are 3-4 sentences (especially for smaller properties)
-- GPT-5.2 was generating valid text but without `\n\n` breaks
-- The post-processor would skip enforcement, leaving a wall of text
-
-The new logic:
-- Works with any text that has 3+ sentences
-- Adapts paragraph count based on text length
-- Always creates at least 2 paragraphs, up to 5 for longer texts
-
----
-
-## Version History
-
-- **v2.5.0** - Added paragraph requirements to generator prompt (didn't work, GPT ignored it)
-- **v2.6.0** - Fixed post-processor to actually enforce paragraph breaks + fixed analyzer JSON keyword
-
----
-
-## Expected Production Behavior After Deploy
-
-✅ Expert feedback panel will populate with analysis  
-✅ Generated texts will have proper paragraph structure  
-✅ No more "json" validation errors in logs  
-✅ Post-processor will log `paragraph_enforcement` transformations  
-✅ Texts will be ready for broker use without manual formatting
+**Lösning:** Bumpa ALLTID `PROMPT_VERSION` när du ändrar system-prompter!

@@ -23,7 +23,7 @@ export interface GenerationResult {
 }
 
 export class SmartGenerationEngine {
-  private readonly PROMPT_VERSION = '2.5.0';
+  private readonly PROMPT_VERSION = '2.6.0';
   private _openai: OpenAI | null = null;
 
   private get openai(): OpenAI {
