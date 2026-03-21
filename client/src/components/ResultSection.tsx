@@ -111,8 +111,8 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
     }
   });
 
-  // Mock expertAnalysis for demonstration (will come from backend in production)
-  const expertAnalysis = (result as any).expertAnalysis || null;
+  // Extract expertAnalysis from result (properly typed in schema)
+  const expertAnalysis = result.expertAnalysis || null;
 
   // Sync editedText when result changes (e.g. regenerate)
   useEffect(() => {

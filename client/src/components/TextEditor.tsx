@@ -2,6 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Wand2, Minus, Plus, RotateCcw, Loader2, PenLine, Sparkles, AlertTriangle } from "lucide-react";
 
+// CRITICAL: Use textContent (not innerText) to preserve \n\n paragraph breaks.
+// innerText normalizes whitespace and strips paragraph breaks.
+
 interface TextEditorProps {
   text: string;
   onTextChange: (newText: string) => void;
