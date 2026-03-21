@@ -10,7 +10,7 @@
   emailRateLimits, type EmailRateLimit,
   personalStyles, type PersonalStyle, type InsertPersonalStyle,
   usageTracking, type UsageTracking, type InsertUsageTracking,
-  pipelineMetrics, experimentResults, experimentAssignments
+  pipelineMetrics
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, sql, desc, and, gt, gte, lt } from "drizzle-orm";
