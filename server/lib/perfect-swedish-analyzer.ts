@@ -100,7 +100,7 @@ export class ExpertAIAnalyzer {
 - Texten ska vara löpande objektbeskrivning — inte en faktalista
 - Fakta ska vara konkreta och verifierbara`;
 
-    return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback.
+    return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback i JSON-format.
 
 ## FÖRBJUDNA FRASER (markera som "critical" om de förekommer)
 ${blockedPhrases.map(p => `- "${p}"`).join('\n')}
@@ -158,6 +158,7 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     const content = completion.choices[0]?.message?.content;
 
     if (!content) {
+      console.error('OpenAI analysis response:', JSON.stringify(completion, null, 2));
       throw new Error('No content in OpenAI analysis response');
     }
 
@@ -189,7 +190,8 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
         }
       };
     } catch (error) {
-      console.error('Failed to parse analysis response:', content);
+      console.error('Failed to parse analysis response. Content:', content);
+      console.error('Parse error:', error);
       throw new Error('Invalid JSON response from analysis');
     }
   }
