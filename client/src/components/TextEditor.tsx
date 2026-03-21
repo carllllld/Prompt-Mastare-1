@@ -43,7 +43,8 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
       setFutureHistory((f: string[]) => [...f, currentText]);
       setHistoryIndex(history.length - 2);
       onTextChange(prev);
-      if (editorRef.current) editorRef.current.innerText = prev;
+      // Use textContent to preserve \n\n paragraph breaks
+      if (editorRef.current) editorRef.current.textContent = prev;
     }
   }, [history, text, onTextChange]);
 
@@ -56,7 +57,8 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
       setHistory((h: string[]) => [...h, currentText]);
       setHistoryIndex(history.length);
       onTextChange(next);
-      if (editorRef.current) editorRef.current.innerText = next;
+      // Use textContent to preserve \n\n paragraph breaks
+      if (editorRef.current) editorRef.current.textContent = next;
     }
   }, [futureHistory, text, history.length, onTextChange]);
 
@@ -99,7 +101,8 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
   // Handle manual text editing
   const handleInput = useCallback(() => {
     if (editorRef.current) {
-      const newText = editorRef.current.innerText;
+      // Use textContent to preserve \n\n paragraph breaks
+      const newText = editorRef.current.textContent || '';
       if (newText !== text) {
         pushHistory();
         onTextChange(newText);
@@ -126,7 +129,8 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
 
       if (data.newFullText) {
         onTextChange(data.newFullText);
-        if (editorRef.current) editorRef.current.innerText = data.newFullText;
+        // Use textContent to preserve \n\n paragraph breaks
+        if (editorRef.current) editorRef.current.textContent = data.newFullText;
       }
     } catch (err) {
       console.error("Rewrite error:", err);
@@ -141,8 +145,9 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
 
   // Sync text prop → editor content
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerText !== text) {
-      editorRef.current.innerText = text;
+    if (editorRef.current && editorRef.current.textContent !== text) {
+      // Use textContent instead of innerText to preserve \n\n paragraph breaks
+      editorRef.current.textContent = text;
     }
   }, [text]);
 

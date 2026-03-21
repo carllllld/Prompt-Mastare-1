@@ -61,7 +61,7 @@ export class ExpertAIAnalyzer {
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
         top_p: 0.8,
-        max_completion_tokens: 1500,
+        max_completion_tokens: 2500,
         response_format: { type: 'json_object' },
       });
 
