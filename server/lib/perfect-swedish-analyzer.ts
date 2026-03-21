@@ -131,6 +131,8 @@ Stil: ${style} | Plattform: ${platform}
 
 ## OUTPUT FORMAT
 
+Svara ENDAST med JSON i denna exakta struktur:
+
 {
   "overallQuality": 8.5,
   "strengths": ["Konkret styrka 1", "Konkret styrka 2", "Konkret styrka 3"],
