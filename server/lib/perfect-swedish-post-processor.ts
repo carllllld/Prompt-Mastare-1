@@ -262,8 +262,8 @@ export class DeterministicPostProcessor {
       const originalText = result[field];
 
       try {
-        let text = this.fixIncompleteSentences(originalText, field, transformations);
-        text = this.fixMissingBulletPoints(text, field, transformations);
+        let text = this.fixMissingBulletPoints(originalText, field, transformations);
+        text = this.fixIncompleteSentences(text, field, transformations);
         // Headlines should not have periods added — applyFormatting already removes them
         if (field !== 'headline') {
           text = this.fixAbruptEndings(text, field, transformations);

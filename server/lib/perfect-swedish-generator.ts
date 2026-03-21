@@ -2,10 +2,6 @@ import OpenAI from 'openai';
 import { getCachedPromptTemplate, cachePromptTemplate } from './redis-cache';
 import { FORBIDDEN_PHRASES, getExemptPhrases, buildBrokerLanguagePolicyPrompt, WritingStyle } from './text-rules';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
-
 export interface GenerationRequest {
   disposition: any;
   style: WritingStyle;
@@ -28,6 +24,16 @@ export interface GenerationResult {
 
 export class SmartGenerationEngine {
   private readonly PROMPT_VERSION = '2.0.0';
+  private _openai: OpenAI | null = null;
+
+  private get openai(): OpenAI {
+    if (!this._openai) {
+      this._openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
+    }
+    return this._openai;
+  }
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const startTime = Date.now();
@@ -36,7 +42,7 @@ export class SmartGenerationEngine {
       const systemPrompt = await this.getSystemPrompt(request.style, request.platform);
       const userPrompt = this.buildUserPrompt(request);
 
-      const completion = await openai.chat.completions.create({
+      const completion = await this.openai.chat.completions.create({
         model: 'gpt-5.2',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -137,6 +143,13 @@ Innan du svarar, kontrollera:
 
 ✗ FEL (AI-klyschor):
 "Välkommen till detta fantastiska hem som erbjuder en unik möjlighet. Köket bjuder på en känsla av lyx."`;
+  }
+
+  /** Public method for testing — returns the combined prompt string */
+  async buildPrompt(request: GenerationRequest): Promise<string> {
+    const systemPrompt = await this.getSystemPrompt(request.style, request.platform);
+    const userPrompt = this.buildUserPrompt(request);
+    return `${systemPrompt}\n\n${userPrompt}`;
   }
 
   private buildUserPrompt(request: GenerationRequest): string {

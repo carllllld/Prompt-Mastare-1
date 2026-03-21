@@ -75,7 +75,7 @@ export class PerfectSwedishOrchestrator {
         {
           retries: 2,
           onFailedAttempt: (error: any) => {
-            retryCount = error.attemptNumber - 1;
+            retryCount = error.attemptNumber;
             console.log(`Pipeline attempt ${error.attemptNumber} failed:`, error.message);
             
             // Log retry to Sentry

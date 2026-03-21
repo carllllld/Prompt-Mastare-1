@@ -148,7 +148,7 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   for (const phrase of FORBIDDEN_PHRASES) {
     const normalizedPhrase = phrase.trim();
     const isSingleWordPhrase = /^[A-Za-zÅÄÖåäö0-9-]+$/.test(normalizedPhrase);
-    const criticalSingleWordPhrases = new Set(["erbjuder", "erbjuds", "fantastisk", "underbar", "magisk", "otrolig"]);
+    const criticalSingleWordPhrases = new Set(["erbjuder", "erbjuds", "fantastisk", "underbar", "magisk", "otrolig", "drömboende", "drömlägenhet", "drömhem"]);
     if (style !== "factual" && isSingleWordPhrase && !criticalSingleWordPhrases.has(normalizedPhrase.toLowerCase())) continue;
     if (!shouldBlockPhraseForStyle(normalizedPhrase, style, platform)) continue;
     if (lowerText.includes(phrase.toLowerCase())) {
@@ -355,7 +355,7 @@ function findAuxFieldViolations(
 
   if (field === "instagramCaption") {
     if (sentenceCount > 3) violations.push("instagramCaption är för lång; håll till max 3 meningar.");
-    if (!/[.!?…]$/.test(text.trim())) violations.push("instagramCaption ska avslutas med korrekt sluttecken.");
+    if (!/[.!?…\p{Emoji}]$/u.test(text.trim())) violations.push("instagramCaption ska avslutas med korrekt sluttecken.");
     if (!/[🌞🌅🏡✨🌿☀️🌳📍🛁🛋️🏠]/u.test(text)) violations.push("instagramCaption bör innehålla minst en relevant emoji.");
   }
 

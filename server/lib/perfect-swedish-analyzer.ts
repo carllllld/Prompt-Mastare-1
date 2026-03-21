@@ -2,10 +2,6 @@ import OpenAI from 'openai';
 import { WritingStyle, FORBIDDEN_PHRASES, getExemptPhrases } from './text-rules';
 import { v4 as uuidv4 } from 'uuid';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
-
 export interface AnalysisRequest {
   improvedPrompt: string;
   headline: string;
@@ -43,13 +39,24 @@ export interface LegalCheck {
 }
 
 export class ExpertAIAnalyzer {
+  private _openai: OpenAI | null = null;
+
+  private get openai(): OpenAI {
+    if (!this._openai) {
+      this._openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      });
+    }
+    return this._openai;
+  }
+
   async analyze(request: AnalysisRequest): Promise<ExpertAnalysis> {
     const startTime = Date.now();
 
     try {
       const prompt = this.buildAnalysisPrompt(request);
 
-      const completion = await openai.chat.completions.create({
+      const completion = await this.openai.chat.completions.create({
         model: 'gpt-5.2',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,

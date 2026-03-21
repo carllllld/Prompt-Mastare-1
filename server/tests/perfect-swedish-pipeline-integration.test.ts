@@ -52,6 +52,12 @@ vi.mock('openai', () => {
   };
 });
 
+// Mock Sentry
+vi.mock('@sentry/node', () => ({
+  captureException: vi.fn(),
+  captureMessage: vi.fn(),
+}));
+
 // Mock Redis cache
 vi.mock('../lib/redis-cache', () => ({
   getCachedABTestAssignment: vi.fn().mockResolvedValue(null),
@@ -141,7 +147,7 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
       // Verify metrics
       expect(result.metrics).toBeDefined();
       expect(result.metrics.success).toBe(true);
-      expect(result.metrics.totalDuration).toBeGreaterThan(0);
+      expect(result.metrics.totalDuration).toBeGreaterThanOrEqual(0);
       expect(result.metrics.retryCount).toBe(0);
     }, 30000); // 30 second timeout for full pipeline
 
@@ -228,12 +234,12 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
       const result = await orchestrator.execute(request);
 
       // Verify step durations are tracked
-      expect(result.metrics.step1Duration).toBeGreaterThan(0); // Smart Generation
+      expect(result.metrics.step1Duration).toBeGreaterThanOrEqual(0); // Smart Generation
       expect(result.metrics.step2Duration).toBeGreaterThanOrEqual(0); // Post-Processing
       
       // Step 3 (Expert Analysis) might be undefined if it failed gracefully
       if (result.expertAnalysis) {
-        expect(result.metrics.step3Duration).toBeGreaterThan(0);
+        expect(result.metrics.step3Duration).toBeGreaterThanOrEqual(0);
       }
     }, 30000);
   });

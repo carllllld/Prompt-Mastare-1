@@ -121,6 +121,8 @@ const BALANCED_EXEMPT = new Set([
   "ligger centralt i",
   "det finns även",
   "det finns också",
+  // Mild hyperbole acceptable in balanced style (not AI-clichés)
+  "magisk", "otrolig",
 ]);
 
 const SELLING_EXEMPT = new Set([
@@ -130,6 +132,9 @@ const SELLING_EXEMPT = new Set([
   "stilren",
   "en sann pärla",
   "drömboende", "drömlägenhet", "drömhem",
+  // More expressive language acceptable in selling style
+  "unik möjlighet",
+  "välkommen hem",
 ]);
 
 export function getExemptPhrases(style: WritingStyle): Set<string> {

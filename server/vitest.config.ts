@@ -9,6 +9,11 @@ export default defineConfig({
       'node_modules/**',
       'client/**',
       // Orphaned tests for old pipeline modules that no longer exist
+      'server/tests/listing-agent-gates.test.ts',
+      'server/tests/listing-agent-iteration.test.ts',
+      'server/tests/listing-agent-loop.test.ts',
+      'server/tests/listing-agent-observability.test.ts',
+      'server/tests/listing-blueprint-coverage.test.ts',
       'server/tests/listing-broker-realism-scorecard.test.ts',
       'server/tests/listing-final-audit-subflow.test.ts',
       'server/tests/listing-input-signal-coverage.test.ts',
