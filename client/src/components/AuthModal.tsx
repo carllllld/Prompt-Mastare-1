@@ -50,7 +50,9 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
     const email = loginEmailRef.current?.value || "";
     const password = loginPasswordRef.current?.value || "";
 
-    if (!email || !email.includes("@")) {
+    // Proper email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
       setError("Ange en giltig e-postadress");
       return;
     }
@@ -82,7 +84,9 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
     const password = registerPasswordRef.current?.value || "";
     const confirmPassword = registerConfirmRef.current?.value || "";
 
-    if (!email || !email.includes("@")) {
+    // Proper email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
       setError("Ange en giltig e-postadress");
       return;
     }
@@ -113,7 +117,9 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
 
     const email = resendEmailRef.current?.value || pendingEmail;
 
-    if (!email || !email.includes("@")) {
+    // Proper email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
       setError("Ange en giltig e-postadress");
       setIsResending(false);
       return;

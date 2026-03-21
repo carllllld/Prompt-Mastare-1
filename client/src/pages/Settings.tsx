@@ -118,6 +118,7 @@ export default function Settings() {
   const [selectedColor, setSelectedColor] = useState("");
   const [profileDirty, setProfileDirty] = useState(false);
   const [userIdCopied, setUserIdCopied] = useState(false);
+  const [isSavingColor, setIsSavingColor] = useState(false);
 
   const { data: details, isLoading } = useQuery<AccountDetails>({
     queryKey: ["/api/account/details"],
@@ -132,14 +133,16 @@ export default function Settings() {
   }, [authLoading, isAuthenticated]);
 
   useEffect(() => {
-    if (details && !profileDirty) {
+    if (details) {
       setDisplayName(details.displayName || "");
       setSelectedColor(details.avatarColor || AVATAR_COLORS[0]);
+      setProfileDirty(false);
     }
   }, [details]);
 
   const saveProfileMutation = useMutation({
     mutationFn: async () => {
+      setIsSavingColor(true);
       const res = await fetch("/api/account/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -153,12 +156,14 @@ export default function Settings() {
       return res.json();
     },
     onSuccess: () => {
+      setIsSavingColor(false);
       setProfileDirty(false);
       queryClient.invalidateQueries({ queryKey: ["/api/account/details"] });
       queryClient.invalidateQueries({ queryKey: ["/auth/me"] });
       toast({ title: "Profil sparad", description: "Ditt visningsnamn och färg har uppdaterats." });
     },
     onError: (err: any) => {
+      setIsSavingColor(false);
       toast({ title: "Fel", description: err.message, variant: "destructive" });
     },
   });
@@ -301,7 +306,8 @@ export default function Settings() {
                       key={color}
                       type="button"
                       onClick={() => { setSelectedColor(color); setProfileDirty(true); }}
-                      className="w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center"
+                      disabled={isSavingColor}
+                      className="w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         background: color,
                         borderColor: selectedColor === color ? "#1D2939" : "transparent",

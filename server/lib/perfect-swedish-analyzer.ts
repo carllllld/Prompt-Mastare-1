@@ -279,12 +279,12 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     analysis: Omit<ExpertAnalysis, 'duration'>
   ): Omit<ExpertAnalysis, 'duration'> {
     const texts: Record<string, string> = {
-      improvedPrompt: request.improvedPrompt,
-      headline: request.headline,
-      socialCopy: request.socialCopy,
-      instagramCaption: request.instagramCaption,
-      showingInvitation: request.showingInvitation,
-      shortAd: request.shortAd
+      improvedPrompt: request.improvedPrompt || '',
+      headline: request.headline || '',
+      socialCopy: request.socialCopy || '',
+      instagramCaption: request.instagramCaption || '',
+      showingInvitation: request.showingInvitation || '',
+      shortAd: request.shortAd || ''
     };
 
     const improvementsWithSpans = analysis.improvements.map(item => {
@@ -293,6 +293,9 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
       const keywords = this.extractKeywords(item.issue);
 
       for (const [field, text] of Object.entries(texts)) {
+        // Skip empty texts
+        if (!text) continue;
+        
         for (const keyword of keywords) {
           const index = text.toLowerCase().indexOf(keyword.toLowerCase());
           if (index !== -1) {

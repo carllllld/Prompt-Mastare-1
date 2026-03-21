@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AlertCircle, AlertTriangle, Lightbulb, Scale, FileText, User, Briefcase, Wand2, Sparkles, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +95,12 @@ export function ExpertFeedbackPanel({
   onDismissClick,
 }: ExpertFeedbackPanelProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[ExpertFeedbackPanel] analysis:', analysis);
+    console.log('[ExpertFeedbackPanel] improvements count:', analysis.improvements.length);
+  }, [analysis]);
 
   // Group feedback by category
   const groupedFeedback = useMemo(() => {
@@ -215,7 +221,7 @@ export function ExpertFeedbackPanel({
       </div>
 
       {/* Feedback list */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 max-h-[500px]">
         <Accordion
           type="multiple"
           value={expandedCategories}

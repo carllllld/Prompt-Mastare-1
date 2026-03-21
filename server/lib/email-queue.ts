@@ -140,4 +140,7 @@ class EmailQueue {
 export const emailQueue = new EmailQueue();
 
 // Cleanup every hour
-setInterval(() => emailQueue.cleanup(), 60 * 60 * 1000);
+const cleanupInterval = setInterval(() => emailQueue.cleanup(), 60 * 60 * 1000);
+
+// Unref to prevent blocking process exit
+cleanupInterval.unref();

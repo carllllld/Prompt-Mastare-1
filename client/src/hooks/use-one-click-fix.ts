@@ -145,7 +145,7 @@ export function useOneClickFix(options: UseOneClickFixOptions = {}) {
       historyIndex: nextIndex
     });
 
-    return { success: true };
+    return { success: true, text: entry.text };
   }, [history, historyIndex]);
 
   // Check if a fix has been applied

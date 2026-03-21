@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "./use-toast";
 
 export interface Team {
   id: number;
@@ -57,6 +58,7 @@ export interface PromptComment {
 
 export function useTeams() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: teams, isLoading } = useQuery<Team[]>({
     queryKey: ["/api/teams"],
@@ -70,6 +72,14 @@ export function useTeams() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
     },
+    onError: (error: any) => {
+      console.error("[Teams] Create team error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte skapa team. Vänligen försök igen.",
+        variant: "destructive",
+      });
+    },
   });
 
   return {
@@ -82,6 +92,7 @@ export function useTeams() {
 
 export function useTeam(teamId: number | null) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: team, isLoading: isLoadingTeam } = useQuery<Team>({
     queryKey: ["/api/teams", teamId],
@@ -98,6 +109,14 @@ export function useTeam(teamId: number | null) {
       const response = await apiRequest("POST", `/api/teams/${teamId}/invite`, { email });
       return response.json();
     },
+    onError: (error: any) => {
+      console.error("[Teams] Invite member error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte skicka inbjudan. Vänligen försök igen.",
+        variant: "destructive",
+      });
+    },
   });
 
   return {
@@ -111,6 +130,7 @@ export function useTeam(teamId: number | null) {
 
 export function useSharedPrompts(teamId: number | null) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: prompts, isLoading } = useQuery<SharedPrompt[]>({
     queryKey: ["/api/teams", teamId, "prompts"],
@@ -125,6 +145,14 @@ export function useSharedPrompts(teamId: number | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "prompts"] });
     },
+    onError: (error: any) => {
+      console.error("[Teams] Create prompt error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte skapa prompt. Vänligen försök igen.",
+        variant: "destructive",
+      });
+    },
   });
 
   const updatePromptMutation = useMutation({
@@ -135,6 +163,14 @@ export function useSharedPrompts(teamId: number | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "prompts"] });
     },
+    onError: (error: any) => {
+      console.error("[Teams] Update prompt error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte uppdatera prompt. Vänligen försök igen.",
+        variant: "destructive",
+      });
+    },
   });
 
   const deletePromptMutation = useMutation({
@@ -143,6 +179,14 @@ export function useSharedPrompts(teamId: number | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams", teamId, "prompts"] });
+    },
+    onError: (error: any) => {
+      console.error("[Teams] Delete prompt error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte radera prompt. Vänligen försök igen.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -158,6 +202,7 @@ export function useSharedPrompts(teamId: number | null) {
 
 export function usePromptComments(promptId: number | null) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: comments, isLoading } = useQuery<PromptComment[]>({
     queryKey: ["/api/prompts", promptId, "comments"],
@@ -171,6 +216,14 @@ export function usePromptComments(promptId: number | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/prompts", promptId, "comments"] });
+    },
+    onError: (error: any) => {
+      console.error("[Teams] Add comment error:", error);
+      toast({
+        title: "Fel",
+        description: error.message || "Kunde inte lägga till kommentar. Vänligen försök igen.",
+        variant: "destructive",
+      });
     },
   });
 

@@ -23,7 +23,16 @@ export function useStripeCheckout() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.location.href = data.url;
+        try {
+          window.location.href = data.url;
+        } catch (error) {
+          console.error("[Stripe Checkout] Redirect failed:", error);
+          toast({
+            title: "Fel vid omdirigering",
+            description: "Kunde inte öppna betalningssidan. Vänligen försök igen.",
+            variant: "destructive",
+          });
+        }
       }
     },
     onError: (error: any) => {
@@ -59,11 +68,20 @@ export function useStripePortal() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.location.href = data.url;
+        try {
+          window.location.href = data.url;
+        } catch (error) {
+          console.error("[Stripe Portal] Redirect failed:", error);
+          toast({
+            title: "Fel vid omdirigering",
+            description: "Kunde inte öppna kundportalen. Vänligen försök igen.",
+            variant: "destructive",
+          });
+        }
       }
     },
     onError: (error: any) => {
-      console.error("Portal error:", error);
+      console.error("[Stripe Portal] Error:", error);
       toast({
         title: "Fel",
         description: error.message || "Kunde inte öppna kundportal.",

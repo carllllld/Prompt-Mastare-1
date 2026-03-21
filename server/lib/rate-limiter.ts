@@ -91,9 +91,12 @@ export async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
 }
 
 // Cleanup stale rate limit entries every 5 minutes
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of Array.from(optimizeRateMap)) {
     if (now > entry.resetAt) optimizeRateMap.delete(key);
   }
 }, 5 * 60 * 1000);
+
+// Unref to prevent blocking process exit
+cleanupInterval.unref();

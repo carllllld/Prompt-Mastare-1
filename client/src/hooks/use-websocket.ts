@@ -7,14 +7,19 @@ export function useWebSocket(userId: string | undefined, teamId: number | null, 
   const [isConnected, setIsConnected] = useState(false);
   const handlersRef = useRef<Map<string, Set<MessageHandler>>>(new Map());
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isMountedRef = useRef(true);
 
   const connect = useCallback(() => {
-    if (!userId || wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (!userId || !isMountedRef.current || wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     ws.onopen = () => {
+      if (!isMountedRef.current) {
+        ws.close();
+        return;
+      }
       setIsConnected(true);
       ws.send(JSON.stringify({
         type: "auth",
@@ -25,6 +30,7 @@ export function useWebSocket(userId: string | undefined, teamId: number | null, 
     };
 
     ws.onmessage = (event) => {
+      if (!isMountedRef.current) return;
       try {
         const message = JSON.parse(event.data);
         const handlers = handlersRef.current.get(message.type);
@@ -37,9 +43,12 @@ export function useWebSocket(userId: string | undefined, teamId: number | null, 
     };
 
     ws.onclose = () => {
+      if (!isMountedRef.current) return;
       setIsConnected(false);
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        if (isMountedRef.current) {
+          connect();
+        }
       }, 3000);
     };
 
@@ -51,9 +60,11 @@ export function useWebSocket(userId: string | undefined, teamId: number | null, 
   }, [userId, teamId, promptId]);
 
   useEffect(() => {
+    isMountedRef.current = true;
     connect();
 
     return () => {
+      isMountedRef.current = false;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }

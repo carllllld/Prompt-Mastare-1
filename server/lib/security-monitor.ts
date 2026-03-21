@@ -326,7 +326,7 @@ export class SecurityMonitor {
     setInterval(() => {
       this.cleanupOldEvents();
       console.log('[SECURITY] Auto-cleanup completed');
-    }, 60 * 60 * 1000); // 1 hour
+    }, 60 * 60 * 1000).unref(); // 1 hour
   }
 
   /**

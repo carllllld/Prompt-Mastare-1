@@ -11,12 +11,22 @@ const MAX_VERIFICATION_EMAILS_PER_HOUR = 3;
 // ─── LOGIN RATE LIMITING (brute-force protection) ───
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const LOGIN_MAX_MAP_SIZE = 10000; // Prevent memory leak
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 
 function checkLoginRateLimit(key: string): boolean {
   const now = Date.now();
   const entry = loginAttempts.get(key);
   if (!entry || now > entry.resetAt) {
+    // Prevent map from growing too large
+    if (loginAttempts.size >= LOGIN_MAX_MAP_SIZE) {
+      // Clear oldest entries
+      const entries = Array.from(loginAttempts.entries());
+      entries.sort((a, b) => a[1].resetAt - b[1].resetAt);
+      for (let i = 0; i < Math.floor(LOGIN_MAX_MAP_SIZE / 2); i++) {
+        loginAttempts.delete(entries[i][0]);
+      }
+    }
     loginAttempts.set(key, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
     return true;
   }
@@ -82,7 +92,10 @@ export function setupAuth(app: Express) {
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(400).json({ message: "E-postadressen är redan registrerad" });
+        // Don't reveal if email exists (prevent email enumeration)
+        return res.status(200).json({ 
+          message: "Om e-postadressen inte redan är registrerad har ett verifieringsmail skickats."
+        });
       }
 
       // Hash password and create user

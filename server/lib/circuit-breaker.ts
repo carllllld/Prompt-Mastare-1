@@ -184,6 +184,11 @@ class CircuitBreaker {
     this.monitorInterval = setInterval(() => {
       this.healthCheck();
     }, this.config.monitorIntervalMs);
+    
+    // Unref to prevent blocking process exit
+    if (this.monitorInterval) {
+      this.monitorInterval.unref();
+    }
   }
 
   /**

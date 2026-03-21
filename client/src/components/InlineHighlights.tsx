@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { AlertCircle, AlertTriangle, Lightbulb, Scale, FileText, User, Briefcase, Wand2 } from "lucide-react";
 
 // FeedbackItem interface matching backend
@@ -73,6 +73,14 @@ interface TextSegment {
 export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onFixClick, onTextChange }: InlineHighlightsProps) {
   const [hoveredFeedbackId, setHoveredFeedbackId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[InlineHighlights] text length:', text.length);
+    console.log('[InlineHighlights] feedback count:', feedback.length);
+    console.log('[InlineHighlights] field:', field);
+    console.log('[InlineHighlights] feedback:', feedback);
+  }, [text, feedback, field]);
 
   // Filter feedback for this specific field
   const relevantFeedback = useMemo(() => {
@@ -191,19 +199,45 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
     }
   }, [onFixClick]);
 
-  // If no feedback, render plain text
+  // Split text into paragraphs (separated by \n\n)
+  const paragraphs = text.split('\n\n').filter(p => p.trim());
+
+  // If no feedback, render plain text with paragraph breaks
   if (relevantFeedback.length === 0) {
-    return <span className="whitespace-pre-wrap">{text}</span>;
+    return (
+      <div className="space-y-4">
+        {paragraphs.map((para, idx) => (
+          <p key={idx} className="leading-relaxed">
+            {para}
+          </p>
+        ))}
+      </div>
+    );
   }
 
+  // Helper to render a segment with proper paragraph handling
+  const renderSegmentText = (segmentText: string) => {
+    // Check if segment contains paragraph breaks
+    if (segmentText.includes('\n\n')) {
+      const parts = segmentText.split('\n\n');
+      return parts.map((part, idx) => (
+        <span key={idx}>
+          {part}
+          {idx < parts.length - 1 && <><br /><br /></>}
+        </span>
+      ));
+    }
+    return segmentText;
+  };
+
   return (
-    <div className="relative inline">
+    <div className="relative">
       {/* Render text segments with highlights */}
       {segments.map((segment, index) => {
         if (segment.feedback.length === 0) {
           return (
             <span key={index} className="whitespace-pre-wrap">
-              {segment.text}
+              {renderSegmentText(segment.text)}
             </span>
           );
         }
@@ -212,7 +246,7 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
         if (!mostSevere) {
           return (
             <span key={index} className="whitespace-pre-wrap">
-              {segment.text}
+              {renderSegmentText(segment.text)}
             </span>
           );
         }
@@ -222,7 +256,7 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
         return (
           <span
             key={index}
-            className="relative inline cursor-help transition-all duration-150 whitespace-pre-wrap"
+            className="relative cursor-help transition-all duration-150 whitespace-pre-wrap"
             style={{
               backgroundColor: colors.bg,
               borderBottom: `2px solid ${colors.border}`,
@@ -232,7 +266,7 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
             onMouseEnter={(e) => handleMouseEnter(e, segment.feedback)}
             onMouseLeave={handleMouseLeave}
           >
-            {segment.text}
+            {renderSegmentText(segment.text)}
             {/* Multiple feedback indicator */}
             {segment.feedback.length > 1 && (
               <span

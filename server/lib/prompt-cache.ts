@@ -35,7 +35,7 @@ export class PromptCache {
     };
     
     // Cleanup varje timme
-    setInterval(() => this.cleanup(), 60 * 60 * 1000);
+    setInterval(() => this.cleanup(), 60 * 60 * 1000).unref();
   }
 
   /**

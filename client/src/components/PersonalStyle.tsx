@@ -52,6 +52,11 @@ export function PersonalStyle() {
       }
     } catch (error) {
       console.error("Failed to fetch personal style:", error);
+      toast({
+        title: "Fel",
+        description: "Kunde inte ladda personlig stil",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -82,12 +87,8 @@ export function PersonalStyle() {
 
       if (res.ok) {
         const data = await res.json();
-        setPersonalStyle(prev => ({
-          ...prev,
-          hasStyle: true,
-          styleProfile: data.styleProfile,
-          isActive: true
-        }));
+        // Wait for API response before updating state
+        await fetchPersonalStyle();
         toast({
           title: "Personlig stil sparad!",
           description: "AI:n kommer nu att använda din skrivstil.",
@@ -114,6 +115,7 @@ export function PersonalStyle() {
   const handleDelete = async () => {
     if (!confirm("Är du säker på att du vill ta bort din personliga stil?")) return;
 
+    setSaving(true);
     try {
       const res = await fetch("/api/personal-style", {
         method: "DELETE",
@@ -121,11 +123,19 @@ export function PersonalStyle() {
       });
 
       if (res.ok) {
+        // Wait for API response before updating state
         setPersonalStyle(null);
         setReferenceTexts(["", "", ""]);
         toast({
           title: "Personlig stil raderad",
           description: "AI:n kommer nu att använda standardstilen.",
+        });
+      } else {
+        const error = await res.json();
+        toast({
+          title: "Fel",
+          description: error.message || "Kunde inte radera personlig stil",
+          variant: "destructive",
         });
       }
     } catch (error) {
@@ -134,10 +144,16 @@ export function PersonalStyle() {
         description: "Kunde inte radera personlig stil",
         variant: "destructive",
       });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleToggleActive = async (isActive: boolean) => {
+    const previousState = personalStyle?.isActive;
+    // Optimistic update
+    setPersonalStyle(prev => prev ? { ...prev, isActive } : null);
+
     try {
       const res = await fetch("/api/personal-style", {
         method: "PUT",
@@ -147,12 +163,22 @@ export function PersonalStyle() {
       });
 
       if (res.ok) {
-        setPersonalStyle(prev => prev ? { ...prev, isActive } : null);
         toast({
           title: isActive ? "Personlig stil aktiverad" : "Personlig stil inaktiverad",
         });
+      } else {
+        // Rollback on error
+        setPersonalStyle(prev => prev ? { ...prev, isActive: previousState || false } : null);
+        const error = await res.json();
+        toast({
+          title: "Fel",
+          description: error.message || "Kunde inte uppdatera personlig stil",
+          variant: "destructive",
+        });
       }
     } catch (error) {
+      // Rollback on error
+      setPersonalStyle(prev => prev ? { ...prev, isActive: previousState || false } : null);
       toast({
         title: "Fel",
         description: "Kunde inte uppdatera personlig stil",

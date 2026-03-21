@@ -284,6 +284,9 @@ export class PerfectSwedishOrchestrator {
         improvedPrompt: postProcessResult.improvedPrompt,
         headline: postProcessResult.headline,
         socialCopy: postProcessResult.socialCopy,
+        instagramCaption: postProcessResult.instagramCaption,
+        showingInvitation: postProcessResult.showingInvitation,
+        shortAd: postProcessResult.shortAd,
         disposition: request.disposition,
         style: request.style,
         platform: request.platform

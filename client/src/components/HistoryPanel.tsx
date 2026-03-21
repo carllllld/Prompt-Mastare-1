@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, Search, ChevronDown, ChevronUp, Trash2, Copy, Check, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface HistoryItem {
   id: number;
@@ -28,6 +29,7 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<Record<number, string>>({});
+  const { toast } = useToast();
 
   const fetchHistory = async () => {
     setLoading(true);
@@ -47,11 +49,30 @@ export function HistoryPanel({ onLoadResult }: HistoryPanelProps) {
   useEffect(() => { fetchHistory(); }, []);
 
   const deleteItem = async (id: number) => {
+    // Save current state for rollback
+    const previousHistory = history;
+    
+    // Optimistic update
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+    
     try {
-      await fetch(`/api/history/${id}`, { method: "DELETE", credentials: "include" });
-      setHistory((prev) => prev.filter((item) => item.id !== id));
+      const response = await fetch(`/api/history/${id}`, { method: "DELETE", credentials: "include" });
+      if (!response.ok) {
+        throw new Error("Delete failed");
+      }
+      toast({
+        title: "Raderad",
+        description: "Historikposten har raderats",
+      });
     } catch (err) {
       console.error("Delete failed:", err);
+      // Rollback on error
+      setHistory(previousHistory);
+      toast({
+        title: "Fel",
+        description: "Kunde inte radera historikposten. Försök igen.",
+        variant: "destructive",
+      });
     }
   };
 

@@ -124,9 +124,21 @@ export function useOptimize() {
   const { toast } = useToast();
   const progressCallbackRef = useRef<ProgressCallback | undefined>(undefined);
   const [lastError, setLastError] = useState<OptimizeUiError | null>(null);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      progressCallbackRef.current = undefined;
+    };
+  }, []);
 
   const setProgressCallback = useCallback((cb: ProgressCallback | undefined) => {
-    progressCallbackRef.current = cb;
+    if (isMountedRef.current) {
+      progressCallbackRef.current = cb;
+    }
   }, []);
 
   const clearLastError = useCallback(() => {

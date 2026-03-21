@@ -98,4 +98,4 @@ export async function checkEmailRateLimit(
 }
 
 // Cleanup every hour
-setInterval(() => rateLimiter.cleanup(), 60 * 60 * 1000);
+setInterval(() => rateLimiter.cleanup(), 60 * 60 * 1000).unref();

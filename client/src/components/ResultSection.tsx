@@ -113,6 +113,12 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
 
   // Extract expertAnalysis from result (properly typed in schema)
   const expertAnalysis = result.expertAnalysis || null;
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[ResultSection] expertAnalysis:', expertAnalysis);
+    console.log('[ResultSection] improvements count:', expertAnalysis?.improvements?.length || 0);
+  }, [expertAnalysis]);
 
   // Sync editedText when result changes (e.g. regenerate)
   useEffect(() => {
@@ -493,7 +499,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
 
           {/* Show InlineHighlights if expertAnalysis is available */}
           {expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 ? (
-            <div className="mb-4 rounded-lg border p-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
+            <div className="mb-4 rounded-lg border p-4 space-y-4" style={{ background: "#FFFFFF", borderColor: "#E8E5DE" }}>
               <div className="text-base leading-relaxed font-serif" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939", lineHeight: "1.6" }}>
                 <InlineHighlights
                   text={editedText}
@@ -511,7 +517,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       </div>
 
       {/* ── EXPERT FEEDBACK PANEL ── */}
-      {expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 && (
+      {expertAnalysis && (
         <div className="animate-slide-up" style={{ animationDelay: "0.09s" }}>
           <ExpertFeedbackPanel
             analysis={expertAnalysis}

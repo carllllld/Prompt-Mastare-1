@@ -31,7 +31,7 @@ export class PerfectSwedishScheduler {
     this.healthCheckInterval = setInterval(
       () => this.runHealthCheck(),
       intervalMinutes * 60 * 1000
-    );
+    ).unref();
   }
 
   /**
@@ -71,7 +71,7 @@ export class PerfectSwedishScheduler {
       this.dailyAggregationInterval = setInterval(
         () => this.runDailyAggregation(),
         24 * 60 * 60 * 1000
-      );
+      ).unref();
     }, msUntilMidnight);
   }
 
