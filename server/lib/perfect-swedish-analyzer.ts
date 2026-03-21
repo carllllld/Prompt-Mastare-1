@@ -131,7 +131,7 @@ Stil: ${style} | Plattform: ${platform}
 
 ## OUTPUT FORMAT
 
-Svara ENDAST med JSON i denna exakta struktur:
+Svara ENDAST med JSON (json format) i denna exakta struktur:
 
 {
   "overallQuality": 8.5,

@@ -153,23 +153,42 @@ export class DeterministicPostProcessor {
     if (existingBreaks < 3) {
       const sentences = text.split(/\.\s+/).filter(s => s.trim().length > 0);
       
-      if (sentences.length >= 5) {
+      // Need at least 3 sentences to create meaningful paragraph breaks
+      if (sentences.length >= 3) {
         // Rebuild with forced paragraph breaks
         const paragraphs: string[] = [];
         
-        // Paragraph 1: First 1-2 sentences (USP opening)
-        paragraphs.push(sentences.slice(0, 2).join('. ') + '.');
-        
-        // Paragraph 2: Next 2-3 sentences (layout/kitchen)
-        const midStart = 2;
-        const midEnd = Math.min(sentences.length - 2, 5);
-        if (midEnd > midStart) {
-          paragraphs.push(sentences.slice(midStart, midEnd).join('. ') + '.');
-        }
-        
-        // Paragraph 3: Remaining sentences (location/economy)
-        if (sentences.length > midEnd) {
-          paragraphs.push(sentences.slice(midEnd).join('. ') + '.');
+        if (sentences.length <= 4) {
+          // Short text: split into 2-3 paragraphs
+          const mid = Math.floor(sentences.length / 2);
+          paragraphs.push(sentences.slice(0, mid).join('. ') + '.');
+          paragraphs.push(sentences.slice(mid).join('. ') + '.');
+        } else {
+          // Longer text: split into 3-5 paragraphs
+          // Paragraph 1: First 1-2 sentences (USP opening)
+          const p1End = Math.min(2, Math.floor(sentences.length * 0.25));
+          paragraphs.push(sentences.slice(0, p1End).join('. ') + '.');
+          
+          // Paragraph 2-3: Middle content (layout/rooms/features)
+          const midStart = p1End;
+          const midEnd = sentences.length - Math.max(2, Math.floor(sentences.length * 0.25));
+          
+          if (midEnd > midStart) {
+            const midSentences = sentences.slice(midStart, midEnd);
+            if (midSentences.length > 3) {
+              // Split middle into 2 paragraphs
+              const midSplit = Math.floor(midSentences.length / 2);
+              paragraphs.push(midSentences.slice(0, midSplit).join('. ') + '.');
+              paragraphs.push(midSentences.slice(midSplit).join('. ') + '.');
+            } else {
+              paragraphs.push(midSentences.join('. ') + '.');
+            }
+          }
+          
+          // Paragraph 4-5: Final content (location/economy)
+          if (midEnd < sentences.length) {
+            paragraphs.push(sentences.slice(midEnd).join('. ') + '.');
+          }
         }
         
         const newText = paragraphs.join('\n\n');
