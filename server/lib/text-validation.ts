@@ -366,7 +366,7 @@ function findAuxFieldViolations(
 
   if (field === "shortAd") {
     if (sentenceCount > 2) violations.push("shortAd ska vara max 2 meningar.");
-    if (words.length > 32) violations.push("shortAd är för lång (max 32 ord).");
+    if (words.length > 50) violations.push("shortAd är för lång (max 50 ord).");
   }
 
   return violations;

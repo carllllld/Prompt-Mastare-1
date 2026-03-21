@@ -283,17 +283,17 @@ export class DeterministicPostProcessor {
   private fixIncompleteSentences(text: string, field: string, transformations: Transformation[]): string {
     let result = text;
 
+    // Only fix lines that end with a comma or dash (clearly incomplete)
     const before1 = result;
     result = result.replace(/([a-zåäö]+)[,\-]\s*$/gm, (_, w) => `${w}.`);
     if (result !== before1) {
       transformations.push({ type: 'narrative_integrity', field, before: 'Incomplete sentence ending', after: 'Added proper punctuation' });
     }
 
-    const before2 = result;
-    result = result.replace(/([a-zåäö])\s+([A-ZÅÄÖ])/g, (_, a, b) => `${a}. ${b}`);
-    if (result !== before2) {
-      transformations.push({ type: 'narrative_integrity', field, before: 'Missing period between sentences', after: 'Added missing periods' });
-    }
+    // NOTE: The broad ([a-zåäö])\s+([A-ZÅÄÖ]) pattern has been intentionally removed.
+    // It was creating broken sentences by inserting periods before proper nouns,
+    // brand names (Siemens), place names (Mörtnäs), and mid-sentence capitalized words.
+    // Period placement is the generator's responsibility — the post-processor must not guess.
 
     // Detect sentence fragments: very short sentences (1-2 words) after a period
     const sentences = result.split(/(?<=[.!?])\s+/);
@@ -359,10 +359,12 @@ export class DeterministicPostProcessor {
   ): PostProcessRequest {
     const result = { ...request };
     let text = result.improvedPrompt;
+    const platform = request.platform?.toLowerCase() || 'hemnet';
 
     try {
       const energiklassValue = disposition?.energiklass || disposition?.property?.energiklass;
-      if (energiklassValue && !/energiklass/i.test(text)) {
+      // Hemnet forbids energiklass in main text — it's shown separately in the listing
+      if (energiklassValue && !/energiklass/i.test(text) && platform !== 'hemnet') {
         text = this.insertBeforeLastSentence(text, `Bostaden har energiklass ${energiklassValue}.`);
         transformations.push({ type: 'missing_facts', field: 'improvedPrompt', before: 'Missing energiklass', after: `Added energiklass ${energiklassValue}` });
       }

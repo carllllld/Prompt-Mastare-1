@@ -23,7 +23,7 @@ export interface GenerationResult {
 }
 
 export class SmartGenerationEngine {
-  private readonly PROMPT_VERSION = '2.0.0';
+  private readonly PROMPT_VERSION = '2.2.0';
   private _openai: OpenAI | null = null;
 
   private get openai(): OpenAI {
@@ -88,8 +88,25 @@ export class SmartGenerationEngine {
     const exemptPhrases = getExemptPhrases(style);
     const blockedPhrases = FORBIDDEN_PHRASES.filter(p => !exemptPhrases.has(p));
     const brokerPolicy = buildBrokerLanguagePolicyPrompt(style, platform);
+    const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
+
+    const platformStructureRules = normalizedPlatform === 'hemnet' ? `
+## HEMNET-SPECIFIKA REGLER
+- NÄMN INTE energiklass eller energiprestanda i huvudtexten — det visas separat i annonsen
+- Första meningen MÅSTE leda med bostadens starkaste USP (balkong, renovering, läge, utsikt) — INTE bara storlek och adress
+- Avsluta med konkret läges- eller vardagsnytta — INTE emotionella fraser som "välkommen hem" eller "skapa minnen"
+- Texten ska läsas som publicerad Hemnet-annons: faktadriven, köparrelevant, utan AI-känsla` :
+    normalizedPlatform === 'booli' ? `
+## BOOLI-SPECIFIKA REGLER
+- Mer berättande ton tillåten men fakta måste förbli konkreta och verifierbara
+- Energiklass kan nämnas om det är relevant (t.ex. energiklass A eller B som säljargument)
+- Första meningen ska fånga det unika med bostaden` : `
+## STRUKTURREGLER
+- Skriv löpande objektbeskrivning — inte en faktalista
+- Fakta ska vara konkreta och verifierbara`;
 
     return `Du är en erfaren svensk mäklare med 15 års erfarenhet av att skriva bostadsannonser. Du är EXTREMT noggrann med svensk grammatik och stavning.
+${platformStructureRules}
 
 ## FÖRBJUDNA FRASER (använd ALDRIG dessa)
 
@@ -126,7 +143,9 @@ KRITISKA REGLER:
    - Inga abstrakta känslor utan konkret grund
 
 3. INTERPUNKTION
-   - Punkt mellan meningar
+   - Punkt ENDAST mellan fullständiga meningar — ALDRIG mitt i en mening
+   - ALDRIG punkt före egennamn, ortsnamn, gatunamn eller varumärken: ✗ "på. Ekorrvägen" → ✓ "på Ekorrvägen", ✗ "i. Mörtnäs" → ✓ "i Mörtnäs"
+   - ALDRIG punkt före förkortningar eller beteckningar: ✗ "Energiklass. B" → ✓ "Energiklass B", ✗ "Integrerade. Siemens-vitvaror" → ✓ "Integrerade Siemens-vitvaror"
    - Ingen punkt i headline
    - Komma före "och" bara vid uppräkning av 3+
 
@@ -134,12 +153,20 @@ KRITISKA REGLER:
 Innan du svarar, kontrollera:
 1. Har jag använt NÅGON av de förbjudna fraserna? → Ta bort dem
 2. Är stavningen korrekt?
-3. Låter det som en riktig mäklare skrev det?
+3. Finns det punkter mitt i meningar (före ortsnamn, varumärken, beteckningar)? → Ta bort dem
+4. Låter det som en riktig mäklare skrev det?
 
 ## EXEMPEL PÅ PERFEKT SVENSKA
 
 ✓ RÄTT:
 "Köket renoverades 2023 med köksö, kompositbänk och integrerade Siemens-vitvaror. Planlösningen samlar kök och vardagsrum i vinkel, med skjutdörrar ut mot den södervända uteplatsen."
+
+✓ RÄTT adresshantering:
+"Villa i ett plan om 146 kvm på Ekorrvägen 10 i Mörtnäs."
+
+✗ FEL (brutna meningar):
+"Villa i ett plan om 146 kvm på. Ekorrvägen 10 i. Mörtnäs."
+"Integrerade. Siemens-vitvaror och en matplats."
 
 ✗ FEL (AI-klyschor):
 "Välkommen till detta fantastiska hem som erbjuder en unik möjlighet. Köket bjuder på en känsla av lyx."`;

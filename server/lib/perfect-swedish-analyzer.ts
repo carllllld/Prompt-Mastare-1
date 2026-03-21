@@ -83,11 +83,28 @@ export class ExpertAIAnalyzer {
     const { improvedPrompt, headline, socialCopy, style, platform } = request;
     const exemptPhrases = getExemptPhrases(style);
     const blockedPhrases = FORBIDDEN_PHRASES.filter(p => !exemptPhrases.has(p));
+    const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
+
+    const platformRulesSection = normalizedPlatform === 'hemnet' ? `
+## HEMNET-SPECIFIKA REGLER (kontrollera dessa)
+- Energiklass eller energiprestanda FÅR INTE nämnas i huvudtexten (visas separat i annonsen) → severity: "critical"
+- Första meningen MÅSTE leda med bostadens starkaste USP — inte bara storlek och adress → severity: "important"
+- Texten FÅR INTE avslutas med emotionella fraser som "välkommen hem", "skapa minnen", "allt du behöver" → severity: "important"
+- Texten ska vara faktadriven och köparrelevant utan AI-känsla` :
+    normalizedPlatform === 'booli' ? `
+## BOOLI-SPECIFIKA REGLER (kontrollera dessa)
+- Mer berättande ton är tillåten men fakta måste förbli konkreta och verifierbara
+- Energiklass kan nämnas om det är ett säljargument (t.ex. energiklass A eller B)
+- Första meningen ska fånga det unika med bostaden` : `
+## STRUKTURREGLER (kontrollera dessa)
+- Texten ska vara löpande objektbeskrivning — inte en faktalista
+- Fakta ska vara konkreta och verifierbara`;
 
     return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback.
 
 ## FÖRBJUDNA FRASER (markera som "critical" om de förekommer)
 ${blockedPhrases.map(p => `- "${p}"`).join('\n')}
+${platformRulesSection}
 
 ## TEXTEN ATT ANALYSERA
 
@@ -106,6 +123,7 @@ Stil: ${style} | Plattform: ${platform}
 1. STYRKOR: Vad är konkret bra? (3-5 punkter)
 2. FÖRBÄTTRINGAR: Konkreta problem med lösningar
    - Finns NÅGON förbjuden fras? → severity: "critical"
+   - Bryter mot plattformsreglerna ovan? → severity: "critical"
    - Grammatikfel? → severity: "critical"  
    - AI-klyschor som inte är i listan? → severity: "important"
    - Stilfrågor? → severity: "suggestion"

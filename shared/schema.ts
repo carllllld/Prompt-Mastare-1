@@ -312,36 +312,6 @@ export const pipelineMetrics = pgTable("pipeline_metrics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const experimentResults = pgTable("experiment_results", {
-  id: serial("id").primaryKey(),
-  experimentId: text("experiment_id").notNull(),
-  variantId: text("variant_id").notNull(),
-  userId: text("user_id").references(() => users.id).notNull(),
-  metrics: jsonb("metrics").$type<Record<string, number>>().notNull(),
-  timestamp: timestamp("timestamp").defaultNow(),
-});
-
-export const experimentAssignments = pgTable("experiment_assignments", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").references(() => users.id).notNull(),
-  experimentId: text("experiment_id").notNull(),
-  variantId: text("variant_id").notNull(),
-  assignedAt: timestamp("assigned_at").defaultNow(),
-}, (table) => ({
-  uniqueUserExperiment: {
-    unique: true,
-    columns: [table.userId, table.experimentId],
-  },
-}));
-
 export const insertPipelineMetricsSchema = createInsertSchema(pipelineMetrics).omit({ id: true, createdAt: true });
 export type PipelineMetrics = typeof pipelineMetrics.$inferSelect;
 export type InsertPipelineMetrics = z.infer<typeof insertPipelineMetricsSchema>;
-
-export const insertExperimentResultSchema = createInsertSchema(experimentResults).omit({ id: true, timestamp: true });
-export type ExperimentResult = typeof experimentResults.$inferSelect;
-export type InsertExperimentResult = z.infer<typeof insertExperimentResultSchema>;
-
-export const insertExperimentAssignmentSchema = createInsertSchema(experimentAssignments).omit({ id: true, assignedAt: true });
-export type ExperimentAssignment = typeof experimentAssignments.$inferSelect;
-export type InsertExperimentAssignment = z.infer<typeof insertExperimentAssignmentSchema>;
