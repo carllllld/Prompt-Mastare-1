@@ -16,23 +16,42 @@ import type { WritingStyle } from '../lib/text-rules';
 
 vi.mock('openai', () => ({
   default: vi.fn().mockImplementation(() => ({
-    responses: {
-      create: vi.fn().mockResolvedValue({
-        output_text: JSON.stringify({
-          improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service.',
-          headline: 'Välplanerad trea med balkong',
-          socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge.',
-          instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
-          showingInvitation: 'Välkommen på visning tisdag 18:00-19:00.',
-          shortAd: 'Ljus 3:a, 75 kvm, balkong söderläge.',
-        }),
-        usage: { output_tokens: 500, input_tokens: 200 },
-      }),
-    },
     chat: {
       completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: '{}' } }],
+        create: vi.fn().mockImplementation(async (params: any) => {
+          // Generator uses system+user messages; analyzer uses user-only
+          const isGeneratorCall = params?.messages?.[0]?.role === 'system';
+          if (isGeneratorCall) {
+            return {
+              choices: [{
+                message: {
+                  content: JSON.stringify({
+                    improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service.',
+                    headline: 'Välplanerad trea med balkong',
+                    socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge.',
+                    instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
+                    showingInvitation: 'Välkommen på visning tisdag 18:00-19:00.',
+                    shortAd: 'Ljus 3:a, 75 kvm, balkong söderläge.',
+                  }),
+                },
+              }],
+              usage: { total_tokens: 500 },
+            };
+          }
+          // Analyzer call
+          return {
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  overallQuality: 8,
+                  strengths: ['Bra struktur', 'Naturligt språk'],
+                  improvements: [],
+                  legalCheck: { compliant: true, notes: '', issues: [] },
+                }),
+              },
+            }],
+            usage: { total_tokens: 200 },
+          };
         }),
       },
     },

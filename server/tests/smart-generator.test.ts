@@ -7,7 +7,8 @@ import { SmartGenerationEngine } from '../lib/perfect-swedish-generator';
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
 
-const mockCreate = vi.fn();
+// Use vi.hoisted to avoid temporal dead zone with vi.mock hoisting
+const mockCreate = vi.hoisted(() => vi.fn());
 
 vi.mock('openai', () => ({
   default: vi.fn().mockImplementation(() => ({

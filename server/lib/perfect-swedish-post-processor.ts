@@ -147,16 +147,7 @@ export class DeterministicPostProcessor {
     for (const field of TEXT_FIELDS) {
       let text = result[field];
 
-      // Add missing periods between sentences (lowercase letter followed by uppercase)
-      const periodMatches = [...text.matchAll(/([a-zåäö])\s+([A-ZÅÄÖ])/g)];
-      if (periodMatches.length > 0) {
-        text = text.replace(/([a-zåäö])\s+([A-ZÅÄÖ])/g, (_, a, b) => `${a}. ${b}`);
-        periodMatches.forEach(match => {
-          transformations.push({ type: 'formatting', field, before: match[0], after: `${match[1]}. ${match[2]}` });
-        });
-      }
-
-      // Remove trailing period from headline
+      // Remove trailing period from headline FIRST (before any period-adding logic)
       if (field === 'headline' && /\.$/.test(text)) {
         const before = text;
         text = text.replace(/\.$/, '');
@@ -232,9 +223,9 @@ export class DeterministicPostProcessor {
     const result = { ...request };
 
     const generalizationPatterns: Array<[RegExp, string]> = [
-      [/Restaurang\s+[A-ZÅÄÖ][a-zåäö]+(?:,\s*Restaurang\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'restauranger'],
-      [/Kafé\s+[A-ZÅÄÖ][a-zåäö]+(?:,\s*Kafé\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'kaféer'],
-      [/Butik\s+[A-ZÅÄÖ][a-zåäö]+(?:,\s*Butik\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'butiker']
+      [/Restaurang\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Restaurang\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'restauranger'],
+      [/Kafé\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Kafé\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'kaféer'],
+      [/Butik\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Butik\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'butiker']
     ];
 
     for (const field of ['improvedPrompt', 'socialCopy', 'instagramCaption'] as const) {
@@ -273,7 +264,10 @@ export class DeterministicPostProcessor {
       try {
         let text = this.fixIncompleteSentences(originalText, field, transformations);
         text = this.fixMissingBulletPoints(text, field, transformations);
-        text = this.fixAbruptEndings(text, field, transformations);
+        // Headlines should not have periods added — applyFormatting already removes them
+        if (field !== 'headline') {
+          text = this.fixAbruptEndings(text, field, transformations);
+        }
         result[field] = text;
       } catch (error) {
         console.warn(`Narrative integrity check failed for ${field}:`, {
@@ -301,14 +295,25 @@ export class DeterministicPostProcessor {
       transformations.push({ type: 'narrative_integrity', field, before: 'Missing period between sentences', after: 'Added missing periods' });
     }
 
+    // Detect sentence fragments: very short sentences (1-2 words) after a period
+    const sentences = result.split(/(?<=[.!?])\s+/);
+    const hasFragment = sentences.some(s => {
+      const words = s.trim().split(/\s+/).filter(Boolean);
+      return words.length >= 1 && words.length <= 2 && /^[A-ZÅÄÖ]/.test(s.trim());
+    });
+    if (hasFragment) {
+      transformations.push({ type: 'narrative_integrity', field, before: 'Detected sentence fragments', after: 'Fragment detected, manual review needed' });
+    }
+
     return result;
   }
 
   private fixMissingBulletPoints(text: string, field: string, transformations: Transformation[]): string {
     let result = text;
 
+    // Match "X: item, item," pattern (list ending with comma, possibly at end of string or line)
     const before1 = result;
-    result = result.replace(/:\s*([a-zåäö][^.!?]*[,])\s*$/gm, (_, list) => `: ${list} och mer.`);
+    result = result.replace(/:\s*([a-zåäöA-ZÅÄÖ][^.!?]*[,])\s*$/gm, (_, list) => `: ${list.replace(/,\s*$/, '')} och mer.`);
     if (result !== before1) {
       transformations.push({ type: 'narrative_integrity', field, before: 'Incomplete list', after: 'Completed list with proper ending' });
     }
@@ -330,12 +335,12 @@ export class DeterministicPostProcessor {
       transformations.push({ type: 'narrative_integrity', field, before: 'Text ending without punctuation', after: 'Added period at end' });
     }
 
-    const lastSentence = result.split(/[.!?]/).pop()?.trim() || '';
-    const words = lastSentence.split(/\s+/);
-    const suspiciousEndings = new Set(['ett', 'en', 'och', 'med', 'i', 'på', 'till', 'från', 'av', 'för']);
-    const lastWord = words[words.length - 1]?.toLowerCase();
-    if (words.length > 0 && words.length < 4 && suspiciousEndings.has(lastWord)) {
-      transformations.push({ type: 'narrative_integrity', field, before: `Abrupt ending: "${lastSentence}"`, after: 'Detected, manual review needed' });
+    const lastSentence = result.split(/[.!?]/).filter(s => s.trim().length > 0).pop()?.trim() || '';
+    const words = lastSentence.split(/\s+/).filter(Boolean);
+    const suspiciousEndings = new Set(['ett', 'en', 'och', 'med', 'i', 'på', 'till', 'från', 'av', 'för', 'har', 'är']);
+    const lastWord = words[words.length - 1]?.toLowerCase().replace(/[.!?]$/, '');
+    if (words.length > 0 && words.length < 5 && suspiciousEndings.has(lastWord)) {
+      transformations.push({ type: 'narrative_integrity', field, before: `Abrupt ending detected: "${lastSentence}"`, after: 'Detected, manual review needed' });
     }
 
     const before = result;

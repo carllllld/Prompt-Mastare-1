@@ -15,33 +15,42 @@ import type { WritingStyle } from '../lib/text-rules';
 
 vi.mock('openai', () => ({
   default: vi.fn().mockImplementation(() => ({
-    responses: {
-      create: vi.fn().mockResolvedValue({
-        output_text: JSON.stringify({
-          improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service och grönområden. Sovrummen är placerade mot lugn innergård.',
-          headline: 'Välplanerad trea med balkong i söderläge',
-          socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge.',
-          instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
-          showingInvitation: 'Välkommen på visning tisdag 18:00-19:00.',
-          shortAd: 'Ljus 3:a, 75 kvm, balkong söderläge.',
-        }),
-        usage: { output_tokens: 500, input_tokens: 200 },
-      }),
-    },
     chat: {
       completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{
-            message: {
-              content: JSON.stringify({
-                overallQuality: 8,
-                strengths: ['Bra struktur', 'Naturligt språk'],
-                improvements: [],
-                legalCheck: { passed: true, issues: [] },
-                risk_notes: [],
-              }),
-            },
-          }],
+        create: vi.fn().mockImplementation(async (params: any) => {
+          // Generator uses system+user messages; analyzer uses user-only
+          const isGeneratorCall = params?.messages?.[0]?.role === 'system';
+          if (isGeneratorCall) {
+            return {
+              choices: [{
+                message: {
+                  content: JSON.stringify({
+                    improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service och grönområden. Sovrummen är placerade mot lugn innergård.',
+                    headline: 'Välplanerad trea med balkong i söderläge',
+                    socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge.',
+                    instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',
+                    showingInvitation: 'Välkommen på visning tisdag 18:00-19:00.',
+                    shortAd: 'Ljus 3:a, 75 kvm, balkong söderläge.',
+                  }),
+                },
+              }],
+              usage: { total_tokens: 500 },
+            };
+          }
+          // Analyzer call
+          return {
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  overallQuality: 8,
+                  strengths: ['Bra struktur', 'Naturligt språk'],
+                  improvements: [],
+                  legalCheck: { compliant: true, notes: '', issues: [] },
+                }),
+              },
+            }],
+            usage: { total_tokens: 200 },
+          };
         }),
       },
     },
@@ -51,6 +60,8 @@ vi.mock('openai', () => ({
 vi.mock('../lib/redis-cache', () => ({
   getCachedABTestAssignment: vi.fn().mockResolvedValue(null),
   cacheABTestAssignment: vi.fn().mockResolvedValue(undefined),
+  getCachedPromptTemplate: vi.fn().mockResolvedValue(null),
+  cachePromptTemplate: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../db', () => ({
@@ -182,27 +193,36 @@ describe('11.2 Retry logic', () => {
 
   it('should retry on ECONNREFUSED and succeed on second attempt', async () => {
     const OpenAI = (await import('openai')).default as any;
-    let callCount = 0;
+    let generatorCallCount = 0;
 
     OpenAI.mockImplementation(() => ({
-      responses: {
-        create: vi.fn().mockImplementation(async () => {
-          callCount++;
-          if (callCount === 1) throw Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
-          return {
-            output_text: JSON.stringify({
-              improvedPrompt: 'Text efter retry.',
-              headline: 'Rubrik',
-              socialCopy: 'Social.',
-              instagramCaption: 'Instagram 🏠',
-              showingInvitation: 'Välkommen på visning.',
-              shortAd: 'Kort annons.',
-            }),
-            usage: { output_tokens: 100, input_tokens: 50 },
-          };
-        }),
+      chat: {
+        completions: {
+          create: vi.fn().mockImplementation(async (params: any) => {
+            const isGeneratorCall = params?.messages?.[0]?.role === 'system';
+            if (isGeneratorCall) {
+              generatorCallCount++;
+              if (generatorCallCount === 1) throw Object.assign(new Error('ECONNREFUSED'), { code: 'ECONNREFUSED' });
+              return {
+                choices: [{
+                  message: {
+                    content: JSON.stringify({
+                      improvedPrompt: 'Text efter retry.',
+                      headline: 'Rubrik',
+                      socialCopy: 'Social.',
+                      instagramCaption: 'Instagram 🏠',
+                      showingInvitation: 'Välkommen på visning.',
+                      shortAd: 'Kort annons.',
+                    }),
+                  },
+                }],
+                usage: { total_tokens: 100 },
+              };
+            }
+            return { choices: [{ message: { content: JSON.stringify({ overallQuality: 7, strengths: [], improvements: [], legalCheck: { compliant: true, notes: '', issues: [] } }) } }], usage: { total_tokens: 50 } };
+          }),
+        },
       },
-      chat: { completions: { create: vi.fn().mockResolvedValue({ choices: [{ message: { content: '{}' } }] }) } },
     }));
 
     const result = await orchestrator.execute(BASE_REQUEST);
@@ -216,24 +236,29 @@ describe('11.2 Retry logic', () => {
     let callCount = 0;
 
     OpenAI.mockImplementation(() => ({
-      responses: {
-        create: vi.fn().mockImplementation(async () => {
-          callCount++;
-          if (callCount === 1) throw new Error('rate_limit_exceeded 429');
-          return {
-            output_text: JSON.stringify({
-              improvedPrompt: 'Text efter rate limit retry.',
-              headline: 'Rubrik',
-              socialCopy: 'Social.',
-              instagramCaption: 'Instagram 🏠',
-              showingInvitation: 'Välkommen på visning.',
-              shortAd: 'Kort annons.',
-            }),
-            usage: { output_tokens: 100, input_tokens: 50 },
-          };
-        }),
+      chat: {
+        completions: {
+          create: vi.fn().mockImplementation(async () => {
+            callCount++;
+            if (callCount === 1) throw new Error('rate_limit_exceeded 429');
+            return {
+              choices: [{
+                message: {
+                  content: JSON.stringify({
+                    improvedPrompt: 'Text efter rate limit retry.',
+                    headline: 'Rubrik',
+                    socialCopy: 'Social.',
+                    instagramCaption: 'Instagram 🏠',
+                    showingInvitation: 'Välkommen på visning.',
+                    shortAd: 'Kort annons.',
+                  }),
+                },
+              }],
+              usage: { total_tokens: 100 },
+            };
+          }),
+        },
       },
-      chat: { completions: { create: vi.fn().mockResolvedValue({ choices: [{ message: { content: '{}' } }] }) } },
     }));
 
     const result = await orchestrator.execute(BASE_REQUEST);
@@ -245,10 +270,11 @@ describe('11.2 Retry logic', () => {
     const OpenAI = (await import('openai')).default as any;
 
     OpenAI.mockImplementation(() => ({
-      responses: {
-        create: vi.fn().mockRejectedValue(new Error('Invalid API key')),
+      chat: {
+        completions: {
+          create: vi.fn().mockRejectedValue(new Error('Invalid API key')),
+        },
       },
-      chat: { completions: { create: vi.fn() } },
     }));
 
     await expect(orchestrator.execute(BASE_REQUEST)).rejects.toThrow();
@@ -258,10 +284,11 @@ describe('11.2 Retry logic', () => {
     const OpenAI = (await import('openai')).default as any;
 
     OpenAI.mockImplementation(() => ({
-      responses: {
-        create: vi.fn().mockRejectedValue(new Error('ETIMEDOUT')),
+      chat: {
+        completions: {
+          create: vi.fn().mockRejectedValue(new Error('ETIMEDOUT')),
+        },
       },
-      chat: { completions: { create: vi.fn() } },
     }));
 
     await expect(orchestrator.execute(BASE_REQUEST)).rejects.toThrow(/misslyckades/i);

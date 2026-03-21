@@ -1,8 +1,7 @@
 export type WritingStyle = "factual" | "balanced" | "selling";
 export type TargetPlatform = "hemnet" | "booli" | "general";
 
-// OPTIMIZED: Reduced from 195 → 66 phrases. Removed legitimate realtor language, kept only REAL AI clichés.
-// This prevents blocking good broker text while still catching AI-generated patterns.
+// OPTIMIZED: 66 phrases. Only REAL AI clichés — legitimate broker language is NOT blocked.
 export const FORBIDDEN_PHRASES = [
   // === KRITISKA AI-ÖPPNINGAR (aldrig i riktig mäklartext) ===
   "välkommen till",
@@ -86,19 +85,6 @@ export const FORBIDDEN_PHRASES = [
   "ett smart val",
   "klok investering",
 
-  // === PASSIVA/BYRÅKRATISKA KONSTRUKTIONER (AI-stil) ===
-  "det kan konstateras",
-  "det bör nämnas",
-  "det ska tilläggas",
-  "värt att nämna",
-  "värt att notera",
-
-  // === ÖVERDRIVNA PLATS-BESKRIVNINGAR (AI-poetik) ===
-  "grön oas",
-  "en oas",
-  "en fristad",
-  "ett stenkast från",
-
   // === HEM-FILOSOFI (AI-emotionalitet) ===
   "inte bara ett hem",
   "mer än bara ett hem",
@@ -126,6 +112,15 @@ const BALANCED_EXEMPT = new Set([
   "bekvämt boende",
   "njutning av", "njut av",
   "förvaringsmöjligheter", "parkeringsmöjligheter",
+  // Accepted broker language from ACCEPTED_BROKER_LANGUAGE_EVIDENCE
+  "kommunikationer",
+  "smidig pendling",
+  "närhet till service",
+  "i mycket gott skick",
+  "gott om utrymme",
+  "ligger centralt i",
+  "det finns även",
+  "det finns också",
 ]);
 
 const SELLING_EXEMPT = new Set([

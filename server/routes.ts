@@ -361,7 +361,7 @@ function buildDeterministicFallbackDescription(disposition: any, style: WritingS
     if (outdoorType && outdoorDirection) {
       opening += `. Här bor du med ${outdoorType} i ${outdoorDirection.toLowerCase()} och en planlösning som tar vara på bostadens bästa kvaliteter.`;
     } else {
-      opening += `. Här möts funktion och trivsel i en bostad som lyfter fram sina starkaste kvaliteter redan från första steget in.`;
+      opening += `. Här möts funktion och trivsel i en välplanerad bostad med starka kvaliteter redan från första steget in.`;
     }
   } else if (style === "factual") {
     opening += `. ${propertyType.charAt(0).toUpperCase() + propertyType.slice(1)} med genomgående disponerade ytor.`;
