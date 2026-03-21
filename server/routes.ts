@@ -1148,120 +1148,160 @@ function stripPlatformDisallowedMainTextSentences(text: string, platform: string
   const blockedPatterns = PLATFORM_MAIN_TEXT_BLOCKLIST[(platform || "").toLowerCase()] || [];
   if (blockedPatterns.length === 0) return text;
 
-  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  const filtered = sentences.filter((sentence) => blockedPatterns.every((pattern) => !pattern.test(sentence)));
-  return filtered.length > 0 ? filtered.join(" ") : text;
+  // CRITICAL FIX: Preserve paragraph breaks (\n\n) while filtering sentences
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  
+  const processedParagraphs = paragraphs.map(paragraph => {
+    const sentences = paragraph.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    const filtered = sentences.filter((sentence) => blockedPatterns.every((pattern) => !pattern.test(sentence)));
+    return filtered.length > 0 ? filtered.join(" ") : "";
+  }).filter(Boolean);
+  
+  return processedParagraphs.length > 0 ? processedParagraphs.join("\n\n") : text;
 }
 
 function enforcePlatformMainTextHeuristics(text: string, platform: string, disposition?: any): string {
   if (!text) return text;
   if ((platform || "").toLowerCase() !== "hemnet") return text;
-  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  if (sentences.length === 0) return text;
+  
+  // CRITICAL FIX: Preserve paragraph breaks while processing
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  
+  const processedParagraphs = paragraphs.map((paragraph, idx) => {
+    // Only process first paragraph (opening)
+    if (idx !== 0) return paragraph;
+    
+    const sentences = paragraph.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    if (sentences.length === 0) return paragraph;
 
-  const firstSentence = sentences[0];
-  const hasTypeInOpening = /\b(villa|lägenhet|radhus|parhus|kedjehus|fritidshus|etta|tvåa|trea|fyra|femma)\b/i.test(firstSentence);
-  const hasSizeInOpening = /\b\d+\s*kvm\b/i.test(firstSentence);
-  const hasStrongOpeningSignal = /(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence);
-  const firstSentenceWordCount = firstSentence.split(/\s+/).filter(Boolean).length;
-  const openingLikelyAlreadyGood = hasStrongOpeningSignal && firstSentenceWordCount >= 8;
-  const shouldAttemptRewrite = (!hasTypeInOpening || !hasSizeInOpening) && !openingLikelyAlreadyGood;
-  if (!shouldAttemptRewrite) return text;
+    const firstSentence = sentences[0];
+    const hasTypeInOpening = /\b(villa|lägenhet|radhus|parhus|kedjehus|fritidshus|etta|tvåa|trea|fyra|femma)\b/i.test(firstSentence);
+    const hasSizeInOpening = /\b\d+\s*kvm\b/i.test(firstSentence);
+    const hasStrongOpeningSignal = /(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående)/i.test(firstSentence);
+    const firstSentenceWordCount = firstSentence.split(/\s+/).filter(Boolean).length;
+    const openingLikelyAlreadyGood = hasStrongOpeningSignal && firstSentenceWordCount >= 8;
+    const shouldAttemptRewrite = (!hasTypeInOpening || !hasSizeInOpening) && !openingLikelyAlreadyGood;
+    if (!shouldAttemptRewrite) return paragraph;
 
-  const property = disposition?.property || {};
-  const propertyType = normalizePropertyTypeLabel(property.type || disposition?.propertyType);
-  const numericSize = typeof property.size === "number"
-    ? property.size
-    : (typeof property.size === "string" ? Number((property.size.match(/\d+/) || [])[0]) : null);
-  if (!propertyType || !numericSize || Number.isNaN(numericSize)) return text;
+    const property = disposition?.property || {};
+    const propertyType = normalizePropertyTypeLabel(property.type || disposition?.propertyType);
+    const numericSize = typeof property.size === "number"
+      ? property.size
+      : (typeof property.size === "string" ? Number((property.size.match(/\d+/) || [])[0]) : null);
+    if (!propertyType || !numericSize || Number.isNaN(numericSize)) return paragraph;
 
-  const area = typeof disposition?.location?.area === "string" && disposition.location.area.trim()
-    ? disposition.location.area.trim()
-    : null;
+    const area = typeof disposition?.location?.area === "string" && disposition.location.area.trim()
+      ? disposition.location.area.trim()
+      : null;
 
-  const strengthCandidates = [
-    typeof property.preferred_outdoor_term === "string" ? property.preferred_outdoor_term : null,
-    Array.isArray(disposition?.unique_features) ? disposition.unique_features.find((item: unknown) => typeof item === "string" && item.trim().length > 0) : null,
-    typeof property.layout === "string" ? property.layout : null,
-  ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+    const strengthCandidates = [
+      typeof property.preferred_outdoor_term === "string" ? property.preferred_outdoor_term : null,
+      Array.isArray(disposition?.unique_features) ? disposition.unique_features.find((item: unknown) => typeof item === "string" && item.trim().length > 0) : null,
+      typeof property.layout === "string" ? property.layout : null,
+    ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 
-  const strength = strengthCandidates[0] || null;
-  const lead = `${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)} om ${numericSize} kvm${area ? ` i ${area}` : ""}${strength ? ` med ${strength}` : ""}.`;
-  sentences[0] = lead.replace(/\s{2,}/g, " ").trim();
-  return sentences.join(" ");
+    const strength = strengthCandidates[0] || null;
+    const lead = `${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)} om ${numericSize} kvm${area ? ` i ${area}` : ""}${strength ? ` med ${strength}` : ""}.`;
+    sentences[0] = lead.replace(/\s{2,}/g, " ").trim();
+    return sentences.join(" ");
+  });
+  
+  return processedParagraphs.join("\n\n");
 }
 
 function enforceOpeningStrengthByStyle(text: string, style: WritingStyle, disposition?: any): string {
   if (!text || style === "factual") return text;
-  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  if (sentences.length === 0) return text;
+  
+  // CRITICAL FIX: Preserve paragraph breaks while processing
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  
+  const processedParagraphs = paragraphs.map((paragraph, idx) => {
+    // Only process first paragraph (opening)
+    if (idx !== 0) return paragraph;
+    
+    const sentences = paragraph.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    if (sentences.length === 0) return paragraph;
 
-  const firstSentence = sentences[0];
-  const hasStrongSignal = /(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående|jacuzzi|köksö)/i.test(firstSentence);
-  const firstWordCount = firstSentence.split(/\s+/).filter(Boolean).length;
-  if (hasStrongSignal && firstWordCount >= 8) return text;
+    const firstSentence = sentences[0];
+    const hasStrongSignal = /(söderläge|västerläge|uteplats|terrass|balkong|utsikt|gård|kvällssol|lugn|renoverat kök|takhöjd|genomgående|jacuzzi|köksö)/i.test(firstSentence);
+    const firstWordCount = firstSentence.split(/\s+/).filter(Boolean).length;
+    if (hasStrongSignal && firstWordCount >= 8) return paragraph;
 
-  const property = disposition?.property || {};
-  const address = typeof property.address === "string" && property.address.trim().length > 0 ? property.address.trim() : "";
-  const propertyType = normalizePropertyTypeLabel(property.type || disposition?.propertyType) || "bostad";
-  const size = getNumericFact(property.size);
-  const preferredOutdoor = typeof property.preferred_outdoor_term === "string" ? property.preferred_outdoor_term.trim() : "";
-  const uniqueFeature = Array.isArray(disposition?.unique_features)
-    ? disposition.unique_features.find((item: unknown) => typeof item === "string" && item.trim().length > 0)
-    : null;
-  const layout = typeof property.layout === "string" && property.layout.trim().length > 0 ? property.layout.trim() : "";
-  const strongest = preferredOutdoor || (typeof uniqueFeature === "string" ? uniqueFeature.trim() : "") || layout;
-  if (!strongest) return text;
+    const property = disposition?.property || {};
+    const address = typeof property.address === "string" && property.address.trim().length > 0 ? property.address.trim() : "";
+    const propertyType = normalizePropertyTypeLabel(property.type || disposition?.propertyType) || "bostad";
+    const size = getNumericFact(property.size);
+    const preferredOutdoor = typeof property.preferred_outdoor_term === "string" ? property.preferred_outdoor_term.trim() : "";
+    const uniqueFeature = Array.isArray(disposition?.unique_features)
+      ? disposition.unique_features.find((item: unknown) => typeof item === "string" && item.trim().length > 0)
+      : null;
+    const layout = typeof property.layout === "string" && property.layout.trim().length > 0 ? property.layout.trim() : "";
+    const strongest = preferredOutdoor || (typeof uniqueFeature === "string" ? uniqueFeature.trim() : "") || layout;
+    if (!strongest) return paragraph;
 
-  const lead = `${address ? `${address}. ` : ""}${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)}${size ? ` om ${size} kvm` : ""} med ${strongest}.`
-    .replace(/\s{2,}/g, " ")
-    .trim();
-  if (!lead) return text;
+    const lead = `${address ? `${address}. ` : ""}${propertyType.charAt(0).toUpperCase()}${propertyType.slice(1)}${size ? ` om ${size} kvm` : ""} med ${strongest}.`
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    if (!lead) return paragraph;
 
-  sentences[0] = lead;
-  return sentences.join(" ").replace(/\s{2,}/g, " ").trim();
+    sentences[0] = lead;
+    return sentences.join(" ").replace(/\s{2,}/g, " ").trim();
+  });
+  
+  return processedParagraphs.join("\n\n");
 }
 
 function enforceLocationClosingQuality(text: string, platform: string, disposition?: any): string {
   if (!text) return text;
-  const sentences = text.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  if (sentences.length === 0) return text;
+  
+  // CRITICAL FIX: Preserve paragraph breaks while processing
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  
+  const processedParagraphs = paragraphs.map((paragraph, idx) => {
+    // Only process last paragraph (closing)
+    if (idx !== paragraphs.length - 1) return paragraph;
+    
+    const sentences = paragraph.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    if (sentences.length === 0) return paragraph;
 
-  const lastSentence = sentences[sentences.length - 1] || "";
-  const weakLocationEnding = /^\b(ica|coop|willys|hemköp|lidl|centrum|skola|förskola|resecentrum|centralstationen?|matbutik)\b/i.test(lastSentence)
-    || /^\b\d+\s*(meter|minuter)\b/i.test(lastSentence);
-  const alreadyContextual = /(promenad|buss|cykel|pendling|vardag|nära|kvarter|kommunikation)/i.test(lastSentence);
-  if (!weakLocationEnding || alreadyContextual) return text;
+    const lastSentence = sentences[sentences.length - 1] || "";
+    const weakLocationEnding = /^\b(ica|coop|willys|hemköp|lidl|centrum|skola|förskola|resecentrum|centralstationen?|matbutik)\b/i.test(lastSentence)
+      || /^\b\d+\s*(meter|minuter)\b/i.test(lastSentence);
+    const alreadyContextual = /(promenad|buss|cykel|pendling|vardag|nära|kvarter|kommunikation)/i.test(lastSentence);
+    if (!weakLocationEnding || alreadyContextual) return paragraph;
 
-  const location = disposition?.location || {};
-  const property = disposition?.property || {};
-  const transport = typeof (property.transport || location.transport) === "string" ? String(property.transport || location.transport).trim() : "";
-  const area = typeof location.area === "string" && location.area.trim().length > 0
-    ? location.area.trim()
-    : (typeof location.municipality === "string" ? location.municipality.trim() : "");
-  const amenities = Array.isArray(location.amenities)
-    ? location.amenities.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
-    : [];
-  const services = Array.isArray(location.services)
-    ? location.services.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
-    : [];
-  const nearby = [...amenities, ...services].slice(0, 1).map((item) => String(item).replace(/\s*\([^)]*\)\s*/g, "").trim()).filter(Boolean);
+    const location = disposition?.location || {};
+    const property = disposition?.property || {};
+    const transport = typeof (property.transport || location.transport) === "string" ? String(property.transport || location.transport).trim() : "";
+    const area = typeof location.area === "string" && location.area.trim().length > 0
+      ? location.area.trim()
+      : (typeof location.municipality === "string" ? location.municipality.trim() : "");
+    const amenities = Array.isArray(location.amenities)
+      ? location.amenities.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
+      : [];
+    const services = Array.isArray(location.services)
+      ? location.services.filter((item: unknown) => typeof item === "string" && item.trim().length > 0)
+      : [];
+    const nearby = [...amenities, ...services].slice(0, 1).map((item) => String(item).replace(/\s*\([^)]*\)\s*/g, "").trim()).filter(Boolean);
 
-  let improvedClosing = "";
-  if (area && transport) {
-    improvedClosing = `${area} ger smidig vardagslogistik med ${toLowerStart(transport)}.`;
-  } else if (transport) {
-    improvedClosing = `Kommunikationerna fungerar smidigt med ${toLowerStart(transport)}.`;
-  } else if (nearby.length > 0) {
-    improvedClosing = `I närområdet finns ${nearby[0]} som underlättar vardagen.`;
-  } else if ((platform || "").toLowerCase() === "booli") {
-    improvedClosing = "Läget fungerar väl i vardagen med närhet till service och kommunikationer.";
-  } else {
-    improvedClosing = "Läget ger en vardag med närhet till service och smidiga kommunikationer.";
-  }
+    let improvedClosing = "";
+    if (area && transport) {
+      improvedClosing = `${area} ger smidig vardagslogistik med ${toLowerStart(transport)}.`;
+    } else if (transport) {
+      improvedClosing = `Kommunikationerna fungerar smidigt med ${toLowerStart(transport)}.`;
+    } else if (nearby.length > 0) {
+      improvedClosing = `I närområdet finns ${nearby[0]} som underlättar vardagen.`;
+    } else if ((platform || "").toLowerCase() === "booli") {
+      improvedClosing = "Läget fungerar väl i vardagen med närhet till service och kommunikationer.";
+    } else {
+      improvedClosing = "Läget ger en vardag med närhet till service och smidiga kommunikationer.";
+    }
 
-  sentences[sentences.length - 1] = improvedClosing;
-  return sentences.join(" ").replace(/\s{2,}/g, " ").trim();
+    sentences[sentences.length - 1] = improvedClosing;
+    return sentences.join(" ").replace(/\s{2,}/g, " ").trim();
+  });
+  
+  return processedParagraphs.join("\n\n");
 }
 
 function shouldSkipFinalRescueRewrite(finalBrokerAudit: any, localScore: number): boolean {
@@ -1427,30 +1467,37 @@ async function finalizeMainMarketingText(
   let finalized = stripPlatformDisallowedMainTextSentences(sanitized, platform);
 
   if ((platform || "").toLowerCase() === "hemnet") {
-    const sentences = finalized.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    // CRITICAL FIX: Preserve paragraph breaks while filtering energiklass
+    const paragraphs = finalized.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
     
-    // För Hemnet: Filtrera bort energiklass helt (visas separat på Hemnet)
-    const filteredSentences = sentences.filter(sentence => {
-      const lower = sentence.toLowerCase();
-      return !(/energiklass(?:en)?\s+[a-g]/i.test(lower)) && !(/\bbostaden har energiklass\b/i.test(lower));
-    });
-    
-    const technicalSentences = filteredSentences.filter(sentence => {
+    const processedParagraphs = paragraphs.map(paragraph => {
+      const sentences = paragraph.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+      
+      // För Hemnet: Filtrera bort energiklass helt (visas separat på Hemnet)
+      const filteredSentences = sentences.filter(sentence => {
+        const lower = sentence.toLowerCase();
+        return !(/energiklass(?:en)?\s+[a-g]/i.test(lower)) && !(/\bbostaden har energiklass\b/i.test(lower));
+      });
+      
+      const technicalSentences = filteredSentences.filter(sentence => {
         const lower = sentence.toLowerCase();
         return /^fiber\s+är\s+installerat/i.test(lower) ||
                (/^uppvärmning sker via/i.test(lower) && sentence.split(/\s+/).length <= 8);
-    });
+      });
 
-    if (technicalSentences.length > 0) {
+      if (technicalSentences.length > 0) {
         const mainTextSentences = filteredSentences.filter((s) => !technicalSentences.includes(s));
         const technicalTail = technicalSentences
           .map((s) => s.replace(/^fiber\s+är\s+installerat/i, "Fiber är installerat").replace(/^uppvärmning sker via/i, "Uppvärmning sker via"))
           .join(". ")
           .replace(/\.\s*\./g, ".");
-        finalized = `${mainTextSentences.join(" ")} ${technicalTail}`.replace(/\s{2,}/g, " ").trim();
-    } else {
-        finalized = filteredSentences.join(" ");
-    }
+        return `${mainTextSentences.join(" ")} ${technicalTail}`.replace(/\s{2,}/g, " ").trim();
+      } else {
+        return filteredSentences.join(" ");
+      }
+    });
+    
+    finalized = processedParagraphs.join("\n\n");
   }
 
   finalized = enforcePlatformMainTextHeuristics(finalized, platform, disposition);
@@ -1664,29 +1711,42 @@ function reduceServiceNameListing(text: string): string {
 
 function applyProfessionalNarrativePolish(text: string, disposition?: any, style: WritingStyle = "balanced", platform: string = "hemnet"): string {
   if (!text) return text;
-  let updated = text;
-  updated = updated.replace(/\ben kombination som lätt att\b/gi, "en kombination som gör det lätt att");
-  updated = updated.replace(/\blätt att snabbt\b/gi, "lätt att");
-  updated = updated.replace(/\.\./g, ".");
-  const sentences = updated.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
-  const first = sentences[0] || "";
-  if (style !== "factual" && /^(villa|lägenhet|radhus|parhus|fritidshus)\s+om\s+\d+\s*kvm\b/i.test(first)) {
-    const hook = buildOpeningHookFromText(updated, disposition);
-    if (hook && !updated.startsWith(hook)) {
-      updated = `${hook} ${updated}`;
+  
+  // CRITICAL FIX: Preserve paragraph breaks while processing
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  
+  const processedParagraphs = paragraphs.map((paragraph, idx) => {
+    let updated = paragraph;
+    updated = updated.replace(/\ben kombination som lätt att\b/gi, "en kombination som gör det lätt att");
+    updated = updated.replace(/\blätt att snabbt\b/gi, "lätt att");
+    updated = updated.replace(/\.\./g, ".");
+    
+    // Only add hook to first paragraph
+    if (idx === 0) {
+      const sentences = updated.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+      const first = sentences[0] || "";
+      if (style !== "factual" && /^(villa|lägenhet|radhus|parhus|fritidshus)\s+om\s+\d+\s*kvm\b/i.test(first)) {
+        const hook = buildOpeningHookFromText(updated, disposition);
+        if (hook && !updated.startsWith(hook)) {
+          updated = `${hook} ${updated}`;
+        }
+      }
     }
-  }
-  updated = reduceServiceNameListing(updated);
-  if (style === "factual") {
-    updated = updated
-      .replace(/\bsätter tonen direkt\b/gi, "är en tydlig styrka")
-      .replace(/\bVardagen blir smidig med\b/gi, "I närområdet finns");
-  }
-  if ((platform || "").toLowerCase() === "hemnet") {
-    updated = updated.replace(/\benergiklass(?:en)?\s+[A-G]\b/gi, "");
-    updated = updated.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
-  }
-  return updated.replace(/\s{2,}/g, " ").trim();
+    
+    updated = reduceServiceNameListing(updated);
+    if (style === "factual") {
+      updated = updated
+        .replace(/\bsätter tonen direkt\b/gi, "är en tydlig styrka")
+        .replace(/\bVardagen blir smidig med\b/gi, "I närområdet finns");
+    }
+    if ((platform || "").toLowerCase() === "hemnet") {
+      updated = updated.replace(/\benergiklass(?:en)?\s+[A-G]\b/gi, "");
+      updated = updated.replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
+    }
+    return updated.replace(/\s{2,}/g, " ").trim();
+  });
+  
+  return processedParagraphs.join("\n\n");
 }
 
 function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingStyle = "balanced", platform?: string): string {
@@ -1854,10 +1914,15 @@ function cleanForbiddenPhrases(text: string, styleProfile?: any, style: WritingS
 function addParagraphs(text: string): string {
   if (!text) return text;
 
-  const normalized = text.replace(/\r\n/g, "\n").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
+  // CRITICAL FIX: If text already has paragraph breaks (from post-processor), preserve them!
   const existingParagraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-  if (existingParagraphs.length >= 2) return text;
+  if (existingParagraphs.length >= 3) {
+    // Text already has good paragraph structure - don't touch it!
+    return text;
+  }
 
+  // Only normalize and add paragraphs if text is missing them
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\n+/g, " ").replace(/\s{2,}/g, " ").trim();
   const sentences = normalized.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
   if (sentences.length < 4) return text;
 

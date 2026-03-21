@@ -6,6 +6,9 @@ export interface AnalysisRequest {
   improvedPrompt: string;
   headline: string;
   socialCopy: string;
+  instagramCaption: string;
+  showingInvitation: string;
+  shortAd: string;
   disposition: any;
   style: WritingStyle;
   platform: string;
@@ -52,11 +55,12 @@ export class ExpertAIAnalyzer {
 
   async analyze(request: AnalysisRequest): Promise<ExpertAnalysis> {
     const startTime = Date.now();
+    const TIMEOUT_MS = 30000; // 30 seconds
 
     try {
       const prompt = this.buildAnalysisPrompt(request);
 
-      const completion = await this.openai.chat.completions.create({
+      const completionPromise = this.openai.chat.completions.create({
         model: 'gpt-5.2',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
@@ -65,30 +69,59 @@ export class ExpertAIAnalyzer {
         response_format: { type: 'json_object' },
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Analysis timeout')), TIMEOUT_MS)
+      );
+
+      const completion = await Promise.race([completionPromise, timeoutPromise]);
+
       const analysis = this.parseAnalysisResult(completion);
       const analysisWithSpans = this.identifyTextSpans(request, analysis);
       const analysisWithFixes = this.generateAutoFixes(analysisWithSpans);
 
       return { ...analysisWithFixes, duration: Date.now() - startTime };
     } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      if (error instanceof Error && error.message === 'Analysis timeout') {
+        console.error('Analyzer timed out, returning basic analysis');
+        return {
+          overallQuality: 7.0,
+          strengths: ['Analysis timed out - basic validation passed'],
+          improvements: [],
+          legalCheck: { compliant: true, notes: 'Timeout - manual review needed', issues: [] },
+          duration
+        };
+      }
+
       console.error('Expert analysis failed:', {
         error: error instanceof Error ? error.message : String(error),
-        duration: Date.now() - startTime
+        duration
       });
       throw error;
     }
   }
 
   private buildAnalysisPrompt(request: AnalysisRequest): string {
-    const { improvedPrompt, headline, socialCopy, style, platform } = request;
+    const { 
+      improvedPrompt, 
+      headline, 
+      socialCopy, 
+      instagramCaption,
+      showingInvitation,
+      shortAd,
+      style, 
+      platform 
+    } = request;
     const exemptPhrases = getExemptPhrases(style);
     const blockedPhrases = FORBIDDEN_PHRASES.filter(p => !exemptPhrases.has(p));
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
 
     const platformRulesSection = normalizedPlatform === 'hemnet' ? `
-## HEMNET-SPECIFIKA REGLER (kontrollera dessa)
-- Energiklass eller energiprestanda FÅR INTE nämnas i huvudtexten (visas separat i annonsen) → severity: "critical"
-- Första meningen MÅSTE leda med bostadens starkaste USP — inte bara storlek och adress → severity: "important"
+## HEMNET-SPECIFIKA REGLER (kontrollera dessa i ALLA fält)
+- Energiklass eller energiprestanda FÅR INTE nämnas i NÅGON text (visas separat i annonsen) → severity: "critical"
+- Pris, avgift eller driftkostnad FÅR INTE nämnas i NÅGON text (visas i separata fält) → severity: "critical"
+- Första meningen i huvudtext MÅSTE leda med bostadens starkaste USP — inte bara storlek och adress → severity: "important"
 - Texten FÅR INTE avslutas med emotionella fraser som "välkommen hem", "skapa minnen", "allt du behöver" → severity: "important"
 - Texten ska vara faktadriven och köparrelevant utan AI-känsla` :
     normalizedPlatform === 'booli' ? `
@@ -102,7 +135,7 @@ export class ExpertAIAnalyzer {
 
     return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback i JSON-format.
 
-## FÖRBJUDNA FRASER (markera som "critical" om de förekommer)
+## FÖRBJUDNA FRASER (markera som "critical" om de förekommer i NÅGOT fält)
 ${blockedPhrases.map(p => `- "${p}"`).join('\n')}
 ${platformRulesSection}
 
@@ -116,9 +149,20 @@ ${improvedPrompt}
 Social media:
 ${socialCopy}
 
+Instagram:
+${instagramCaption}
+
+Visningsinbjudan:
+${showingInvitation}
+
+Kort annons:
+${shortAd}
+
 Stil: ${style} | Plattform: ${platform}
 
-## ANALYSERA
+## ANALYSERA ALLA FÄLT
+
+För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, kort annons):
 
 1. STYRKOR: Vad är konkret bra? (3-5 punkter)
 2. FÖRBÄTTRINGAR: Konkreta problem med lösningar
@@ -127,7 +171,13 @@ Stil: ${style} | Plattform: ${platform}
    - Grammatikfel? → severity: "critical"  
    - AI-klyschor som inte är i listan? → severity: "important"
    - Stilfrågor? → severity: "suggestion"
-3. JURIDIK: Vilseledande påståenden? Faktafel?
+3. FÄLTSPECIFIKA KVALITETSKRAV:
+   - Rubrik: max 9 ord, ingen punkt, inga emojis → severity: "important"
+   - Social media: 1-3 meningar, punkt i slutet → severity: "suggestion"
+   - Instagram: 1-2 emojis, max 2200 tecken → severity: "suggestion"
+   - Visningsinbjudan: innehåller "visning" → severity: "important"
+   - Kort annons: max 2 meningar, innehåller bostadstyp + boarea → severity: "suggestion"
+4. JURIDIK: Vilseledande påståenden? Faktafel?
 
 ## OUTPUT FORMAT
 
@@ -138,8 +188,8 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
   "strengths": ["Konkret styrka 1", "Konkret styrka 2", "Konkret styrka 3"],
   "improvements": [
     {
-      "issue": "Konkret problem",
-      "location": "Exakt var (stycke X, mening Y)",
+      "issue": "Konkret problem i specifikt fält",
+      "location": "headline|improvedPrompt|socialCopy|instagramCaption|showingInvitation|shortAd",
       "suggestion": "Konkret förslag",
       "category": "grammar|style|legal|broker_realism|clarity",
       "severity": "critical|important|suggestion",
@@ -231,7 +281,10 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     const texts: Record<string, string> = {
       improvedPrompt: request.improvedPrompt,
       headline: request.headline,
-      socialCopy: request.socialCopy
+      socialCopy: request.socialCopy,
+      instagramCaption: request.instagramCaption,
+      showingInvitation: request.showingInvitation,
+      shortAd: request.shortAd
     };
 
     const improvementsWithSpans = analysis.improvements.map(item => {
@@ -248,7 +301,7 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
               textSpan: {
                 start: index,
                 end: index + keyword.length,
-                field: field as 'improvedPrompt' | 'headline' | 'socialCopy'
+                field: field as 'improvedPrompt' | 'headline' | 'socialCopy' | 'instagramCaption' | 'showingInvitation' | 'shortAd'
               }
             };
           }

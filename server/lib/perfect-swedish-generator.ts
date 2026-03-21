@@ -22,8 +22,18 @@ export interface GenerationResult {
   tokensUsed: number;
 }
 
+export class GeneratorValidationError extends Error {
+  constructor(
+    public violations: string[],
+    public generatedOutput: Omit<GenerationResult, 'duration' | 'tokensUsed'>
+  ) {
+    super(`Generator validation failed: ${violations.join(', ')}`);
+    this.name = 'GeneratorValidationError';
+  }
+}
+
 export class SmartGenerationEngine {
-  private readonly PROMPT_VERSION = '2.6.0';
+  private readonly PROMPT_VERSION = '2.9.0';
   private _openai: OpenAI | null = null;
 
   private get openai(): OpenAI {
@@ -55,6 +65,10 @@ export class SmartGenerationEngine {
       });
 
       const result = this.extractResult(completion);
+      
+      // Validate generated output before returning
+      this.validateGeneratedOutput(result, request.platform);
+      
       const duration = Date.now() - startTime;
 
       return {
@@ -90,11 +104,123 @@ export class SmartGenerationEngine {
     const brokerPolicy = buildBrokerLanguagePolicyPrompt(style, platform);
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
 
+    // Auxiliary field rules based on platform
+    const auxiliaryFieldRules = normalizedPlatform === 'hemnet' ? `
+## AUXILIARY FIELDS - HEMNET RULES
+
+### Headline (rubrik)
+- Max 9 ord
+- INGEN punkt eller utropstecken i slutet
+- INGA emojis
+- NÄMN INTE pris, avgift eller energiklass
+- Fokusera på bostadens starkaste USP
+- Exempel: "Helrenoverad trea med balkong i söderläge"
+
+### Social Copy
+- 1-3 meningar
+- Avsluta med punkt
+- NÄMN INTE pris, avgift eller energiklass
+- Säljande men saklig ton
+- Kan avsluta med "Läs mer i annonsen."
+- Exempel: "Helrenoverat kök 2022 och södervända balkongen ger denna 3:a på Södermalm ett tydligt övertag. Läs mer i annonsen."
+
+### Instagram Caption
+- 1-2 relevanta emojis (INTE fler)
+- Max 2200 tecken
+- NÄMN INTE pris, avgift eller energiklass
+- Varm och mänsklig ton
+- Avsluta med korrekt sluttecken (. ! ?)
+- Exempel: "Helrenoverat kök med köksö och södervända balkongen 🌞 Perfekt för den som söker ljus och trivsel på Södermalm."
+
+### Showing Invitation (visningsinbjudan)
+- MÅSTE innehålla ordet "visning"
+- 1-2 meningar
+- Professionell och trevlig ton
+- NÄMN INTE pris, avgift eller energiklass
+- Kan innehålla placeholders: [TID], [KONTAKT]
+- Exempel: "Välkommen på visning [TID]. Kontakta [KONTAKT] för mer information."
+
+### Short Ad (kort annons)
+- Max 2 meningar
+- MÅSTE innehålla bostadstyp och boarea
+- 2 konkreta styrkor
+- NÄMN INTE pris, avgift eller energiklass
+- Säljande men faktabaserad
+- Exempel: "3:a om 72 kvm med helrenoverat kök 2022 och södervända balkongen. Södermalm med 5 min till tunnelbanan."
+` : normalizedPlatform === 'booli' ? `
+## AUXILIARY FIELDS - BOOLI RULES
+
+### Headline (rubrik)
+- Max 9 ord
+- INGEN punkt eller utropstecken i slutet
+- INGA emojis
+- Pris/avgift KAN nämnas om relevant
+- Fokusera på bostadens starkaste USP
+
+### Social Copy
+- 1-3 meningar
+- Avsluta med punkt
+- Pris/avgift KAN nämnas om relevant
+- Säljande men saklig ton
+- Kan avsluta med "Läs mer i annonsen."
+
+### Instagram Caption
+- 1-2 relevanta emojis (INTE fler)
+- Max 2200 tecken
+- Pris/avgift KAN nämnas om relevant
+- Varm och mänsklig ton
+- Avsluta med korrekt sluttecken (. ! ?)
+
+### Showing Invitation (visningsinbjudan)
+- MÅSTE innehålla ordet "visning"
+- 1-2 meningar
+- Professionell och trevlig ton
+- Kan innehålla placeholders: [TID], [KONTAKT]
+
+### Short Ad (kort annons)
+- Max 2 meningar
+- MÅSTE innehålla bostadstyp och boarea
+- 2 konkreta styrkor
+- Pris/avgift KAN nämnas om relevant (format: "Avgift 4 500 kr/mån")
+- Säljande men faktabaserad
+` : `
+## AUXILIARY FIELDS - GENERAL RULES
+
+### Headline (rubrik)
+- Max 9 ord
+- INGEN punkt eller utropstecken i slutet
+- INGA emojis
+- Fokusera på bostadens starkaste USP
+
+### Social Copy
+- 1-3 meningar
+- Avsluta med punkt
+- Säljande men saklig ton
+
+### Instagram Caption
+- 1-2 relevanta emojis (INTE fler)
+- Max 2200 tecken
+- Varm och mänsklig ton
+- Avsluta med korrekt sluttecken (. ! ?)
+
+### Showing Invitation (visningsinbjudan)
+- MÅSTE innehålla ordet "visning"
+- 1-2 meningar
+- Professionell och trevlig ton
+
+### Short Ad (kort annons)
+- Max 2 meningar
+- MÅSTE innehålla bostadstyp och boarea
+- 2 konkreta styrkor
+- Säljande men faktabaserad
+`;
+
     const platformStructureRules = normalizedPlatform === 'hemnet' ? `
 ## HEMNET: REGLER OCH STYCKESTRUKTUR
 
 ### Plattformsregler
 - NÄMN INTE energiklass eller energiprestanda — det visas separat i annonsen
+- NÄMN ALDRIG pris, utgångspris, avgift eller driftkostnad — det visas i separata fält på Hemnet
 - Avsluta ALDRIG med emotionella fraser som "välkommen hem", "skapa minnen", "allt du behöver"
 - Texten ska vara faktadriven och köparrelevant — ingen AI-känsla
 
@@ -114,8 +240,9 @@ Antal sovrum och deras storlek/funktion. Badrum: år för renovering, material, 
 STYCKE 4 — UTEMILJÖ (1–2 meningar, utelämna om ej relevant)
 Balkong/uteplats/tomt: väderstreck, storlek, material, utsikt. Gemensamma ytor: gård, cykelförråd, tvättstuga.
 
-STYCKE 5 — LÄGE, KOMMUNIKATIONER, EKONOMI (2–3 meningar)
-Konkret lägesbeskrivning: gatunamn, stadsdel, avstånd i minuter till tunnelbana/pendeltåg/spårvagn. Nearby: matbutik, skola, park — med namn. Avsluta med avgift och ev. driftkostnad.` :
+STYCKE 5 — LÄGE OCH KOMMUNIKATIONER (2–3 meningar)
+Konkret lägesbeskrivning: gatunamn, stadsdel, avstånd i minuter till tunnelbana/pendeltåg/spårvagn. Nearby: matbutik, skola, park — med namn.
+VIKTIGT: NÄMN INTE pris, avgift eller driftkostnad — det visas i separata fält på Hemnet.` :
     normalizedPlatform === 'booli' ? `
 ## BOOLI: REGLER OCH STYCKESTRUKTUR
 
@@ -159,6 +286,9 @@ STYCKE 5 — LÄGE OCH EKONOMI (2–3 meningar)
 Läge, kommunikationer, avgift/driftkostnad.`;
 
     return `Du är en erfaren svensk mäklare med 15 års erfarenhet av att skriva bostadsannonser. Du är EXTREMT noggrann med svensk grammatik och stavning.
+
+${auxiliaryFieldRules}
+
 ${platformStructureRules}
 
 ## FÖRBJUDNA FRASER (använd ALDRIG dessa)
@@ -296,6 +426,93 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
     } catch (error) {
       console.error('Failed to parse OpenAI response:', content);
       throw new Error('Invalid JSON response from OpenAI');
+    }
+  }
+
+  /**
+   * Validates generated output against platform rules and field-specific quality requirements.
+   * Throws GeneratorValidationError if violations are found.
+   */
+  private validateGeneratedOutput(
+    result: Omit<GenerationResult, 'duration' | 'tokensUsed'>,
+    platform: string
+  ): void {
+    const violations: string[] = [];
+    const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
+
+    // Platform-specific validation (Hemnet)
+    if (normalizedPlatform === 'hemnet') {
+      const pricePattern = /\b(pris|avgift|driftkostnad|kr\/mån|utgångspris|kronor|SEK)\b/gi;
+      const energyPattern = /\b(energiklass|energiprestanda)\b/gi;
+
+      const fields: Array<keyof typeof result> = [
+        'improvedPrompt',
+        'headline',
+        'socialCopy',
+        'instagramCaption',
+        'showingInvitation',
+        'shortAd'
+      ];
+
+      for (const field of fields) {
+        const text = result[field];
+        if (typeof text !== 'string') continue;
+
+        const priceMatches = text.match(pricePattern);
+        if (priceMatches) {
+          violations.push(`${field} contains price/fee: "${priceMatches[0]}" (Hemnet violation)`);
+        }
+
+        const energyMatches = text.match(energyPattern);
+        if (energyMatches) {
+          violations.push(`${field} contains energiklass: "${energyMatches[0]}" (Hemnet violation)`);
+        }
+      }
+    }
+
+    // Field-specific validation
+    
+    // Headline: max 9 words, no trailing punctuation, no emojis
+    const headlineWords = result.headline.split(/\s+/).filter(w => w.length > 0).length;
+    if (headlineWords > 9) {
+      violations.push(`headline has ${headlineWords} words (max 9)`);
+    }
+
+    if (/[.!?]$/.test(result.headline)) {
+      violations.push(`headline has trailing punctuation`);
+    }
+
+    const emojiPattern = /[\u{1F300}-\u{1F9FF}]/gu;
+    if (emojiPattern.test(result.headline)) {
+      violations.push(`headline contains emojis`);
+    }
+
+    // Showing invitation: must contain "visning"
+    if (!/visning/i.test(result.showingInvitation)) {
+      violations.push(`showingInvitation missing word "visning"`);
+    }
+
+    // Instagram caption: max 2 emojis
+    const instagramEmojis = result.instagramCaption.match(emojiPattern) || [];
+    if (instagramEmojis.length > 2) {
+      violations.push(`instagramCaption has ${instagramEmojis.length} emojis (max 2)`);
+    }
+
+    // Instagram caption: max 2200 characters
+    if (result.instagramCaption.length > 2200) {
+      violations.push(`instagramCaption has ${result.instagramCaption.length} characters (max 2200)`);
+    }
+
+    // If violations found, log and throw
+    if (violations.length > 0) {
+      console.error('[GENERATOR_VALIDATION_FAILED]', {
+        platform: normalizedPlatform,
+        violations,
+        timestamp: new Date().toISOString(),
+        fields: Object.keys(result)
+      });
+
+      throw new GeneratorValidationError(violations, result);
     }
   }
 }

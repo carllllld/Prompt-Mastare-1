@@ -84,6 +84,8 @@ export class DeterministicPostProcessor {
       result = this.enforceParagraphBreaks(result, transformations);
       result = this.applyFormatting(result, transformations);
       result = this.removeForbiddenPhrases(result, request.style, transformations);
+      result = this.removePlatformForbiddenPatterns(result, request.platform, transformations);
+      result = this.enforceFieldQualityRules(result, transformations);
       result = this.normalizeSwedishCharacters(result, transformations);
       result = this.generalizeAndDeduplicate(result, transformations);
       result = this.checkNarrativeIntegrity(result, transformations);
@@ -257,6 +259,135 @@ export class DeterministicPostProcessor {
       }
 
       result[field] = text.replace(/\s{2,}/g, ' ').trim();
+    }
+
+    return result;
+  }
+
+  /**
+   * Removes platform-forbidden patterns from all fields.
+   * For Hemnet: removes price/fee/energiklass references.
+   * For Booli/General: allows these references.
+   */
+  private removePlatformForbiddenPatterns(
+    request: PostProcessRequest,
+    platform: string,
+    transformations: Transformation[]
+  ): PostProcessRequest {
+    const result = { ...request };
+    const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
+
+    // Only Hemnet has strict forbidden patterns
+    if (normalizedPlatform !== 'hemnet') {
+      return result;
+    }
+
+    // Hemnet-forbidden patterns
+    const pricePattern = /\b(pris|utgångspris|avgift|driftkostnad|kr\/mån|kronor|SEK)\b/gi;
+    const energyPattern = /\b(energiklass|energiprestanda|energiklass\s+[A-G])\b/gi;
+
+    for (const field of TEXT_FIELDS) {
+      let text = result[field];
+      const originalText = text;
+
+      // Remove price/fee references
+      const priceMatches = text.match(pricePattern);
+      if (priceMatches) {
+        text = text.replace(pricePattern, '');
+        priceMatches.forEach(match =>
+          transformations.push({
+            type: 'forbidden_phrase',
+            field,
+            before: match,
+            after: '',
+          })
+        );
+      }
+
+      // Remove energiklass references
+      const energyMatches = text.match(energyPattern);
+      if (energyMatches) {
+        text = text.replace(energyPattern, '');
+        energyMatches.forEach(match =>
+          transformations.push({
+            type: 'forbidden_phrase',
+            field,
+            before: match,
+            after: '',
+          })
+        );
+      }
+
+      // Clean up extra spaces and update result
+      if (text !== originalText) {
+        result[field] = text.replace(/\s{2,}/g, ' ').trim();
+      }
+    }
+
+    // Log violations found
+    const violationsByField = transformations
+      .filter(t => t.type === 'forbidden_phrase' && (
+        /\b(pris|avgift|energiklass)/i.test(t.before)
+      ))
+      .reduce((acc, t) => {
+        acc[t.field] = (acc[t.field] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+    if (Object.keys(violationsByField).length > 0) {
+      console.warn('[PLATFORM_VIOLATIONS_REMOVED]', {
+        platform: normalizedPlatform,
+        violationsByField,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Enforces field-specific quality rules:
+   * - Headline: remove trailing punctuation (already done in applyFormatting)
+   * - Social Copy: ensure it ends with period
+   * - Instagram Caption: limit to max 2 emojis
+   */
+  private enforceFieldQualityRules(
+    request: PostProcessRequest,
+    transformations: Transformation[]
+  ): PostProcessRequest {
+    const result = { ...request };
+
+    // Social Copy: ensure it ends with period
+    if (result.socialCopy && !/[.!?]$/.test(result.socialCopy)) {
+      const before = result.socialCopy;
+      result.socialCopy = result.socialCopy + '.';
+      transformations.push({
+        type: 'formatting',
+        field: 'socialCopy',
+        before: 'Missing period',
+        after: 'Added period'
+      });
+    }
+
+    // Instagram Caption: limit emojis to 2
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]/gu;
+    const emojis = result.instagramCaption.match(emojiRegex) || [];
+    if (emojis.length > 2) {
+      // Remove excess emojis (keep first 2)
+      let count = 0;
+      result.instagramCaption = result.instagramCaption.replace(
+        emojiRegex,
+        (match) => {
+          count++;
+          return count <= 2 ? match : '';
+        }
+      );
+      transformations.push({
+        type: 'formatting',
+        field: 'instagramCaption',
+        before: `${emojis.length} emojis`,
+        after: '2 emojis (removed excess)'
+      });
     }
 
     return result;
