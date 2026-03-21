@@ -211,6 +211,28 @@ export const optimizeResponseSchema = z.object({
     violationCount: z.number().nullable().optional(),
     candidateLabel: z.string().nullable().optional(),
   }).optional(),
+  expertAnalysis: z.object({
+    overallQuality: z.number(),
+    strengths: z.array(z.string()),
+    improvements: z.array(z.object({
+      id: z.string(),
+      issue: z.string(),
+      location: z.string(),
+      textSpan: z.object({ start: z.number(), end: z.number(), field: z.string() }).optional(),
+      suggestion: z.string(),
+      category: z.enum(['grammar', 'style', 'legal', 'broker_realism', 'clarity']),
+      severity: z.enum(['critical', 'important', 'suggestion']),
+      expert: z.enum(['broker', 'lawyer']),
+      actionable: z.boolean(),
+      autoFix: z.string().optional(),
+    })),
+    legalCheck: z.object({
+      compliant: z.boolean(),
+      notes: z.string(),
+      issues: z.array(z.string()),
+    }),
+    duration: z.number(),
+  }).optional(),
 });
 
 export const optimizeErrorSchema = z.object({

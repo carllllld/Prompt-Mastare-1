@@ -23,7 +23,7 @@ export interface GenerationResult {
 }
 
 export class SmartGenerationEngine {
-  private readonly PROMPT_VERSION = '2.2.0';
+  private readonly PROMPT_VERSION = '2.4.0';
   private _openai: OpenAI | null = null;
 
   private get openai(): OpenAI {
@@ -91,19 +91,72 @@ export class SmartGenerationEngine {
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
 
     const platformStructureRules = normalizedPlatform === 'hemnet' ? `
-## HEMNET-SPECIFIKA REGLER
-- NÄMN INTE energiklass eller energiprestanda i huvudtexten — det visas separat i annonsen
-- Första meningen MÅSTE leda med bostadens starkaste USP (balkong, renovering, läge, utsikt) — INTE bara storlek och adress
-- Avsluta med konkret läges- eller vardagsnytta — INTE emotionella fraser som "välkommen hem" eller "skapa minnen"
-- Texten ska läsas som publicerad Hemnet-annons: faktadriven, köparrelevant, utan AI-känsla` :
+## HEMNET: REGLER OCH STYCKESTRUKTUR
+
+### Plattformsregler
+- NÄMN INTE energiklass eller energiprestanda — det visas separat i annonsen
+- Avsluta ALDRIG med emotionella fraser som "välkommen hem", "skapa minnen", "allt du behöver"
+- Texten ska vara faktadriven och köparrelevant — ingen AI-känsla
+
+### Obligatorisk styckestruktur (4–5 stycken, tomrad mellan varje)
+
+STYCKE 1 — USP-ÖPPNING (1–2 meningar)
+Börja med bostadens starkaste säljargument: renovering, balkong med väderstreck, utsikt, läge, ovanlig planlösning.
+INTE: "Välkommen till denna fina lägenhet om 3 rok och 72 kvm."
+RÄTT: "Helrenoverat kök 2022 med köksö och södervända balkongen ger den här 3:an på Södermalm ett tydligt övertag."
+
+STYCKE 2 — PLANLÖSNING, KÖK, VARDAGSRUM (2–4 meningar)
+Beskriv hur rummen hänger ihop, flödet i bostaden. Kök: material, vitvaror, bänkyta, förvaring. Vardagsrum: storlek, ljusinsläpp, utgång till balkong/uteplats.
+
+STYCKE 3 — SOVRUM, BADRUM, TEKNIK (2–3 meningar)
+Antal sovrum och deras storlek/funktion. Badrum: år för renovering, material, golvvärme, dusch/badkar. Teknik: värmesystem, ventilation, laddplats om relevant.
+
+STYCKE 4 — UTEMILJÖ (1–2 meningar, utelämna om ej relevant)
+Balkong/uteplats/tomt: väderstreck, storlek, material, utsikt. Gemensamma ytor: gård, cykelförråd, tvättstuga.
+
+STYCKE 5 — LÄGE, KOMMUNIKATIONER, EKONOMI (2–3 meningar)
+Konkret lägesbeskrivning: gatunamn, stadsdel, avstånd i minuter till tunnelbana/pendeltåg/spårvagn. Nearby: matbutik, skola, park — med namn. Avsluta med avgift och ev. driftkostnad.` :
     normalizedPlatform === 'booli' ? `
-## BOOLI-SPECIFIKA REGLER
-- Mer berättande ton tillåten men fakta måste förbli konkreta och verifierbara
-- Energiklass kan nämnas om det är relevant (t.ex. energiklass A eller B som säljargument)
-- Första meningen ska fånga det unika med bostaden` : `
-## STRUKTURREGLER
-- Skriv löpande objektbeskrivning — inte en faktalista
-- Fakta ska vara konkreta och verifierbara`;
+## BOOLI: REGLER OCH STYCKESTRUKTUR
+
+### Plattformsregler
+- Något mer berättande ton tillåten men fakta måste förbli konkreta och verifierbara
+- Energiklass kan nämnas om det är ett säljargument (t.ex. energiklass A eller B)
+- Personlig röst tillåten men undvik klichéer
+
+### Obligatorisk styckestruktur (4–5 stycken, tomrad mellan varje)
+
+STYCKE 1 — ÖPPNING MED KARAKTÄR (1–3 meningar)
+Fånga det unika med bostaden. Får vara något mer berättande än Hemnet men måste fortfarande vara konkret.
+RÄTT: "På fjärde våningen med fri utsikt över Riddarfjärden ligger den här 4:an — renoverad 2021 med bibehållen 1920-talskaraktär."
+
+STYCKE 2 — PLANLÖSNING, KÖK, VARDAGSRUM (2–4 meningar)
+Beskriv rummens sammanhang och flöde. Kök: material, vitvaror, köksö om finns. Vardagsrum: storlek, ljus, utgång till balkong.
+
+STYCKE 3 — SOVRUM, BADRUM, TEKNIK (2–3 meningar)
+Sovrum: antal, storlek, funktion (garderob, arbetsrum). Badrum: renovering, material, golvvärme. Teknik: värmesystem, FTX-ventilation, laddplats.
+
+STYCKE 4 — UTEMILJÖ (1–2 meningar, utelämna om ej relevant)
+Balkong/uteplats/tomt med väderstreck och storlek. Gemensamma ytor och förmåner.
+
+STYCKE 5 — LÄGE OCH EKONOMI (2–3 meningar)
+Stadsdel och konkret avstånd till kollektivtrafik. Nearby med namn. Avgift och driftkostnad.` : `
+## STYCKESTRUKTUR (4–5 stycken, tomrad mellan varje)
+
+STYCKE 1 — ÖPPNING (1–3 meningar)
+Bostadens starkaste argument. Friare ton tillåten.
+
+STYCKE 2 — PLANLÖSNING OCH KÖK (2–4 meningar)
+Rummens sammanhang, kök med material och vitvaror.
+
+STYCKE 3 — SOVRUM, BADRUM, TEKNIK (2–3 meningar)
+Sovrum, badrum med detaljer, tekniska system.
+
+STYCKE 4 — UTEMILJÖ (1–2 meningar om relevant)
+Balkong, uteplats, tomt eller trädgård.
+
+STYCKE 5 — LÄGE OCH EKONOMI (2–3 meningar)
+Läge, kommunikationer, avgift/driftkostnad.`;
 
     return `Du är en erfaren svensk mäklare med 15 års erfarenhet av att skriva bostadsannonser. Du är EXTREMT noggrann med svensk grammatik och stavning.
 ${platformStructureRules}
@@ -154,7 +207,8 @@ Innan du svarar, kontrollera:
 1. Har jag använt NÅGON av de förbjudna fraserna? → Ta bort dem
 2. Är stavningen korrekt?
 3. Finns det punkter mitt i meningar (före ortsnamn, varumärken, beteckningar)? → Ta bort dem
-4. Låter det som en riktig mäklare skrev det?
+4. Är texten uppdelad i rätt antal stycken med tomrad mellan varje? → Kontrollera styckestrukturen ovan
+5. Låter det som en riktig mäklare skrev det?
 
 ## EXEMPEL PÅ PERFEKT SVENSKA
 
