@@ -6,7 +6,7 @@ import { shouldBlockPhraseForStyle, countEvidenceBackedBlockedPhrases } from '..
 
 function makeResult(overrides: Record<string, string> = {}) {
   return {
-    improvedPrompt: overrides.improvedPrompt ?? 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med smidig pendling till city. Bra läge med närhet till service och grönområden.',
+    improvedPrompt: overrides.improvedPrompt ?? 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil och välskött. Kommunikationer nås enkelt med smidig pendling till city. Bra läge med närhet till service och grönområden.',
     headline: overrides.headline ?? 'Välplanerad trea med balkong',
     socialCopy: overrides.socialCopy ?? 'Fin lägenhet med balkong i söderläge.',
     instagramCaption: overrides.instagramCaption ?? 'Ny lägenhet ute! 🏡',
@@ -149,7 +149,7 @@ describe('Validation: monoton meningsstart', () => {
   });
 
   it('should exempt "brf" from monoton check', () => {
-    const sentences = Array(12).fill('BRF Storgatan har låg avgift.').join(' ');
+    const sentences = Array(12).fill('BRF Storgatan är välskött.').join(' ');
     const violations = findRuleViolations(sentences, 'hemnet', 'balanced');
     // "brf" is in exempt list
     expect(violations.some(v => v.includes('"brf"'))).toBe(false);
@@ -215,7 +215,7 @@ describe('validateOptimizationResult', () => {
 
   it('should flag mixed outdoor terminology', () => {
     const result = makeResult({
-      improvedPrompt: 'Lägenheten har en balkong och en terrass och en altan med uteplats. Det är en fin bostad med bra läge och goda kommunikationer. Föreningen är stabil med låg avgift och bra ekonomi. Köket är renoverat och badrummet är helkaklat med modern inredning.',
+      improvedPrompt: 'Lägenheten har en balkong och en terrass och en altan med uteplats. Det är en fin bostad med bra läge och goda kommunikationer. Föreningen är stabil och välskött med bra ekonomi. Köket är renoverat och badrummet är helkaklat med modern inredning.',
     });
     const violations = validateOptimizationResult(result, 'hemnet');
     expect(violations.some(v => v.includes('uteplatsterminologi'))).toBe(true);

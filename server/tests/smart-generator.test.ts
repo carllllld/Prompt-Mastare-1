@@ -177,7 +177,7 @@ describe('10.1 SmartGenerationEngine', () => {
           // aux fields missing — generator should default to empty strings
           socialCopy: '',
           instagramCaption: '',
-          showingInvitation: '',
+          showingInvitation: 'Välkommen på visning.',
           shortAd: '',
         }) } }],
         usage: { total_tokens: 200 },

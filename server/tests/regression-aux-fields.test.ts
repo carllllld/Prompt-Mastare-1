@@ -26,7 +26,7 @@ vi.mock('openai', () => ({
               choices: [{
                 message: {
                   content: JSON.stringify({
-                    improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil med låg avgift. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service.',
+                    improvedPrompt: 'Storgatan 12 är en välplanerad trea om 75 kvm med balkong i söderläge. Lägenheten har renoverat kök och helkaklat badrum. Föreningen är stabil och välskött. Kommunikationer nås enkelt med tunnelbana. Bra läge med närhet till service.',
                     headline: 'Välplanerad trea med balkong',
                     socialCopy: 'Välplanerad lägenhet med öppet kök och balkong i söderläge.',
                     instagramCaption: 'Ljus 3:a i Stockholm 🏠 Balkong i söderläge ☀️',

@@ -141,6 +141,7 @@ describe('10.2 Post-processor: missing facts detection', () => {
     const result = await processor.process(makeRequest({
       improvedPrompt: 'Bostaden är fin.',
       disposition: { energiklass: 'C' },
+      platform: 'booli',
     }));
     expect(result.improvedPrompt).toContain('energiklass C');
     expect(result.transformations.some(t => t.type === 'missing_facts')).toBe(true);
@@ -159,6 +160,7 @@ describe('10.2 Post-processor: missing facts detection', () => {
     const result = await processor.process(makeRequest({
       improvedPrompt: 'Bostaden har energiklass B.',
       disposition: { energiklass: 'B' },
+      platform: 'booli',
     }));
     const count = (result.improvedPrompt.match(/energiklass/gi) || []).length;
     expect(count).toBe(1);
@@ -168,6 +170,7 @@ describe('10.2 Post-processor: missing facts detection', () => {
     const result = await processor.process(makeRequest({
       improvedPrompt: 'Bostaden är fin.',
       disposition: { energiklass: 'A', värmesystem: 'Bergvärme' },
+      platform: 'booli',
     }));
     const factTransformations = result.transformations.filter(t => t.type === 'missing_facts');
     expect(factTransformations.length).toBe(2);

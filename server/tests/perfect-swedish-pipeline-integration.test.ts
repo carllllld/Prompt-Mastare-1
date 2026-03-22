@@ -721,7 +721,7 @@ describe('Perfect Swedish Pipeline Integration Tests', () => {
                         headline: 'Test headline',
                         socialCopy: 'Test social copy',
                         instagramCaption: 'Test caption',
-                        showingInvitation: 'Test invitation',
+                        showingInvitation: 'Välkommen på visning.',
                         shortAd: 'Test ad'
                       })
                     }

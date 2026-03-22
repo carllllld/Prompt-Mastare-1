@@ -174,7 +174,7 @@ const CASES = [
       monthlyFee: 2200,
       price: 1450000,
       transport: 'stadskärna 2 min gång',
-      uniqueSellingPoints: 'låg avgift, praktiskt',
+      uniqueSellingPoints: 'välskött, praktiskt',
     },
   },
   {

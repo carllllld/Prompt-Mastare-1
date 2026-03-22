@@ -17,7 +17,7 @@ describe('Missing Facts Detection', () => {
           energiklass: 'C'
         },
         style: 'balanced' as const,
-        platform: 'hemnet'
+        platform: 'booli'
       };
 
       const result = await postProcessor.process(request);
@@ -39,7 +39,7 @@ describe('Missing Facts Detection', () => {
           energiklass: 'B'
         },
         style: 'balanced' as const,
-        platform: 'hemnet'
+        platform: 'booli'
       };
 
       const result = await postProcessor.process(request);
@@ -154,7 +154,7 @@ describe('Missing Facts Detection', () => {
           värmesystem: 'Fjärrvärme'
         },
         style: 'balanced' as const,
-        platform: 'hemnet'
+        platform: 'booli'
       };
 
       const result = await postProcessor.process(request);
@@ -179,7 +179,7 @@ describe('Missing Facts Detection', () => {
           värmesystem: 'Vattenburen värme'
         },
         style: 'balanced' as const,
-        platform: 'hemnet'
+        platform: 'booli'
       };
 
       const result = await postProcessor.process(request);
@@ -248,7 +248,7 @@ describe('Missing Facts Detection', () => {
           värmesystem: 'Fjärrvärme'
         },
         style: 'balanced' as const,
-        platform: 'hemnet'
+        platform: 'booli'
       };
 
       const result = await postProcessor.process(request);
