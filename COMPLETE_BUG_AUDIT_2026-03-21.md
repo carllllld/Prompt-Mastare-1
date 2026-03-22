@@ -66,29 +66,29 @@
 **Fil:** `client/src/hooks/use-optimize.ts:113`  
 **Problem:** `progressCallbackRef.current` kan anropas efter component unmount eftersom det inte finns någon cleanup  
 **Konsekvens:** Memory leak och potentiell crash när WebSocket/streaming fortsätter efter unmount  
-**Fix:** Lägg till cleanup i useEffect som nollställer progressCallbackRef  
-**Status:** 🔴 MÅSTE FIXAS
+**Fix:** Lagt till `isMountedRef` med cleanup i useEffect som nollställer både isMountedRef och progressCallbackRef  
+**Status:** ✅ FIXAD
 
 ### 🔴 BUG #14: use-websocket - Reconnect timeout läcker minne
 **Fil:** `client/src/hooks/use-websocket.ts:45`  
 **Problem:** `reconnectTimeoutRef.current` rensas i cleanup men timeout kan sättas efter unmount  
 **Konsekvens:** Memory leak när komponenten unmountas under reconnect  
-**Fix:** Lägg till en `isMounted` flag eller använd AbortController  
-**Status:** 🔴 MÅSTE FIXAS
+**Fix:** Lagt till `isMountedRef` med checks i alla callbacks och cleanup  
+**Status:** ✅ FIXAD
 
 ### 🔴 BUG #15: AuthModal - Email validation är för svag
 **Fil:** `client/src/components/AuthModal.tsx:52, 78, 119`  
 **Problem:** Validering är bara `!email.includes("@")` vilket accepterar "@@", "@test", etc.  
 **Konsekvens:** Användare kan skicka ogiltiga emails som sedan failar på servern  
-**Fix:** Använd proper email regex eller Zod schema  
-**Status:** 🔴 MÅSTE FIXAS
+**Fix:** Implementerat proper email regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` i alla tre funktioner  
+**Status:** ✅ FIXAD
 
 ### 🔴 BUG #16: HistoryPanel - Ingen error handling för delete
 **Fil:** `client/src/components/HistoryPanel.tsx:38`  
 **Problem:** `deleteItem` har try-catch men visar ingen toast/feedback till användaren vid fel  
 **Konsekvens:** Användaren vet inte om delete misslyckades  
-**Fix:** Lägg till toast notification vid error  
-**Status:** 🟡 BÖR FIXAS
+**Fix:** Lagt till toast notification vid error med rollback av optimistic update  
+**Status:** ✅ FIXAD
 
 ### 🔴 BUG #17: HistoryPanel - Race condition vid snabb delete
 **Fil:** `client/src/components/HistoryPanel.tsx:38`  
