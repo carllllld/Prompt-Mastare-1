@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import { api, type OptimizeRequest, type OptimizeResponse } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { ErrorHandler } from "@/lib/error-handler";
