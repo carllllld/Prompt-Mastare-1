@@ -49,7 +49,7 @@ const GRAMMATICAL_ISSUES = [
     issue: "Double periods"
   },
   {
-    pattern: /\s{2,}/g,
+    pattern: / {2,}/g,
     issue: "Multiple spaces"
   },
   {

@@ -266,7 +266,7 @@ export class PerfectSwedishMonitoring {
         params
       );
 
-      return result.rows.map(row => {
+      return result.rows.map((row: any) => {
         const totalGenerations = parseInt(row.total_generations) || 0;
         const successfulGenerations = parseInt(row.successful_generations) || 0;
         const fallbackCount = parseInt(row.fallback_count) || 0;

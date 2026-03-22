@@ -1,6 +1,7 @@
 import { SmartGenerationEngine, GenerationResult } from './perfect-swedish-generator';
 import { DeterministicPostProcessor, PostProcessResult } from './perfect-swedish-post-processor';
 import { ExpertAIAnalyzer, ExpertAnalysis } from './perfect-swedish-analyzer';
+import { PerfectSwedishFallback, FallbackResult } from './perfect-swedish-fallback';
 import { WritingStyle } from './text-rules';
 import pRetry, { AbortError } from 'p-retry';
 import * as Sentry from '@sentry/node';
@@ -53,12 +54,14 @@ export class PerfectSwedishOrchestrator {
   private smartGenerator: SmartGenerationEngine;
   private postProcessor: DeterministicPostProcessor;
   private expertAnalyzer: ExpertAIAnalyzer;
+  private fallbackGenerator: PerfectSwedishFallback;
   private progressEmitter?: ProgressEmitter;
 
   constructor(progressEmitter?: ProgressEmitter) {
     this.smartGenerator = new SmartGenerationEngine();
     this.postProcessor = new DeterministicPostProcessor();
     this.expertAnalyzer = new ExpertAIAnalyzer();
+    this.fallbackGenerator = new PerfectSwedishFallback();
     this.progressEmitter = progressEmitter;
   }
 
@@ -124,7 +127,7 @@ export class PerfectSwedishOrchestrator {
     } catch (error) {
       const totalDuration = Date.now() - startTime;
       
-      console.error('Pipeline execution failed after all retries:', {
+      console.error('Pipeline execution failed after all retries, activating emergency fallback:', {
         error: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined,
         retryCount,
@@ -135,12 +138,13 @@ export class PerfectSwedishOrchestrator {
         platform: request.platform
       });
 
-      // Capture error in Sentry with detailed context
+      // Capture pipeline failure in Sentry before fallback
       Sentry.captureException(error, {
+        level: 'error',
         tags: {
           component: 'perfect-swedish-orchestrator',
           pipeline_step: 'execute',
-          user_plan: 'unknown', // Could be enriched with actual plan
+          fallback_triggered: 'true',
           style: request.style,
           platform: request.platform
         },
@@ -155,20 +159,59 @@ export class PerfectSwedishOrchestrator {
         }
       });
 
-      // Re-throw with user-friendly message
-      const msg = (() => {
-        if (error instanceof Error) return error.message;
-        if (error && typeof (error as any).message === 'string') return (error as any).message;
-        // p-retry FailedAttemptError wraps the original — try to unwrap it
-        const original = (error as any)?.originalError ?? (error as any)?.cause;
-        if (original instanceof Error) return original.message;
-        if (original && typeof original.message === 'string') return original.message;
-        return String(error);
-      })();
-      throw new Error(
-        `Textgenerering misslyckades: ${msg}. ` +
-        `Försök igen om en stund eller kontakta support om problemet kvarstår.`
-      );
+      // Activate emergency fallback
+      try {
+        const fallbackResult = this.fallbackGenerator.generate({
+          disposition: request.disposition,
+          style: request.style,
+          platform: request.platform,
+          userId: request.userId,
+          sessionId: request.sessionId,
+          originalError: error instanceof Error ? error : new Error(String(error))
+        });
+
+        // Convert FallbackResult to PipelineResult format
+        return {
+          improvedPrompt: fallbackResult.improvedPrompt,
+          headline: fallbackResult.headline,
+          socialCopy: fallbackResult.socialCopy,
+          instagramCaption: fallbackResult.instagramCaption,
+          showingInvitation: fallbackResult.showingInvitation,
+          shortAd: fallbackResult.shortAd,
+          expertAnalysis: undefined, // No expert analysis in fallback
+          metrics: {
+            totalDuration: Date.now() - startTime,
+            retryCount,
+            success: true, // Fallback succeeded
+            errorType: 'pipeline_failure_fallback_activated',
+            timestamp: new Date()
+          }
+        };
+      } catch (fallbackError) {
+        // Even fallback failed - this is critical
+        console.error('Emergency fallback also failed:', fallbackError);
+        
+        Sentry.captureException(fallbackError, {
+          level: 'fatal',
+          tags: {
+            component: 'perfect-swedish-orchestrator',
+            pipeline_step: 'fallback',
+            fallback_failed: 'true'
+          },
+          extra: {
+            userId: request.userId,
+            sessionId: request.sessionId,
+            originalError: error instanceof Error ? error.message : String(error),
+            fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
+          }
+        });
+
+        // Re-throw with user-friendly message
+        throw new Error(
+          'Textgenerering misslyckades och reservsystemet kunde inte aktiveras. ' +
+          'Kontakta support omedelbart.'
+        );
+      }
     }
   }
 

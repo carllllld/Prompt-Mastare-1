@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/node';
-import { PerfectSwedishMonitoring, MetricsSnapshot } from './perfect-swedish-monitoring';
+import { PerfectSwedishMonitoring } from './perfect-swedish-monitoring';
 
 export interface AlertThresholds {
   successRate: {
