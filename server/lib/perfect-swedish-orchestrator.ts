@@ -127,18 +127,48 @@ export class PerfectSwedishOrchestrator {
     } catch (error) {
       const totalDuration = Date.now() - startTime;
       
-      console.error('Pipeline execution failed after all retries, activating emergency fallback:', {
+      // Check if this is a non-retryable error (AbortError from p-retry)
+      const isAbortError = error instanceof AbortError;
+      const isNonRetryable = isAbortError || !this.isRetryableError(error);
+      
+      console.error('Pipeline execution failed after all retries:', {
         error: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined,
         retryCount,
         duration: totalDuration,
+        isNonRetryable,
         userId: request.userId,
         sessionId: request.sessionId,
         style: request.style,
         platform: request.platform
       });
 
-      // Capture pipeline failure in Sentry before fallback
+      // For non-retryable errors (like invalid API key), throw immediately without fallback
+      if (isNonRetryable) {
+        Sentry.captureException(error, {
+          level: 'error',
+          tags: {
+            component: 'perfect-swedish-orchestrator',
+            pipeline_step: 'execute',
+            error_type: 'non_retryable',
+            style: request.style,
+            platform: request.platform
+          },
+          extra: {
+            userId: request.userId,
+            sessionId: request.sessionId,
+            retryCount,
+            totalDuration
+          }
+        });
+        
+        throw new Error(
+          'Textgenerering misslyckades: ' + 
+          (error instanceof Error ? error.message : String(error))
+        );
+      }
+
+      // For retryable errors that exhausted retries, activate emergency fallback
       Sentry.captureException(error, {
         level: 'error',
         tags: {

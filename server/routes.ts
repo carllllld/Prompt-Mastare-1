@@ -1558,9 +1558,17 @@ function collapseRepeatedPhraseRuns(text: string): string {
 function repairEmbeddedForAttArtifacts(text: string): string {
   if (!text) return text;
 
-  return text
+  // First, fix specific known broken words
+  let repaired = text
+    .replace(/\bvälsköför att\b/gi, 'välskött')
+    .replace(/\banvändningssäför att\b/gi, 'användningssätt');
+
+  // Then apply general pattern for any word fused with "för att"
+  repaired = repaired
     .replace(/\b([A-Za-zÅÄÖåäö]{3,})för att([A-Za-zÅÄÖåäö]{2,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`)
     .replace(/\b([A-Za-zÅÄÖåäö]{2,})för att([A-Za-zÅÄÖåäö]{3,})\b/g, (_match, prefix: string, suffix: string) => `${prefix}${suffix}`);
+  
+  return repaired;
 }
 
 function hasCorruptedWordArtifacts(text: string): boolean {
