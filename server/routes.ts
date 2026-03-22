@@ -378,7 +378,11 @@ function buildDeterministicFallbackDescription(disposition: any, style: WritingS
   if (kitchen) middleSentences.push(`Köket är utfört med ${kitchen.charAt(0).toLowerCase() + kitchen.slice(1)}.`);
   if (bathroom) middleSentences.push(`Badrummet är inrett med ${bathroom.charAt(0).toLowerCase() + bathroom.slice(1)}.`);
   if (renovations.length > 0) middleSentences.push(`Under senare år har bostaden uppdaterats med ${renovations.join(" och ")}.`);
-  if (features.length > 0) middleSentences.push(`Detaljer som ${features.join(", ")} bidrar till helhetsintrycket.`);
+  if (features.length > 0) {
+    // Build grammatically correct sentence for features (which are typically adjectives)
+    const featureList = features.join(" och ");
+    middleSentences.push(`Bostaden är ${featureList}.`);
+  }
 
   const outdoorParts: string[] = [];
   if (outdoorType) outdoorParts.push(outdoorType);
