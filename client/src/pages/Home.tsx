@@ -298,7 +298,12 @@ export default function Home() {
                         Historik
                       </Link>
                     </DropdownMenuItem>
-                    {(plan === "pro" || plan === "premium") && (
+                    {plan === "free" ? (
+                      <DropdownMenuItem onClick={() => startCheckout("pro")} disabled={isCheckoutPending} className="cursor-pointer">
+                        <ArrowUp className="w-3.5 h-3.5 mr-2" />
+                        Uppgradera till Pro
+                      </DropdownMenuItem>
+                    ) : (
                       <DropdownMenuItem onClick={() => openPortal()} disabled={isPortalPending} className="cursor-pointer">
                         <Settings className="w-3.5 h-3.5 mr-2" />
                         Hantera prenumeration
