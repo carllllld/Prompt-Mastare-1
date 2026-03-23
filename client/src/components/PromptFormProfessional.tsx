@@ -124,20 +124,20 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   tooltips?: Record<string, string>;
 }) {
   const getChipClasses = (isOn: boolean) => {
-    if (!isOn) return "bg-background text-muted-foreground border-border";
+    if (!isOn) return "bg-background text-muted-foreground border-border hover:bg-accent hover:border-accent-hover";
 
     const variantClasses = {
-      default: "bg-primary text-primary-foreground border-primary",
-      kitchen: "bg-warning-bg text-warning border-warning",
-      bathroom: "bg-info-bg text-info border-info",
-      flooring: "bg-purple-100 text-purple-700 border-purple-300",
-      heating: "bg-error-bg text-error border-error",
-      special: "bg-indigo-100 text-indigo-700 border-indigo-300",
-      garden: "bg-success-bg text-success border-success",
-      usp: "bg-warning-bg text-warning border-warning",
-      parking: "bg-cyan-100 text-cyan-700 border-cyan-300",
-      roof: "bg-orange-100 text-orange-700 border-orange-300",
-      material: "bg-muted text-muted-foreground border-border",
+      default: "bg-primary text-primary-foreground border-primary hover:bg-primary-hover",
+      kitchen: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
+      bathroom: "bg-info-bg text-info border-info hover:bg-info-bg/80",
+      flooring: "bg-secondary text-secondary-foreground border-secondary-border hover:bg-accent",
+      heating: "bg-error-bg text-error border-error hover:bg-error-bg/80",
+      special: "bg-accent text-accent-foreground border-border hover:bg-accent-hover",
+      garden: "bg-success-bg text-success border-success hover:bg-success-bg/80",
+      usp: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
+      parking: "bg-info-bg text-info border-info hover:bg-info-bg/80",
+      roof: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
+      material: "bg-muted text-muted-foreground border-border hover:bg-accent",
     };
     return variantClasses[variant];
   };
@@ -201,22 +201,22 @@ function NumberStepper({ value, onChange, min = 0, max = 20, label }: {
 }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-[10px] text-gray-400 font-medium">{label}</span>
-      <div className="flex items-center border rounded-lg overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
+      <span className="text-xs text-muted-foreground font-medium">{label}</span>
+      <div className="flex items-center border border-input rounded-lg overflow-hidden">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
-          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
         >
           <Minus className="w-3 h-3" />
         </button>
-        <span className="w-8 h-8 flex items-center justify-center text-sm font-semibold" style={{ color: "#1B4332" }}>
+        <span className="w-8 h-8 flex items-center justify-center text-sm font-semibold text-foreground">
           {value}
         </span>
         <button
           type="button"
           onClick={() => onChange(Math.min(max, value + 1))}
-          className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
         >
           <Plus className="w-3 h-3" />
         </button>
@@ -260,49 +260,49 @@ function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
   const percentage = Math.round((completedCount / totalCount) * 100);
   
   const getProgressLevel = () => {
-    if (percentage < 40) return { label: "Grundläggande", color: "text-orange-600" };
-    if (percentage < 70) return { label: "Bra", color: "text-green-600" };
-    return { label: "Utmärkt", color: "text-green-700" };
+    if (percentage < 40) return { label: "Grundläggande", color: "text-warning" };
+    if (percentage < 70) return { label: "Bra", color: "text-success" };
+    return { label: "Utmärkt", color: "text-success" };
   };
   
   const progressLevel = getProgressLevel();
   
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'border-orange-500 bg-orange-50';
-      case 'important': return 'border-green-500 bg-green-50';
-      case 'optional': return 'border-gray-400 bg-gray-50';
-      default: return 'border-gray-400 bg-gray-50';
+      case 'critical': return 'border-warning bg-warning-bg';
+      case 'important': return 'border-success bg-success-bg';
+      case 'optional': return 'border-border bg-muted';
+      default: return 'border-border bg-muted';
     }
   };
   
   const getPriorityAccent = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-orange-500';
-      case 'important': return 'bg-green-500';
-      case 'optional': return 'bg-gray-400';
-      default: return 'bg-gray-400';
+      case 'critical': return 'bg-warning';
+      case 'important': return 'bg-success';
+      case 'optional': return 'bg-muted-foreground';
+      default: return 'bg-muted-foreground';
     }
   };
   
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+    <div className="bg-card border border-card-border rounded-lg p-4 mb-3">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-900">Prioriterade fält</h3>
+        <h3 className="text-sm font-semibold text-foreground">Prioriterade fält</h3>
         <div className="flex items-center gap-2">
           <span className={`text-sm font-medium ${progressLevel.color}`}>
             {progressLevel.label}
           </span>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-muted-foreground">
             {completedCount}/{totalCount}
           </span>
         </div>
       </div>
       
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+      <div className="w-full bg-muted rounded-full h-2 mb-4 overflow-hidden">
         <div 
           className={`h-2 rounded-full transition-all duration-300 ${
-            percentage < 40 ? 'bg-orange-500' : percentage < 70 ? 'bg-green-500' : 'bg-green-600'
+            percentage < 40 ? 'bg-warning' : percentage < 70 ? 'bg-success' : 'bg-success'
           }`}
           style={{ width: `${percentage}%` }}
         />
@@ -320,12 +320,12 @@ function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
           >
             <div className={`w-1 h-6 rounded ${getPriorityAccent(item.priority)}`} />
             <div className="flex-1 text-left">
-              <span className="text-sm text-gray-900">{item.label}</span>
+              <span className="text-sm text-foreground">{item.label}</span>
             </div>
             {item.completed ? (
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
+              <CheckCircle2 className="w-4 h-4 text-success" />
             ) : (
-              <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
+              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />
             )}
           </button>
         ))}
@@ -378,19 +378,19 @@ function FieldGroup({
   
   const getPriorityColor = () => {
     switch (priority) {
-      case 'critical': return 'bg-orange-50 border-orange-200';
-      case 'important': return 'bg-green-50 border-green-200';
-      case 'optional': return 'bg-gray-50 border-gray-200';
-      default: return 'bg-gray-50 border-gray-200';
+      case 'critical': return 'bg-warning-bg border-warning';
+      case 'important': return 'bg-success-bg border-success';
+      case 'optional': return 'bg-muted border-border';
+      default: return 'bg-muted border-border';
     }
   };
   
   const getPriorityAccent = () => {
     switch (priority) {
-      case 'critical': return 'text-orange-600';
-      case 'important': return 'text-green-600';
-      case 'optional': return 'text-gray-600';
-      default: return 'text-gray-600';
+      case 'critical': return 'text-warning';
+      case 'important': return 'text-success';
+      case 'optional': return 'text-muted-foreground';
+      default: return 'text-muted-foreground';
     }
   };
   
@@ -399,21 +399,21 @@ function FieldGroup({
       <button
         type="button"
         onClick={toggleExpanded}
-        className="w-full flex items-center justify-between mb-3"
+        className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
       >
         <div className="flex items-center gap-2">
           {icon && <span className={getPriorityAccent()}>{icon}</span>}
           <h3 className={`text-sm font-semibold ${getPriorityAccent()}`}>{title}</h3>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-gray-500" />
+          <ChevronUp className="w-4 h-4 text-muted-foreground" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-gray-500" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
         )}
       </button>
       
       {helpText && isExpanded && (
-        <p className="text-xs text-gray-600 mb-3">{helpText}</p>
+        <p className="text-xs text-muted-foreground mb-3">{helpText}</p>
       )}
       
       {isExpanded && <div className="space-y-3">{children}</div>}
@@ -998,12 +998,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
           <div className="mb-1 rounded-xl border px-4 py-3.5 pro-muted-panel">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-success-bg text-success">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Skriv det som faktiskt höjer kvaliteten i en publicerbar objektsbeskrivning</p>
-                <p className="text-xs mt-1" style={{ color: "#6B7280" }}>
+                <p className="text-sm font-semibold text-foreground">Skriv det som faktiskt höjer kvaliteten i en publicerbar objektsbeskrivning</p>
+                <p className="text-xs mt-1 text-muted-foreground">
                   Prioritera skick, större renoveringar, planlösning, läge och det som avviker positivt från standard. Saker som oftast är standard ska bara nämnas om de faktiskt är särskiljande för objektet.
                 </p>
               </div>
@@ -1017,10 +1017,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <div className="pro-section-card">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Snabbast väg till bra text</p>
-                  <p className="text-sm font-semibold mt-1" style={{ color: "#1D2939" }}>Fyll det som styr huvudtexten först</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Snabbast väg till bra text</p>
+                  <p className="text-sm font-semibold mt-1 text-foreground">Fyll det som styr huvudtexten först</p>
                 </div>
-                <div className="px-2.5 py-1 rounded-full text-[11px] font-semibold" style={{ background: "#ECFDF5", color: "#2D6A4F" }}>
+                <div className="px-2.5 py-1 rounded-full text-xs font-semibold bg-success-bg text-success">
                   {priorityCompleted}/{priorityChecklist.length} klara
                 </div>
               </div>
@@ -1034,8 +1034,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   ["Särskiljande styrkor", hasStrongDifferentiator],
                   ["Planlösning/skick", Boolean(layoutValue?.trim() || conditionValue?.trim())],
                 ].map(([label, done]) => (
-                  <div key={String(label)} className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: done ? "#F0FDF4" : "#FAFAF7", color: done ? "#166534" : "#4B5563" }}>
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: done ? "#DCFCE7" : "#E5E7EB", color: done ? "#166534" : "#6B7280" }}>
+                  <div key={String(label)} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${done ? 'bg-success-bg text-success' : 'bg-muted text-muted-foreground'}`}>
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${done ? 'bg-success-bg text-success' : 'bg-muted text-muted-foreground'}`}>
                       {done ? "✓" : "•"}
                     </div>
                     <span>{label}</span>
@@ -1045,18 +1045,18 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
 
             <div className="pro-section-card">
-              <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: "#9CA3AF" }}>Så används dina fält i modellen</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Så används dina fält i modellen</p>
               <div className="space-y-2 text-xs">
-                <div className="rounded-lg px-3 py-2" style={{ background: "#EEFDF3", color: "#166534" }}>
+                <div className="rounded-lg px-3 py-2 bg-success-bg text-success">
                   <span className="font-semibold">Direkt i huvudtexten:</span>
                   <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
                 </div>
-                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7", color: "#4B5563" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
+                <div className="rounded-lg px-3 py-2 bg-muted text-muted-foreground">
+                  <span className="font-semibold text-foreground">Kontext till AI:n:</span>
                   <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
                 </div>
-                <div className="rounded-lg px-3 py-2" style={{ background: "#FAFAF7", color: "#4B5563" }}>
-                  <span className="font-semibold" style={{ color: "#1D2939" }}>Regel:</span>
+                <div className="rounded-lg px-3 py-2 bg-muted text-muted-foreground">
+                  <span className="font-semibold text-foreground">Regel:</span>
                   <span> lägg laddbox under Parkering och undvik att upprepa samma fakta i flera fält.</span>
                 </div>
               </div>
@@ -1066,10 +1066,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* ── SECTION 1: OBJEKTTYP ── */}
           <div className="pro-section-card">
             <div className="flex items-center justify-between mb-2.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Objekttyp
               </label>
-              <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+              <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-success-bg text-success">
                 <CheckCircle2 className="w-3 h-3" />
                 Steg 1
               </div>
@@ -1085,12 +1085,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   key={t.value}
                   type="button"
                   onClick={() => form.setValue("propertyType", t.value)}
-                  className="px-4 py-2 text-sm rounded-lg border transition-all font-medium"
-                  style={{
-                    background: selectedType === t.value ? "#2D6A4F" : "#fff",
-                    color: selectedType === t.value ? "#fff" : "#4B5563",
-                    borderColor: selectedType === t.value ? "#2D6A4F" : "#E8E5DE",
-                  }}
+                  className={`px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
+                    selectedType === t.value 
+                      ? 'bg-primary text-primary-foreground border-primary' 
+                      : 'bg-background text-muted-foreground border-input hover:bg-accent'
+                  }`}
                 >
                   {t.label}
                 </button>
@@ -1102,13 +1101,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           <div className="pro-section-card">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Grundfakta
                 </label>
-                <p className="text-[10px] mt-1" style={{ color: "#9CA3AF" }}>Det här är basen för hela objektbeskrivningen. Fyll i detta först för bäst resultat.</p>
+                <p className="text-xs mt-1 text-muted-foreground">Det här är basen för hela objektbeskrivningen. Fyll i detta först för bäst resultat.</p>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-medium px-2 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E" }}>
-                <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#92400E" }} />
+              <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-warning-bg text-warning">
+                <div className="w-3 h-3 rounded-full border-2 border-warning" />
                 Högst prioritet
               </div>
             </div>
@@ -1125,8 +1124,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       variant="outline"
                       size="sm"
                       disabled={addressLookupLoading || !field.value}
-                      className="h-10 text-[11px] px-3 whitespace-nowrap"
-                      style={{ borderColor: "#D1D5DB", color: addressLookupLoading ? "#9CA3AF" : "#2D6A4F" }}
+                      className="h-10 text-xs px-3 whitespace-nowrap border-input text-primary disabled:text-muted-foreground"
                       onClick={() => handleAddressLookup(field.value)}
                     >
                       {addressLookupLoading ? (
@@ -1137,7 +1135,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     </Button>
                   </div>
                   {addressLookupResult && (
-                    <p className="text-[10px] mt-1" style={{ color: "#2D6A4F" }}>
+                    <p className="text-xs mt-1 text-success">
                       ✓ {addressLookupResult} — kollektivtrafik och närområde ifyllt
                     </p>
                   )}
@@ -1189,7 +1187,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <FormLabel className="text-xs text-gray-500">Skick</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
+                      <SelectContent className="bg-white border border-input shadow-lg">
                         {PROPERTY_CONDITIONS.map((c) => (
                           <SelectItem key={c} value={c}>{c}</SelectItem>
                         ))}
@@ -1228,12 +1226,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                         <button
                           type="button"
                           onClick={() => field.onChange(!field.value)}
-                          className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium"
-                          style={{
-                            background: field.value ? "#2D6A4F" : "#fff",
-                            color: field.value ? "#fff" : "#6B7280",
-                            borderColor: field.value ? "#2D6A4F" : "#E8E5DE",
-                          }}
+                          className={`px-3.5 py-2 text-xs rounded-lg border transition-all font-medium ${
+                            field.value 
+                              ? 'bg-primary text-primary-foreground border-primary' 
+                              : 'bg-background text-muted-foreground border-input'
+                          }`}
                         >
                           {field.value ? "✓ Hiss" : "Hiss"}
                         </button>
@@ -1284,7 +1281,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       <FormLabel className="text-xs text-gray-500">Antal plan</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
+                        <SelectContent className="bg-white border border-input shadow-lg">
                           {PROPERTY_FLOORS_OPTIONS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -1368,12 +1365,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <button
                 type="button"
                 onClick={() => setHasBalcony(!hasBalcony)}
-                className="px-3.5 py-2 text-xs rounded-lg border transition-all font-medium shrink-0 mt-5"
-                style={{
-                  background: hasBalcony ? "#2D6A4F" : "#fff",
-                  color: hasBalcony ? "#fff" : "#6B7280",
-                  borderColor: hasBalcony ? "#2D6A4F" : "#E8E5DE",
-                }}
+                className={`px-3.5 py-2 text-xs rounded-lg border transition-all font-medium shrink-0 mt-5 ${
+                  hasBalcony 
+                    ? 'bg-primary text-primary-foreground border-primary' 
+                    : 'bg-background text-muted-foreground border-input'
+                }`}
               >
                 {hasBalcony ? "✓ Balkong/Uteplats" : "Balkong/Uteplats"}
               </button>
@@ -1390,7 +1386,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       <FormLabel className="text-xs text-gray-500">Väderstreck</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
+                        <SelectContent className="bg-white border border-input shadow-lg">
                           {BALCONY_DIRECTIONS.map((dir) => <SelectItem key={dir} value={dir}>{dir}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -1413,7 +1409,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
           {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
           <div className="pro-section-card">
-            <label className="text-[11px] font-semibold uppercase tracking-wider block mb-3" style={{ color: "#9CA3AF" }}>
+            <label className="text-xs font-semibold uppercase tracking-wider block mb-3 text-muted-foreground">
               Kök & Badrum
             </label>
             <div className="space-y-4">
@@ -1448,7 +1444,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
           {/* ── SECTION 4: SÄLJPUNKTER (prominent!) ── */}
           <div className="pro-section-card">
-            <label className="text-[11px] font-semibold uppercase tracking-wider block mb-1" style={{ color: "#2D6A4F" }}>
+            <label className="text-xs font-semibold uppercase tracking-wider block mb-1 text-success">
               ★ Vad gör objektet speciellt?
             </label>
             <p className="text-[10px] text-gray-400 mb-3">
@@ -1493,26 +1489,25 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all"
-              style={{
-                background: showDetails ? "#F0FDF4" : "#FFFFFF",
-                borderColor: showDetails ? "#86EFAC" : "#D1D5DB",
-                color: showDetails ? "#2D6A4F" : "#374151",
-              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
+                showDetails 
+                  ? 'bg-success-bg border-success' 
+                  : 'bg-background border-border'
+              }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold">Material, läge &amp; fler detaljer</span>
+                <span className={`text-xs font-semibold ${showDetails ? 'text-success' : 'text-foreground'}`}>Material, läge &amp; fler detaljer</span>
                 {!showDetails && (
-                  <span className="text-[11px]" style={{ color: "#9CA3AF" }}>— golv, uppvärmning, parkering, utsikt och mer</span>
+                  <span className="text-xs text-muted-foreground">— golv, uppvärmning, parkering, utsikt och mer</span>
                 )}
               </div>
               <div className="flex items-center gap-1.5">
                 {!showDetails && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                     Bra att ha
                   </span>
                 )}
-                <span className="text-[10px] font-semibold" style={{ color: showDetails ? "#2D6A4F" : "#6B7280" }}>
+                <span className={`text-xs font-semibold ${showDetails ? 'text-success' : 'text-muted-foreground'}`}>
                   {showDetails ? "Dölj" : "Lägg till"}
                 </span>
                 {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -1594,7 +1589,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
+                        <SelectContent className="bg-white border border-input shadow-lg">
                           {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                         </SelectContent>
                       </Select>
@@ -1648,10 +1643,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* ── SECTION 6b: VISNINGSINFORMATION ── */}
           <div className="pro-section-card">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Visningsinformation
               </label>
-              <span className="text-[10px] text-gray-400">Valfritt — för visningsinbjudan</span>
+              <span className="text-xs text-muted-foreground">Valfritt — för visningsinbjudan</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <FormField control={form.control} name="visningstid" render={({ field }) => (
@@ -1681,7 +1676,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             {/* Platform + Writing style — compact */}
             <div className="flex flex-wrap gap-6 pro-muted-panel px-3.5 py-3">
               <div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Plattform</span>
+                <span className="text-xs font-semibold uppercase tracking-wider block mb-2 text-muted-foreground">Plattform</span>
                 <div className="flex gap-1.5">
                   {([
                     { value: "hemnet" as const, label: "Hemnet" },
@@ -1692,12 +1687,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       key={p.value}
                       type="button"
                       onClick={() => form.setValue("platform", p.value)}
-                      className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium"
-                      style={{
-                        background: selectedPlatform === p.value ? "#2D6A4F" : "#fff",
-                        color: selectedPlatform === p.value ? "#fff" : "#6B7280",
-                        borderColor: selectedPlatform === p.value ? "#2D6A4F" : "#E8E5DE",
-                      }}
+                      className={`px-3 py-1.5 text-xs rounded-full border transition-all font-medium ${
+                        selectedPlatform === p.value 
+                          ? 'bg-primary text-primary-foreground border-primary' 
+                          : 'bg-background text-muted-foreground border-input'
+                      }`}
                     >
                       {p.label}
                     </button>
@@ -1705,7 +1699,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 </div>
               </div>
               <div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "#9CA3AF" }}>Textstil</span>
+                <span className="text-xs font-semibold uppercase tracking-wider block mb-2 text-muted-foreground">Textstil</span>
                 <div className="flex gap-1.5">
                   {([
                     { value: "factual" as const, label: "Faktabaserad" },
@@ -1716,18 +1710,17 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       key={s.value}
                       type="button"
                       onClick={() => form.setValue("writingStyle", s.value)}
-                      className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium"
-                      style={{
-                        background: selectedStyle === s.value ? "#1B4332" : "#fff",
-                        color: selectedStyle === s.value ? "#fff" : "#6B7280",
-                        borderColor: selectedStyle === s.value ? "#1B4332" : "#E8E5DE",
-                      }}
+                      className={`px-3 py-1.5 text-xs rounded-full border transition-all font-medium ${
+                        selectedStyle === s.value 
+                          ? 'bg-foreground text-background border-foreground' 
+                          : 'bg-background text-muted-foreground border-input'
+                      }`}
                     >
                       {s.label}
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] mt-1.5" style={{ color: "#9CA3AF" }}>
+                <p className="text-xs mt-1.5 text-muted-foreground">
                   {selectedStyle === "factual" && "Saklig och rak ton med fokus på verifierbara fakta."}
                   {selectedStyle === "balanced" && "Fakta i fokus med naturlig rytm och tydlig köparnytta."}
                   {selectedStyle === "selling" && "Mer säljtryck och tydlig vinkel utan klyschor."}
@@ -1735,8 +1728,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
 
-            <div className="rounded-lg border px-3.5 py-3" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
-              <span className="text-xs font-medium" style={{ color: "#4B5563" }}>
+            <div className="rounded-lg border border-input px-3.5 py-3 bg-muted">
+              <span className="text-xs font-medium text-muted-foreground">
                 Hemnet använder hårdast klyschfilter. Booli/Egen sida tillåter mer berättande ton när fakta förblir konkreta.
               </span>
             </div>
@@ -1748,7 +1741,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <div className="flex items-center gap-2">
                   <Select value={String(wordCountMin)} onValueChange={(v: string) => handleWordCountMin(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
+                    <SelectContent className="bg-white border border-input shadow-lg">
                       {Array.from({ length: Math.floor((modelLimits.max - modelLimits.min) / 50) + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
                         <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
                       ))}
@@ -1757,7 +1750,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <span className="text-xs text-gray-400">till</span>
                   <Select value={String(wordCountMax)} onValueChange={(v: string) => handleWordCountMax(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-white border shadow-lg" style={{ borderColor: "#E8E5DE" }}>
+                    <SelectContent className="bg-white border border-input shadow-lg">
                       {Array.from({ length: Math.floor((modelLimits.max - modelLimits.min) / 50) + 1 }, (_, i) => modelLimits.min + i * 50).map((n) => (
                         <SelectItem key={n} value={String(n)}>{n} ord</SelectItem>
                       ))}
@@ -1782,14 +1775,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-gray-400 font-medium">Bilder (valfritt)</span>
-                <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: "#D4AF37", color: "#fff" }}>Pro</span>
+                <span className="text-xs font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning text-warning-foreground">Pro</span>
                 {isPro && uploadedImages.length > 0 && (
                   <span className="text-xs text-gray-400 ml-auto">{uploadedImages.length} bild(er)</span>
                 )}
               </div>
               {isPro ? (
                 <>
-                  <div className="border border-dashed rounded-lg p-3 text-center transition-colors hover:border-gray-400" style={{ borderColor: "#D1D5CB" }}>
+                  <div className="border border-dashed border-border rounded-lg p-3 text-center transition-colors hover:border-muted-foreground">
                     <Input
                       type="file"
                       accept="image/*"
@@ -1816,11 +1809,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <div className="flex gap-2 mt-2 flex-wrap">
                       {uploadedImages.map((img, idx) => (
                         <div key={idx} className="relative group">
-                          <img src={img} alt={`Bild ${idx + 1}`} className="w-14 h-14 object-cover rounded-lg border" style={{ borderColor: "#E8E5DE" }} />
+                          <img src={img} alt={`Bild ${idx + 1}`} className="w-14 h-14 object-cover rounded-lg border border-input" />
                           <button
                             type="button"
                             onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute -top-1.5 -right-1.5 bg-error text-error-foreground rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <X className="w-2.5 h-2.5" />
                           </button>
@@ -1830,8 +1823,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   )}
                 </>
               ) : (
-                <div className="border border-dashed rounded-lg p-3 text-center" style={{ borderColor: "#E8E5DE", background: "#FAFAF7" }}>
-                  <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                <div className="border border-dashed border-input rounded-lg p-3 text-center bg-muted">
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                     <Lock className="w-3.5 h-3.5" />
                     Uppgradera till Pro för bildtolkning
                   </div>
@@ -1840,12 +1833,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
 
             {/* Submit - sticky on mobile */}
-            <div className="sticky bottom-0 left-0 right-0 pt-4 pb-2 -mx-6 px-6 sm:relative sm:mx-0 sm:px-0 sm:pb-0" style={{ background: "linear-gradient(to top, #FAFAF7 85%, transparent)" }}>
+            <div className="sticky bottom-0 left-0 right-0 pt-4 pb-2 -mx-6 px-6 sm:relative sm:mx-0 sm:px-0 sm:pb-0 bg-gradient-to-t from-muted via-muted to-transparent">
               <Button
                 type="submit"
-                className="w-full h-12 text-sm font-semibold transition-colors shadow-lg sm:shadow-none"
+                className="w-full h-12 text-sm font-semibold transition-colors shadow-lg sm:shadow-none bg-primary text-primary-foreground hover:bg-primary-hover"
                 disabled={isPending || disabled}
-                style={{ background: "#2D6A4F", color: "#fff" }}
               >
                 {isPending ? (
                   <>
@@ -1856,7 +1848,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <>
                     <Sparkles className="w-4 h-4 mr-2" />
                     Generera textpaket
-                    <span className="hidden sm:inline text-[10px] ml-2 opacity-60">(⌘↵)</span>
+                    <span className="hidden sm:inline text-xs ml-2 opacity-60">(⌘↵)</span>
                   </>
                 )}
               </Button>
