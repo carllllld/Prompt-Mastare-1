@@ -193,14 +193,14 @@ This implementation transforms OptiPrompt from its current state into a professi
     - Update validation error styling
     - _Requirements: 6.1, 6.2, 6.6, 14.4_
   
-  - [~] 7.2 Redesign chip selectors
+  - [ ] 7.2 Redesign chip selectors
     - Remove all inline styles
     - Update chip button styling with toggle states
     - Update spacing with gap classes
     - Update colors with design tokens
     - _Requirements: 6.4, 14.4_
   
-  - [~] 7.3 Redesign field groups
+  - [ ] 7.3 Redesign field groups
     - Remove all inline styles
     - Update collapsible section styling
     - Update borders and spacing
@@ -219,39 +219,39 @@ This implementation transforms OptiPrompt from its current state into a professi
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 9. Phase 7: Testing & Quality Assurance
-  - [~] 9.1 Write property test for font weights
+  - [ ] 9.1 Write property test for font weights
     - **Property 4: Consistent Font Weights**
     - **Validates: Requirements 2.6**
   
-  - [~] 9.2 Write property test for uppercase letter spacing
+  - [ ] 9.2 Write property test for uppercase letter spacing
     - **Property 5: Uppercase Letter Spacing**
     - **Validates: Requirements 2.8**
   
-  - [~] 9.3 Write property test for icon imports
+  - [ ] 9.3 Write property test for icon imports
     - **Property 8: Icon Import Source**
     - **Validates: Requirements 9.3**
   
-  - [~] 9.4 Write property test for icon-text spacing
+  - [ ] 9.4 Write property test for icon-text spacing
     - **Property 9: Icon-Text Spacing**
     - **Validates: Requirements 9.4, 9.5**
   
-  - [~] 9.5 Write property test for flex/grid gaps
+  - [ ] 9.5 Write property test for flex/grid gaps
     - **Property 12: Flex/Grid Gap Consistency**
     - **Validates: Requirements 11.3**
   
-  - [~] 9.6 Write property test for vertical spacing
+  - [ ] 9.6 Write property test for vertical spacing
     - **Property 13: Vertical Spacing Consistency**
     - **Validates: Requirements 11.4**
   
-  - [~] 9.7 Write property test for responsive breakpoints
+  - [ ] 9.7 Write property test for responsive breakpoints
     - **Property 14: Responsive Breakpoints**
     - **Validates: Requirements 12.2**
   
-  - [~] 9.8 Write property test for mobile touch targets
+  - [ ] 9.8 Write property test for mobile touch targets
     - **Property 15: Mobile Touch Targets**
     - **Validates: Requirements 12.6**
   
-  - [~] 9.9 Write property test for WCAG contrast ratios
+  - [ ] 9.9 Write property test for WCAG contrast ratios
     - **Property 16: WCAG Contrast Ratios**
     - **Validates: Requirements 1.6**
   
@@ -276,7 +276,7 @@ This implementation transforms OptiPrompt from its current state into a professi
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.7, 12.8_
 
 - [ ] 10. Phase 8: Documentation & Handoff
-  - [~] 10.1 Create design system documentation
+  - [ ] 10.1 Create design system documentation
     - Document all color tokens with usage guidelines
     - Document typography scale with examples
     - Document spacing scale with examples
@@ -284,20 +284,20 @@ This implementation transforms OptiPrompt from its current state into a professi
     - Document component variants with visual examples
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.7_
   
-  - [~] 10.2 Create before/after comparison
+  - [ ] 10.2 Create before/after comparison
     - Document inline style count reduction
     - Document color token consolidation
     - Document font size improvements
     - Create visual comparison screenshots
     - _Requirements: 13.6_
   
-  - [~] 10.3 Create maintenance guidelines
+  - [ ] 10.3 Create maintenance guidelines
     - Document how to add new components
     - Document how to modify design tokens
     - Create code review checklist
     - _Requirements: 13.8_
   
-  - [~] 10.4 Perform final visual consistency audit
+  - [ ] 10.4 Perform final visual consistency audit
     - Audit all pages for visual consistency
     - Verify all components use design tokens
     - Check for any remaining inline styles
