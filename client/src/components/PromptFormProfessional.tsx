@@ -111,9 +111,9 @@ const PROPERTY_FLOORS_OPTIONS = ["1 plan", "1½ plan", "2 plan", "2½ plan", "3 
 const BALCONY_DIRECTIONS = [
   "Norr", "Nordost", "Öst", "Sydost", "Söder", "Sydväst", "Väst", "Nordväst",
 ];
-const exampleInputClass = "h-10 rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
-const exampleCompactInputClass = "h-9 text-xs rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
-const exampleTextareaClass = "min-h-[56px] resize-none text-sm rounded-lg border-slate-200 bg-white/90 placeholder:italic placeholder:text-slate-400 focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-emerald-800/20";
+const exampleInputClass = "h-10 rounded-lg border-input bg-background placeholder:italic placeholder:text-muted-foreground focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const exampleCompactInputClass = "h-9 text-xs rounded-lg border-input bg-background placeholder:italic placeholder:text-muted-foreground focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const exampleTextareaClass = "min-h-[56px] resize-none text-sm rounded-lg border-input bg-background placeholder:italic placeholder:text-muted-foreground focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 // ── HELPER: Chip Selector ──
 function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips }: {
@@ -123,23 +123,23 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
   tooltips?: Record<string, string>;
 }) {
-  const getColors = (isOn: boolean) => {
-    if (!isOn) return { background: "#FFFFFF", color: "#556170", borderColor: "#DAD8D1" };
+  const getChipClasses = (isOn: boolean) => {
+    if (!isOn) return "bg-background text-muted-foreground border-border";
 
-    const colors = {
-      default: { background: "#2D6A4F", color: "#fff", borderColor: "#2D6A4F" },
-      kitchen: { background: "#FEF3C7", color: "#92400E", borderColor: "#FCD34D" },
-      bathroom: { background: "#DBEAFE", color: "#1E40AF", borderColor: "#93C5FD" },
-      flooring: { background: "#F3E8FF", color: "#6B21A8", borderColor: "#D8B4FE" },
-      heating: { background: "#FEE2E2", color: "#991B1B", borderColor: "#FCA5A5" },
-      special: { background: "#E0E7FF", color: "#3730A3", borderColor: "#C7D2FE" },
-      garden: { background: "#D1FAE5", color: "#065F46", borderColor: "#6EE7B7" },
-      usp: { background: "#FEF3C7", color: "#92400E", borderColor: "#FCD34D" },
-      parking: { background: "#E0F2FE", color: "#075985", borderColor: "#7DD3FC" },
-      roof: { background: "#FED7AA", color: "#9A3412", borderColor: "#FDBA74" },
-      material: { background: "#E5E7EB", color: "#1F2937", borderColor: "#D1D5DB" },
+    const variantClasses = {
+      default: "bg-primary text-primary-foreground border-primary",
+      kitchen: "bg-warning-bg text-warning border-warning",
+      bathroom: "bg-info-bg text-info border-info",
+      flooring: "bg-purple-100 text-purple-700 border-purple-300",
+      heating: "bg-error-bg text-error border-error",
+      special: "bg-indigo-100 text-indigo-700 border-indigo-300",
+      garden: "bg-success-bg text-success border-success",
+      usp: "bg-warning-bg text-warning border-warning",
+      parking: "bg-cyan-100 text-cyan-700 border-cyan-300",
+      roof: "bg-orange-100 text-orange-700 border-orange-300",
+      material: "bg-muted text-muted-foreground border-border",
     };
-    return colors[variant];
+    return variantClasses[variant];
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, chip: string) => {
@@ -153,7 +153,7 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
     <div className="flex flex-wrap gap-1.5">
       {chips.map((chip) => {
         const isOn = selected.includes(chip);
-        const colors = getColors(isOn);
+        const chipClasses = getChipClasses(isOn);
         const tooltip = tooltips?.[chip];
         
         const chipButton = (
@@ -165,8 +165,7 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
             role="checkbox"
             aria-checked={isOn}
             aria-label={chip}
-            className="px-2.5 py-1 md:py-2 md:px-3 text-xs rounded-full border transition-all font-medium select-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 inline-flex items-center gap-1"
-            style={colors}
+            className={`px-2.5 py-1 md:py-2 md:px-3 text-xs rounded-full border transition-all font-medium select-none focus:ring-2 focus:ring-ring focus:ring-offset-1 inline-flex items-center gap-1 ${chipClasses}`}
           >
             {isOn && <CheckCircle2 className="w-3 h-3" />}
             {chip}

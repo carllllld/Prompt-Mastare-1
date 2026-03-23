@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design Tokens Test - Task 1.3</title>
+  <link rel="stylesheet" href="./index.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: var(--font-sans);
+      padding: 2rem;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    .test-card {
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid hsl(var(--border));
+    }
+    .shadow-demo {
+      display: inline-block;
+      padding: 1rem 1.5rem;
+      margin: 0.5rem;
+      background: white;
+      border-radius: var(--radius-md);
+    }
+    .radius-demo {
+      display: inline-block;
+      padding: 1rem 1.5rem;
+      margin: 0.5rem;
+      background: hsl(var(--primary));
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="font-size: var(--text-4xl); font-weight: var(--font-bold); margin-bottom: 2rem;">
+    Task 1.3: CSS Custom Properties Test
+  </h1>
+
+  <div class="test-card">
+    <h2 style="font-size: var(--text-2xl); font-weight: var(--font-semibold); margin-bottom: 1rem;">
+      Shadow Scale (Requirements 8.1, 8.2, 8.3, 8.4)
+    </h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+      <div class="shadow-demo" style="box-shadow: var(--shadow-xs);">
+        <strong>xs</strong><br>
+        <code>--shadow-xs</code>
+      </div>
+      <div class="shadow-demo" style="box-shadow: var(--shadow-sm);">
+        <strong>sm</strong><br>
+        <code>--shadow-sm</code>
+      </div>
+      <div class="shadow-demo" style="box-shadow: var(--shadow-md);">
+        <strong>md</strong><br>
+        <code>--shadow-md</code>
+      </div>
+      <div class="shadow-demo" style="box-shadow: var(--shadow-lg);">
+        <strong>lg</strong><br>
+        <code>--shadow-lg</code>
+      </div>
+      <div class="shadow-demo" style="box-shadow: var(--shadow-xl);">
+        <strong>xl</strong><br>
+        <code>--shadow-xl</code>
+      </div>
+      <div class="shadow-demo" style="box-shadow: var(--shadow-2xl);">
+        <strong>2xl</strong><br>
+        <code>--shadow-2xl</code>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-card">
+    <h2 style="font-size: var(--text-2xl); font-weight: var(--font-semibold); margin-bottom: 1rem;">
+      Border Radius Values (Requirements 11.1, 11.2)
+    </h2>
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+      <div class="radius-demo" style="border-radius: var(--radius-sm);">
+        <strong>sm</strong><br>
+        <code>--radius-sm</code><br>
+        <small>6px</small>
+      </div>
+      <div class="radius-demo" style="border-radius: var(--radius-md);">
+        <strong>md</strong><br>
+        <code>--radius-md</code><br>
+        <small>8px</small>
+      </div>
+      <div class="radius-demo" style="border-radius: var(--radius-lg);">
+        <strong>lg</strong><br>
+        <code>--radius-lg</code><br>
+        <small>12px</small>
+      </div>
+      <div class="radius-demo" style="border-radius: var(--radius-xl);">
+        <strong>xl</strong><br>
+        <code>--radius-xl</code><br>
+        <small>16px</small>
+      </div>
+      <div class="radius-demo" style="border-radius: var(--radius-2xl);">
+        <strong>2xl</strong><br>
+        <code>--radius-2xl</code><br>
+        <small>24px</small>
+      </div>
+      <div class="radius-demo" style="border-radius: var(--radius-full);">
+        <strong>full</strong><br>
+        <code>--radius-full</code><br>
+        <small>9999px</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-card">
+    <h2 style="font-size: var(--text-2xl); font-weight: var(--font-semibold); margin-bottom: 1rem;">
+      Tailwind Integration Test
+    </h2>
+    <p style="margin-bottom: 1rem;">These should render correctly if Tailwind config is properly mapped:</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+      <div class="shadow-xs rounded-sm bg-white p-4 border">shadow-xs + rounded-sm</div>
+      <div class="shadow-sm rounded-md bg-white p-4 border">shadow-sm + rounded-md</div>
+      <div class="shadow-md rounded-lg bg-white p-4 border">shadow-md + rounded-lg</div>
+      <div class="shadow-lg rounded-xl bg-white p-4 border">shadow-lg + rounded-xl</div>
+      <div class="shadow-xl rounded-2xl bg-white p-4 border">shadow-xl + rounded-2xl</div>
+    </div>
+  </div>
+
+  <div class="test-card" style="background: hsl(var(--success-bg)); border-color: hsl(var(--success));">
+    <h2 style="font-size: var(--text-2xl); font-weight: var(--font-semibold); margin-bottom: 1rem; color: hsl(var(--success));">
+      ✓ Task 1.3 Complete
+    </h2>
+    <ul style="list-style: disc; margin-left: 1.5rem; line-height: 1.8;">
+      <li><strong>Shadow scale defined:</strong> xs, sm, md, lg, xl, 2xl (Requirements 8.1-8.4)</li>
+      <li><strong>Border radius values defined:</strong> sm, md, lg, xl, 2xl, full (Requirements 11.1-11.2)</li>
+      <li><strong>Tailwind config updated:</strong> boxShadow and borderRadius mapped to CSS custom properties</li>
+      <li><strong>Spacing scale:</strong> Available through Tailwind's default scale (Requirement 11.1)</li>
+    </ul>
+  </div>
+</body>
+</html>

@@ -323,7 +323,7 @@ export function PersonalStyle() {
                 <label className="text-sm font-medium">
                   Exempel {index + 1}{index === 0 ? " (obligatorisk)" : " (valfri)"}
                 </label>
-                <Badge variant={text.length >= 100 ? "default" : text.length > 0 ? "destructive" : "secondary"}>
+                <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"}>
                   {text.length}/100 tecken
                 </Badge>
               </div>

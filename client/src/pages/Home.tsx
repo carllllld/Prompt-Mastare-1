@@ -20,6 +20,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -230,14 +231,14 @@ export default function Home() {
     <div className="min-h-screen app-shell-bg">
 
       {/* ── NAV ── */}
-      <header className="sticky top-0 z-50 border-b" style={{ background: "rgba(250,250,247,0.75)", backdropFilter: "blur(12px)", borderColor: "#E8E5DE" }}>
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-[2200px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-10 2xl:px-14 h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
-              <FileText className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+              <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+            <span className="text-lg font-semibold text-foreground">
               OptiPrompt
             </span>
           </Link>
@@ -245,19 +246,23 @@ export default function Home() {
           {/* Right side */}
           <div className="flex items-center gap-3">
             {authLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             ) : isAuthenticated ? (
               <>
                 {/* Usage pill */}
-                <div className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full" style={{ background: "#F0EDE6", color: "#4B5563" }}>
-                  <span className="font-semibold" style={{ color: "#2D6A4F" }}>{remaining}</span>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
+                  <span className="font-semibold text-primary">{remaining}</span>
                   <span>/</span>
                   <span>{limit}</span>
                 </div>
 
                 {/* Plan badge or upgrade */}
                 {(plan === "pro" || plan === "premium") ? (
-                  <div className="hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: plan === "premium" ? "#8B5CF6" : "#D4AF37", color: "#fff" }}>
+                  <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
+                    plan === "premium" 
+                      ? "bg-purple-600 text-white" 
+                      : "bg-amber-500 text-white"
+                  }`}>
                     <Crown className="w-3 h-3" />
                     {plan === "premium" ? "Premium" : "Pro"}
                   </div>
@@ -266,8 +271,7 @@ export default function Home() {
                     size="sm"
                     onClick={() => startCheckout("pro")}
                     disabled={isCheckoutPending}
-                    className="text-xs font-medium gap-1"
-                    style={{ background: "#2D6A4F", color: "#fff" }}
+                    className="text-xs font-medium gap-1 bg-primary text-primary-foreground hover:bg-primary-hover"
                   >
                     {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />}
                     <span className="hidden sm:inline">Uppgradera</span>
@@ -277,16 +281,16 @@ export default function Home() {
                 {/* User dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors border" style={{ borderColor: "#E8E5DE" }}>
+                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors border border-border">
                       <User className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline max-w-[120px] truncate">{user?.email?.split("@")[0]}</span>
-                      <ChevronDown className="w-3 h-3 text-gray-400" />
+                      <ChevronDown className="w-3 h-3" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <div className="px-3 py-2 border-b" style={{ borderColor: "#F3F4F6" }}>
-                      <p className="text-xs font-medium text-gray-700 truncate">{user?.email}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{plan === "premium" ? "Premium" : plan === "pro" ? "Pro" : "Gratis"}</p>
+                  <DropdownMenuContent align="end" className="w-52 shadow-lg">
+                    <div className="px-3 py-2 border-b border-border">
+                      <p className="text-xs font-medium text-foreground truncate">{user?.email}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{plan === "premium" ? "Premium" : plan === "pro" ? "Pro" : "Gratis"}</p>
                     </div>
                     <DropdownMenuItem asChild>
                       <Link href="/history" className="flex items-center gap-2 cursor-pointer">
@@ -311,7 +315,7 @@ export default function Home() {
                       Ändra lösenord
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-600 focus:text-red-600">
+                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-error focus:text-error">
                       <LogOut className="w-3.5 h-3.5 mr-2" />
                       Logga ut
                     </DropdownMenuItem>
@@ -322,8 +326,7 @@ export default function Home() {
               <Button
                 onClick={() => setAuthModalOpen(true)}
                 size="sm"
-                className="text-sm font-medium"
-                style={{ background: "#2D6A4F", color: "#fff" }}
+                className="text-sm font-medium bg-primary text-primary-foreground hover:bg-primary-hover"
               >
                 Logga in
               </Button>
@@ -380,12 +383,12 @@ export default function Home() {
 
         {/* Limit warning */}
         {isAuthenticated && remaining === 0 && !result && (
-          <div className="mb-6 rounded-xl border overflow-hidden" style={{ borderColor: "#FDBA74" }}>
-            <div className="px-5 py-3.5 flex items-center gap-4" style={{ background: "#FFF7ED" }}>
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#F97316" }} />
+          <div className="mb-6 rounded-xl border border-warning overflow-hidden">
+            <div className="px-5 py-3.5 flex items-center gap-4 bg-warning-bg">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold" style={{ color: "#9A3412" }}>Månadskvoten är slut</p>
-                <p className="text-xs mt-0.5" style={{ color: "#C2410C" }}>
+                <p className="text-sm font-semibold text-warning">Månadskvoten är slut</p>
+                <p className="text-xs mt-0.5 text-warning">
                   {plan === "free"
                     ? "Pro ger 10 genereringar, 40 AI-redigeringar, adressuppslag, bildanalys, personlig skrivstil och team-samarbete."
                     : `Återställs ${userStatus?.resetTime ? new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }) : "nästa månad"}`}
@@ -396,10 +399,9 @@ export default function Home() {
                   size="sm"
                   onClick={() => startCheckout("pro")}
                   disabled={isCheckoutPending}
-                  className="shrink-0 text-xs font-semibold"
-                  style={{ background: "#2D6A4F", color: "#fff" }}
+                  className="shrink-0 text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary-hover"
                 >
-                  {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Uppgradera till Pro"}
+                  {isCheckoutPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Uppgradera till Pro"}
                 </Button>
               )}
             </div>
@@ -481,14 +483,14 @@ export default function Home() {
             {/* Loading progress with skeleton */}
             {isPending && (
               <div className="mt-4 pro-card pro-card-premium rounded-2xl p-5">
-                <div className="mb-3 flex items-center justify-between text-xs" style={{ color: "#6B7280" }}>
+                <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
                   <span className="font-medium">Generering pågår — steg {progressStep}/{LOADING_STEPS_COUNT}</span>
                   <span>{progressPercent}%</span>
                 </div>
-                <div className="w-full h-1.5 rounded-full overflow-hidden mb-4" style={{ background: "#E8E5DE" }}>
+                <div className="w-full h-1.5 rounded-full overflow-hidden mb-4 bg-border">
                   <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${progressPercent}%`, background: "#2D6A4F" }}
+                    className="h-full rounded-full transition-all duration-500 bg-primary"
+                    style={{ width: `${progressPercent}%` }}
                   />
                 </div>
                 <PromptGenerationSkeleton step={loadingStep} total={LOADING_STEPS_COUNT} message={loadingMessage} />
@@ -515,42 +517,47 @@ export default function Home() {
               {/* Usage indicator */}
               {isAuthenticated && (
                 <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
-                  <div className="px-5 py-3 border-b flex items-center justify-between" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                    <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Månadskvot</span>
-                    <span
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{
-                        background: plan === "premium" ? "#F5F3FF" : plan === "pro" ? "#ECFDF5" : "#F3F4F6",
-                        color: plan === "premium" ? "#7C3AED" : plan === "pro" ? "#2D6A4F" : "#4B5563",
-                      }}
-                    >
-                      {plan === "pro" ? "Pro" : plan === "premium" ? "Premium" : "Gratis"}
-                    </span>
+                  <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Månadskvot</span>
+                    {plan === "premium" ? (
+                      <Badge size="sm" className="bg-purple-600 text-white border-transparent">
+                        Premium
+                      </Badge>
+                    ) : plan === "pro" ? (
+                      <Badge variant="success" size="sm">
+                        Pro
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" size="sm">
+                        Gratis
+                      </Badge>
+                    )}
                   </div>
                   <div className="p-5">
                     <div className="flex items-end justify-between mb-3">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-bold" style={{ color: remaining === 0 ? "#EF4444" : "#1D2939" }}>{remaining}</span>
-                        <span className="text-sm" style={{ color: "#9CA3AF" }}>/ {limit} kvar</span>
+                        <span className={`text-3xl font-bold ${remaining === 0 ? "text-error" : "text-foreground"}`}>{remaining}</span>
+                        <span className="text-sm text-muted-foreground">/ {limit} kvar</span>
                       </div>
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>{used} använda</span>
+                      <span className="text-xs text-muted-foreground">{used} använda</span>
                     </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#F0EDE6" }}>
+                    <div className="w-full h-2 rounded-full overflow-hidden bg-muted">
                       <div
-                        className="h-full rounded-full transition-all duration-500"
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          remaining === 0 ? "bg-error" : plan === "premium" ? "bg-purple-600" : "bg-success"
+                        }`}
                         style={{
-                          background: remaining === 0 ? "#EF4444" : plan === "premium" ? "#8B5CF6" : "#2D6A4F",
                           width: `${Math.min(100, (used / limit) * 100)}%`,
                         }}
                       />
                     </div>
                     {userStatus?.resetTime && (
-                      <p className="text-[11px] mt-2.5" style={{ color: "#9CA3AF" }}>
+                      <p className="text-xs mt-2.5 text-muted-foreground">
                         Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
                       </p>
                     )}
-                    <div className="mt-4 rounded-lg border px-3 py-3 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#4B5563" }}>
-                      <p className="font-semibold mb-1" style={{ color: "#1D2939" }}>För bäst resultat</p>
+                    <div className="mt-4 rounded-lg border border-border px-3 py-3 text-xs bg-muted text-muted-foreground">
+                      <p className="font-semibold mb-1 text-foreground">För bäst resultat</p>
                       <p>Fyll först i adress, område, boarea, skick, planlösning och objektets starkaste säljpunkter. Resten är förfining.</p>
                     </div>
                   </div>

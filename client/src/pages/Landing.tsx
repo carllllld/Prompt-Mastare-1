@@ -48,25 +48,24 @@ function DemoTabs() {
   const item = DEMO[activeTab];
 
   return (
-    <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: "#E8E5DE" }}>
-      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: "#E8E5DE", background: "#F8F6F1" }}>
+    <div className="bg-card rounded-xl border border-card-border overflow-hidden shadow-md">
+      <div className="px-5 pt-4 pb-3 border-b border-border bg-muted">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
+          <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Exempeloutput (förkortad)
           </span>
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {DEMO.map((t, i) => (
             <button
               key={t.label}
               onClick={() => setActiveTab(i)}
-              className="px-2.5 py-1 text-[11px] rounded-full border transition-all font-medium"
-              style={{
-                background: activeTab === i ? "#2D6A4F" : "#fff",
-                color: activeTab === i ? "#fff" : "#6B7280",
-                borderColor: activeTab === i ? "#2D6A4F" : "#E8E5DE",
-              }}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-all font-medium ${
+                activeTab === i
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                  : "bg-background text-muted-foreground border-input hover:bg-accent hover:text-accent-foreground"
+              }`}
             >
               {t.label}
             </button>
@@ -75,32 +74,32 @@ function DemoTabs() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-        <div className="p-6 border-b md:border-b-0 md:border-r" style={{ borderColor: "#F3F4F6" }}>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-semibold mb-3" style={{ background: "#FEE2E2", color: "#991B1B" }}>
+        <div className="p-6 border-b md:border-b-0 md:border-r border-border bg-error-bg/30">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 bg-error-bg text-error border border-error/20">
             Typisk chatt-AI
           </div>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#4B5563" }}>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
             {item.before}
           </p>
-          <div className="mt-4 pt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "#F3F4F6" }}>
+          <div className="mt-4 pt-3 border-t border-border flex flex-wrap gap-2">
             {["generös", "fantastisk", "bjuder på", "unik möjlighet", "perfekt"].map((w) => (
-              <span key={w} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: "#FEE2E2", color: "#991B1B" }}>
+              <span key={w} className="px-2 py-0.5 rounded text-xs font-medium bg-error-bg text-error border border-error/20">
                 {w}
               </span>
             ))}
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-semibold mb-3" style={{ background: "#DCFCE7", color: "#166534" }}>
+        <div className="p-6 bg-success-bg/30">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 bg-success-bg text-success border border-success/20">
             OptiPrompt
           </div>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "#4B5563" }}>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
             {item.after}
           </p>
-          <div className="mt-4 pt-3 border-t flex flex-wrap gap-2" style={{ borderColor: "#F3F4F6" }}>
+          <div className="mt-4 pt-3 border-t border-border flex flex-wrap gap-2">
             {["fakta först", "plattformstext", "klyschfilter", "redo att publicera"].map((w) => (
-              <span key={w} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: "#DCFCE7", color: "#166534" }}>
+              <span key={w} className="px-2 py-0.5 rounded text-xs font-medium bg-success-bg text-success border border-success/20">
                 {w}
               </span>
             ))}
@@ -278,21 +277,18 @@ export default function Landing() {
       </header>
 
       {/* ════════ HERO ════════ */}
-      <section className="pt-16 pb-20 sm:pt-24 sm:pb-28">
+      <section className="pt-16 pb-20 sm:pt-24 sm:pb-28 bg-gradient-to-b from-muted/30 to-background">
         <div className="max-w-4xl mx-auto text-center px-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8" style={{ background: "#E8F5E9", color: "#2D6A4F" }}>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium mb-8 bg-success-bg text-success border border-success/20">
             Byggt för svenska fastighetsmäklare
           </div>
 
-          <h1
-            className="text-3xl sm:text-5xl lg:text-6xl font-semibold leading-tight mb-6"
-            style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}
-          >
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold leading-tight mb-6 text-foreground">
             Sluta skriva objektbeskrivningar.{" "}
-            <span style={{ color: "#2D6A4F" }}>Börja publicera.</span>
+            <span className="text-primary">Börja publicera.</span>
           </h1>
 
-          <p className="text-base sm:text-lg max-w-2xl mx-auto mb-8 leading-relaxed" style={{ color: "#6B7280" }}>
+          <p className="text-base sm:text-lg max-w-2xl mx-auto mb-8 leading-relaxed text-muted-foreground">
             Fyll i fastighetens data. Få 5 publiceringsklara texter på under en minut —
             Hemnet, rubrik, socialt inlägg, visningsinbjudan och kortannons.
             Utan klyschor. Utan "generösa ytor".
@@ -301,17 +297,17 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
             <Button
               onClick={openRegister}
-              className="text-base px-8 py-3.5 font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
-              style={{ background: "#2D6A4F", color: "#fff" }}
+              size="lg"
+              className="text-base px-8 py-6 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
             >
               Testa gratis — 2 genereringar/månad
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <span className="text-xs" style={{ color: "#6B7280" }}>Inget kort krävs</span>
+            <span className="text-xs text-muted-foreground">Inget kort krävs</span>
           </div>
 
           {/* Stats — bara produktfakta, inga användarsiffror */}
-          <div className="flex flex-wrap items-center justify-center gap-8 mt-12 pt-8 border-t" style={{ borderColor: "#E8E5DE" }}>
+          <div className="flex flex-wrap items-center justify-center gap-8 mt-12 pt-8 border-t border-border">
             {[
               { value: "Under 1 min", label: "per generering" },
               { value: "5 texter", label: "på en gång" },
@@ -319,8 +315,8 @@ export default function Landing() {
               { value: "Formatmallar", label: "Hemnet & Booli" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
-                <div className="text-xl sm:text-2xl font-bold" style={{ color: "#2D6A4F" }}>{stat.value}</div>
-                <div className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{stat.label}</div>
+                <div className="text-xl sm:text-2xl font-bold text-primary">{stat.value}</div>
+                <div className="text-xs mt-0.5 text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -372,25 +368,25 @@ export default function Landing() {
       </section>
 
       {/* ════════ FEATURES ════════ */}
-      <section id="funktioner" className="py-16 sm:py-20" style={{ background: "#F8F6F1" }}>
+      <section id="funktioner" className="py-16 sm:py-20 bg-muted">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3 text-foreground">
               Byggt för svenska mäklare
             </h2>
-            <p className="text-sm max-w-xl mx-auto" style={{ color: "#6B7280" }}>
+            <p className="text-sm max-w-xl mx-auto text-muted-foreground">
               Inte en chatt. Ett publiceringsflöde för objektsbeskrivningar — med klyschfilter, formatmallar och kvalitetskontroller.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
-              <div key={f.title} className="bg-white rounded-xl border p-5" style={{ borderColor: "#E8E5DE" }}>
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4" style={{ background: "#E8F5E9" }}>
-                  <f.icon className="w-5 h-5" style={{ color: "#2D6A4F" }} />
+              <div key={f.title} className="bg-card rounded-xl border border-card-border p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4 bg-success-bg">
+                  <f.icon className="w-10 h-10 text-success" />
                 </div>
-                <h3 className="font-semibold text-sm mb-1.5" style={{ color: "#1D2939" }}>{f.title}</h3>
-                <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>{f.desc}</p>
+                <h3 className="font-semibold text-base mb-2 text-foreground">{f.title}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -401,10 +397,10 @@ export default function Landing() {
       <section id="priser" className="py-16 sm:py-20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+            <h2 className="text-2xl sm:text-3xl font-semibold mb-3 text-foreground">
               Enkel prissättning. Avsluta när du vill.
             </h2>
-            <p className="text-sm" style={{ color: "#6B7280" }}>
+            <p className="text-sm text-muted-foreground">
               Varje generering ger 5 texter: objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan & kortannons.
             </p>
           </div>
@@ -413,32 +409,33 @@ export default function Landing() {
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
-                className={`bg-white rounded-xl p-6 relative ${plan.highlight ? "border-2 shadow-lg" : "border"}`}
-                style={{ borderColor: plan.highlight ? plan.color : "#E8E5DE" }}
+                className={`bg-card rounded-xl p-6 relative shadow-md transition-shadow hover:shadow-lg ${
+                  plan.highlight ? "border-2 border-primary" : "border border-card-border"
+                }`}
               >
                 {plan.highlight && (
-                  <div className="absolute -top-3 right-4 px-3 py-0.5 rounded-full text-xs font-bold text-white" style={{ background: plan.color }}>
+                  <div className="absolute -top-3 right-4 px-3 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
                     Populärast
                   </div>
                 )}
-                <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: plan.color }}>
+                <div className="text-xs font-semibold uppercase tracking-wider mb-2 text-primary">
                   {plan.name}
                 </div>
                 {plan.price !== null ? (
                   <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-3xl font-bold" style={{ color: "#1D2939" }}>{plan.price} kr</span>
-                    <span className="text-sm" style={{ color: "#9CA3AF" }}>/månad</span>
+                    <span className="text-4xl font-bold text-foreground">{plan.price} kr</span>
+                    <span className="text-sm text-muted-foreground">/månad</span>
                   </div>
                 ) : (
                   <div className="mb-1">
-                    <span className="text-2xl font-bold" style={{ color: "#1D2939" }}>Anpassat</span>
+                    <span className="text-4xl font-bold text-foreground">Anpassat</span>
                   </div>
                 )}
-                <p className="text-xs mb-6" style={{ color: "#6B7280" }}>{plan.desc}</p>
+                <p className="text-xs mb-6 text-muted-foreground">{plan.desc}</p>
                 <ul className="space-y-2.5 mb-6">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm" style={{ color: "#374151" }}>
-                      <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
+                    <li key={f} className="flex items-start gap-2 text-sm text-foreground">
+                      <Check className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
                       {f}
                     </li>
                   ))}
@@ -447,7 +444,6 @@ export default function Landing() {
                   onClick={openRegister}
                   variant={plan.highlight ? "default" : "outline"}
                   className="w-full font-medium"
-                  style={plan.highlight ? { background: plan.color, color: "#fff" } : {}}
                 >
                   {plan.tier && <Crown className="w-4 h-4 mr-2" />}
                   {plan.cta}
@@ -455,7 +451,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-center mt-6" style={{ color: "#9CA3AF" }}>
+          <p className="text-xs text-center mt-6 text-muted-foreground">
             Team-samarbete ingår i Pro och Premium.
           </p>
         </div>

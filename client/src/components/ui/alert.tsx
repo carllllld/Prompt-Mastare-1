@@ -4,13 +4,16 @@ import { cn } from "@/lib/utils"
 const alertVariants = ({
   variant = "default"
 }: {
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive" | "success" | "warning" | "info"
 }) => {
-  const base = "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground"
+  const base = "relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4"
   
   const variants = {
-    default: "bg-background text-foreground",
-    destructive: "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive"
+    default: "bg-background text-foreground border-border [&>svg]:text-foreground",
+    destructive: "bg-error-bg text-error border-error [&>svg]:text-error",
+    success: "bg-success-bg text-success border-success [&>svg]:text-success",
+    warning: "bg-warning-bg text-warning border-warning [&>svg]:text-warning",
+    info: "bg-info-bg text-info border-info [&>svg]:text-info"
   }
   
   return `${base} ${variants[variant]}`
@@ -18,7 +21,7 @@ const alertVariants = ({
 
 const Alert = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "destructive" }
+  React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "destructive" | "success" | "warning" | "info" }
 >(
   ({ className, variant, ...props }, ref) => (
     <div
