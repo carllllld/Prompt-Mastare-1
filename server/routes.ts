@@ -3286,8 +3286,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       // Execute new pipeline
+      const transformedDisposition = req.body.propertyData 
+        ? buildDispositionFromStructuredData(req.body.propertyData)
+        : { rawText: prompt };
+      
       const result = await orchestrator.execute({
-        disposition: req.body.propertyData || { rawText: prompt },
+        disposition: transformedDisposition,
         style,
         platform: platform || 'hemnet',
         personalStylePrompt,
@@ -3311,7 +3315,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         user.id,
         sessionId,
         'treatment',
-        JSON.stringify(req.body.propertyData || { rawText: prompt }),
+        JSON.stringify(transformedDisposition),
         style,
         platform || 'hemnet',
         personalStylePrompt || null,
