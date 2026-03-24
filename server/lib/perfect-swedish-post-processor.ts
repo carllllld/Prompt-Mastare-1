@@ -212,8 +212,11 @@ export class DeterministicPostProcessor {
     // Count existing paragraph breaks
     const existingBreaks = (text.match(/\n\n/g) || []).length;
 
-    // If text has fewer than 3 paragraph breaks, force them in at logical points
-    if (existingBreaks < 3) {
+    // Count words to determine if text is long enough to need paragraph breaks
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+    // Only enforce paragraph breaks for texts with 120+ words and fewer than 2 breaks
+    if (wordCount >= 120 && existingBreaks < 2) {
       const sentences = text.split(/\.\s+/).filter(s => s.trim().length > 0);
       
       // Need at least 3 sentences to create meaningful paragraph breaks
@@ -222,10 +225,16 @@ export class DeterministicPostProcessor {
         const paragraphs: string[] = [];
         
         if (sentences.length <= 4) {
-          // Short text: split into 2-3 paragraphs
+          // Short text: split into 2 paragraphs (1 break)
           const mid = Math.floor(sentences.length / 2);
           paragraphs.push(sentences.slice(0, mid).join('. ') + '.');
           paragraphs.push(sentences.slice(mid).join('. ') + '.');
+        } else if (sentences.length <= 6) {
+          // Medium text: split into 3 paragraphs (2 breaks)
+          const third = Math.floor(sentences.length / 3);
+          paragraphs.push(sentences.slice(0, third).join('. ') + '.');
+          paragraphs.push(sentences.slice(third, third * 2).join('. ') + '.');
+          paragraphs.push(sentences.slice(third * 2).join('. ') + '.');
         } else {
           // Longer text: split into 3-5 paragraphs
           // Paragraph 1: First 1-2 sentences (USP opening)
@@ -343,19 +352,34 @@ export class DeterministicPostProcessor {
       return result;
     }
 
-    // Hemnet-forbidden patterns
-    const pricePattern = /\b(pris|utgångspris|avgift|driftkostnad|kr\/mån|kronor|SEK)\b/gi;
+    // Hemnet-forbidden patterns - remove numbers with currency AND the words
+    const priceWithNumberPattern = /\d+\s*(?:\d{3}\s*)*\s*(?:kr|kronor|mkr|miljoner|SEK)\b/gi;
+    const priceWordPattern = /\b(pris|utgångspris|avgift|driftkostnad|månadsavgift|kr\/mån)\b/gi;
     const energyPattern = /\b(energiklass|energiprestanda|energiklass\s+[A-G])\b/gi;
 
     for (const field of TEXT_FIELDS) {
       let text = result[field];
       const originalText = text;
 
-      // Remove price/fee references
-      const priceMatches = text.match(pricePattern);
-      if (priceMatches) {
-        text = text.replace(pricePattern, '');
-        priceMatches.forEach(match =>
+      // Remove price/fee WITH numbers (e.g., "3 500 000 kr", "4 500 kr/mån")
+      const priceNumberMatches = text.match(priceWithNumberPattern);
+      if (priceNumberMatches) {
+        text = text.replace(priceWithNumberPattern, '');
+        priceNumberMatches.forEach(match =>
+          transformations.push({
+            type: 'forbidden_phrase',
+            field,
+            before: match,
+            after: '',
+          })
+        );
+      }
+
+      // Remove price/fee words (e.g., "avgift", "pris")
+      const priceWordMatches = text.match(priceWordPattern);
+      if (priceWordMatches) {
+        text = text.replace(priceWordPattern, '');
+        priceWordMatches.forEach(match =>
           transformations.push({
             type: 'forbidden_phrase',
             field,
@@ -622,10 +646,14 @@ export class DeterministicPostProcessor {
   private fixAbruptEndings(text: string, field: string, transformations: Transformation[]): string {
     let result = text.trim();
 
+    // Check if text ends with punctuation (including double punctuation)
     if (result.length > 0 && !/[.!?]$/.test(result)) {
       result = result + '.';
       transformations.push({ type: 'narrative_integrity', field, before: 'Text ending without punctuation', after: 'Added period at end' });
     }
+
+    // Clean up any double punctuation that might have been created
+    result = result.replace(/\.{2,}$/g, '.');
 
     const lastSentence = result.split(/[.!?]/).filter(s => s.trim().length > 0).pop()?.trim() || '';
     const words = lastSentence.split(/\s+/).filter(Boolean);

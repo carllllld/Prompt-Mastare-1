@@ -104,6 +104,10 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     // Grammar errors
     [/\.{2,}/, 'Dubbla punkter (..) - använd endast en punkt'],
     [/\s+[.!?,;:]/, 'Mellanslag före interpunktion - ta bort mellanslaget'],
+    // Broken sentence detection - missing punctuation between clauses
+    [/\b(plus|minus)\s+[a-zåäö]+(?:ar|er|as)\s+[a-zåäö]+/i, 'Möjlig saknad interpunktion mellan satser - kontrollera meningsstruktur'],
+    // Bullet point detection in prose
+    [/^\s*[-•]\s+/m, 'Punktlistor i löptext - skriv som naturlig prosa'],
     // Existing patterns
     [/\benergiklass(?:en)?\s+är\s+(?:fiber|installerat|parkering|buss)\b/i, 'Trasig energiklass-/teknikmening'],
     [/\benergiklass\s+[A-G]\.\s+fiber\s+är\s+installerat\b/i, 'Mekanisk teknikrad efter energiklass'],
@@ -126,6 +130,23 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
       violations.push(message);
     }
   }
+  
+  // Check for unverifiable condition claims
+  const unverifiableClaimPatterns = [
+    /\b(?:i\s+)?(?:genomgående\s+)?nyskick\b/i,
+    /\btoppskick\b/i,
+    /\bperfekt\s+skick\b/i,
+  ];
+  for (const pattern of unverifiableClaimPatterns) {
+    if (pattern.test(text)) {
+      // Check if there's renovation evidence in the text
+      const hasRenovationEvidence = /renovera(?:d|t|de)|totalrenovering|upprustning|ombyggnad|ny(?:tt|a)\s+(?:kök|badrum|fönster|tak)/i.test(text);
+      if (!hasRenovationEvidence) {
+        violations.push('Otydligt påstående om skick utan bevis - använd specifika renoveringsår eller undvik "nyskick"/"toppskick"');
+      }
+    }
+  }
+  
   if (hasHarmfulRepeatedPhraseRun(text)) {
     violations.push('Upprepad fras flera gånger i rad');
   }
