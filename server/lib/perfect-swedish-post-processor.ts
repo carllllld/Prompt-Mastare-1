@@ -215,8 +215,8 @@ export class DeterministicPostProcessor {
     // Count words to determine if text is long enough to need paragraph breaks
     const wordCount = text.split(/\s+/).filter(Boolean).length;
 
-    // Only enforce paragraph breaks for texts with 120+ words and fewer than 2 breaks
-    if (wordCount >= 120 && existingBreaks < 2) {
+    // Only enforce paragraph breaks for texts with 80+ words and fewer than 2 breaks
+    if (wordCount >= 80 && existingBreaks < 2) {
       const sentences = text.split(/\.\s+/).filter(s => s.trim().length > 0);
       
       // Need at least 3 sentences to create meaningful paragraph breaks

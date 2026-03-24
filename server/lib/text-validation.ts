@@ -234,8 +234,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
       }
     }
     for (const [word, count] of Object.entries(starters)) {
-      // Raised threshold from 4 to 5 repetitions, and from 8+ to 10+ sentences - more lenient for natural Swedish
-      if (count >= 5 && sentences.length >= 10 && !['brf', 'avgift'].includes(word)) {
+      // Detect 5 repetitions when there are at least 5 sentences
+      if (count >= 5 && sentences.length >= 5 && !['brf', 'avgift'].includes(word)) {
         violations.push(`Monoton meningsstart: "${word}" börjar ${count} meningar. Variera.`);
       }
     }
