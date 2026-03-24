@@ -240,7 +240,7 @@ Om något av dessa påståenden förekommer UTAN konkret bevis (t.ex. renovering
 - severity: "critical"
 - category: "legal"
 - issue: "Otydligt påstående: '[påstående]' kräver bevis"
-- suggestion: "Specificera ${c.requiresEvidence} eller ta bort påståendet"`;
+- suggestion: "Specificera bevis (t.ex. renoveringsår, besiktning) eller ta bort påståendet"`;
 
     return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback i JSON-format.
 
