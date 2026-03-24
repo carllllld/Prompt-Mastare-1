@@ -3,6 +3,7 @@ import { DeterministicPostProcessor, PostProcessResult } from './perfect-swedish
 import { ExpertAIAnalyzer, ExpertAnalysis } from './perfect-swedish-analyzer';
 import { PerfectSwedishFallback, FallbackResult } from './perfect-swedish-fallback';
 import { WritingStyle } from './text-rules';
+import { findRuleViolations } from './text-validation';
 import pRetry, { AbortError } from 'p-retry';
 import * as Sentry from '@sentry/node';
 
@@ -400,6 +401,46 @@ export class PerfectSwedishOrchestrator {
       message: 'Pipeline klar',
       timestamp: new Date()
     });
+
+    // CRITICAL: Validate ALL fields for forbidden phrases and platform rules
+    const fieldsToValidate = {
+      improvedPrompt: postProcessResult.improvedPrompt,
+      headline: postProcessResult.headline,
+      socialCopy: postProcessResult.socialCopy,
+      instagramCaption: postProcessResult.instagramCaption,
+      showingInvitation: postProcessResult.showingInvitation,
+      shortAd: postProcessResult.shortAd
+    };
+    
+    for (const [fieldName, fieldValue] of Object.entries(fieldsToValidate)) {
+      if (!fieldValue) continue;
+      
+      const violations = findRuleViolations(
+        fieldValue,
+        request.platform || 'hemnet',
+        request.style
+      );
+      
+      if (violations.length > 0) {
+        console.warn(`[Orchestrator] Validation violations in ${fieldName}:`, violations);
+        // Log to Sentry for monitoring
+        Sentry.captureMessage(`Validation violations in ${fieldName}`, {
+          level: 'warning',
+          tags: {
+            component: 'perfect-swedish-orchestrator',
+            field: fieldName,
+            platform: request.platform || 'hemnet',
+            style: request.style
+          },
+          extra: {
+            violations,
+            fieldValue: fieldValue.substring(0, 200),
+            userId: request.userId,
+            sessionId: request.sessionId
+          }
+        });
+      }
+    }
 
     return {
       improvedPrompt: postProcessResult.improvedPrompt,

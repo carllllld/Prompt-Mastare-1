@@ -221,13 +221,14 @@ export function ExpertFeedbackPanel({
       </div>
 
       {/* Feedback list */}
-      <ScrollArea className="flex-1 max-h-[500px]">
-        <Accordion
-          type="multiple"
-          value={expandedCategories}
-          onValueChange={setExpandedCategories}
-          className="w-full"
-        >
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          <Accordion
+            type="multiple"
+            value={expandedCategories}
+            onValueChange={setExpandedCategories}
+            className="w-full"
+          >
           {Object.entries(groupedFeedback).map(([category, items]) => {
             if (items.length === 0) return null;
 
@@ -373,6 +374,7 @@ export function ExpertFeedbackPanel({
           })}
         </Accordion>
       </ScrollArea>
+    </div>
 
       {/* Footer with legal check */}
       {analysis.legalCheck && (

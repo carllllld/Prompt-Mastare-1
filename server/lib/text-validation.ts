@@ -1,9 +1,11 @@
-import { FORBIDDEN_PHRASES, shouldBlockPhraseForStyle, WritingStyle } from "./text-rules";
+import { FORBIDDEN_PHRASES, shouldBlockPhraseForStyle, WritingStyle, HEMNET_FORBIDDEN_PATTERNS, UNVERIFIABLE_CLAIMS } from "./text-rules";
 
 const PLATFORM_RULES: Record<string, Array<{ pattern: RegExp; message: string }>> = {
   hemnet: [
     { pattern: /\benergiklass\b/i, message: "Energiklass ska inte nämnas i Hemnet-huvudtexten då den visas separat i annonsen." },
     { pattern: /\benergiprestanda\b/i, message: "Energiprestanda ska inte nämnas i Hemnet-huvudtexten då den visas separat i annonsen." },
+    // Lägg till Hemnet-specifika regler från text-rules.ts
+    ...HEMNET_FORBIDDEN_PATTERNS.map(rule => ({ pattern: rule.pattern, message: rule.message }))
   ],
   booli: [],
 };

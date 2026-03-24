@@ -243,9 +243,7 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
           borderColor: "#D1D5DB",
           boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
         }}
-      >
-        {text}
-      </div>
+      />
 
       {/* Floating AI toolbar */}
       {showToolbar && (

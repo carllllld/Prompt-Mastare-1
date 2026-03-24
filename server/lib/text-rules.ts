@@ -98,6 +98,37 @@ export const FORBIDDEN_PHRASES = [
   "ett hem som",
 ];
 
+// === HEMNET-SPECIFIKA REGLER ===
+// Hemnet tillåter INTE ekonomihänvisningar eller pris/avgift i objektbeskrivningen
+export const HEMNET_FORBIDDEN_PATTERNS = [
+  // Ekonomihänvisningar
+  { pattern: /ekonomi.*redovisas/gi, message: "Ekonomihänvisning inte tillåten i objektbeskrivning" },
+  { pattern: /se.*ekonomi.*fält/gi, message: "Hänvisning till ekonomifält inte tillåten" },
+  { pattern: /pris.*avgift.*drift/gi, message: "Ekonomisk information ska endast stå i dedikerade fält" },
+  { pattern: /läs mer.*ekonomi/gi, message: "Ekonomihänvisning inte tillåten" },
+  
+  // Avgift i löptext (Hemnet-regel: endast i dedikerat fält)
+  { pattern: /\d+\s*kr\/mån/gi, message: "Avgift får inte stå i objektbeskrivning" },
+  { pattern: /\d+\s*kronor.*månad/gi, message: "Avgift får inte stå i objektbeskrivning" },
+  { pattern: /månadsavgift.*\d+/gi, message: "Avgift får inte stå i objektbeskrivning" },
+  
+  // Pris i löptext
+  { pattern: /\d+\s*mkr/gi, message: "Pris får inte stå i objektbeskrivning" },
+  { pattern: /\d+\s*miljoner/gi, message: "Pris får inte stå i objektbeskrivning" },
+  { pattern: /utgångspris.*\d+/gi, message: "Pris får inte stå i objektbeskrivning" }
+];
+
+// === OTYDLIGA PÅSTÅENDEN SOM KRÄVER BEVIS ===
+export const UNVERIFIABLE_CLAIMS = [
+  { claim: "i nyskick", requiresEvidence: "renoveringsår för hela bostaden eller besiktning" },
+  { claim: "mycket gott skick", requiresEvidence: "specifika renoveringar eller besiktning" },
+  { claim: "fräscht", requiresEvidence: "renoveringsår eller målning" },
+  { claim: "välskött", requiresEvidence: "underhållshistorik eller besiktning" },
+  { claim: "genomgående fint skick", requiresEvidence: "besiktning eller omfattande renovering" },
+  { claim: "toppskick", requiresEvidence: "renoveringsår eller besiktning" },
+  { claim: "perfekt skick", requiresEvidence: "renoveringsår eller besiktning" }
+];
+
 const BALANCED_EXEMPT = new Set([
   // Legitimate broker language that's allowed in balanced style
   "genomtänkt", "smakfullt", "stilfullt", "elegant",
