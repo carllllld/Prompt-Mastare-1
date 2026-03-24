@@ -89,6 +89,10 @@ export class ExpertAIAnalyzer {
       // Step 2: Merge validation violations with AI improvements
       const mergedAnalysis = this.mergeValidationViolations(analysis, validationResult);
       
+      // Memory optimization: Clear validation result after merge to allow GC
+      // This is safe because all needed data is now in mergedAnalysis
+      (validationResult as any).violations = null;
+      
       const analysisWithSpans = this.identifyTextSpans(request, mergedAnalysis);
       const analysisWithFixes = this.generateAutoFixes(analysisWithSpans);
 
@@ -138,6 +142,7 @@ export class ExpertAIAnalyzer {
       }
     }
 
+    // Return immediately to allow garbage collection of intermediate objects
     return { violations, totalCount };
   }
 

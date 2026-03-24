@@ -46,7 +46,7 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [-] 3. Fix for Expert Analyzer validation detection
+- [x] 3. Fix for Expert Analyzer validation detection
 
   - [x] 3.1 Add validation imports and enhance buildAnalysisPrompt
     - Import `findRuleViolations` from `./text-validation`
@@ -154,7 +154,7 @@
     - Confirm all tests still pass after fix (no regressions)
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Run all tests: `npm run test`
   - Verify bug condition test passes (task 3.6)
   - Verify preservation tests pass (task 3.7)
