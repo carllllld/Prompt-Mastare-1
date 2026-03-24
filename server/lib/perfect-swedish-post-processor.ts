@@ -139,7 +139,17 @@ export class DeterministicPostProcessor {
         }
       }
 
-      result[field] = text.replace(/\s{2,}/g, ' ').trim();
+      // Normalize spaces but preserve paragraph breaks (\n\n)
+      // Split on paragraph breaks, normalize each paragraph, then rejoin
+      if (field === 'improvedPrompt' && text.includes('\n\n')) {
+        const paragraphs = text.split('\n\n');
+        result[field] = paragraphs
+          .map(p => p.replace(/\s{2,}/g, ' ').trim())
+          .filter(p => p.length > 0)
+          .join('\n\n');
+      } else {
+        result[field] = text.replace(/\s{2,}/g, ' ').trim();
+      }
     }
 
     return result;
@@ -328,7 +338,16 @@ export class DeterministicPostProcessor {
         }
       }
 
-      result[field] = text.replace(/\s{2,}/g, ' ').trim();
+      // Normalize spaces but preserve paragraph breaks (\n\n) in improvedPrompt
+      if (field === 'improvedPrompt' && text.includes('\n\n')) {
+        const paragraphs = text.split('\n\n');
+        result[field] = paragraphs
+          .map(p => p.replace(/\s{2,}/g, ' ').trim())
+          .filter(p => p.length > 0)
+          .join('\n\n');
+      } else {
+        result[field] = text.replace(/\s{2,}/g, ' ').trim();
+      }
     }
 
     return result;
