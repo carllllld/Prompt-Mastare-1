@@ -8,11 +8,16 @@
  * Expected: Analyzer returns critical improvements for all validation violations.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ExpertAIAnalyzer } from '../lib/perfect-swedish-analyzer';
 import { findRuleViolations } from '../lib/text-validation';
 
-describe('Analyzer-Validation Mismatch - Bug Condition Exploration', () => {
+// Skip all tests if using fake API key
+const hasRealApiKey = process.env.OPENAI_API_KEY && 
+                      !process.env.OPENAI_API_KEY.startsWith('test-') &&
+                      process.env.OPENAI_API_KEY.length > 20;
+
+describe.skipIf(!hasRealApiKey)('Analyzer-Validation Mismatch - Bug Condition Exploration', () => {
   const analyzer = new ExpertAIAnalyzer();
 
   it('PROPERTY 1: Analyzer detects forbidden phrase "erbjuds" in improvedPrompt', async () => {

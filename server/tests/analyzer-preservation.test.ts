@@ -9,11 +9,16 @@
  * For clean texts (no violations), analyzer should continue providing quality analysis.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { ExpertAIAnalyzer } from '../lib/perfect-swedish-analyzer';
 import { findRuleViolations } from '../lib/text-validation';
 
-describe('Analyzer Preservation - Property 2: Non-Violation Analysis Quality', () => {
+// Skip all tests if using fake API key
+const hasRealApiKey = process.env.OPENAI_API_KEY && 
+                      !process.env.OPENAI_API_KEY.startsWith('test-') &&
+                      process.env.OPENAI_API_KEY.length > 20;
+
+describe.skipIf(!hasRealApiKey)('Analyzer Preservation - Property 2: Non-Violation Analysis Quality', () => {
   const analyzer = new ExpertAIAnalyzer();
 
   it('PRESERVATION: Clean text (no violations) gets quality analysis with strengths', async () => {

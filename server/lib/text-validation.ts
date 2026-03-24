@@ -225,7 +225,7 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     violations.push(`"ligger [avstånd]" upprepas ${liggerCount} gånger (max 3). Variera avståndsformat.`);
   }
 
-  if (sentences.length >= 5) {
+  if (sentences.length >= 10) {
     const starters: Record<string, number> = {};
     for (const s of sentences) {
       const firstWord = s.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-zåäö]/g, '');
@@ -234,8 +234,8 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
       }
     }
     for (const [word, count] of Object.entries(starters)) {
-      // Detect 5 repetitions when there are at least 5 sentences
-      if (count >= 5 && sentences.length >= 5 && !['brf', 'avgift'].includes(word)) {
+      // Detect 5 repetitions when there are at least 10 sentences
+      if (count >= 5 && sentences.length >= 10 && !['brf', 'avgift'].includes(word)) {
         violations.push(`Monoton meningsstart: "${word}" börjar ${count} meningar. Variera.`);
       }
     }

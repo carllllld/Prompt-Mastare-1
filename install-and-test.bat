@@ -1,0 +1,6 @@
+@echo off
+echo Installing dependencies...
+call npm install
+echo.
+echo Running test...
+call npm test -- server/tests/critical-quality-fixes-preservation.test.ts -t "3.8"

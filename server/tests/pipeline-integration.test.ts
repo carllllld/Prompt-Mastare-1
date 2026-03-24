@@ -328,7 +328,17 @@ describe('11.2 Retry logic', () => {
       },
     }));
 
-    await expect(orchestrator.execute(BASE_REQUEST)).rejects.toThrow(/misslyckades/i);
+    // After exhausting retries, fallback system activates
+    const result = await orchestrator.execute(BASE_REQUEST);
+    
+    // Fallback provides basic result
+    expect(result.metrics.success).toBe(true);
+    expect(result.metrics.errorType).toBe('pipeline_failure_fallback_activated');
+    expect(result.metrics.retryCount).toBeGreaterThan(0);
+    
+    // Fallback text should be present
+    expect(result.improvedPrompt).toBeTruthy();
+    expect(result.headline).toBeTruthy();
   }, 30000);
 });
 

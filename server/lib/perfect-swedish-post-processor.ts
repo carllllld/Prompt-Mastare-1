@@ -227,7 +227,8 @@ export class DeterministicPostProcessor {
 
     // Only enforce paragraph breaks for texts with 80+ words and fewer than 2 breaks
     if (wordCount >= 80 && existingBreaks < 2) {
-      const sentences = text.split(/\.\s+/).filter(s => s.trim().length > 0);
+      // Split by period (with or without trailing space) to handle text ending with period
+      const sentences = text.split(/\.\s*/).filter(s => s.trim().length > 0);
       
       // Need at least 3 sentences to create meaningful paragraph breaks
       if (sentences.length >= 3) {
