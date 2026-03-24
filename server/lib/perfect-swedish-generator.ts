@@ -58,11 +58,11 @@ export class SmartGenerationEngine {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
-        top_p: 0.9,
+        // Note: temperature and top_p are not supported when using reasoning_effort
+        // Reasoning models use internal reasoning process for consistency
         max_completion_tokens: 2500,
         response_format: { type: 'json_object' },
-        reasoning_effort: 'medium', // Enable o1/o3 reasoning mode for quality
+        reasoning_effort: 'high', // High reasoning for best quality broker-realistic text
       });
 
       const result = this.extractResult(completion);

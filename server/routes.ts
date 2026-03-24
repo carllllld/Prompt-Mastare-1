@@ -387,8 +387,10 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
+      temperature: 0.5, // Moderate temperature for style interpretation
       max_completion_tokens: 1000,
       response_format: { type: "json_object" },
+      // Note: No reasoning_effort - simple JSON extraction doesn't need deep reasoning
     });
 
     const styleData = safeJsonParse(response.choices[0]?.message?.content || "{}");

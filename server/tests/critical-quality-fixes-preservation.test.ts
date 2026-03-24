@@ -410,7 +410,8 @@ describe('Preservation 6: Validation Detection (Requirements 3.9-3.10)', () => {
 
   it('3.9 should continue detecting repetitive sentence starters', () => {
     // OBSERVATION: Validation detects monotonous writing
-    const text = 'Köket har nya vitvaror. Köket har kompositbänk. Köket har köksö. Köket har gott om förvaring. Köket har fönster mot gården. Köket har ljusa skåp. Köket har moderna detaljer. Köket har plats för matbord. Köket har bra arbetsytor. Köket har fin utsikt.';
+    // NOTE: Requires 10+ sentences with 5+ repetitions of same starter
+    const text = 'Köket har nya vitvaror. Köket har kompositbänk. Köket har köksö. Köket har gott om förvaring. Köket har fönster mot gården. Köket har ljusa skåp. Köket har moderna detaljer. Köket har plats för matbord. Köket har bra arbetsytor. Köket har fin utsikt. Köket har bra belysning. Köket har praktisk layout.';
     const violations = findRuleViolations(text, 'hemnet', 'balanced');
     
     // EXPECTED: Should detect repetitive starters

@@ -72,10 +72,11 @@ export class ExpertAIAnalyzer {
       const completionPromise = this.openai.chat.completions.create({
         model: 'gpt-5.2',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        top_p: 0.8,
+        temperature: 0.3, // Low temperature for consistent, focused analysis
         max_completion_tokens: 2500,
         response_format: { type: 'json_object' },
+        // Note: No reasoning_effort here - this is simpler validation/analysis
+        // that benefits from temperature control for consistency
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
