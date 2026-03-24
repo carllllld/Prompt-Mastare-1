@@ -351,7 +351,7 @@ describe('Preservation 5: Post-Processing Transformations (Requirements 3.7-3.8)
 
   it('3.8 should continue enforcing paragraph breaks in main text', async () => {
     // OBSERVATION: System adds paragraph breaks to long text
-    const longText = 'Storgatan 12 ligger på Södermalm. Köket renoverades 2022. Balkongen har söderläge. Lägenheten har tre rum. Badrummet är helkaklat. Närhet till tunnelbana.';
+    const longText = 'Storgatan 12 ligger på Södermalm med närhet till tunnelbanan. Köket renoverades 2022 med nya vitvaror och kompositbänk. Balkongen har söderläge och ger kvällssol. Lägenheten har tre rum och ett helkaklat badrum. Vardagsrummet är ljust och rymligt med plats för både matbord och soffa. Sovrummen har gott om förvaring. Närområdet har matbutiker, restauranger och parker inom gångavstånd. Kommunikationerna är utmärkta med tunnelbana och bussar i närheten.';
     
     const result = await processor.process(makePostProcessRequest({
       improvedPrompt: longText,

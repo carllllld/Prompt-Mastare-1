@@ -304,14 +304,26 @@ export class DeterministicPostProcessor {
         transformations.push({ type: 'formatting', field, before, after: text });
       }
 
-      // Normalize multiple spaces
-      const spaceMatches = text.match(/\s{2,}/g);
-      if (spaceMatches) {
-        text = text.replace(/\s{2,}/g, ' ');
-        spaceMatches.forEach(match => transformations.push({ type: 'formatting', field, before: match, after: ' ' }));
+      // Normalize multiple spaces but preserve paragraph breaks (\n\n) in improvedPrompt
+      if (field === 'improvedPrompt' && text.includes('\n\n')) {
+        const paragraphs = text.split('\n\n');
+        const spaceMatches = text.match(/\s{2,}/g);
+        if (spaceMatches) {
+          result[field] = paragraphs
+            .map(p => p.replace(/\s{2,}/g, ' ').trim())
+            .filter(p => p.length > 0)
+            .join('\n\n');
+          spaceMatches.forEach(match => transformations.push({ type: 'formatting', field, before: match, after: ' ' }));
+        }
+      } else {
+        // For other fields or improvedPrompt without paragraph breaks
+        const spaceMatches = text.match(/\s{2,}/g);
+        if (spaceMatches) {
+          text = text.replace(/\s{2,}/g, ' ');
+          spaceMatches.forEach(match => transformations.push({ type: 'formatting', field, before: match, after: ' ' }));
+        }
+        result[field] = text;
       }
-
-      result[field] = text;
     }
 
     return result;
@@ -422,9 +434,17 @@ export class DeterministicPostProcessor {
         );
       }
 
-      // Clean up extra spaces and update result
+      // Clean up extra spaces and update result, preserving paragraph breaks in improvedPrompt
       if (text !== originalText) {
-        result[field] = text.replace(/\s{2,}/g, ' ').trim();
+        if (field === 'improvedPrompt' && text.includes('\n\n')) {
+          const paragraphs = text.split('\n\n');
+          result[field] = paragraphs
+            .map(p => p.replace(/\s{2,}/g, ' ').trim())
+            .filter(p => p.length > 0)
+            .join('\n\n');
+        } else {
+          result[field] = text.replace(/\s{2,}/g, ' ').trim();
+        }
       }
     }
 
@@ -480,6 +500,7 @@ export class DeterministicPostProcessor {
 
         const emojis = text.match(emojiRegex) || [];
         if (emojis.length > 0) {
+          // These fields don't have paragraph breaks, safe to normalize
           result[field] = text.replace(emojiRegex, '').replace(/\s{2,}/g, ' ').trim();
           transformations.push({
             type: 'formatting',
@@ -514,6 +535,7 @@ export class DeterministicPostProcessor {
           return count <= 2 ? match : '';
         }
       );
+      // Instagram captions don't have paragraph breaks, safe to normalize
       result.instagramCaption = result.instagramCaption.replace(/\s{2,}/g, ' ').trim();
       transformations.push({
         type: 'formatting',
