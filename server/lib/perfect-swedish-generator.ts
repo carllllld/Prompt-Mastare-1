@@ -62,6 +62,7 @@ export class SmartGenerationEngine {
         top_p: 0.9,
         max_completion_tokens: 2500,
         response_format: { type: 'json_object' },
+        reasoning_effort: 'medium', // Enable o1/o3 reasoning mode for quality
       });
 
       const result = this.extractResult(completion);
@@ -287,6 +288,33 @@ Läge, kommunikationer, avgift/driftkostnad.`;
 
     return `Du är en erfaren svensk mäklare med 15 års erfarenhet av att skriva bostadsannonser. Du är EXTREMT noggrann med svensk grammatik och stavning.
 
+## KRITISKA GRAMMATIKREGLER
+
+**ALDRIG dubbla punkter**: Skriv "Slussen." INTE "Slussen.."
+**ALDRIG mellanslag före punkt/komma/utropstecken**: Skriv "visning." INTE "visning ."
+**Varje mening måste ha korrekt interpunktion mellan satser**: Skriv "Nya fönster och tjärpappstak är två tydliga plus som prioriterar långsiktigt underhåll." INTE "Nya fönster och tjärpappstak är två tydliga plus prioriterar långsiktigt underhåll."
+
+## EMOJI-REGLER
+
+**Hemnet-plattformen**:
+- INGA emojis i headline, socialCopy, showingInvitation, shortAd
+- Emojis är FÖRBJUDNA i alla Hemnet-fält utom instagramCaption
+
+**Instagram caption**:
+- MAX 2 emojis i instagramCaption
+- Välj relevanta emojis: 🏠🌞🛁🌿✨
+
+## FÖRETAGSNAMN OCH GENERALISERING
+
+**Använd ALDRIG specifika restaurangnamn**:
+- INTE: "Kikka", "COME 2 EAT", "ChopChop Asian Express", "Restaurang Gondolen"
+- RÄTT: "restauranger", "kaféer", "matställen"
+
+**Generalisera alltid företagsnamn till kategorier**:
+- "Restaurang X" → "restauranger"
+- "Kafé Y" → "kaféer"
+- "Butik Z" → "butiker"
+
 ${auxiliaryFieldRules}
 
 ${platformStructureRules}
@@ -440,19 +468,57 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
     const violations: string[] = [];
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
 
+    // Grammar error detection (pre-flight validation)
+    const fields: Array<keyof typeof result> = [
+      'improvedPrompt',
+      'headline',
+      'socialCopy',
+      'instagramCaption',
+      'showingInvitation',
+      'shortAd'
+    ];
+
+    for (const field of fields) {
+      const text = result[field];
+      if (typeof text !== 'string') continue;
+
+      // Check for double punctuation
+      if (/\.{2,}/.test(text)) {
+        violations.push(`${field} contains double punctuation (..)`);
+      }
+
+      // Check for space before punctuation
+      if (/\s+[.!?,;:]/.test(text)) {
+        violations.push(`${field} contains space before punctuation`);
+      }
+    }
+
+    // Specific business name detection
+    const businessNamePattern = /\b(kikka|come 2 eat|chopchop asian express)\b/i;
+    const restaurantPattern = /Restaurang\s+[A-ZÅÄÖ][a-zåäö]+/;
+    const cafePattern = /Kafé\s+[A-ZÅÄÖ][a-zåäö]+/;
+
+    for (const field of fields) {
+      const text = result[field];
+      if (typeof text !== 'string') continue;
+
+      if (businessNamePattern.test(text)) {
+        violations.push(`${field} contains specific business name (should use generic terms)`);
+      }
+
+      if (restaurantPattern.test(text)) {
+        violations.push(`${field} contains specific restaurant name (should use "restauranger")`);
+      }
+
+      if (cafePattern.test(text)) {
+        violations.push(`${field} contains specific café name (should use "kaféer")`);
+      }
+    }
+
     // Platform-specific validation (Hemnet)
     if (normalizedPlatform === 'hemnet') {
       const pricePattern = /\b(pris|avgift|driftkostnad|kr\/mån|utgångspris|kronor|SEK)\b/gi;
       const energyPattern = /\b(energiklass|energiprestanda)\b/gi;
-
-      const fields: Array<keyof typeof result> = [
-        'improvedPrompt',
-        'headline',
-        'socialCopy',
-        'instagramCaption',
-        'showingInvitation',
-        'shortAd'
-      ];
 
       for (const field of fields) {
         const text = result[field];
@@ -470,6 +536,28 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
       }
     }
 
+    // Emoji validation
+    const emojiPattern = /[\u{1F300}-\u{1F9FF}]/gu;
+
+    // Hemnet: NO emojis in headline, socialCopy, showingInvitation, shortAd
+    if (normalizedPlatform === 'hemnet') {
+      const hemnetNoEmojiFields: Array<keyof typeof result> = [
+        'headline',
+        'socialCopy',
+        'showingInvitation',
+        'shortAd'
+      ];
+
+      for (const field of hemnetNoEmojiFields) {
+        const text = result[field];
+        if (typeof text !== 'string') continue;
+
+        if (emojiPattern.test(text)) {
+          violations.push(`${field} contains emojis (forbidden for Hemnet)`);
+        }
+      }
+    }
+
     // Field-specific validation
     
     // Headline: max 9 words, no trailing punctuation, no emojis
@@ -482,7 +570,6 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
       violations.push(`headline has trailing punctuation`);
     }
 
-    const emojiPattern = /[\u{1F300}-\u{1F9FF}]/gu;
     if (emojiPattern.test(result.headline)) {
       violations.push(`headline contains emojis`);
     }

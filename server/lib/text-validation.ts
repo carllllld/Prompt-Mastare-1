@@ -101,11 +101,16 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   }
 
   const mechanicalQualityPatterns: Array<[RegExp, string]> = [
+    // Grammar errors
+    [/\.{2,}/, 'Dubbla punkter (..) - använd endast en punkt'],
+    [/\s+[.!?,;:]/, 'Mellanslag före interpunktion - ta bort mellanslaget'],
+    // Existing patterns
     [/\benergiklass(?:en)?\s+är\s+(?:fiber|installerat|parkering|buss)\b/i, 'Trasig energiklass-/teknikmening'],
     [/\benergiklass\s+[A-G]\.\s+fiber\s+är\s+installerat\b/i, 'Mekanisk teknikrad efter energiklass'],
     [/\bparkering\s+har\s+(?:laddplats|garage|carport|plats)\b/i, 'Mekanisk parkeringsfras: "Parkering har ..."'],
     [/\bnär det passar med en måltid\s+buss\s+tar\b/i, 'Saknad meningsgräns före kommunikationsmening'],
     [/\b(?:kikka|come 2 eat|chopchop asian express|restaurang\w+\s+\w+\s+\w+)\b/i, 'Undvik specifika restaurangnamn i löptext - håll lägesbeskrivning generell ("restauranger", "matställen")'],
+    [/\w+\s+\([^)]+\)\.\s+\w+\s+\([^)]+\)\./, 'Mekanisk bullet-point stil: "X (typ). Y (typ)." - skriv som naturlig prosa'],
     [/\bbörja\s+[A-ZÅÄÖ][a-zåäö]+\b/i, 'Avhuggen mening efter "börja"'],
     [/\bavgift\s+om\s+\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\b/, 'Trasig avgiftsmening: saknar enhet (kr/mån, kr/år) och meningsgräns'],
     [/\d{1,6}\s+[A-ZÅÄÖ][a-zåäö]+\s+ligger\s+nära\b/i, 'Trasig meningsövergång: siffra direkt följt av nytt stycke utan punkt'],

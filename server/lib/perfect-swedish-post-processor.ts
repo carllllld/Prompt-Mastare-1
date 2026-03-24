@@ -81,11 +81,12 @@ export class DeterministicPostProcessor {
       let result = { ...request };
 
       result = this.removePlaceholders(result, transformations);
+      result = this.cleanupGrammarErrors(result, transformations);
       result = this.enforceParagraphBreaks(result, transformations);
       result = this.applyFormatting(result, transformations);
       result = this.removeForbiddenPhrases(result, request.style, transformations);
       result = this.removePlatformForbiddenPatterns(result, request.platform, transformations);
-      result = this.enforceFieldQualityRules(result, transformations);
+      result = this.enforceFieldQualityRules(result, request.platform, transformations);
       result = this.normalizeSwedishCharacters(result, transformations);
       result = this.generalizeAndDeduplicate(result, transformations);
       result = this.checkNarrativeIntegrity(result, transformations);
@@ -139,6 +140,66 @@ export class DeterministicPostProcessor {
       }
 
       result[field] = text.replace(/\s{2,}/g, ' ').trim();
+    }
+
+    return result;
+  }
+
+  private cleanupGrammarErrors(request: PostProcessRequest, transformations: Transformation[]): PostProcessRequest {
+    const result = { ...request };
+
+    for (const field of TEXT_FIELDS) {
+      let text = result[field];
+      const originalText = text;
+
+      // Remove double punctuation (.., ..., etc.)
+      const doublePunctuationMatches = text.match(/\.{2,}/g);
+      if (doublePunctuationMatches) {
+        text = text.replace(/\.{2,}/g, '.');
+        doublePunctuationMatches.forEach(match => 
+          transformations.push({ 
+            type: 'formatting', 
+            field, 
+            before: match, 
+            after: '.' 
+          })
+        );
+      }
+
+      // Remove space before punctuation
+      const spaceBeforePunctuationMatches = text.match(/\s+([.!?,;:])/g);
+      if (spaceBeforePunctuationMatches) {
+        text = text.replace(/\s+([.!?,;:])/g, '$1');
+        spaceBeforePunctuationMatches.forEach(match => 
+          transformations.push({ 
+            type: 'formatting', 
+            field, 
+            before: match, 
+            after: match.trim() 
+          })
+        );
+      }
+
+      // Detect broken sentences (missing punctuation between clauses)
+      // This is a heuristic - we log warnings but don't auto-fix
+      const brokenSentencePattern = /\b(plus|minus|och|men)\s+[a-zåäö]+(?:ar|er|as)\s+[a-zåäö]/i;
+      if (brokenSentencePattern.test(text)) {
+        console.warn('[BROKEN_SENTENCE_DETECTED]', {
+          field,
+          text: text.substring(0, 100),
+          timestamp: new Date().toISOString()
+        });
+        transformations.push({
+          type: 'narrative_integrity',
+          field,
+          before: 'Possible broken sentence detected',
+          after: 'Manual review recommended'
+        });
+      }
+
+      if (text !== originalText) {
+        result[field] = text;
+      }
     }
 
     return result;
@@ -350,16 +411,45 @@ export class DeterministicPostProcessor {
    * - Headline: remove trailing punctuation (already done in applyFormatting)
    * - Social Copy: ensure it ends with period
    * - Instagram Caption: limit to max 2 emojis
+   * - Hemnet fields: remove ALL emojis from headline, socialCopy, showingInvitation, shortAd
    */
   private enforceFieldQualityRules(
     request: PostProcessRequest,
+    platform: string,
     transformations: Transformation[]
   ): PostProcessRequest {
     const result = { ...request };
+    const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}]/gu;
+
+    // Hemnet: Remove ALL emojis from specific fields
+    if (normalizedPlatform === 'hemnet') {
+      const hemnetNoEmojiFields: Array<keyof PostProcessRequest> = [
+        'headline',
+        'socialCopy',
+        'showingInvitation',
+        'shortAd'
+      ];
+
+      for (const field of hemnetNoEmojiFields) {
+        const text = result[field];
+        if (typeof text !== 'string') continue;
+
+        const emojis = text.match(emojiRegex) || [];
+        if (emojis.length > 0) {
+          result[field] = text.replace(emojiRegex, '').replace(/\s{2,}/g, ' ').trim();
+          transformations.push({
+            type: 'formatting',
+            field,
+            before: `${emojis.length} emoji(s) in Hemnet field`,
+            after: 'Removed all emojis (Hemnet rule)'
+          });
+        }
+      }
+    }
 
     // Social Copy: ensure it ends with period
     if (result.socialCopy && !/[.!?]$/.test(result.socialCopy)) {
-      const before = result.socialCopy;
       result.socialCopy = result.socialCopy + '.';
       transformations.push({
         type: 'formatting',
@@ -370,7 +460,6 @@ export class DeterministicPostProcessor {
     }
 
     // Instagram Caption: limit emojis to 2
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]/gu;
     const emojis = result.instagramCaption.match(emojiRegex) || [];
     if (emojis.length > 2) {
       // Remove excess emojis (keep first 2)
@@ -382,6 +471,7 @@ export class DeterministicPostProcessor {
           return count <= 2 ? match : '';
         }
       );
+      result.instagramCaption = result.instagramCaption.replace(/\s{2,}/g, ' ').trim();
       transformations.push({
         type: 'formatting',
         field: 'instagramCaption',
@@ -422,6 +512,9 @@ export class DeterministicPostProcessor {
     const result = { ...request };
 
     const generalizationPatterns: Array<[RegExp, string]> = [
+      // Specific restaurant names (case-insensitive)
+      [/\b(kikka|come 2 eat|chopchop asian express)\b/gi, 'restauranger'],
+      // Generic restaurant patterns
       [/Restaurang\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Restaurang\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'restauranger'],
       [/Kafé\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Kafé\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'kaféer'],
       [/Butik\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Butik\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'butiker']
