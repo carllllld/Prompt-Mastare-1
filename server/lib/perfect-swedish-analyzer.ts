@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
-import { WritingStyle, FORBIDDEN_PHRASES, getExemptPhrases } from './text-rules';
+import { WritingStyle, FORBIDDEN_PHRASES, getExemptPhrases, UNVERIFIABLE_CLAIMS, HEMNET_FORBIDDEN_PATTERNS } from './text-rules';
+import { findRuleViolations } from './text-validation';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface AnalysisRequest {
@@ -41,6 +42,11 @@ export interface LegalCheck {
   issues: string[];
 }
 
+interface ValidationResult {
+  violations: Record<string, string[]>;
+  totalCount: number;
+}
+
 export class ExpertAIAnalyzer {
   private _openai: OpenAI | null = null;
 
@@ -58,6 +64,9 @@ export class ExpertAIAnalyzer {
     const TIMEOUT_MS = 30000; // 30 seconds
 
     try {
+      // Step 1: Run deterministic validation BEFORE AI
+      const validationResult = this.runDeterministicValidation(request);
+
       const prompt = this.buildAnalysisPrompt(request);
 
       const completionPromise = this.openai.chat.completions.create({
@@ -76,7 +85,11 @@ export class ExpertAIAnalyzer {
       const completion = await Promise.race([completionPromise, timeoutPromise]);
 
       const analysis = this.parseAnalysisResult(completion);
-      const analysisWithSpans = this.identifyTextSpans(request, analysis);
+      
+      // Step 2: Merge validation violations with AI improvements
+      const mergedAnalysis = this.mergeValidationViolations(analysis, validationResult);
+      
+      const analysisWithSpans = this.identifyTextSpans(request, mergedAnalysis);
       const analysisWithFixes = this.generateAutoFixes(analysisWithSpans);
 
       return { ...analysisWithFixes, duration: Date.now() - startTime };
@@ -102,6 +115,88 @@ export class ExpertAIAnalyzer {
     }
   }
 
+  private runDeterministicValidation(request: AnalysisRequest): ValidationResult {
+    const fields = {
+      improvedPrompt: request.improvedPrompt,
+      headline: request.headline,
+      socialCopy: request.socialCopy,
+      instagramCaption: request.instagramCaption,
+      showingInvitation: request.showingInvitation,
+      shortAd: request.shortAd
+    };
+
+    const violations: Record<string, string[]> = {};
+    let totalCount = 0;
+
+    for (const [field, text] of Object.entries(fields)) {
+      if (text && text.length > 0) {
+        const fieldViolations = findRuleViolations(text, request.platform, request.style);
+        if (fieldViolations.length > 0) {
+          violations[field] = fieldViolations;
+          totalCount += fieldViolations.length;
+        }
+      }
+    }
+
+    return { violations, totalCount };
+  }
+
+  private mergeValidationViolations(
+    analysis: Omit<ExpertAnalysis, 'duration'>,
+    validation: ValidationResult
+  ): Omit<ExpertAnalysis, 'duration'> {
+    const mergedImprovements = [...analysis.improvements];
+    const legalIssues = new Set(analysis.legalCheck.issues);
+    let hasViolations = false;
+
+    for (const [field, violations] of Object.entries(validation.violations)) {
+      for (const violation of violations) {
+        // Check if AI already detected this violation
+        const alreadyDetected = mergedImprovements.some(item =>
+          item.location === field && 
+          (item.issue.toLowerCase().includes(violation.toLowerCase().slice(0, 20)) ||
+           violation.toLowerCase().includes(item.issue.toLowerCase().slice(0, 20)))
+        );
+
+        if (!alreadyDetected) {
+          // Add missing violation as critical improvement
+          hasViolations = true;
+          mergedImprovements.push({
+            id: uuidv4(),
+            issue: violation,
+            location: field,
+            suggestion: this.generateSuggestionForViolation(violation),
+            category: this.categorizeViolation(violation),
+            severity: 'critical',
+            expert: this.determineExpert(violation),
+            actionable: false,
+            textSpan: undefined,
+            autoFix: undefined
+          });
+
+          // Add to legal issues
+          const issueType = this.categorizeViolation(violation);
+          legalIssues.add(issueType);
+        }
+      }
+    }
+
+    // Update legalCheck if violations were found
+    const updatedLegalCheck: LegalCheck = {
+      compliant: validation.totalCount === 0 && analysis.legalCheck.compliant,
+      notes: validation.totalCount > 0 
+        ? `${validation.totalCount} violation(s) detected by deterministic validation. ${analysis.legalCheck.notes}`.trim()
+        : analysis.legalCheck.notes,
+      issues: Array.from(legalIssues)
+    };
+
+    return {
+      ...analysis,
+      improvements: mergedImprovements,
+      legalCheck: updatedLegalCheck
+    };
+  }
+
   private buildAnalysisPrompt(request: AnalysisRequest): string {
     const { 
       improvedPrompt, 
@@ -118,12 +213,16 @@ export class ExpertAIAnalyzer {
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
 
     const platformRulesSection = normalizedPlatform === 'hemnet' ? `
-## HEMNET-SPECIFIKA REGLER (kontrollera dessa i ALLA fält)
+## HEMNET-SPECIFIKA REGLER (kontrollera dessa i ALLA fält) - KRITISKT!
 - Energiklass eller energiprestanda FÅR INTE nämnas i NÅGON text (visas separat i annonsen) → severity: "critical"
 - Pris, avgift eller driftkostnad FÅR INTE nämnas i NÅGON text (visas i separata fält) → severity: "critical"
+- Ekonomihänvisningar FÅR INTE förekomma (t.ex. "ekonomi redovisas", "kontakta för ekonomisk information") → severity: "critical"
 - Första meningen i huvudtext MÅSTE leda med bostadens starkaste USP — inte bara storlek och adress → severity: "important"
 - Texten FÅR INTE avslutas med emotionella fraser som "välkommen hem", "skapa minnen", "allt du behöver" → severity: "important"
-- Texten ska vara faktadriven och köparrelevant utan AI-känsla` :
+- Texten ska vara faktadriven och köparrelevant utan AI-känsla
+
+### HEMNET FÖRBJUDNA MÖNSTER (MÅSTE flaggas som "critical"):
+${HEMNET_FORBIDDEN_PATTERNS.map(p => `- ${p.message}: Mönster som matchar "${p.pattern.source}"`).join('\n')}` :
     normalizedPlatform === 'booli' ? `
 ## BOOLI-SPECIFIKA REGLER (kontrollera dessa)
 - Mer berättande ton är tillåten men fakta måste förbli konkreta och verifierbara
@@ -133,10 +232,23 @@ export class ExpertAIAnalyzer {
 - Texten ska vara löpande objektbeskrivning — inte en faktalista
 - Fakta ska vara konkreta och verifierbara`;
 
+    const unverifiableClaimsSection = `
+## OTYDLIGA PÅSTÅENDEN SOM KRÄVER BEVIS (MÅSTE flaggas som "critical" om bevis saknas)
+${UNVERIFIABLE_CLAIMS.map(c => `- "${c.claim}" → Kräver: ${c.requiresEvidence}`).join('\n')}
+
+Om något av dessa påståenden förekommer UTAN konkret bevis (t.ex. renoveringsår, besiktning), MÅSTE du flagga det som:
+- severity: "critical"
+- category: "legal"
+- issue: "Otydligt påstående: '[påstående]' kräver bevis"
+- suggestion: "Specificera ${c.requiresEvidence} eller ta bort påståendet"`;
+
     return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback i JSON-format.
 
-## FÖRBJUDNA FRASER (markera som "critical" om de förekommer i NÅGOT fält)
+## FÖRBJUDNA FRASER (MÅSTE flaggas som "critical" om de förekommer i NÅGOT fält)
 ${blockedPhrases.map(p => `- "${p}"`).join('\n')}
+
+${unverifiableClaimsSection}
+
 ${platformRulesSection}
 
 ## TEXTEN ATT ANALYSERA
@@ -160,15 +272,16 @@ ${shortAd}
 
 Stil: ${style} | Plattform: ${platform}
 
-## ANALYSERA ALLA FÄLT
+## ANALYSERA ALLA FÄLT - KRITISKT!
 
 För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, kort annons):
 
 1. STYRKOR: Vad är konkret bra? (3-5 punkter)
 2. FÖRBÄTTRINGAR: Konkreta problem med lösningar
-   - Finns NÅGON förbjuden fras? → severity: "critical"
-   - Bryter mot plattformsreglerna ovan? → severity: "critical"
-   - Grammatikfel? → severity: "critical"  
+   - Finns NÅGON förbjuden fras? → MÅSTE flaggas som severity: "critical"
+   - Finns NÅGOT otydligt påstående utan bevis? → MÅSTE flaggas som severity: "critical"
+   - Bryter mot plattformsreglerna ovan? → MÅSTE flaggas som severity: "critical"
+   - Grammatikfel (t.ex. dubbel punkt "..")? → severity: "critical"  
    - AI-klyschor som inte är i listan? → severity: "important"
    - Stilfrågor? → severity: "suggestion"
 3. FÄLTSPECIFIKA KVALITETSKRAV:
@@ -178,6 +291,8 @@ För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, 
    - Visningsinbjudan: innehåller "visning" → severity: "important"
    - Kort annons: max 2 meningar, innehåller bostadstyp + boarea → severity: "suggestion"
 4. JURIDIK: Vilseledande påståenden? Faktafel?
+
+**VIKTIGT**: Du MÅSTE kontrollera VARJE fält för VARJE förbjuden fras, otydligt påstående och plattformsregel. Missa INGENTING!
 
 ## OUTPUT FORMAT
 
@@ -355,5 +470,62 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     }
 
     return undefined;
+  }
+
+  private generateSuggestionForViolation(violation: string): string {
+    const lowerViolation = violation.toLowerCase();
+    
+    // Forbidden phrases
+    if (lowerViolation.includes('förbjuden fras')) {
+      return 'Ersätt med naturligt mäklarspråk utan AI-klyschor';
+    }
+    
+    // Hemnet violations
+    if (lowerViolation.includes('hemnet') || lowerViolation.includes('ekonomi')) {
+      return 'Ta bort enligt Hemnet-regler';
+    }
+    
+    // Unverifiable claims
+    if (lowerViolation.includes('otydligt påstående') || lowerViolation.includes('kräver bevis')) {
+      return 'Lägg till konkret bevis (t.ex. renoveringsår) eller ta bort påståendet';
+    }
+    
+    // Grammar errors
+    if (lowerViolation.includes('grammatik') || lowerViolation.includes('dubbel punkt')) {
+      return 'Korrigera grammatikfel';
+    }
+    
+    // Default
+    return 'Åtgärda enligt regelverket';
+  }
+
+  private categorizeViolation(violation: string): FeedbackItem['category'] {
+    const lowerViolation = violation.toLowerCase();
+    
+    if (lowerViolation.includes('grammatik') || lowerViolation.includes('dubbel punkt')) {
+      return 'grammar';
+    }
+    
+    if (lowerViolation.includes('hemnet') || lowerViolation.includes('otydligt påstående') || 
+        lowerViolation.includes('kräver bevis')) {
+      return 'legal';
+    }
+    
+    if (lowerViolation.includes('förbjuden fras')) {
+      return 'style';
+    }
+    
+    return 'clarity';
+  }
+
+  private determineExpert(violation: string): 'broker' | 'lawyer' {
+    const lowerViolation = violation.toLowerCase();
+    
+    if (lowerViolation.includes('hemnet') || lowerViolation.includes('otydligt påstående') || 
+        lowerViolation.includes('kräver bevis') || lowerViolation.includes('ekonomi')) {
+      return 'lawyer';
+    }
+    
+    return 'broker';
   }
 }
