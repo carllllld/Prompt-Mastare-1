@@ -409,9 +409,13 @@ function buildRecommendations(
 /**
  * Outputs report as JSON file.
  */
-function outputJsonReport(report: OptimizationReport): void {
-  const fs = require('fs');
-  const path = require('path');
+async function outputJsonReport(report: OptimizationReport): Promise<void> {
+  const fs = await import('fs');
+  const path = await import('path');
+  const { fileURLToPath } = await import('url');
+  
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   
   const outputPath = path.join(__dirname, '..', 'form-optimization-report.json');
   fs.writeFileSync(outputPath, JSON.stringify(report, null, 2), 'utf-8');
@@ -485,7 +489,7 @@ async function main() {
     
     const report = await runAnalysis(options);
     
-    outputJsonReport(report);
+    await outputJsonReport(report);
     outputHumanReadableSummary(report);
     
     process.exit(0);
@@ -495,8 +499,8 @@ async function main() {
   }
 }
 
-// Run if executed directly
-if (require.main === module) {
+// Run if executed directly (ES module check)
+if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
 
