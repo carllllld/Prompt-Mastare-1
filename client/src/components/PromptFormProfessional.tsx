@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info, CheckCircle2 } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -63,17 +63,18 @@ interface PropertyFormData {
 
 // ── CHIP OPTIONS ──
 const KITCHEN_CHIPS = [
-  "Renoverat kök", "Köksö", "Stenbänk", "Komposit",
-  "Integrerade vitvaror", "Platsbyggt kök", "Matplats 4–6 pers",
+  "Renoverat kök", "Köksö", "Stenbänk", "Kompositbänk",
+  "Integrerade vitvaror", "Platsbyggt kök", "Matplats i kök",
   "Öppen planlösning", "Moderna vitvaror", "Fönster vid matplats",
 ];
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
-  "Badkar", "Tvättmaskin", "Torktumlare",
+  "Badkar", "Tvättmaskin", "Torktumlare", "Golvvärme i badrum",
+  "Dubbla handfat",
 ];
 const FLOORING_CHIPS = [
   "Ekparkett", "Originalparkett", "Björkparkett",
-  "Massivt trägolv", "Klinker", "Stengolv",
+  "Massivt trägolv", "Klinker", "Stengolv", "Laminat",
 ];
 const HEATING_CHIPS = [
   "Fjärrvärme", "Bergvärme", "Luft-vattenvärmepump", "Luft-luftvärmepump",
@@ -86,20 +87,21 @@ const SPECIAL_CHIPS = [
 ];
 const GARDEN_CHIPS = [
   "Välskött trädgård", "Uteplats i söder", "Altan", "Trädäck",
-  "Fruktträd", "Insynsskyddat", "Förråd/bod", "Pergola", "Eldstad ute",
+  "Fruktträd", "Insynsskyddat", "Förråd", "Bod", "Pergola", "Eldstad ute",
+  "Växthus",
 ];
 const USP_CHIPS = [
   "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
-  "Renoverat kök", "Renoverat badrum",
-  "Nära pendling", "Garage", "Laddbox", "Flera badrum",
+  "Nära pendling", "Garage", "Laddbox för elbil", "Flera badrum",
+  "Hög standard", "Nyproduktion",
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
   "Garageplats", "Boendeparkering", "Laddbox för elbil", "Förberett för laddbox",
 ];
 const ROOF_CHIPS = [
-  "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak",
+  "Plåttak", "Betongpannor", "Tegeltak", "Papptak", "Platt tak", "Takpannor",
 ];
 const MATERIAL_CHIPS = [
   "Trä", "Tegel", "Puts", "Betong", "Plåt", "Leca",
@@ -109,15 +111,19 @@ const MATERIAL_CHIPS = [
 // Tooltips for technical or unclear chips to improve user understanding
 const KITCHEN_TOOLTIPS: Record<string, string> = {
   "Stenbänk": "Bänkskiva i natursten (granit, marmor etc.)",
-  "Komposit": "Bänkskiva i kvartskomposit eller liknande",
+  "Kompositbänk": "Bänkskiva i kvartskomposit eller liknande",
   "Integrerade vitvaror": "Vitvaror inbyggda i köksinredningen",
   "Platsbyggt kök": "Skräddarsytt kök anpassat efter rummet",
   "Moderna vitvaror": "Nyare vitvaror i gott skick",
+  "Matplats i kök": "Plats för matbord med 4–6 sittplatser i köket",
+  "Köksö": "Fristående arbetsyta mitt i köket",
 };
 
 const BATHROOM_TOOLTIPS: Record<string, string> = {
   "Helkaklat": "Väggar helt täckta med kakel",
-  "Duschvägg i glas": "Glasvägg vid dusch istället för duschdrape ri",
+  "Duschvägg i glas": "Glasvägg vid dusch istället för duschdraperi",
+  "Golvvärme i badrum": "Vattenburet eller elektriskt uppvärmt golv i badrum",
+  "Dubbla handfat": "Två handfat monterade sida vid sida",
 };
 
 const HEATING_TOOLTIPS: Record<string, string> = {
@@ -138,15 +144,18 @@ const SPECIAL_TOOLTIPS: Record<string, string> = {
 
 const GARDEN_TOOLTIPS: Record<string, string> = {
   "Insynsskyddat": "Skyddat från insyn via häck, staket eller läge",
-  "Förråd/bod": "Förvaringsbyggnad i trädgården",
+  "Förråd": "Större förvaringsbyggnad i trädgården",
+  "Bod": "Mindre förvaringsbyggnad i trädgården",
   "Pergola": "Öppen spaljékonstruktion för klätterväxter",
+  "Växthus": "Inglasad odlingsyta i trädgården",
 };
 
 const USP_TOOLTIPS: Record<string, string> = {
   "Genomgående planlösning": "Fönster på flera väderstreck ger genomljusning",
   "Stabil BRF": "Bostadsrättsförening med god ekonomi",
-  "Renoverat kök": "Ange årtal i fritextfältet för bäst resultat",
-  "Renoverat badrum": "Ange årtal i fritextfältet för bäst resultat",
+  "Laddbox för elbil": "Installerad laddstation för elfordon",
+  "Hög standard": "Genomgående hög materialkvalitet och finish",
+  "Nyproduktion": "Nybyggd bostad eller färdigställd senaste åren",
 };
 
 const PARKING_TOOLTIPS: Record<string, string> = {
@@ -172,8 +181,9 @@ const exampleCompactInputClass = "h-9 text-xs rounded-lg border-input bg-backgro
 const exampleTextareaClass = "min-h-[56px] resize-none text-sm rounded-lg border-input bg-background placeholder:italic placeholder:text-muted-foreground focus:placeholder-transparent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 // ── HELPER: Chip Selector ──
-function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips }: {
+function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips, id }: {
   chips: string[];
+  id?: string;
   selected: string[];
   onToggle: (chip: string) => void;
   variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
@@ -206,7 +216,7 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={id || "Chip-väljare"} id={id}>
       {chips.map((chip) => {
         const isOn = selected.includes(chip);
         const chipClasses = getChipClasses(isOn);
@@ -220,8 +230,8 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
             onKeyDown={(e) => handleKeyDown(e, chip)}
             role="checkbox"
             aria-checked={isOn}
-            aria-label={chip}
-            className={`px-2.5 py-1 md:py-2 md:px-3 text-xs rounded-full border transition-all font-medium select-none focus:ring-2 focus:ring-ring focus:ring-offset-1 inline-flex items-center gap-1 ${chipClasses}`}
+            aria-label={tooltip ? `${chip}: ${tooltip}` : chip}
+            className={`min-h-[44px] min-w-[44px] px-3 py-2 text-xs rounded-full border transition-all font-medium select-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:outline-none inline-flex items-center gap-1 ${chipClasses}`}
           >
             {isOn && <CheckCircle2 className="w-3 h-3" />}
             {chip}
@@ -580,6 +590,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     setList(list.includes(chip) ? list.filter(c => c !== chip) : [...list, chip]);
   }, []);
 
+
   const form = useForm<PropertyFormData>({
     defaultValues: {
       propertyType: "apartment",
@@ -752,44 +763,63 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     // Canonical rules for chip normalization - maps aliases to canonical forms
     const CANONICAL_RULES: Array<{ canonical: string; pattern: RegExp }> = [
       // Laddning för elbilar
-      { canonical: "Laddbox för elbil", pattern: /\b(laddplats elbil|laddplats för elbil|laddbox(?: installerad)?|elbilsladdare)\b/i },
+      { canonical: "Laddbox för elbil", pattern: /\b(laddplats elbil|laddplats för elbil|laddbox(?: installerad)?|elbilsladdare|laddstation)\b/i },
       
       // Fönster
-      { canonical: "Nya fönster", pattern: /\b(fönster bytta|nya fönster|fönsterbyte|uppdaterade fönster)\b/i },
+      { canonical: "Nya fönster", pattern: /\b(fönster bytta|nya fönster|fönsterbyte|uppdaterade fönster|3-glasfönster)\b/i },
       
       // Stammar
-      { canonical: "Stambyte genomfört", pattern: /\b(stambyte|stamrenovering|nya stammar)\b/i },
+      { canonical: "Stambyte genomfört", pattern: /\b(stambyte|stamrenovering|nya stammar|stambyte genomfört)\b/i },
       
       // Golvvärme (kan finnas i både badrum och uppvärmning)
-      { canonical: "Golvvärme", pattern: /\b(golvvärme|varmvatten i golv)\b/i },
+      { canonical: "Golvvärme", pattern: /\b(golvvärme|varmvatten i golv|golvvärme i badrum)\b/i },
       
       // Balkong/uteplats
       { canonical: "Balkong", pattern: /\b(balkong|uteplats på balkong)\b/i },
-      { canonical: "Altan", pattern: /\b(altan|uteplats)\b/i },
       
       // Parkering
       { canonical: "Garage", pattern: /\b(garage|carport med garage)\b/i },
       { canonical: "Carport", pattern: /\b(carport|biltak)\b/i },
+      { canonical: "P-plats", pattern: /\b(p-plats|parkeringsplats|parkering)\b/i },
       
       // Kök
       { canonical: "Öppen planlösning", pattern: /\b(öppen planlösning|öppet kök|kök öppet mot vardagsrum)\b/i },
-      { canonical: "Vitvaror uppdaterade", pattern: /\b(vitvaror uppdaterade|nya vitvaror|moderna vitvaror)\b/i },
+      { canonical: "Moderna vitvaror", pattern: /\b(vitvaror uppdaterade|nya vitvaror|moderna vitvaror|uppdaterade vitvaror)\b/i },
+      { canonical: "Renoverat kök", pattern: /\b(renoverat kök|nyrenoverat kök|kök renoverat|nytt kök)\b/i },
+      { canonical: "Köksö", pattern: /\b(köksö|fristående köksö)\b/i },
+      { canonical: "Kompositbänk", pattern: /\b(kompositbänk|kvartskomposit|komposit bänkskiva|bänkskiva i komposit)\b/i },
+      { canonical: "Stenbänk", pattern: /\b(stenbänk|granitbänk|marmorbänk|bänkskiva i sten|bänkskiva i granit)\b/i },
       
       // Badrum
-      { canonical: "Renoverat badrum", pattern: /\b(renoverat badrum|nyrenoverat badrum|badrum renoverat)\b/i },
-      { canonical: "Helkaklat", pattern: /\b(helkaklat|helkaklat badrum)\b/i },
+      { canonical: "Renoverat badrum", pattern: /\b(renoverat badrum|nyrenoverat badrum|badrum renoverat|nytt badrum)\b/i },
+      { canonical: "Helkaklat", pattern: /\b(helkaklat|helkaklat badrum|fullt kaklat)\b/i },
+      { canonical: "Dubbla handfat", pattern: /\b(dubbla handfat|två handfat|dubbelhandfat)\b/i },
+      { canonical: "Duschvägg i glas", pattern: /\b(duschvägg i glas|glasdusch|dusch i glas)\b/i },
       
       // Golv
-      { canonical: "Ekparkett", pattern: /\b(ekparkett|parkett i ek)\b/i },
-      { canonical: "Massivt trägolv", pattern: /\b(massivt trägolv|massiv parkett)\b/i },
+      { canonical: "Ekparkett", pattern: /\b(ekparkett|parkett i ek|ek parkett)\b/i },
+      { canonical: "Massivt trägolv", pattern: /\b(massivt trägolv|massiv parkett|massiva trägolv)\b/i },
+      { canonical: "Originalparkett", pattern: /\b(originalparkett|original parkett|bevarad parkett)\b/i },
       
       // Uppvärmning
       { canonical: "Fjärrvärme", pattern: /\b(fjärrvärme|stadsvärme)\b/i },
       { canonical: "Bergvärme", pattern: /\b(bergvärme|bergvärmepump)\b/i },
+      { canonical: "Luft-luftvärmepump", pattern: /\b(luft-luftvärmepump|luft till luft|luft-luft)\b/i },
+      { canonical: "Luft-vattenvärmepump", pattern: /\b(luft-vattenvärmepump|luft till vatten|luft-vatten)\b/i },
       
       // Trädgård
       { canonical: "Stor trädgård", pattern: /\b(stor trädgård|rymlig trädgård|generös trädgård)\b/i },
       { canonical: "Altan", pattern: /\b(altan|uteplats|terrass)\b/i },
+      { canonical: "Pergola", pattern: /\b(pergola|spaljé)\b/i },
+      
+      // Tak
+      { canonical: "Nytt tak", pattern: /\b(nytt tak|tak omlagt|tak bytt|takrenovering)\b/i },
+      
+      // Övrigt
+      { canonical: "Fiber indraget", pattern: /\b(fiber indraget|fiberanslutning|bredband via fiber|fiber installerat)\b/i },
+      { canonical: "Solceller", pattern: /\b(solceller|solpaneler|solenergi)\b/i },
+      { canonical: "Braskamin", pattern: /\b(braskamin|vedkamin|kamin)\b/i },
+      { canonical: "Dränering utförd", pattern: /\b(dränering utförd|dränering gjord|ny dränering|dränerat)\b/i },
     ];
 
     const normalizeListText = (value: string) => {
@@ -961,8 +991,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       d += "\n=== SÄRSKILDA EGENSKAPER ===\n";
       d += `${merged.specialFeatures}\n`;
     }
+    // Task 5.1: otherInfo consolidated into specialFeatures section
     if (merged.otherInfo) {
-      d += "\n=== ÖVRIGT ===\n";
       d += `${merged.otherInfo}\n`;
     }
 
@@ -1080,28 +1110,42 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
     } catch { /* ignore corrupted drafts */ }
   }, []);
 
-  // ── DRAFT PERSISTENCE: Auto-save form on changes ──
+  // ── DRAFT PERSISTENCE: Debounced auto-save form on changes (Task 8.13 — performance) ──
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const subscription = form.watch((values) => {
-      try {
-        localStorage.setItem('optiprompt-form-draft', JSON.stringify({
-          ...values,
-          rooms, bedrooms, bathrooms, hasBalcony, wordCountMin, wordCountMax,
-        }));
-      } catch { /* storage full */ }
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem('optiprompt-form-draft', JSON.stringify({
+            ...values,
+            rooms, bedrooms, bathrooms, hasBalcony, wordCountMin, wordCountMax,
+          }));
+        } catch { /* storage full */ }
+      }, 300);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
   }, [form, rooms, bedrooms, bathrooms, hasBalcony, wordCountMin, wordCountMax]);
 
-  // ── DRAFT PERSISTENCE: Auto-save chips on changes ──
+  // ── DRAFT PERSISTENCE: Debounced auto-save chips on changes ──
+  const chipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    try {
-      localStorage.setItem('optiprompt-form-chips', JSON.stringify({
-        kitchen: kitchenChips, bathroom: bathroomChips, flooring: flooringChips,
-        heating: heatingChips, special: specialChips, garden: gardenChips,
-        usp: uspChips, parking: parkingChips, roof: roofChips, material: materialChips,
-      }));
-    } catch { /* storage full */ }
+    if (chipTimerRef.current) clearTimeout(chipTimerRef.current);
+    chipTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem('optiprompt-form-chips', JSON.stringify({
+          kitchen: kitchenChips, bathroom: bathroomChips, flooring: flooringChips,
+          heating: heatingChips, special: specialChips, garden: gardenChips,
+          usp: uspChips, parking: parkingChips, roof: roofChips, material: materialChips,
+        }));
+      } catch { /* storage full */ }
+    }, 300);
+    return () => {
+      if (chipTimerRef.current) clearTimeout(chipTimerRef.current);
+    };
   }, [kitchenChips, bathroomChips, flooringChips, heatingChips, specialChips, gardenChips, uspChips, parkingChips, roofChips, materialChips]);
 
   return (
@@ -1528,8 +1572,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <div className="space-y-4">
               {/* Kitchen chips */}
               <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2">Kök — välj det som stämmer</span>
-                <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" tooltips={KITCHEN_TOOLTIPS} />
+                <span className="text-xs text-gray-500 font-medium block mb-2" id="kitchen-label">Kök — välj det som stämmer</span>
+                <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" tooltips={KITCHEN_TOOLTIPS} id="kitchen-chips" />
                 <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
                   <FormItem className="mt-2">
                     <p className="text-[10px] text-gray-400 mb-1">Komplettera bara chipsen med sådant som ger bättre text, till exempel material, fabrikat eller årtal.</p>
@@ -1541,8 +1585,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
               {/* Bathroom chips */}
               <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2">Badrum — välj det som stämmer</span>
-                <ChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} variant="bathroom" />
+                <span className="text-xs text-gray-500 font-medium block mb-2" id="bathroom-label">Badrum — välj det som stämmer</span>
+                <ChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} variant="bathroom" tooltips={BATHROOM_TOOLTIPS} id="bathroom-chips" />
                 <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
                   <FormItem className="mt-2">
                     <p className="text-[10px] text-gray-400 mb-1">Lägg bara till fakta som inte redan täcks av chipsen, till exempel årtal, tvättdel eller materialval.</p>
@@ -1563,7 +1607,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <p className="text-[10px] text-gray-400 mb-3">
               Det här påverkar textens styrka mest. Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
             </p>
-            <ChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} variant="usp" />
+            <ChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} variant="usp" tooltips={USP_TOOLTIPS} id="usp-chips" />
             <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
               <FormItem className="mt-2">
                 <FormControl>
@@ -1631,8 +1675,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="mt-3 pb-1 space-y-4 pro-muted-panel p-4">
                 {/* Flooring chips */}
                 <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2">Golv</span>
-                  <ChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} />
+                  <span className="text-xs text-gray-500 font-medium block mb-2" id="flooring-label">Golv</span>
+                  <ChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} id="flooring-chips" />
                   <FormField control={form.control} name="flooring" render={({ field }) => (
                     <FormItem className="mt-2">
                       <FormControl><Input placeholder="Ex: Enstavsparkett i vardagsrum och sovrum, klinker med golvvärme i hall och badrum" {...field} className={exampleCompactInputClass} /></FormControl>
@@ -1640,20 +1684,21 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   )} />
                 </div>
 
-                {/* Heating chips */}
+                {/* Heating chips — chip-only (Task 5.5) */}
                 <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2">Uppvärmning</span>
-                  <ChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} />
+                  <span className="text-xs text-gray-500 font-medium block mb-2" id="heating-label">Uppvärmning</span>
+                  <p className="text-[10px] text-gray-400 mb-1">Välj den primära uppvärmningskällan. Kombinationer som fjärrvärme + golvvärme är vanliga.</p>
+                  <ChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} id="heating-chips" tooltips={HEATING_TOOLTIPS} />
                 </div>
 
-                {/* Special features chips */}
+                {/* Special features chips — consolidated with otherInfo (Task 5.1, 5.3) */}
                 <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2">Särskilda egenskaper</span>
-                  <p className="text-[10px] text-gray-400 mb-1">Välj sådant som inte redan täcks av kök, badrum, parkering eller trädgård.</p>
-                  <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} />
+                  <span className="text-xs text-gray-500 font-medium block mb-2" id="special-label">Särskilda egenskaper</span>
+                  <p className="text-[10px] text-gray-400 mb-1">Välj sådant som inte redan täcks av kök, badrum, parkering eller trädgård. Inkludera även renoveringar och tekniska uppgraderingar här.</p>
+                  <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} id="special-chips" tooltips={SPECIAL_TOOLTIPS} />
                   <FormField control={form.control} name="specialFeatures" render={({ field }) => (
                     <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Ex: Stambyte 2017, fungerande kakelugn och platsbyggd förvaring i vardagsrum" {...field} className={exampleCompactInputClass} /></FormControl>
+                      <FormControl><Input placeholder="Ex: Stambyte 2017, nya 3-glasfönster 2021, kakelugn, platsbyggd förvaring" {...field} className={exampleCompactInputClass} /></FormControl>
                     </FormItem>
                   )} />
                 </div>
@@ -1661,8 +1706,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 {/* House/Villa: Garden chips */}
                 {isHouseType && (
                   <div>
-                    <span className="text-xs text-gray-500 font-medium block mb-2">Trädgård & uteplats</span>
-                    <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} />
+                    <span className="text-xs text-gray-500 font-medium block mb-2" id="garden-label">Trädgård & uteplats</span>
+                    <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} id="garden-chips" tooltips={GARDEN_TOOLTIPS} />
                     <FormField control={form.control} name="gardenDescription" render={({ field }) => (
                       <FormItem className="mt-2">
                         <FormControl><Input placeholder="Ex: Plan trädgårdstomt med häck, äppelträd, odlingslådor och stor altan i västerläge" {...field} className={exampleCompactInputClass} /></FormControl>
@@ -1675,7 +1720,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormField control={form.control} name="view" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Utsikt</FormLabel>
+                      <FormLabel className="text-xs text-gray-500">Utsikt <span className="text-gray-400 font-normal">(används även som USP)</span></FormLabel>
                       <FormControl><Input placeholder="Ex: Fri utsikt över park, grönska och takåsar" {...field} className={exampleInputClass} /></FormControl>
                     </FormItem>
                   )} />
@@ -1718,9 +1763,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
                 {/* Parking chips */}
                 <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2">Parkering</span>
+                  <span className="text-xs text-gray-500 font-medium block mb-2" id="parking-label">Parkering</span>
                   <p className="text-[10px] text-gray-400 mb-1">Laddbox och garageinfo ska ligga här för att undvika dubbla formuleringar i texten.</p>
-                  <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} />
+                  <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} id="parking-chips" tooltips={PARKING_TOOLTIPS} />
                   <FormField control={form.control} name="parking" render={({ field }) => (
                     <FormItem className="mt-2">
                       <FormControl><Input placeholder="Ex: Isolerat garage med laddbox samt uppfart med plats för två bilar" {...field} className={exampleCompactInputClass} /></FormControl>
@@ -1732,23 +1777,17 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 {isHouseType && (
                   <>
                     <div>
-                      <span className="text-xs text-gray-500 font-medium block mb-2">Byggnadsmaterial</span>
-                      <ChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} />
+                      <span className="text-xs text-gray-500 font-medium block mb-2" id="material-label">Byggnadsmaterial</span>
+                      <ChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} id="material-chips" tooltips={MATERIAL_TOOLTIPS} />
                     </div>
                     <div>
-                      <span className="text-xs text-gray-500 font-medium block mb-2">Taktyp</span>
-                      <ChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} />
+                      <span className="text-xs text-gray-500 font-medium block mb-2" id="roof-label">Taktyp</span>
+                      <ChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} id="roof-chips" />
                     </div>
                   </>
                 )}
 
-                {/* Other info */}
-                <FormField control={form.control} name="otherInfo" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Övrig information</FormLabel>
-                      <FormControl><Input placeholder="Ex: Stambyte utfört 2015, nya 3-glasfönster 2021 och dokumenterat låg energiförbrukning senaste 12 månaderna" {...field} className={exampleInputClass} /></FormControl>
-                  </FormItem>
-                )} />
+                {/* Task 5.1: otherInfo removed — consolidated into specialFeatures */}
               </div>
             )}
           </div>

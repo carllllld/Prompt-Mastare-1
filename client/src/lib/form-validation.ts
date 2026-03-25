@@ -159,16 +159,47 @@ export function getFieldLabel(fieldName: string): string {
   const labels: Record<string, string> = {
     'propertyType': 'Bostadstyp',
     'address': 'Adress',
+    'area': 'Område',
     'livingArea': 'Boarea',
     'totalRooms': 'Antal rum',
+    'bedrooms': 'Sovrum',
+    'bathrooms': 'Badrum',
     'price': 'Pris',
     'monthlyFee': 'Avgift',
     'buildYear': 'Byggår',
+    'condition': 'Skick',
     'energyClass': 'Energiklass',
     'floor': 'Våning',
     'elevator': 'Hiss',
+    'balconyArea': 'Balkongarea',
+    'balconyDirection': 'Balkongväderstreck',
+    'brfName': 'BRF-namn',
+    'storage': 'Förråd',
+    'layoutDescription': 'Planlösning',
+    'kitchenDescription': 'Kök',
+    'bathroomDescription': 'Badrum',
+    'uniqueSellingPoints': 'Säljpunkter',
+    'view': 'Utsikt',
+    'neighborhood': 'Områdesbeskrivning',
+    'transport': 'Kommunikationer',
+    'parking': 'Parkering',
+    'flooring': 'Golv',
+    'heating': 'Uppvärmning',
     'lotArea': 'Tomtarea',
+    'gardenDescription': 'Trädgård',
+    'specialFeatures': 'Särskilda egenskaper',
+    'fastighetsbeteckning': 'Fastighetsbeteckning',
+    'taxeringsvarde': 'Taxeringsvärde',
+    'tomtrattsavgald': 'Tomträttsavgäld',
+    'konstruktionMaterial': 'Byggnadsmaterial',
+    'taktyp': 'Taktyp',
+    'renoveringsar': 'Renoveringar',
     'floors': 'Antal plan',
+    'biarea': 'Biarea',
+    'tilltradesdag': 'Tillträdesdag',
+    'visningstid': 'Visningstid',
+    'maklarnamn': 'Mäklarens namn',
+    'maklartelefon': 'Telefon',
   };
   
   return labels[fieldName] || fieldName;
@@ -192,4 +223,74 @@ export function isFieldRequired(
 export function getRequiredFieldError(fieldName: string): string {
   const label = getFieldLabel(fieldName);
   return `${label} är obligatoriskt`;
+}
+
+/**
+ * Task 8.1: Field dependency definitions.
+ * Maps fields to conditions that must be met for them to be visible/relevant.
+ */
+export type FieldDependency = {
+  field: string;
+  dependsOn: string;
+  condition: (value: string | boolean) => boolean;
+};
+
+export const FIELD_DEPENDENCIES: FieldDependency[] = [
+  // Apartment-only fields
+  { field: 'monthlyFee', dependsOn: 'propertyType', condition: (v) => v === 'apartment' || v === 'townhouse' },
+  { field: 'floor', dependsOn: 'propertyType', condition: (v) => v === 'apartment' || v === 'townhouse' },
+  { field: 'elevator', dependsOn: 'propertyType', condition: (v) => v === 'apartment' || v === 'townhouse' },
+  { field: 'brfName', dependsOn: 'propertyType', condition: (v) => v === 'apartment' || v === 'townhouse' },
+  // House-only fields
+  { field: 'lotArea', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'floors', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'biarea', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'gardenDescription', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'fastighetsbeteckning', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'tomtrattsavgald', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'konstruktionMaterial', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  { field: 'taktyp', dependsOn: 'propertyType', condition: (v) => v === 'house' || v === 'villa' },
+  // Balcony direction depends on having a balcony area
+  { field: 'balconyDirection', dependsOn: 'balconyArea', condition: (v) => typeof v === 'string' && v.trim() !== '' },
+];
+
+/**
+ * Task 8.1: Check if a field should be visible based on dependencies.
+ */
+export function isFieldVisible(
+  fieldName: string,
+  formData: Record<string, string | boolean>
+): boolean {
+  const deps = FIELD_DEPENDENCIES.filter(d => d.field === fieldName);
+  if (deps.length === 0) return true; // No dependencies = always visible
+  return deps.every(dep => dep.condition(formData[dep.dependsOn] ?? ''));
+}
+
+/**
+ * Task 8.3: Cross-field validation warnings (non-blocking).
+ * Returns advisory warnings for data quality improvement.
+ */
+export function getValidationWarnings(
+  formData: Record<string, string | boolean>,
+  propertyType: PropertyType
+): string[] {
+  const warnings: string[] = [];
+  const isHouseType = propertyType === 'house' || propertyType === 'villa';
+
+  // Warn if USP is empty but view is filled (view contributes to USP)
+  if (formData.view && !formData.uniqueSellingPoints) {
+    warnings.push('Tips: Lägg till försäljningsargument för starkare text.');
+  }
+
+  // Warn if house has no garden description
+  if (isHouseType && !formData.gardenDescription) {
+    warnings.push('Tips: Beskriv trädgården — det är ofta avgörande för villaköpare.');
+  }
+
+  // Warn if no kitchen or bathroom info
+  if (!formData.kitchenDescription && !formData.bathroomDescription) {
+    warnings.push('Tips: Kök och badrum är högintressanta — beskriv åtminstone ett.');
+  }
+
+  return warnings;
 }
