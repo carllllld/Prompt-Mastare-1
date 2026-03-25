@@ -8,7 +8,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
 
 ## Tasks
 
-- [~] 1. Phase 1: Analysis Infrastructure
+- [x] 1. Phase 1: Analysis Infrastructure
   - [x] 1.1 Create Form Auditor module
     - Create `server/lib/form-auditor.ts` with FormAuditor interface
     - Implement Hemnet/Booli reference data structures (HEMNET_REQUIRED_FIELDS, HEMNET_RECOMMENDED_FIELDS, BOOLI_REQUIRED_FIELDS, BOOLI_RECOMMENDED_FIELDS)
@@ -50,7 +50,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - **Property 11: Top Feature Coverage**
     - **Validates: Requirements 3.2, 3.3, 3.5**
 
-  - [ ] 1.7 Create Field Impact Analyzer module
+  - [x] 1.7 Create Field Impact Analyzer module
     - Create `server/lib/field-impact-analyzer.ts` with FieldImpactAnalyzer interface
     - Implement analyzeFieldImpact() to calculate fillRate, appearanceRate, qualityCorrelation
     - Implement Pearson correlation calculation for field completion vs quality scores
@@ -65,7 +65,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - **Property 25: Critical Priority Validation**
     - **Validates: Requirements 7.1, 7.2, 7.6**
 
-  - [~] 1.9 Create analysis orchestration script
+  - [x] 1.9 Create analysis orchestration script
     - Create `script/analyze-form-optimization.ts` to orchestrate all analyzers
     - Query historical form submissions and generated texts from database
     - Run FormAuditor, GapAnalyzer, ChipAnalyzer, and FieldImpactAnalyzer
@@ -80,7 +80,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - Test CLI flag handling
     - _Requirements: 1.5_
 
-- [ ] 2. Checkpoint - Review analysis results
+- [x] 2. Checkpoint - Review analysis results
   - Run analysis script on production data
   - Review OptimizationReport findings
   - Validate recommendations with stakeholders

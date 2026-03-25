@@ -18,6 +18,7 @@
     "test:profile": "tsx server/tests/load/performance-profiler.ts",
     "test:load": "echo 'Install k6 to run load tests: brew install k6 (macOS) or see server/tests/load/README.md' && echo 'Then run: k6 run server/tests/load/k6-load-test.js'",
     "test:load:analyze": "tsx server/tests/load/analyze-results.ts",
+    "analyze-form-optimization": "tsx script/analyze-form-optimization.ts",
     "launch:gate": "tsx script/launch-gate.ts",
     "quota:refill": "tsx script/refill-quota.ts"
   },
