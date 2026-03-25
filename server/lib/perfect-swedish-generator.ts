@@ -405,34 +405,31 @@ Innan du svarar, kontrollera:
 
     prompt += `\n\n## OUTPUT FORMAT
 
-Skriv texterna med följande struktur (använd exakta markörer):
+Skriv texterna direkt efter varje markör. Kopiera INTE instruktionerna i hakparenteser.
 
 HUVUDTEXT:
-[Skriv huvudtexten här (${targetWordMin}-${targetWordMax} ord, inga förbjudna fraser)]
-
-KRITISKT FÖR HUVUDTEXT:
-- MÅSTE innehålla minst 3 styckebrytningar (tomma rader) som separerar stycken
-- Varje stycke ska vara 2-4 meningar
-- Första stycket = USP-öppning
-- Sista stycket = läge och ekonomi
-- ALDRIG en enda lång textmassa utan radbrytningar
+(Skriv ${targetWordMin}-${targetWordMax} ord här, minst 3 styckebrytningar med tomma rader)
 
 RUBRIK:
-[Max 10 ord, ingen punkt, inga förbjudna fraser]
+(Max 10 ord, ingen punkt)
 
 SOCIAL MEDIA:
-[Max 3 meningar]
+(Max 3 meningar)
 
 INSTAGRAM:
-[Max 2200 tecken]
+(Max 2200 tecken)
 
 VISNINGSINBJUDAN:
-[1-2 meningar]
+(1-2 meningar, måste innehålla ordet "visning")
 
 KORT ANNONS:
-[Max 50 ord]
+(Max 50 ord)
 
-VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
+VIKTIGT: 
+- Skriv ENDAST texten efter varje markör
+- Kopiera INTE instruktionerna i parenteser
+- Använd INGA förbjudna fraser
+- HUVUDTEXT måste ha styckebrytningar (tomma rader mellan stycken)`;
 
     return prompt;
   }
@@ -457,10 +454,21 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
         if (marker === 'KORT ANNONS:') markers.push('SHORT AD:', 'SHORT ADVERTISEMENT:');
 
         for (const m of markers) {
-          const regex = new RegExp(`${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*([\\s\\S]*?)(?=\\n\\n[A-ZÅÄÖ]+:|$)`, 'i');
+          // Match marker, then capture everything until the next ALL-CAPS marker or end
+          // This handles both "RUBRIK:\nText here" and "RUBRIK: Text here"
+          const escapedMarker = m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(
+            `${escapedMarker}\\s*\\n?\\s*([\\s\\S]*?)(?=\\n\\s*(?:[A-ZÅÄÖ]{3,}[A-ZÅÄÖ\\s]*:|$))`,
+            'i'
+          );
           const match = content.match(regex);
           if (match && match[1]) {
-            return match[1].trim();
+            let extracted = match[1].trim();
+            // Remove any parenthetical instructions at the start (e.g., "(Max 10 ord...)")
+            extracted = extracted.replace(/^\([^)]*\)\s*/, '');
+            // Remove any bracketed instructions at the start (e.g., "[Max 10 ord...]")
+            extracted = extracted.replace(/^\[[^\]]*\]\s*/, '');
+            return extracted;
           }
         }
         return '';
