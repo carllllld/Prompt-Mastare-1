@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { validateRequiredFields, getFieldLabel, type PropertyType, type Platform } from "@/lib/form-validation";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -62,9 +63,9 @@ interface PropertyFormData {
 
 // ── CHIP OPTIONS ──
 const KITCHEN_CHIPS = [
-  "Renoverat kök", "Köksö", "Stenbänk/komposit",
+  "Renoverat kök", "Köksö", "Stenbänk", "Komposit",
   "Integrerade vitvaror", "Platsbyggt kök", "Matplats 4–6 pers",
-  "Öppen planlösning", "Vitvaror uppdaterade", "Fönster vid matplats",
+  "Öppen planlösning", "Moderna vitvaror", "Fönster vid matplats",
 ];
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
@@ -84,14 +85,14 @@ const SPECIAL_CHIPS = [
   "Braskamin", "Kakelugn", "Originaldetaljer",
 ];
 const GARDEN_CHIPS = [
-  "Välskött trädgård", "Uteplats i söder", "Altan/trädäck",
+  "Välskött trädgård", "Uteplats i söder", "Altan", "Trädäck",
   "Fruktträd", "Insynsskyddat", "Förråd/bod", "Pergola", "Eldstad ute",
 ];
 const USP_CHIPS = [
   "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
-  "Renoverat kök med årtal", "Renoverat badrum med årtal",
-  "Nära pendling", "Garage/laddbox", "Flera badrum",
+  "Renoverat kök", "Renoverat badrum",
+  "Nära pendling", "Garage", "Laddbox", "Flera badrum",
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
@@ -103,6 +104,61 @@ const ROOF_CHIPS = [
 const MATERIAL_CHIPS = [
   "Trä", "Tegel", "Puts", "Betong", "Plåt", "Leca",
 ];
+
+// ── CHIP TOOLTIPS ──
+// Tooltips for technical or unclear chips to improve user understanding
+const KITCHEN_TOOLTIPS: Record<string, string> = {
+  "Stenbänk": "Bänkskiva i natursten (granit, marmor etc.)",
+  "Komposit": "Bänkskiva i kvartskomposit eller liknande",
+  "Integrerade vitvaror": "Vitvaror inbyggda i köksinredningen",
+  "Platsbyggt kök": "Skräddarsytt kök anpassat efter rummet",
+  "Moderna vitvaror": "Nyare vitvaror i gott skick",
+};
+
+const BATHROOM_TOOLTIPS: Record<string, string> = {
+  "Helkaklat": "Väggar helt täckta med kakel",
+  "Duschvägg i glas": "Glasvägg vid dusch istället för duschdrape ri",
+};
+
+const HEATING_TOOLTIPS: Record<string, string> = {
+  "Fjärrvärme": "Värme från kommunalt fjärrvärmenät",
+  "Bergvärme": "Värmepump som hämtar energi från berg",
+  "Luft-vattenvärmepump": "Värmepump som värmer vatten via utomhusluft",
+  "Luft-luftvärmepump": "Värmepump som värmer inomhusluften direkt",
+  "Frånluftsvärmepump": "Värmepump som återvinner värme från ventilationsluft",
+  "Vattenburen värme": "Radiatorsystem med varmvatten",
+};
+
+const SPECIAL_TOOLTIPS: Record<string, string> = {
+  "Stambyte genomfört": "Byte av vatten- och avloppsledningar",
+  "Dränering utförd": "System för bortledning av grundvatten",
+  "Fiber indraget": "Fiberoptisk bredbandsanslutning",
+  "Originaldetaljer": "Bevarade historiska detaljer från byggnadsåret",
+};
+
+const GARDEN_TOOLTIPS: Record<string, string> = {
+  "Insynsskyddat": "Skyddat från insyn via häck, staket eller läge",
+  "Förråd/bod": "Förvaringsbyggnad i trädgården",
+  "Pergola": "Öppen spaljékonstruktion för klätterväxter",
+};
+
+const USP_TOOLTIPS: Record<string, string> = {
+  "Genomgående planlösning": "Fönster på flera väderstreck ger genomljusning",
+  "Stabil BRF": "Bostadsrättsförening med god ekonomi",
+  "Renoverat kök": "Ange årtal i fritextfältet för bäst resultat",
+  "Renoverat badrum": "Ange årtal i fritextfältet för bäst resultat",
+};
+
+const PARKING_TOOLTIPS: Record<string, string> = {
+  "Garageplats": "Parkeringsplats i garage",
+  "Boendeparkering": "Parkeringstillstånd för boende i området",
+  "Laddbox för elbil": "Installerad laddstation för elfordon",
+  "Förberett för laddbox": "Elinstallation förberedd för framtida laddbox",
+};
+
+const MATERIAL_TOOLTIPS: Record<string, string> = {
+  "Leca": "Lättbetong (Lättklinkerblock)",
+};
 const PROPERTY_CONDITIONS = [
   "Nyskick", "Mycket gott skick", "Gott skick", "Bra skick", "Behöver renoveras",
 ];
@@ -589,6 +645,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const transportValue = form.watch("transport");
   const neighborhoodValue = form.watch("neighborhood");
   const viewValue = form.watch("view");
+  const buildYearValue = form.watch("buildYear");
+  const energyClassValue = form.watch("energyClass");
+  const floorValue = form.watch("floor");
+  const elevatorValue = form.watch("elevator");
+  const lotAreaValue = form.watch("lotArea");
+  const floorsValue = form.watch("floors");
   const isApartmentType = selectedType === "apartment" || selectedType === "townhouse";
   const isHouseType = selectedType === "house" || selectedType === "villa";
   const hasKitchenBathroomFacts = Boolean(kitchenValue?.trim() || bathroomValue?.trim() || kitchenChips.length > 0 || bathroomChips.length > 0);
@@ -596,10 +658,32 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const hasStrongDifferentiator = Boolean(uspValue?.trim() || uspChips.length > 0 || viewValue?.trim());
   
   // Priority checklist items with field references for scroll-to functionality
+  // Updated to include platform-specific mandatory fields
   const priorityItems: PriorityItem[] = [
     { label: "Adress", completed: Boolean(addressValue?.trim()), fieldName: "address", priority: "critical" },
     { label: "Boarea", completed: Boolean(livingAreaValue?.trim()), fieldName: "livingArea", priority: "critical" },
     { label: "Rum & badrum", completed: Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0), fieldName: "totalRooms", priority: "critical" },
+    
+    // Platform-specific mandatory fields
+    ...(selectedPlatform === "hemnet" ? [
+      { label: "Byggår", completed: Boolean(buildYearValue?.trim()), fieldName: "buildYear", priority: "critical" as const },
+      { label: "Energiklass", completed: Boolean(energyClassValue?.trim()), fieldName: "energyClass", priority: "critical" as const },
+      ...(isApartmentType ? [
+        { label: "Avgift", completed: Boolean(form.watch("monthlyFee")?.trim()), fieldName: "monthlyFee", priority: "critical" as const },
+      ] : []),
+    ] : []),
+    
+    // Property type-specific mandatory fields
+    ...(isApartmentType ? [
+      { label: "Våning", completed: Boolean(floorValue?.trim()), fieldName: "floor", priority: "critical" as const },
+      { label: "Hiss", completed: true, fieldName: "elevator", priority: "critical" as const }, // Boolean field always "completed"
+    ] : []),
+    ...(isHouseType ? [
+      { label: "Tomtarea", completed: Boolean(lotAreaValue?.trim()), fieldName: "lotArea", priority: "critical" as const },
+      { label: "Antal plan", completed: Boolean(floorsValue?.trim()), fieldName: "floors", priority: "critical" as const },
+    ] : []),
+    
+    // Important fields (not mandatory but high impact)
     { label: "Kök & badrum", completed: hasKitchenBathroomFacts, fieldName: "kitchenDescription", priority: "important" },
     { label: "Läge & transport", completed: hasLocationFacts, fieldName: "transport", priority: "important" },
     { label: "Försäljningsargument", completed: hasStrongDifferentiator, fieldName: "uniqueSellingPoints", priority: "critical" },
@@ -624,6 +708,35 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
   const onLocalSubmit = (values: PropertyFormData) => {
+    // Validate required fields based on property type and platform
+    const validationResult = validateRequiredFields(
+      {
+        ...values,
+        totalRooms: String(rooms),
+        bedrooms: String(bedrooms),
+        bathrooms: String(bathrooms),
+      },
+      values.propertyType as PropertyType,
+      values.platform as Platform
+    );
+    
+    if (!validationResult.valid) {
+      const missingFieldLabels = validationResult.missingFields.map(getFieldLabel);
+      toast({
+        title: "Obligatoriska fält saknas",
+        description: `Följande fält måste fyllas i: ${missingFieldLabels.join(', ')}`,
+        variant: "destructive",
+      });
+      
+      // Scroll to first missing field
+      if (validationResult.missingFields.length > 0) {
+        const firstMissingField = validationResult.missingFields[0];
+        handleScrollToField(firstMissingField);
+      }
+      
+      return;
+    }
+    
     // Check if priority fields are incomplete (less than 4 completed)
     if (priorityCompleted < 4) {
       setPendingFormData(values);
@@ -1416,7 +1529,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               {/* Kitchen chips */}
               <div>
                 <span className="text-xs text-gray-500 font-medium block mb-2">Kök — välj det som stämmer</span>
-                <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" />
+                <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" tooltips={KITCHEN_TOOLTIPS} />
                 <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
                   <FormItem className="mt-2">
                     <p className="text-[10px] text-gray-400 mb-1">Komplettera bara chipsen med sådant som ger bättre text, till exempel material, fabrikat eller årtal.</p>

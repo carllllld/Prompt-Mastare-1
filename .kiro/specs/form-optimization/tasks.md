@@ -86,8 +86,8 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
   - Validate recommendations with stakeholders
   - Ensure all tests pass, ask the user if questions arise
 
-- [ ] 3. Phase 2: Platform Compliance
-  - [ ] 3.1 Add missing Hemnet mandatory fields
+- [x] 3. Phase 2: Platform Compliance
+  - [x] 3.1 Add missing Hemnet mandatory fields
     - Update PropertyFormData interface with missing Hemnet-required fields from analysis
     - Add form fields to PromptFormProfessional.tsx in appropriate FieldGroups
     - Mark fields as required with asterisk (*) in FormLabel
@@ -99,14 +99,14 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - **Property 18: Missing Critical Field Addition**
     - **Validates: Requirements 5.2, 5.3**
 
-  - [ ] 3.3 Add missing Booli mandatory fields
+  - [x] 3.3 Add missing Booli mandatory fields
     - Update PropertyFormData interface with missing Booli-required fields from analysis
     - Add form fields to PromptFormProfessional.tsx
     - Add field validation rules
     - Update buildDispositionFromStructuredData() to map new fields
     - _Requirements: 1.2, 5.3, 5.6_
 
-  - [ ] 3.4 Add high-priority recommended fields
+  - [x] 3.4 Add high-priority recommended fields
     - Add Hemnet/Booli recommended fields with high quality impact (from Field Impact Analyzer)
     - Mark as "important" priority in FieldGroup components
     - Add contextual help text explaining field importance
@@ -117,7 +117,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - **Property 19: New Field Disposition Integration**
     - **Validates: Requirements 5.6**
 
-  - [ ] 3.6 Update validation engine for platform compliance
+  - [x] 3.6 Update validation engine for platform compliance
     - Implement dynamic required fields based on property type and platform
     - Add Hemnet-specific validation rules
     - Add Booli-specific validation rules
@@ -132,14 +132,14 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - _Requirements: 1.1, 1.2, 5.6_
 
 - [ ] 4. Phase 3: Chip Optimization
-  - [ ] 4.1 Add high-frequency chips
+  - [x] 4.1 Add high-frequency chips
     - Update chip constant arrays (KITCHEN_CHIPS, BATHROOM_CHIPS, etc.) with chips recommended by Chip Analyzer (>15% frequency)
     - Add new chips to appropriate ChipSelector components
     - Add tooltips for new chips if terminology is unclear
     - Update CANONICAL_RULES to include new chip aliases
     - _Requirements: 3.2, 3.5_
 
-  - [ ] 4.2 Remove low-usage chips
+  - [x] 4.2 Remove low-usage chips
     - Remove chips with <5% selection rate identified by Chip Analyzer
     - Update chip constant arrays
     - Remove from ChipSelector components
