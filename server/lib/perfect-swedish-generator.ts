@@ -405,31 +405,31 @@ Innan du svarar, kontrollera:
 
     prompt += `\n\n## OUTPUT FORMAT
 
-Skriv texterna direkt efter varje markör. Kopiera INTE instruktionerna i hakparenteser.
+Du MÅSTE skriva ALLA 6 fält nedan. Skriv texten direkt efter varje markör.
 
 HUVUDTEXT:
-(Skriv ${targetWordMin}-${targetWordMax} ord här, minst 3 styckebrytningar med tomma rader)
+(${targetWordMin}-${targetWordMax} ord, minst 3 styckebrytningar)
 
 RUBRIK:
 (Max 10 ord, ingen punkt)
 
 SOCIAL MEDIA:
-(Max 3 meningar)
+(Max 3 meningar, avsluta med punkt)
 
 INSTAGRAM:
-(Max 2200 tecken)
+(Max 2200 tecken, max 2 emojis)
 
 VISNINGSINBJUDAN:
-(1-2 meningar, måste innehålla ordet "visning")
+(1-2 meningar, måste innehålla "visning", INTE "välkommen")
 
 KORT ANNONS:
-(Max 50 ord)
+(Max 50 ord, måste innehålla bostadstyp + boarea)
 
-VIKTIGT: 
-- Skriv ENDAST texten efter varje markör
-- Kopiera INTE instruktionerna i parenteser
-- Använd INGA förbjudna fraser
-- HUVUDTEXT måste ha styckebrytningar (tomma rader mellan stycken)`;
+KRITISKT:
+- ALLA 6 fält är obligatoriska
+- Skriv ENDAST texten, INTE instruktionerna i parenteser
+- INGA förbjudna fraser (särskilt INTE "välkommen" i visningsinbjudan)
+- HUVUDTEXT måste ha tomma rader mellan stycken`;
 
     return prompt;
   }
