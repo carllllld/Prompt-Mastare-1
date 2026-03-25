@@ -60,8 +60,8 @@ export class SmartGenerationEngine {
         ],
         // Note: temperature not supported with reasoning_effort
         max_completion_tokens: 2500,
-        response_format: { type: 'json_object' },
-        reasoning_effort: 'medium', // REVERTED from 'high' - 'high' causes empty responses
+        // REMOVED response_format - let AI write naturally, we'll parse the output
+        reasoning_effort: 'medium',
       });
 
       const result = this.extractResult(completion);
@@ -405,23 +405,32 @@ Innan du svarar, kontrollera:
 
     prompt += `\n\n## OUTPUT FORMAT
 
-Svara ENDAST med JSON i denna exakta struktur:
+Skriv texterna med följande struktur (använd exakta markörer):
 
-{
-  "improvedPrompt": "Huvudtext (${targetWordMin}-${targetWordMax} ord, inga förbjudna fraser, MÅSTE ha styckebrytningar med \\n\\n mellan varje stycke)",
-  "headline": "Rubrik (max 10 ord, ingen punkt, inga förbjudna fraser)",
-  "socialCopy": "Social media text (max 3 meningar)",
-  "instagramCaption": "Instagram caption (max 2200 tecken)",
-  "showingInvitation": "Visningsinbjudan (1-2 meningar)",
-  "shortAd": "Kort annons (max 50 ord)"
-}
+HUVUDTEXT:
+[Skriv huvudtexten här (${targetWordMin}-${targetWordMax} ord, inga förbjudna fraser)]
 
-KRITISKT FÖR improvedPrompt:
-- MÅSTE innehålla minst 3 styckebrytningar (\\n\\n) som separerar stycken
+KRITISKT FÖR HUVUDTEXT:
+- MÅSTE innehålla minst 3 styckebrytningar (tomma rader) som separerar stycken
 - Varje stycke ska vara 2-4 meningar
 - Första stycket = USP-öppning
 - Sista stycket = läge och ekonomi
 - ALDRIG en enda lång textmassa utan radbrytningar
+
+RUBRIK:
+[Max 10 ord, ingen punkt, inga förbjudna fraser]
+
+SOCIAL MEDIA:
+[Max 3 meningar]
+
+INSTAGRAM:
+[Max 2200 tecken]
+
+VISNINGSINBJUDAN:
+[1-2 meningar]
+
+KORT ANNONS:
+[Max 50 ord]
 
 VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
 
@@ -436,23 +445,66 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
     }
 
     try {
-      const parsed = JSON.parse(content);
+      // Try to extract fields using markers
+      const extractField = (marker: string): string => {
+        // Try multiple marker variations (Swedish and English)
+        const markers = [marker];
+        if (marker === 'HUVUDTEXT:') markers.push('IMPROVED PROMPT:', 'MAIN TEXT:');
+        if (marker === 'RUBRIK:') markers.push('HEADLINE:', 'TITLE:');
+        if (marker === 'SOCIAL MEDIA:') markers.push('SOCIAL COPY:');
+        if (marker === 'INSTAGRAM:') markers.push('INSTAGRAM CAPTION:');
+        if (marker === 'VISNINGSINBJUDAN:') markers.push('SHOWING INVITATION:', 'VIEWING INVITATION:');
+        if (marker === 'KORT ANNONS:') markers.push('SHORT AD:', 'SHORT ADVERTISEMENT:');
 
-      if (!parsed.improvedPrompt || !parsed.headline) {
-        throw new Error('Missing required fields in generated content');
+        for (const m of markers) {
+          const regex = new RegExp(`${m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*([\\s\\S]*?)(?=\\n\\n[A-ZÅÄÖ]+:|$)`, 'i');
+          const match = content.match(regex);
+          if (match && match[1]) {
+            return match[1].trim();
+          }
+        }
+        return '';
+      };
+
+      const improvedPrompt = extractField('HUVUDTEXT:');
+      const headline = extractField('RUBRIK:');
+      const socialCopy = extractField('SOCIAL MEDIA:');
+      const instagramCaption = extractField('INSTAGRAM:');
+      const showingInvitation = extractField('VISNINGSINBJUDAN:');
+      const shortAd = extractField('KORT ANNONS:');
+
+      if (!improvedPrompt || !headline) {
+        // Fallback: try JSON parsing if markers didn't work
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed.improvedPrompt && parsed.headline) {
+            return {
+              improvedPrompt: parsed.improvedPrompt || '',
+              headline: parsed.headline || '',
+              socialCopy: parsed.socialCopy || '',
+              instagramCaption: parsed.instagramCaption || '',
+              showingInvitation: parsed.showingInvitation || '',
+              shortAd: parsed.shortAd || ''
+            };
+          }
+        } catch {
+          // JSON parsing failed, continue with error
+        }
+        
+        throw new Error('Missing required fields in generated content (no HUVUDTEXT or RUBRIK found)');
       }
 
       return {
-        improvedPrompt: parsed.improvedPrompt || '',
-        headline: parsed.headline || '',
-        socialCopy: parsed.socialCopy || '',
-        instagramCaption: parsed.instagramCaption || '',
-        showingInvitation: parsed.showingInvitation || '',
-        shortAd: parsed.shortAd || ''
+        improvedPrompt,
+        headline,
+        socialCopy,
+        instagramCaption,
+        showingInvitation,
+        shortAd
       };
     } catch (error) {
       console.error('Failed to parse OpenAI response:', content);
-      throw new Error('Invalid JSON response from OpenAI');
+      throw new Error(`Invalid response format from OpenAI: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -489,6 +541,18 @@ VIKTIGT: Kontrollera att INGEN av de förbjudna fraserna finns i din output!`;
       // Check for space before punctuation
       if (/\s+[.!?,;:]/.test(text)) {
         violations.push(`${field} contains space before punctuation`);
+      }
+
+      // Check for words with trailing digits (e.g., "nyskick2")
+      const wordsWithDigits = text.match(/\b[a-zåäöA-ZÅÄÖ]+\d+\b/g);
+      if (wordsWithDigits) {
+        violations.push(`${field} contains words with trailing digits: ${wordsWithDigits.join(', ')}`);
+      }
+
+      // Check for excessive "vilket" repetition (max 3 occurrences)
+      const vilketMatches = text.match(/\bvilket\b/gi);
+      if (vilketMatches && vilketMatches.length > 3) {
+        violations.push(`${field} contains "vilket" ${vilketMatches.length} times (max 3) - use varied sentence structures`);
       }
     }
 

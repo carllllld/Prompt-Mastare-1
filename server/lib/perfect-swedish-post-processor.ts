@@ -162,6 +162,21 @@ export class DeterministicPostProcessor {
       let text = result[field];
       const originalText = text;
 
+      // Remove words with trailing digits (e.g., "nyskick2" -> "nyskick")
+      const wordsWithDigitsMatches = text.match(/\b([a-zåäöA-ZÅÄÖ]+)\d+\b/g);
+      if (wordsWithDigitsMatches) {
+        text = text.replace(/\b([a-zåäöA-ZÅÄÖ]+)\d+\b/g, '$1');
+        wordsWithDigitsMatches.forEach(match => {
+          const cleaned = match.replace(/\d+$/, '');
+          transformations.push({ 
+            type: 'formatting', 
+            field, 
+            before: match, 
+            after: cleaned 
+          });
+        });
+      }
+
       // Remove double punctuation (.., ..., etc.)
       const doublePunctuationMatches = text.match(/\.{2,}/g);
       if (doublePunctuationMatches) {
@@ -186,6 +201,21 @@ export class DeterministicPostProcessor {
             field, 
             before: match, 
             after: match.trim() 
+          })
+        );
+      }
+
+      // Fix missing commas in lists (e.g., "matbutiker ett bra utbud" -> "matbutiker, samt ett bra utbud")
+      const missingCommaPattern = /\b(matbutiker|restauranger|kaféer|butiker)\s+(ett|en|många|flera)\s+/gi;
+      const missingCommaMatches = text.match(missingCommaPattern);
+      if (missingCommaMatches) {
+        text = text.replace(missingCommaPattern, (match, noun, article) => `${noun}, samt ${article} `);
+        missingCommaMatches.forEach(match => 
+          transformations.push({ 
+            type: 'formatting', 
+            field, 
+            before: match.trim(), 
+            after: match.replace(/\s+(ett|en|många|flera)\s+/, ', samt $1 ').trim()
           })
         );
       }
