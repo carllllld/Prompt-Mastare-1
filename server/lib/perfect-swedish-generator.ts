@@ -328,6 +328,30 @@ Istället för "välkommen till" → börja direkt med fakta om bostaden
 Istället för "bjuder på" → beskriv konkret vad som finns
 Istället för "i hjärtat av" → ange faktiskt avstånd eller gatunamn
 
+## KRITISKT: SKICKBESKRIVNINGAR
+
+**ALDRIG använd vaga skickbeskrivningar utan bevis:**
+- INTE: "i nyskick", "som nytt", "fräscht skick", "gott skick"
+- RÄTT: Ange konkreta renoveringsår och omfattning
+
+**Om disposition innehåller "nyskick" eller liknande:**
+- Ignorera det helt
+- Använd istället konkreta renoveringsår från disposition (kök, badrum, fönster, tak)
+- Exempel: "Köket renoverades 2023" istället för "kök i nyskick"
+- Exempel: "Helrenoverat badrum 2021" istället för "badrum i nyskick"
+
+## UNDVIK REPETITION OCH MOTSÄGELSER
+
+**Vitvaror:**
+- INTE: "Integrerade Siemens-vitvaror, uppdaterade vitvaror" (repetitivt)
+- RÄTT: "Integrerade Siemens-vitvaror (ugn, spis, diskmaskin)" (specifikt)
+- RÄTT: "Vitvarorna är från 2023" (om årtal finns)
+
+**Tekniska detaljer:**
+- Ange alltid årtal för renoveringar: "Köket renoverades 2023"
+- Ange alltid årtal för nya fönster/tak: "Fönster bytta 2022"
+- Om årtal saknas: Skriv neutralt "Fönster är bytta" eller utelämna helt
+
 ${brokerPolicy}
 
 ## DIN PROCESS
@@ -421,6 +445,11 @@ INSTAGRAM:
 
 VISNINGSINBJUDAN:
 (1-2 meningar, måste innehålla "visning", INTE "välkommen")
+
+EXEMPEL PÅ BRA VISNINGSINBJUDAN:
+- "Visning sker efter överenskommelse. Kontakta ansvarig mäklare för bokning."
+- "Visning: anmälan krävs via Hemnet eller mäklarens kontaktformulär."
+- "Visning efter överenskommelse. Boka tid via annonsen."
 
 KORT ANNONS:
 (Max 50 ord, måste innehålla bostadstyp + boarea)

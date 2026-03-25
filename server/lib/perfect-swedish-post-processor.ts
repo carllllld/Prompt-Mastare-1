@@ -220,6 +220,21 @@ export class DeterministicPostProcessor {
         );
       }
 
+      // Fix repetitive vitvaror phrases (e.g., "integrerade vitvaror, uppdaterade vitvaror" -> "integrerade vitvaror")
+      const repetitiveVitvarorPattern = /\b(integrerade|inbyggda)\s+([\w-]+vitvaror)[,\s]+(uppdaterade|nya)\s+vitvaror\b/gi;
+      const repetitiveVitvarorMatches = text.match(repetitiveVitvarorPattern);
+      if (repetitiveVitvarorMatches) {
+        text = text.replace(repetitiveVitvarorPattern, '$1 $2');
+        repetitiveVitvarorMatches.forEach(match =>
+          transformations.push({
+            type: 'formatting',
+            field,
+            before: match,
+            after: match.replace(/[,\s]+(uppdaterade|nya)\s+vitvaror/gi, '')
+          })
+        );
+      }
+
       // Detect broken sentences (missing punctuation between clauses)
       // This is a heuristic - we log warnings but don't auto-fix
       const brokenSentencePattern = /\b(plus|minus|och|men)\s+[a-zåäö]+(?:ar|er|as)\s+[a-zåäö]/i;
@@ -610,6 +625,11 @@ export class DeterministicPostProcessor {
     const generalizationPatterns: Array<[RegExp, string]> = [
       // Specific restaurant names (case-insensitive)
       [/\b(kikka|come 2 eat|chopchop asian express)\b/gi, 'restauranger'],
+      
+      // Swedish grocery store chains - replace with "matbutik" or "matbutiker"
+      [/\b(Willys|ICA|Coop|Hemköp|City Gross|Lidl)\s+[A-ZÅÄÖ][a-zåäö]+\b/gi, 'matbutik'],
+      [/\b(Willys|ICA|Coop|Hemköp|City Gross|Lidl)\b/gi, 'matbutik'],
+      
       // Generic restaurant patterns
       [/Restaurang\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Restaurang\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'restauranger'],
       [/Kafé\s+[A-ZÅÄÖ][a-zåäö]+(?:(?:\s*(?:,|och)\s*)Kafé\s+[A-ZÅÄÖ][a-zåäö]+)*/gi, 'kaféer'],
