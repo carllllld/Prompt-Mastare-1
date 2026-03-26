@@ -179,11 +179,6 @@ describe('Form Auditor', () => {
       expect(mapped).toBe('balcony');
     });
 
-    it('should map fastighetsbeteckning to propertyDesignation', () => {
-      const mapped = auditor.mapFormFieldToPlatformField('fastighetsbeteckning');
-      expect(mapped).toBe('propertyDesignation');
-    });
-
     it('should return null for fields without mapping', () => {
       const mapped = auditor.mapFormFieldToPlatformField('address');
       expect(mapped).toBeNull();
@@ -233,10 +228,9 @@ describe('Form Auditor', () => {
       expect(auditor.mapFormFieldToPlatformField('balconyDirection')).toBe('balcony');
     });
 
-    it('should map Swedish technical terms to English equivalents', () => {
-      expect(auditor.mapFormFieldToPlatformField('fastighetsbeteckning')).toBe('propertyDesignation');
-      expect(auditor.mapFormFieldToPlatformField('taxeringsvarde')).toBe('assessedValue');
-      expect(auditor.mapFormFieldToPlatformField('tomtrattsavgald')).toBe('groundRentFee');
+    it('should map construction and roof fields correctly', () => {
+      expect(auditor.mapFormFieldToPlatformField('konstruktionMaterial')).toBe('constructionMaterial');
+      expect(auditor.mapFormFieldToPlatformField('taktyp')).toBe('roofType');
     });
   });
 });

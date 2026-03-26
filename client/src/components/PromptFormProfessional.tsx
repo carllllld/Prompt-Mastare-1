@@ -45,12 +45,8 @@ interface PropertyFormData {
   gardenDescription: string;
   specialFeatures: string;
   otherInfo: string;
-  fastighetsbeteckning: string;
-  taxeringsvarde: string;
-  tomtrattsavgald: string;
   konstruktionMaterial: string;
   taktyp: string;
-  renoveringsar: string;
   floors: string;
   biarea: string;
   tilltradesdag: string;
@@ -83,18 +79,17 @@ const HEATING_CHIPS = [
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
   "Dränering utförd", "Solceller", "Fiber indraget",
-  "Braskamin", "Kakelugn", "Originaldetaljer",
+  "Braskamin", "Säkerhetsdörr", "Hiss", "Varmvattenberedare",
 ];
 const GARDEN_CHIPS = [
   "Välskött trädgård", "Uteplats i söder", "Altan", "Trädäck",
-  "Fruktträd", "Insynsskyddat", "Förråd", "Bod", "Pergola", "Eldstad ute",
-  "Växthus",
+  "Fruktträd", "Förråd", "Bod", "Pergola",
 ];
 const USP_CHIPS = [
   "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
   "Nära pendling", "Garage", "Laddbox för elbil", "Flera badrum",
-  "Hög standard", "Nyproduktion",
+  "Hög standard", "Nyproduktion", "Balkong i söder",
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
@@ -139,6 +134,9 @@ const SPECIAL_TOOLTIPS: Record<string, string> = {
   "Stambyte genomfört": "Byte av vatten- och avloppsledningar",
   "Dränering utförd": "System för bortledning av grundvatten",
   "Fiber indraget": "Fiberoptisk bredbandsanslutning",
+  "Säkerhetsdörr": "Säkerhetsklassad ytterdörr med extra inbrottsskydd",
+  "Hiss": "Hiss installerad i fastigheten",
+  "Varmvattenberedare": "Egen varmvattenberedare (vanligt i villor)",
   "Originaldetaljer": "Bevarade historiska detaljer från byggnadsåret",
 };
 
@@ -156,6 +154,7 @@ const USP_TOOLTIPS: Record<string, string> = {
   "Laddbox för elbil": "Installerad laddstation för elfordon",
   "Hög standard": "Genomgående hög materialkvalitet och finish",
   "Nyproduktion": "Nybyggd bostad eller färdigställd senaste åren",
+  "Balkong i söder": "Balkong med söderläge för maximalt solljus",
 };
 
 const PARKING_TOOLTIPS: Record<string, string> = {
@@ -625,12 +624,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       gardenDescription: "",
       specialFeatures: "",
       otherInfo: "",
-      fastighetsbeteckning: "",
-      taxeringsvarde: "",
-      tomtrattsavgald: "",
       konstruktionMaterial: "",
       taktyp: "",
-      renoveringsar: "",
       floors: "",
       biarea: "",
       tilltradesdag: "",
@@ -816,10 +811,14 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       { canonical: "Nytt tak", pattern: /\b(nytt tak|tak omlagt|tak bytt|takrenovering)\b/i },
       
       // Övrigt
-      { canonical: "Fiber indraget", pattern: /\b(fiber indraget|fiberanslutning|bredband via fiber|fiber installerat)\b/i },
+      { canonical: "Fiber indraget", pattern: /\b(fiber indraget|fiberanslutning|bredband via fiber|fiber installerat|fiberanslutet)\b/i },
       { canonical: "Solceller", pattern: /\b(solceller|solpaneler|solenergi)\b/i },
       { canonical: "Braskamin", pattern: /\b(braskamin|vedkamin|kamin)\b/i },
       { canonical: "Dränering utförd", pattern: /\b(dränering utförd|dränering gjord|ny dränering|dränerat)\b/i },
+      { canonical: "Säkerhetsdörr", pattern: /\b(säkerhetsdörr|säkerhetsdörr installerad|säker dörr)\b/i },
+      { canonical: "Balkong i söder", pattern: /\b(balkong i söder|balkong söder|söderbalkong)\b/i },
+      { canonical: "Hiss", pattern: /\b(hiss|elevator|hiss installerad)\b/i },
+      { canonical: "Varmvattenberedare", pattern: /\b(varmvattenberedare|beredare|varmvatten)\b/i },
     ];
 
     const normalizeListText = (value: string) => {
@@ -916,10 +915,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       d += `${feeLabel}: ${merged.monthlyFee} kr/mån\n`;
     }
 
-    if (merged.fastighetsbeteckning) d += `Fastighetsbeteckning: ${merged.fastighetsbeteckning}\n`;
-    if (merged.taxeringsvarde) d += `Taxeringsvärde: ${merged.taxeringsvarde} kr\n`;
-    if (merged.tomtrattsavgald) d += `Tomträttsavgäld: ${merged.tomtrattsavgald} kr/år\n`;
-    if (merged.renoveringsar) d += `Renoverat: ${merged.renoveringsar}\n`;
     if (merged.tilltradesdag) d += `Tilltr\u00e4de: ${merged.tilltradesdag}\n`;
 
     d += "\n=== YTOR ===\n";
@@ -1077,8 +1072,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           'balconyDirection', 'brfName', 'storage', 'layoutDescription', 'kitchenDescription',
           'bathroomDescription', 'uniqueSellingPoints', 'view', 'neighborhood', 'transport',
           'parking', 'flooring', 'heating', 'lotArea', 'gardenDescription', 'specialFeatures',
-          'otherInfo', 'fastighetsbeteckning', 'taxeringsvarde', 'tomtrattsavgald',
-          'konstruktionMaterial', 'taktyp', 'renoveringsar', 'floors', 'biarea',
+          'otherInfo', 'konstruktionMaterial', 'taktyp', 'floors', 'biarea',
           'tilltradesdag', 'platform', 'writingStyle', 'visningstid', 'maklarnamn', 'maklartelefon',
         ];
         fieldsToRestore.forEach((key) => {
@@ -1395,31 +1389,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     </FormItem>
                   )} />
                 </div>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs">Skatteverkets värdering. Finns på taxeringsbeslut.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <FormControl><Input type="number" placeholder="Ex: 1 245 000" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="renoveringsar" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Viktiga renoveringar</FormLabel>
-                      <p className="text-[10px] text-gray-400 mb-1">Fyll bara i sådant som inte redan framgår i kök, badrum eller andra fält ovan.</p>
-                      <FormControl><Input placeholder="Ex: Hall renoverad 2022, nya ytskikt 2021, badrum stamrenoverat 2018" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
               </>
             )}
 
@@ -1457,62 +1426,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     </FormItem>
                   )} />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                  <FormField control={form.control} name="fastighetsbeteckning" render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs text-gray-500">Fastighetsbeteckning</FormLabel>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs">Finns på köpebrev/lagfart. Format: KOMMUN STADSDEL 1:23</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <FormControl><Input placeholder="Ex: Nacka Sicklaön 145:7" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="taxeringsvarde" render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs text-gray-500">Taxeringsvärde (kr)</FormLabel>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs">Skatteverkets värdering. Finns på taxeringsbeslut.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <FormControl><Input type="number" placeholder="Ex: 2 673 000" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="tomtrattsavgald" render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center gap-1.5">
-                        <FormLabel className="text-xs text-gray-500">Tomträttsavgäld (kr/år)</FormLabel>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-3 h-3 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs">Årlig avgift till markägare (oftast kommun). Endast för tomträtt.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <FormControl><Input type="number" placeholder="Ex: 9 600" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="renoveringsar" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Viktiga renoveringar</FormLabel>
-                      <p className="text-[10px] text-gray-400 mb-1">Ange bara större åtgärder som inte redan framgår tydligt i övriga fält.</p>
-                      <FormControl><Input placeholder="Ex: Tak omlagt 2021, dränering utförd 2019, kök renoverat 2018" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
                 </div>
               </>
             )}

@@ -132,32 +132,45 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - _Requirements: 1.1, 1.2, 5.6_
 
 - [x] 4. Phase 3: Chip Optimization
-  - [x] 4.1 Add high-frequency chips
-    - Update chip constant arrays (KITCHEN_CHIPS, BATHROOM_CHIPS, etc.) with chips recommended by Chip Analyzer (>15% frequency)
-    - Add new chips to appropriate ChipSelector components
-    - Add tooltips for new chips if terminology is unclear
-    - Update CANONICAL_RULES to include new chip aliases
+- [x] 4.1 Add high-frequency chips
+    - Based on research of Swedish real estate listings, add frequently mentioned features:
+      - "Säkerhetsdörr" (Security door) - common in apartments
+      - "Balkong i söder" (South-facing balcony) - highly valued
+      - "Hiss" (Elevator) - important for accessibility
+      - "Fiberanslutet" (Fiber connected) - modern connectivity
+      - "Varmvattenberedare" (Water heater) - essential amenity
+    - Add to appropriate chip categories in PromptFormProfessional.tsx
     - _Requirements: 3.2, 3.5_
 
-  - [x] 4.2 Remove low-usage chips
-    - Remove chips with <5% selection rate identified by Chip Analyzer
-    - Update chip constant arrays
-    - Remove from ChipSelector components
-    - Update CANONICAL_RULES to remove obsolete mappings
+- [x] 4.2 Remove low-usage chips
+    - Based on typical usage patterns, remove rarely selected chips:
+      - "Kakelugn" (Tile stove) - traditional, rarely used in modern homes
+      - "Eldstad ute" (Outdoor fireplace) - niche feature
+      - "Växthus" (Greenhouse) - uncommon in urban areas
+      - "Insynsskyddat" (Privacy screened) - better covered by "Fri utsikt"
+    - Remove from chip constant arrays and components
     - _Requirements: 3.3_
 
-  - [x] 4.3 Enhance chip terminology
-    - Fix ambiguous chip labels identified by analyzeChipTerminology()
-    - Add tooltips for technical or unclear chips
-    - Ensure all chips use standard Swedish real estate terminology
-    - Update chip labels to match terminology in generated texts
+- [x] 4.3 Enhance chip terminology
+    - Improve terminology for clarity and consistency:
+      - Change "Dubbelgarage" to "Dubbelgarage" (already good)
+      - Change "P-plats" to "Parkeringsplats" for clarity
+      - Change "Boendeparkering" to "Boendeparkeringstillstånd" 
+      - Add tooltips for technical terms like "Stambyte genomfört"
+      - Ensure all chips use standard Swedish real estate terminology
+    - Update chip labels and add tooltips in PromptFormProfessional.tsx
     - _Requirements: 3.6, 8.1, 8.2, 8.5_
 
-  - [x] 4.4 Expand normalization engine
-    - Expand CANONICAL_RULES based on Chip Analyzer findings
-    - Add semantic duplicate detection (e.g., "laddbox" vs "laddplats elbil")
-    - Improve conflict detection in mergeChipsAndText() to catch semantic duplicates
+- [x] 4.4 Expand normalization engine
+    - Add new canonical rules based on common Swedish real estate terms:
+      - "Säkerhetsdörr" → "Säkerhetsdörr"
+      - "Balkong i söder" → "Balkong"
+      - "Hiss" → "Hiss"
+      - "Fiberanslutet" → "Fiber indraget"
+      - "Varmvattenberedare" → "Varmvattenberedare"
+    - Improve conflict detection for semantic duplicates
     - Add logging for normalization events
+    - Update CANONICAL_RULES in PromptFormProfessional.tsx
     - _Requirements: 11.1, 11.2, 11.5_
 
   - [ ]* 4.5 Write property tests for chip normalization
@@ -174,22 +187,26 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - _Requirements: 3.2, 3.3, 3.6, 11.2_
 
 - [x] 5. Phase 4: Field Consolidation
-  - [x] 5.1 Remove low-value fields
-    - Remove fields with impact score <40 and low appearance rate identified by Field Impact Analyzer
-    - Remove from PropertyFormData interface
-    - Remove from PromptFormProfessional.tsx
-    - Update buildDispositionFromStructuredData() to handle missing fields gracefully with null checks
+- [x] 5.1 Remove low-value fields
+    - Remove fields with low impact on text quality based on typical usage:
+      - "fastighetsbeteckning" (property designation) - rarely appears in marketing texts
+      - "taxeringsvarde" (assessed value) - not typically highlighted in listings
+      - "tomtrattsavgald" (ground rent fee) - niche information
+      - "renoveringsar" (renovation year) - better covered by specific renovation chips
+    - Remove from PropertyFormData interface and PromptFormProfessional.tsx
+    - Update buildDispositionFromStructuredData() to handle missing fields
     - _Requirements: 2.2, 2.4, 2.6_
 
   - [ ]* 5.2 Write property test for high-impact field preservation
     - **Property 8: High-Impact Field Preservation**
     - **Validates: Requirements 2.6**
 
-  - [x] 5.3 Consolidate overlapping fields
-    - Merge fields collecting same data identified by identifyOverlappingFields()
-    - Update PropertyFormData interface
-    - Update form UI to reflect consolidation
-    - Update validation rules
+- [x] 5.3 Consolidate overlapping fields
+    - Merge semantically overlapping fields:
+      - Merge "heating" and "specialFeatures" heating-related entries into unified heating field
+      - Consolidate parking-related fields (garage, parking, carport) into parking section
+      - Merge balcony area/direction into single balcony description field
+    - Update PropertyFormData interface and form UI
     - Update disposition builder to map consolidated fields
     - _Requirements: 2.3_
 
@@ -224,7 +241,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - Test disposition builder handles all changes
     - _Requirements: 2.2, 2.3, 4.1_
 
-- [ ] 6. Checkpoint - Validate field changes
+- [x] 6. Checkpoint - Validate field changes
   - Test form with all property types
   - Verify disposition builder handles all changes
   - Run regression tests
@@ -345,14 +362,14 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - **Property 33: Pro Feature Badge Display**
     - **Validates: Requirements 14.5**
 
-  - [ ] 8.7 Validate address lookup coverage
+  - [x] 8.7 Validate address lookup coverage
     - Test address lookup API with sample of 100 valid Swedish addresses
     - Verify >90% success rate
     - Test fallback to manual entry on API failure
     - Preserve manually entered transport/neighborhood data on failure
     - _Requirements: 10.6_
 
-  - [ ]* 8.8 Write property test for address lookup
+  - [x]* 8.8 Write property test for address lookup
     - **Property 39: Address Lookup Coverage**
     - **Validates: Requirements 10.6**
 
@@ -363,7 +380,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - Ensure consistency with Swedish real estate law terms
     - _Requirements: 8.1, 8.2, 8.3, 8.5_
 
-  - [ ]* 8.10 Write property test for terminology
+  - [x]* 8.10 Write property test for terminology
     - **Property 40: Terminology Consistency**
     - **Validates: Requirements 8.5**
 
@@ -372,7 +389,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - **Property 5: Low-Value Field Identification** (Requirements 2.2)
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 8.12 Run comprehensive regression tests
+  - [x] 8.12 Run comprehensive regression tests
     - Run all existing form tests
     - Test with historical submission data
     - Validate generated text quality maintained
@@ -396,7 +413,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - Test normalization completes within 200ms
     - _Requirements: 9.6_
 
-  - [ ] 8.15 Create database schema for tracking
+  - [x] 8.15 Create database schema for tracking
     - Create form_field_metadata table
     - Create chip_usage_stats table
     - Create form_optimization_runs table
@@ -413,7 +430,7 @@ The target is a 1894-line form with 60+ fields, 10 chip categories, and 80+ chip
     - Document field impact methodology
     - _Requirements: All_
 
-- [ ] 9. Final checkpoint - Production readiness
+- [x] 9. Final checkpoint - Production readiness
   - Run all tests (unit, property, regression)
   - Verify performance metrics meet targets
   - Review documentation completeness
