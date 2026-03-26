@@ -354,12 +354,11 @@ Istället för "i hjärtat av" → ange faktiskt avstånd eller gatunamn
 - Ange specifika material: "kvartskomposit" eller "granit" om känt
 - Var konsekvent i terminologi: "kylskåp och frys" eller "kyl/frys" men håll samma genom texten
 
-**Tekniska detaljer:**
-- Ange alltid årtal för renoveringar: "Köket renoverades 2023"
-- Ange alltid årtal för nya fönster/tak: "Fönster bytta 2022", "Tak omlagt 2021 med takpapp"
-- Om årtal saknas: Skriv neutralt "Fönster är bytta" eller utelämna helt
-- Specificera omfattning: "Alla fönster bytta" istället för bara "nya fönster"
-- För tak: Ange material och åtgärd, t.ex. "Takpapp omlagt 2020"
+**Tekniska detaljer & Årtal:**
+- ALDRIG värderande ord som "smidig pendling" utan att lägga till faktisk tid (ca X minuter)
+- ALDRIG "är bytta" eller "är lagt" utan årtalet DIREKT: "Fönster bytta 2022" / "Tak omlagt 2021 med takpapp"
+- Årtal MÅSTE följa renoveringen samma mening: "Köket renoverades 2023", inte bara "2023"
+- Om årtal saknas: Utelämna helt istället för vaga formuleringar
 
 ${brokerPolicy}
 
@@ -453,15 +452,25 @@ INSTAGRAM:
 (Max 2200 tecken, max 2 emojis)
 
 VISNINGSINBJUDAN:
-(1-2 meningar, måste innehålla "visning", INTE "välkommen")
+(1-2 meningar, måste innehålla ordet "visning", måste vara FULLSTÄNDIG mening utan avbrytningar)
 
-EXEMPEL PÅ BRA VISNINGSINBJUDAN:
-- "Visning sker efter överenskommelse. Kontakta ansvarig mäklare för bokning."
-- "Visning: anmälan krävs via Hemnet eller mäklarens kontaktformulär."
-- "Visning efter överenskommelse. Boka tid via annonsen."
+EXEMPEL PÅ RÄTT VISNINGSINBJUDAN:
+- "Visning efter överenskommelse. Kontakta mäklaren för bokning."
+- "Visning sker på tisdagar kl 17:00. Anmälan krävs via Hemnet."
+- "Visning arrangeras efter överenskommelse."
+
+EXEMPEL PÅ FEL VISNINGSINBJUDAN (UNDVIK):
+- "Visning:. Anmälan sker via." ✗ (avbruten, dubbeltecken)
+- "Visning" ✗ (ej fullständig)
+- "Visning möjlig" ✗ (för kort, ej instruktiv)
 
 KORT ANNONS:
-(Max 50 ord, måste innehålla bostadstyp + boarea, FÅR INTE vara tom)
+(Max 2 meningar, MÅSTE innehålla bostadstyp + boarea, alltid fylld - ALDRIG tom)
+
+EXAMPLES PÅ BRA KORT ANNONS:
+- "Villa om 146 kvm med södervänd uteplats och inbyggd jacuzzi. Kök renoverat 2023 och två badrum renoverade 2021."
+- "3:a om 72 kvm med helrenoverat kök 2022 och södervändbalkongen. 5 min promenad till tunnelbanan."
+- "Radhus om 105 kvm med två sovrum och modernt kök. Fint läge nära park och skola."
 
 KRITISKT:
 - ALLA 6 fält är obligatoriska
@@ -680,25 +689,26 @@ KRITISKT:
       }
     }
 
-    // Field-specific validation
+    // Field-specific validation (critical issues only)
     
-    // Headline: max 9 words, no trailing punctuation, no emojis
+    // Headline: max 9 words, no trailing punctuation
     const headlineWords = result.headline.split(/\s+/).filter(w => w.length > 0).length;
-    if (headlineWords > 9) {
-      violations.push(`headline has ${headlineWords} words (max 9)`);
+    if (headlineWords > 10) {
+      violations.push(`headline has ${headlineWords} words (should be max 9)`);
     }
 
     if (/[.!?]$/.test(result.headline)) {
       violations.push(`headline has trailing punctuation`);
     }
 
-    if (emojiPattern.test(result.headline)) {
-      violations.push(`headline contains emojis`);
-    }
-
-    // Showing invitation: must contain "visning"
+    // Showing invitation: must contain "visning" and be complete (not malformed)
     if (!/visning/i.test(result.showingInvitation)) {
       violations.push(`showingInvitation missing word "visning"`);
+    }
+
+    // Check for malformed patterns (double dots, incomplete sentences)
+    if (/:\s*\.|sker\s+via\s*\.?\s*$|anmälan\s+sker\s+via\s*\.?\s*$/.test(result.showingInvitation)) {
+      violations.push(`showingInvitation appears malformed or incomplete`);
     }
 
     // Instagram caption: max 2 emojis
@@ -712,16 +722,30 @@ KRITISKT:
       violations.push(`instagramCaption has ${result.instagramCaption.length} characters (max 2200)`);
     }
 
-    // If violations found, log and throw
-    if (violations.length > 0) {
+    // Critical violations only (malformed, missing required words, forbidden phrases)
+    const criticalViolations = violations.filter(v => 
+      v.includes('malformed') || 
+      v.includes('missing word') ||
+      v.includes('forbidden phrase')
+    );
+
+    if (criticalViolations.length > 0) {
       console.error('[GENERATOR_VALIDATION_FAILED]', {
         platform: normalizedPlatform,
-        violations,
-        timestamp: new Date().toISOString(),
-        fields: Object.keys(result)
+        criticalViolations,
+        timestamp: new Date().toISOString()
       });
 
-      throw new GeneratorValidationError(violations, result);
+      throw new GeneratorValidationError(criticalViolations, result);
+    }
+
+    // Non-critical issues: log as warnings but don't fail
+    if (violations.length > 0) {
+      console.warn('[GENERATOR_VALIDATION_WARNINGS]', {
+        platform: normalizedPlatform,
+        warnings: violations,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 }

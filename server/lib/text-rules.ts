@@ -1,9 +1,10 @@
 export type WritingStyle = "factual" | "balanced" | "selling";
 export type TargetPlatform = "hemnet" | "booli" | "general";
 
-// OPTIMIZED: 66 phrases. Only REAL AI clichés — legitimate broker language is NOT blocked.
+// RACIONALISERAD: 32 phrases. Endast verkliga AI-klyschor som en erfaren mäklare ALDRIG skulle skriva.
+// Legitim mäklarvokabulär är TILLÅTEN (t.ex. "smidig pendling", "populärt område", "ljust").
 export const FORBIDDEN_PHRASES = [
-  // === KRITISKA AI-ÖPPNINGAR (aldrig i riktig mäklartext) ===
+  // === KRITISKA AI-ÖPPNINGAR (endast AI använder dessa) ===
   "välkommen till",
   "välkommen hem",
   "här möts du",
@@ -12,90 +13,46 @@ export const FORBIDDEN_PHRASES = [
   "missa inte",
   "unik möjlighet",
   "unik chans",
-  "kontakta oss",
-  "för mer information",
-
-  // === "ERBJUDER" I ALLA FORMER (AI-favorit, mäklare säger "har"/"finns") ===
-  "erbjuder",
-  "erbjuds",
+  "kan erbjuda",
+  "kan bjuda på",
+  "perfekt för",
+  "den perfekta",
+  "det perfekta hemmet",
 
   // === EMOTIONELLA AI-VERB (aldrig i riktig mäklartext) ===
-  "inbjuder till",
-  "bjuder in till",
-  "bjuder på",
-  "präglas av",
-  "genomsyras av",
   "andas lugn",
   "andas charm",
   "andas historia",
   "utstrålar",
+  "präglas av",
+  "genomsyras av",
 
-  // === ABSTRAKT AI-KÄNSLOSSPRÅK ===
+  // === AI-KÄNSLOSSPRÅK ===
   "ger en känsla av",
   "skapar en känsla av",
-  "skapar en harmonisk",
-  "skapar en inbjudande",
-  "adderar en touch",
-  "ger en touch",
+  "skapa minnen",
 
-  // === "FÖR DEN SOM" (AI-signatur) ===
+  // === AI-MÅLGRUPPSTEMPLATES ===
   "för den som",
+  "om du är den som",
 
-  // === HJÄRTA-KLYSCHOR (poetisk AI) ===
+  // === POETISK AI-ÖVERDRIFT ===
   "i hjärtat av",
   "hjärtat av",
   "husets hjärta",
-  "hemmets hjärta",
 
-  // === ÖVERDRIVNA ADJEKTIV (AI-favoriter) ===
-  "fantastisk",
-  "underbar",
+  // === ÖVERDRIVNA ADJEKTIV (endast AI använder dessa i överdrift) ===
+  "fantastisk bostad",
+  "underbar bostad",
   "magisk",
-  "otrolig",
-  "drömboende",
-  "drömlägenhet",
+  "otrolig utsikt",
   "drömhem",
-  "en sann pärla",
 
-  // === LÄGES-KLYSCHOR (AI-överdrift) ===
-  "stadens puls",
-
-  // === SKAPA MINNEN (AI-emotionalitet) ===
-  "skapa minnen",
-
-  // === SAMMANFATTNINGS-FRASER (AI-slutsatser) ===
-  "sammanfattningsvis",
-  "med andra ord",
-  "kort sagt",
+  // === AI-SLUTSATSFRASER ===
   "allt sammantaget",
+  "sammanfattningsvis",
   "detta gör bostaden till",
-  "detta gör lägenheten till",
   "detta gör villan till",
-
-  // === "INTE BARA... UTAN OCKSÅ" (AI-signatur) ===
-  "inte bara",
-  "utan också",
-
-  // === ABSTRAKT LIVSSTIL/KÄNSLA (AI-filosofi) ===
-  "livsstil",
-  "livsföring",
-  "drömmar",
-  "vision",
-  "med en vision",
-  "ett smart val",
-  "klok investering",
-
-  // === HEM-FILOSOFI (AI-emotionalitet) ===
-  "inte bara ett hem",
-  "mer än bara ett hem",
-  "mer än bara en bostad",
-  "ett hem för alla",
-  "ett hem att trivas i",
-
-  // === ANDRA AI-FAVORITER ===
-  "en bostad som",
-  "en lägenhet som",
-  "ett hem som",
 ];
 
 // === HEMNET-SPECIFIKA REGLER ===
