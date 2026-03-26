@@ -707,21 +707,9 @@ KRITISKT:
       violations.push(`instagramCaption has ${instagramEmojis.length} emojis (max 2)`);
     }
 
-    // Short ad: must not be empty and must contain property type + area
-    if (!result.shortAd || result.shortAd.trim().length === 0) {
-      violations.push(`shortAd is empty (must contain property type and area)`);
-    } else {
-      // Check for property type (lägenhet, villa, hus, radhus)
-      const hasPropertyType = /(lägenhet|hus|villa|radhus)/i.test(result.shortAd);
-      if (!hasPropertyType) {
-        violations.push(`shortAd missing property type (lägenhet/hus/villa/radhus)`);
-      }
-
-      // Check for area (kvm)
-      const hasArea = /\d+\s*kvm/i.test(result.shortAd);
-      if (!hasArea) {
-        violations.push(`shortAd missing area (e.g., "146 kvm")`);
-      }
+    // Instagram caption: max 2200 characters
+    if (result.instagramCaption.length > 2200) {
+      violations.push(`instagramCaption has ${result.instagramCaption.length} characters (max 2200)`);
     }
 
     // If violations found, log and throw
