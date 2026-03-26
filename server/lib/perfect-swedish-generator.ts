@@ -114,7 +114,9 @@ export class SmartGenerationEngine {
 - INGA emojis
 - NÄMN INTE pris, avgift eller energiklass
 - Fokusera på bostadens starkaste USP
-- Exempel: "Helrenoverad trea med balkong i söderläge"
+- MÅSTE inkludera bostadstyp (lägenhet, villa, hus, radhus)
+- Förtydliga renoveringar: "kök renoverat 2023" istället för bara "kök 2023"
+- Exempel: "Villa med södervänd uteplats och kök renoverat 2023"
 
 ### Social Copy
 - 1-3 meningar
@@ -122,7 +124,8 @@ export class SmartGenerationEngine {
 - NÄMN INTE pris, avgift eller energiklass
 - Säljande men saklig ton
 - Kan avsluta med "Läs mer i annonsen."
-- Exempel: "Helrenoverat kök 2022 och södervända balkongen ger denna 3:a på Södermalm ett tydligt övertag. Läs mer i annonsen."
+- ANVÄND ALDRIG "erbjuder" eller liknande förbjudna fraser
+- Exempel: "Platsbyggt kök renoverat 2023 och södervända uteplatsen ger denna villa ett tydligt övertag. Läs mer i annonsen."
 
 ### Instagram Caption
 - 1-2 relevanta emojis (INTE fler)
@@ -138,7 +141,8 @@ export class SmartGenerationEngine {
 - Professionell och trevlig ton
 - NÄMN INTE pris, avgift eller energiklass
 - Kan innehålla placeholders: [TID], [KONTAKT]
-- Exempel: "Välkommen på visning [TID]. Kontakta [KONTAKT] för mer information."
+- UNDVIK "kontaktformulär" eller liknande säljfraser
+- Exempel: "Visning efter överenskommelse. Kontakta ansvarig mäklare för bokning."
 
 ### Short Ad (kort annons)
 - Max 2 meningar
@@ -146,7 +150,8 @@ export class SmartGenerationEngine {
 - 2 konkreta styrkor
 - NÄMN INTE pris, avgift eller energiklass
 - Säljande men faktabaserad
-- Exempel: "3:a om 72 kvm med helrenoverat kök 2022 och södervända balkongen. Södermalm med 5 min till tunnelbanan."
+- FÅR INTE vara tom - fyll alltid med relevant information
+- Exempel: "Villa om 146 kvm med södervänd uteplats och inbyggd jacuzzi. Platsbyggt kök renoverat 2023 och två badrum renoverade 2021."
 ` : normalizedPlatform === 'booli' ? `
 ## AUXILIARY FIELDS - BOOLI RULES
 
@@ -229,7 +234,8 @@ export class SmartGenerationEngine {
 STYCKE 1 — USP-ÖPPNING (1–2 meningar)
 Börja med bostadens starkaste säljargument: renovering, balkong med väderstreck, utsikt, läge, ovanlig planlösning.
 INTE: "Välkommen till denna fina lägenhet om 3 rok och 72 kvm."
-RÄTT: "Helrenoverat kök 2022 med köksö och södervända balkongen ger den här 3:an på Södermalm ett tydligt övertag."
+RÄTT: "Södervänd uteplats med inbyggd jacuzzi sätter tonen. Villan på Ekorrvägen 10 omfattar 146 kvm med fokus på uteliv."
+BRYT ALLTID UPP FÖRSTA MENINGEN: Starta med USP, nämn adress och boarea separat.
 
 STYCKE 2 — PLANLÖSNING, KÖK, VARDAGSRUM (2–4 meningar)
 Beskriv hur rummen hänger ihop, flödet i bostaden. Kök: material, vitvaror, bänkyta, förvaring. Vardagsrum: storlek, ljusinsläpp, utgång till balkong/uteplats.
@@ -242,6 +248,7 @@ Balkong/uteplats/tomt: väderstreck, storlek, material, utsikt. Gemensamma ytor:
 
 STYCKE 5 — LÄGE OCH KOMMUNIKATIONER (2–3 meningar)
 Konkret lägesbeskrivning: gatunamn, stadsdel, avstånd i minuter till tunnelbana/pendeltåg/spårvagn. Nearby: matbutik, skola, park — med namn.
+KVALIFICERA RESTIDER: Ange "ca 25–35 min (beroende på avgång)" eller "ca 25 min med direktbuss vid gynnsamma tider".
 VIKTIGT: NÄMN INTE pris, avgift eller driftkostnad — det visas i separata fält på Hemnet.` :
     normalizedPlatform === 'booli' ? `
 ## BOOLI: REGLER OCH STYCKESTRUKTUR
@@ -342,15 +349,17 @@ Istället för "i hjärtat av" → ange faktiskt avstånd eller gatunamn
 
 ## UNDVIK REPETITION OCH MOTSÄGELSER
 
-**Vitvaror:**
-- INTE: "Integrerade Siemens-vitvaror, uppdaterade vitvaror" (repetitivt)
-- RÄTT: "Integrerade Siemens-vitvaror (ugn, spis, diskmaskin)" (specifikt)
-- RÄTT: "Vitvarorna är från 2023" (om årtal finns)
+**Material och detaljer:**
+- Förtydliga motsägelsefulla beskrivningar: "Bänkskivor i sten (del) och komposit (del)" istället för "sten och komposit"
+- Ange specifika material: "kvartskomposit" eller "granit" om känt
+- Var konsekvent i terminologi: "kylskåp och frys" eller "kyl/frys" men håll samma genom texten
 
 **Tekniska detaljer:**
 - Ange alltid årtal för renoveringar: "Köket renoverades 2023"
-- Ange alltid årtal för nya fönster/tak: "Fönster bytta 2022"
+- Ange alltid årtal för nya fönster/tak: "Fönster bytta 2022", "Tak omlagt 2021 med takpapp"
 - Om årtal saknas: Skriv neutralt "Fönster är bytta" eller utelämna helt
+- Specificera omfattning: "Alla fönster bytta" istället för bara "nya fönster"
+- För tak: Ange material och åtgärd, t.ex. "Takpapp omlagt 2020"
 
 ${brokerPolicy}
 
@@ -452,7 +461,7 @@ EXEMPEL PÅ BRA VISNINGSINBJUDAN:
 - "Visning efter överenskommelse. Boka tid via annonsen."
 
 KORT ANNONS:
-(Max 50 ord, måste innehålla bostadstyp + boarea)
+(Max 50 ord, måste innehålla bostadstyp + boarea, FÅR INTE vara tom)
 
 KRITISKT:
 - ALLA 6 fält är obligatoriska
@@ -615,8 +624,18 @@ KRITISKT:
       }
     }
 
-    // Platform-specific validation (Hemnet)
-    if (normalizedPlatform === 'hemnet') {
+    // Forbidden phrases validation
+    const forbiddenPhrases = FORBIDDEN_PHRASES;
+    for (const field of fields) {
+      const text = result[field];
+      if (typeof text !== 'string') continue;
+
+      for (const phrase of forbiddenPhrases) {
+        if (text.toLowerCase().includes(phrase.toLowerCase())) {
+          violations.push(`${field} contains forbidden phrase: "${phrase}"`);
+        }
+      }
+    }
       const pricePattern = /\b(pris|avgift|driftkostnad|kr\/mån|utgångspris|kronor|SEK)\b/gi;
       const energyPattern = /\b(energiklass|energiprestanda)\b/gi;
 
@@ -685,9 +704,21 @@ KRITISKT:
       violations.push(`instagramCaption has ${instagramEmojis.length} emojis (max 2)`);
     }
 
-    // Instagram caption: max 2200 characters
-    if (result.instagramCaption.length > 2200) {
-      violations.push(`instagramCaption has ${result.instagramCaption.length} characters (max 2200)`);
+    // Short ad: must not be empty and must contain property type + area
+    if (!result.shortAd || result.shortAd.trim().length === 0) {
+      violations.push(`shortAd is empty (must contain property type and area)`);
+    } else {
+      // Check for property type (lägenhet, villa, hus, radhus)
+      const hasPropertyType = /(lägenhet|hus|villa|radhus)/i.test(result.shortAd);
+      if (!hasPropertyType) {
+        violations.push(`shortAd missing property type (lägenhet/hus/villa/radhus)`);
+      }
+
+      // Check for area (kvm)
+      const hasArea = /\d+\s*kvm/i.test(result.shortAd);
+      if (!hasArea) {
+        violations.push(`shortAd missing area (e.g., "146 kvm")`);
+      }
     }
 
     // If violations found, log and throw
