@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '@/test-utils';
 import { ResultSection } from './ResultSection';
 import type { OptimizeResponse } from '@shared/schema';
 import '@testing-library/jest-dom';

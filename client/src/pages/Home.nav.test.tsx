@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render } from '@/test-utils';
 import Home from './Home';
 
 describe('Home Navigation Bar - Task 5.1', () => {
