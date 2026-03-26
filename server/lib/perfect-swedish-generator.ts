@@ -636,6 +636,9 @@ KRITISKT:
         }
       }
     }
+
+    // Platform-specific validation (Hemnet)
+    if (normalizedPlatform === 'hemnet') {
       const pricePattern = /\b(pris|avgift|driftkostnad|kr\/mån|utgångspris|kronor|SEK)\b/gi;
       const energyPattern = /\b(energiklass|energiprestanda)\b/gi;
 
