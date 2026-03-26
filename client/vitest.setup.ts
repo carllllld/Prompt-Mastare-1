@@ -1,9 +1,9 @@
+import React, { type ReactNode, type ReactElement } from 'react';
 import { expect, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as rtl from '@testing-library/react';
-import type { ReactNode, ReactElement } from 'react';
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers);
@@ -26,9 +26,8 @@ const createTestQueryClient = () =>
 
 const customRender = (ui: ReactElement, options: Record<string, unknown> = {}) => {
   const queryClient = createTestQueryClient();
-  const Wrapper = ({ children }: { children?: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  );
+  const Wrapper = ({ children }: { children?: ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
 
   return rtl.render(ui, { wrapper: Wrapper, ...options });
 };
