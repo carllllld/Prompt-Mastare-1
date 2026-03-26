@@ -657,8 +657,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const elevatorValue = form.watch("elevator");
   const lotAreaValue = form.watch("lotArea");
   const floorsValue = form.watch("floors");
-  const isApartmentType = selectedType === "apartment" || selectedType === "townhouse";
+  const isTownhouseType = selectedType === "townhouse";
+  const isApartmentType = selectedType === "apartment" || isTownhouseType;
   const isHouseType = selectedType === "house" || selectedType === "villa";
+  const isHouseOrTownhouseType = isHouseType || isTownhouseType;
   const hasKitchenBathroomFacts = Boolean(kitchenValue?.trim() || bathroomValue?.trim() || kitchenChips.length > 0 || bathroomChips.length > 0);
   const hasLocationFacts = Boolean(transportValue?.trim() || neighborhoodValue?.trim());
   const hasStrongDifferentiator = Boolean(uspValue?.trim() || uspChips.length > 0 || viewValue?.trim());
@@ -698,6 +700,25 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   
   const priorityChecklist = priorityItems.map(item => item.completed);
   const priorityCompleted = priorityChecklist.filter(Boolean).length;
+
+  // Keep type-specific UI + chips aligned when property type changes
+  useEffect(() => {
+    if (isApartmentType) {
+      // Apartment/townhouse flows should hide house-specific chips + fields
+      form.setValue("lotArea", "");
+      form.setValue("floors", "");
+      setGardenChips([]);
+      setRoofChips([]);
+      setMaterialChips([]);
+    }
+
+    if (!isApartmentType) {
+      // House/villa flows should hide apartment-specific extra fields
+      form.setValue("floor", "");
+      form.setValue("elevator", false);
+      form.setValue("brfName", "");
+    }
+  }, [isApartmentType, form]);
   
   // Scroll to field handler
   const handleScrollToField = useCallback((fieldName: string) => {
@@ -1392,8 +1413,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </>
             )}
 
-            {/* House/Villa-specific */}
-            {isHouseType && (
+            {/* House/Villa/Radhus-specific */}
+            {isHouseOrTownhouseType && (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
                   <FormField control={form.control} name="buildYear" render={({ field }) => (
@@ -1615,8 +1636,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   )} />
                 </div>
 
-                {/* House/Villa: Garden chips */}
-                {isHouseType && (
+                {/* House/Villa/Radhus: Garden chips */}
+                {isHouseOrTownhouseType && (
                   <div>
                     <span className="text-xs text-gray-500 font-medium block mb-2" id="garden-label">Trädgård & uteplats</span>
                     <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} id="garden-chips" tooltips={GARDEN_TOOLTIPS} />
@@ -1685,8 +1706,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   )} />
                 </div>
 
-                {/* House/Villa: Building material + roof type */}
-                {isHouseType && (
+                {/* House/Villa/Radhus: Building material + roof type */}
+                {isHouseOrTownhouseType && (
                   <>
                     <div>
                       <span className="text-xs text-gray-500 font-medium block mb-2" id="material-label">Byggnadsmaterial</span>
