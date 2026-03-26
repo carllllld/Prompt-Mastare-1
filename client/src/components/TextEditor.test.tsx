@@ -28,7 +28,7 @@ describe('TextEditor - Bug 1: Paragraph Breaks Preservation', () => {
     );
 
     // Get the contentEditable div
-    const editor = screen.getByText(/Köket renoverades 2020/i).closest('[contenteditable="true"]');
+    const editor = document.querySelector('[contenteditable="true"]');
     expect(editor).toBeInTheDocument();
 
     // CRITICAL CHECK: textContent should preserve \n\n breaks

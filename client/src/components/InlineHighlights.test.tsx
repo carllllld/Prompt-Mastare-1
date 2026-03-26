@@ -69,17 +69,17 @@ describe('InlineHighlights', () => {
       <InlineHighlights text={text} feedback={feedback} field="improvedPrompt" />
     );
 
-    const highlightedSpans = container.querySelectorAll('span[style*="background"]');
-    expect(highlightedSpans.length).toBe(3);
+    const criticalSegment = screen.getByText('Critical').closest('span');
+    const importantSegment = screen.getByText('Important').closest('span');
+    const suggestionSegment = screen.getByText('Suggestion').closest('span');
 
-    // Critical should have red background
-    expect(highlightedSpans[0].getAttribute('style')).toContain('#FEE2E2');
-    
-    // Important should have yellow background
-    expect(highlightedSpans[1].getAttribute('style')).toContain('#FEF3C7');
-    
-    // Suggestion should have blue background
-    expect(highlightedSpans[2].getAttribute('style')).toContain('#DBEAFE');
+    expect(criticalSegment).toBeTruthy();
+    expect(importantSegment).toBeTruthy();
+    expect(suggestionSegment).toBeTruthy();
+
+    expect(criticalSegment && getComputedStyle(criticalSegment).backgroundColor).toBe('rgb(254, 226, 226)');
+    expect(importantSegment && getComputedStyle(importantSegment).backgroundColor).toBe('rgb(254, 243, 199)');
+    expect(suggestionSegment && getComputedStyle(suggestionSegment).backgroundColor).toBe('rgb(219, 234, 254)');
   });
 
   it('shows tooltip on hover with feedback details', () => {
