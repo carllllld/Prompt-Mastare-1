@@ -28,32 +28,32 @@ const BEFORE_AFTER = [
   {
     label: "Objektbeskrivning",
     before: `Välkommen till denna fantastiska bostad med ljus och rymd. Här bor du i ett attraktivt område med närhet till det mesta. Köket passar både vardag och fest och planlösningen är väl genomtänkt. Missa inte chansen att uppleva denna unika möjlighet!`,
-    after: `Storgatan 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett, plats för soffgrupp och matbord samt utgång till balkong. Köket renoverades 2022 med god arbetsyta, induktionshäll och plats för matbord vid fönster.\n\nTvå sovrum ligger avskilt. Badrummet är helkaklat och uppdaterat 2020. Avgift 3 900 kr/mån.\n\nKommunikationer och service nås inom kort promenad.`,
+    after: `Karlavägen 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett och utgång till balkong med plats för utemöbler. Köket renoverades 2022 med induktionshäll, stenbänkskiva och matplats vid fönster.\n\nTvå sovrum ligger avskilt mot gården. Badrummet är helkaklat och uppdaterat 2020 med golvvärme. Avgift 3 900 kr/mån i välskött BRF.\n\nT-bana Östermalmstorg 4 min till fots.`,
   },
   {
     label: "Rubrik",
     before: `Drömboende i toppskick!`,
-    after: `Trea med söderbalkong och renoverat kök`,
+    after: `Trea med söderbalkong och renoverat kök — Karlavägen 12`,
   },
   {
     label: "Socialt inlägg",
     before: `Nu finns en fin lägenhet till salu i ett bra område! Ljus och fräsch med perfekt läge. Hör av dig för mer information! #bostad #lägenhet`,
-    after: `Storgatan 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #balkong`,
+    after: `Karlavägen 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge, 4 min till T-bana.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #östermalm #balkong`,
   },
   {
     label: "Instagram",
     before: `Drömmer du om ditt nya hem? Den här pärlan måste upplevas på plats! ✨\n\n#nytthem #drömboende`,
-    after: `🏡 Storgatan 12 — trea om 76 kvm med söderbalkong.\n🍳 Kök renoverat 2022 och helkaklat badrum (uppdaterat 2020).\n💬 Avgift 3 900 kr/mån.\n\nVälkommen på visning: [TID].`,
+    after: `🏡 Karlavägen 12 — trea om 76 kvm med söderbalkong.\n🍳 Kök renoverat 2022, stenbänkskiva och induktionshäll.\n🚿 Helkaklat badrum med golvvärme (uppdaterat 2020).\n💬 Avgift 3 900 kr/mån. T-bana 4 min.\n\nVälkommen på visning: [TID].`,
   },
   {
     label: "Visningsinbjudan",
-    before: `Varmt välkommen på visning av denna fantastiska lägenhet! Här får du ett hem med härlig känsla och smart planlösning i ett attraktivt område.\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]`,
-    after: `Visning — Storgatan 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]`,
+    before: `Varmt välkommen på visning av denna fantastiska lägenhet! Här får du ett hem med härlig känsla och smart planlösning i ett attraktivt område.\n\nTid: [TID]\nPlats: Karlavägen 12\nAnmälan: [KONTAKT]`,
+    after: `Visning — Karlavägen 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Karlavägen 12, 3 tr (port B)\nAnmälan: [KONTAKT]`,
   },
   {
     label: "Kortannons",
     before: `Fin trea i bra område. Balkong. Måste ses!`,
-    after: `Storgatan 12, 3 tr — trea om 76 kvm. Söderbalkong och kök renoverat 2022. Avgift 3 900 kr/mån. Visning: [TID].`,
+    after: `Karlavägen 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022, helkaklat badrum med golvvärme 2020. Avgift 3 900 kr/mån. T-bana 4 min. Visning: [TID].`,
   },
 ];
 
@@ -687,6 +687,7 @@ export default function Home() {
                     {[
                       "5 textformat per generering",
                       "Hemnet + Booli-anpassad huvudtext",
+                      "Importera från Hemnet (klistra in länk)",
                       "Stilmedvetet klyschfilter",
                       "Inget kreditkort krävs",
                     ].map((f) => (

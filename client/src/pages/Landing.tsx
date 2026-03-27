@@ -12,34 +12,34 @@ const DEMO = [
   {
     label: "Rubrik",
     before: "Drömboende i toppskick!",
-    after: "Trea med söderbalkong och renoverat kök",
+    after: "Trea med söderbalkong och renoverat kök — Karlavägen 12",
   },
   {
     label: "Objektbeskrivning",
     before:
       "Välkommen till denna fantastiska lägenhet med generösa ytor och en härlig balkong. Här bor du i ett attraktivt läge med närhet till allt du kan önska. Köket är perfekt för matlagning och hemmet bjuder på en underbar känsla. Missa inte denna unika möjlighet!",
     after:
-      "Storgatan 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett, plats för soffgrupp och matbord samt utgång till balkong. Köket renoverades 2022 med god arbetsyta, induktionshäll och plats för matbord vid fönster.\n\nTvå sovrum ligger avskilt. Badrummet är helkaklat och uppdaterat 2020. Avgift 3 900 kr/mån.\n\nKommunikationer och service nås inom kort promenad. Visning: [TID].",
+      "Karlavägen 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett och utgång till balkong med plats för utemöbler. Köket renoverades 2022 med induktionshäll, stenbänkskiva och matplats vid fönster.\n\nTvå sovrum ligger avskilt mot gården. Badrummet är helkaklat och uppdaterat 2020 med golvvärme. Avgift 3 900 kr/mån i välskött BRF.\n\nT-bana Östermalmstorg 4 min till fots. Visning: [TID].",
   },
   {
     label: "Social text",
     before:
       "Nu finns en fin lägenhet till salu! Ljus, fräsch och perfekt för dig som vill bo centralt. Hör av dig för mer information! #bostad #lägenhet",
     after:
-      "Storgatan 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #balkong",
+      "Karlavägen 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge, 4 min till T-bana.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #östermalm #balkong",
   },
   {
     label: "Visningsinbjudan",
     before:
-      "Varmt välkommen på visning av denna fantastiska lägenhet! Ett hem med härlig känsla och smart planlösning.\n\nTid: [TID]\nPlats: Storgatan 12\nAnmälan: [KONTAKT]",
+      "Varmt välkommen på visning av denna fantastiska lägenhet! Ett hem med härlig känsla och smart planlösning.\n\nTid: [TID]\nPlats: Karlavägen 12\nAnmälan: [KONTAKT]",
     after:
-      "Visning — Storgatan 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Storgatan 12, 3 tr\nAnmälan: [KONTAKT]",
+      "Visning — Karlavägen 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Karlavägen 12, 3 tr (port B)\nAnmälan: [KONTAKT]",
   },
   {
     label: "Kortannons",
     before: "Fin trea i bra område. Balkong. Måste ses!",
     after:
-      "Storgatan 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022 och uppdaterat badrum 2020. Avgift 3 900 kr/mån. Visning: [TID].",
+      "Karlavägen 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022, helkaklat badrum 2020. Avgift 3 900 kr/mån. T-bana 4 min. Visning: [TID].",
   },
 ];
 
@@ -134,8 +134,8 @@ const FEATURES = [
   },
   {
     icon: Image,
-    title: "Bildanalys (valfritt)",
-    desc: "Lägg till bilder så fångar verktyget detaljer som kan lyftas i texten. (Pro/Premium)",
+    title: "Importera från Vitec & Hemnet",
+    desc: "Koppla ditt Vitec-konto och hämta objektdata direkt. Eller klistra in en Hemnet-länk — formuläret fylls i automatiskt. (Pro/Premium för Vitec)",
   },
   {
     icon: Sparkles,
@@ -161,6 +161,7 @@ const PLANS = [
       "5 textformat per generering",
       "Klyschfilter för svensk mäklarprosa",
       "300–450 ord per text",
+      "Importera från Hemnet (klistra in länk)",
     ],
     cta: "Kom igång gratis",
     tier: null as null | "pro" | "premium",
@@ -174,6 +175,8 @@ const PLANS = [
     features: [
       "10 genereringar / månad",
       "40 AI-textredigeringar / månad",
+      "Vitec-integration — importera direkt från ditt CRM",
+      "Importera från Hemnet (klistra in länk)",
       "Adressuppslag (läge, kollektivtrafik, närområde)",
       "Bildanalys (valfritt)",
       "Personlig skrivstil",
@@ -193,6 +196,8 @@ const PLANS = [
     features: [
       "25 genereringar / månad",
       "120 AI-textredigeringar / månad",
+      "Vitec-integration — importera direkt från ditt CRM",
+      "Importera från Hemnet (klistra in länk)",
       "Adressuppslag (läge, kollektivtrafik, närområde)",
       "Bildanalys (valfritt)",
       "Personlig skrivstil",

@@ -1385,9 +1385,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
 
             {/* Import from Hemnet or Vitec */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed" style={{ borderColor: "#2D6A4F", background: "#F0FDF4" }}>
+              <div className="w-full flex items-center gap-1.5 mb-1">
+                <span className="text-xs font-semibold" style={{ color: "#2D6A4F" }}>Importera objektdata automatiskt</span>
+                <span className="text-xs" style={{ color: "#6B7280" }}>— slipper fylla i formuläret manuellt</span>
+              </div>
               <HemnetImportButton onImport={handleExternalImport} />
               <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+              {!isPro && (
+                <span className="text-xs self-center" style={{ color: "#9CA3AF" }}>Vitec-import kräver Pro</span>
+              )}
             </div>
 
             {/* Address + Area */}
