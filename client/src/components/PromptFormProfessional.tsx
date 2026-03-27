@@ -85,7 +85,7 @@ const HEATING_CHIPS = [
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
   "Dränering utförd", "Solceller", "Fiber indraget",
-  "Braskamin", "Säkerhetsdörr", "Hiss", "Varmvattenberedare",
+  "Braskamin", "Säkerhetsdörr", "Varmvattenberedare",
 ];
 const GARDEN_CHIPS = [
   "Välskött trädgård", "Uteplats i söder", "Altan", "Trädäck",
@@ -94,7 +94,7 @@ const GARDEN_CHIPS = [
 const USP_CHIPS = [
   "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
-  "Nära pendling", "Garage", "Laddbox för elbil", "Flera badrum",
+  "Nära pendling", "Flera badrum",
   "Hög standard", "Nyproduktion", "Balkong i söder",
 ];
 const PARKING_CHIPS = [
@@ -1403,10 +1403,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
                 <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
                 <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
-              </div>
-              <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
-                <span className="font-semibold" style={{ color: "#1D2939" }}>Regel:</span>
-                <span> lägg laddbox under Parkering och undvik att upprepa samma fakta i flera fält.</span>
               </div>
             </div>
           </div>
