@@ -1452,8 +1452,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             addressLookupLoading={addressLookupLoading}
             addressLookupResult={addressLookupResult}
             onAddressLookup={handleAddressLookup}
-            priorityCompleted={priorityCompleted}
-            priorityTotal={priorityItems.length}
           />
 
           {/* Import buttons wrapper for integration */}

@@ -65,8 +65,6 @@ interface EssentialFieldsSectionProps {
   addressLookupLoading: boolean;
   addressLookupResult: string | null;
   onAddressLookup: (address: string) => void;
-  priorityCompleted: number;
-  priorityTotal: number;
 }
 
 const exampleInputClass = "h-10 bg-white border-input text-sm";
@@ -87,8 +85,6 @@ export function EssentialFieldsSection({
   addressLookupLoading,
   addressLookupResult,
   onAddressLookup,
-  priorityCompleted,
-  priorityTotal,
 }: EssentialFieldsSectionProps) {
   const addressValue = form.watch("address");
   const buildYearValue = form.watch("buildYear");
@@ -100,33 +96,8 @@ export function EssentialFieldsSection({
 
   return (
     <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>Grundläggande uppgifter</span>
-            <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: "#F3F4F6", color: "#6B7280" }}>
-              {priorityCompleted}/{priorityTotal} klara
-            </span>
-          </div>
-          <p className="text-xs" style={{ color: "#6B7280" }}>Dessa fält behövs för att skapa en bra beskrivning</p>
-        </div>
-      </div>
-
-      {/* Progress bar - enklare design */}
-      <div className="mb-4 p-3 rounded-lg" style={{ background: "#F8F6F1" }}>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium" style={{ color: "#4B5563" }}>Framsteg</span>
-          <span className="text-xs font-semibold" style={{ color: "#2D6A4F" }}>{Math.round((priorityCompleted / priorityTotal) * 100)}%</span>
-        </div>
-        <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#E8E5DE" }}>
-          <div
-            className="h-full transition-all duration-300"
-            style={{ 
-              width: `${(priorityCompleted / priorityTotal) * 100}%`,
-              background: "#2D6A4F"
-            }}
-          />
-        </div>
+      <div className="mb-4">
+        <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>Grundläggande uppgifter</span>
       </div>
 
       {/* Import section - enklare design */}
