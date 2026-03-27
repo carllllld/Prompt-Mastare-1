@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { validateRequiredFields, getFieldLabel, type PropertyType, type Platform } from "@/lib/form-validation";
+import { HemnetImportButton, VitecImportPicker } from "@/components/IntegrationsPanel";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -657,6 +658,105 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const elevatorValue = form.watch("elevator");
   const lotAreaValue = form.watch("lotArea");
   const floorsValue = form.watch("floors");
+
+  // Handles importing property data from Hemnet or Vitec and populating the form
+  const handleExternalImport = useCallback((propertyData: Record<string, any>) => {
+    // Helper: only set if value is non-empty. Always sets both as string (form) and raw (steppers).
+    const set = (field: keyof PropertyFormData, value: any) => {
+      if (value !== undefined && value !== null && value !== "") {
+        form.setValue(field, String(value), { shouldDirty: true });
+      }
+    };
+
+    // Property type — must be set first as it affects which fields are shown
+    if (propertyData.propertyType) {
+      form.setValue("propertyType", propertyData.propertyType as any, { shouldDirty: true });
+    }
+
+    // Core fields
+    set("address", propertyData.address);
+    set("area", propertyData.area || propertyData.district || propertyData.neighborhood);
+    set("livingArea", propertyData.livingArea);
+    set("biarea", propertyData.biarea || propertyData.biArea);
+    set("lotArea", propertyData.lotArea);
+    set("buildYear", propertyData.buildYear || propertyData.yearBuilt || propertyData.constructionYear);
+    set("energyClass", propertyData.energyClass);
+    set("monthlyFee", propertyData.monthlyFee);
+    set("price", propertyData.price || propertyData.askingPrice);
+    set("brfName", propertyData.brfName);
+    set("condition", propertyData.condition);
+
+    // Rooms — BOTH the form string field AND the number stepper state must be set
+    if (propertyData.totalRooms || propertyData.rooms) {
+      const n = Number(propertyData.totalRooms || propertyData.rooms) || 3;
+      form.setValue("totalRooms", String(n), { shouldDirty: true });
+      setRooms(n);
+    }
+    if (propertyData.bedrooms) {
+      const n = Number(propertyData.bedrooms) || 2;
+      form.setValue("bedrooms", String(n), { shouldDirty: true });
+      setBedrooms(n);
+    }
+    if (propertyData.bathrooms) {
+      const n = Number(propertyData.bathrooms) || 1;
+      form.setValue("bathrooms", String(n), { shouldDirty: true });
+      setBathrooms(n);
+    }
+
+    // Floor / building
+    set("floor", propertyData.floor);
+    set("floors", propertyData.floors || propertyData.totalFloors);
+    if (typeof propertyData.elevator === "boolean") {
+      form.setValue("elevator", propertyData.elevator, { shouldDirty: true });
+    }
+
+    // Descriptions
+    set("layoutDescription", propertyData.layoutDescription || propertyData.layout);
+    set("kitchenDescription", propertyData.kitchenDescription || propertyData.kitchen);
+    set("bathroomDescription", propertyData.bathroomDescription || propertyData.bathroom);
+    set("gardenDescription", propertyData.gardenDescription || propertyData.garden);
+    set("otherInfo", propertyData.description || propertyData.otherInfo);
+    set("view", propertyData.view);
+
+    // Location
+    set("transport", propertyData.transport);
+    set("neighborhood", propertyData.neighborhood || propertyData.district);
+
+    // Features
+    set("parking", propertyData.parking);
+    set("storage", propertyData.storage);
+    set("heating", propertyData.heating);
+    set("flooring", propertyData.flooring);
+
+    // Balcony
+    set("balconyArea", propertyData.balconyArea);
+    if (propertyData.balconyDirection) {
+      form.setValue("balconyDirection", propertyData.balconyDirection as any, { shouldDirty: true });
+    }
+
+    // Construction (house types)
+    set("konstruktionMaterial", propertyData.constructionMaterial || propertyData.konstruktionMaterial);
+    set("taktyp", propertyData.roofType || propertyData.taktyp);
+
+    // Broker / showing info
+    set("maklarnamn", propertyData.maklarnamn || propertyData.brokerName);
+    set("maklartelefon", propertyData.maklartelefon || propertyData.brokerPhone);
+    set("visningstid", propertyData.visningstid || propertyData.showingDate);
+    set("tilltradesdag", propertyData.tilltradesdag || propertyData.accessDate);
+
+    // Chip state — special features
+    if (Array.isArray(propertyData.specialFeatures) && propertyData.specialFeatures.length > 0) {
+      setSpecialChips(propertyData.specialFeatures);
+    }
+    // Garden chips from Vitec gardenFeatures
+    if (Array.isArray(propertyData.gardenFeatures) && propertyData.gardenFeatures.length > 0) {
+      setGardenChips(propertyData.gardenFeatures);
+    }
+    // Images
+    if (Array.isArray(propertyData.imageUrls) && propertyData.imageUrls.length > 0) {
+      setUploadedImages(propertyData.imageUrls.slice(0, 5));
+    }
+  }, [form, setRooms, setBedrooms, setBathrooms, setSpecialChips, setGardenChips, setUploadedImages]);
   const isTownhouseType = selectedType === "townhouse";
   const isApartmentType = selectedType === "apartment" || isTownhouseType;
   const isHouseType = selectedType === "house" || selectedType === "villa";
@@ -1282,6 +1382,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <div className="w-3 h-3 rounded-full border-2 border-warning" />
                 Högst prioritet
               </div>
+            </div>
+
+            {/* Import from Hemnet or Vitec */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <HemnetImportButton onImport={handleExternalImport} />
+              <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
             </div>
 
             {/* Address + Area */}

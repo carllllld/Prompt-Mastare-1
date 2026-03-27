@@ -3110,6 +3110,211 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ============================================================
+  // INTEGRATIONS: Vitec CRM & Hemnet
+  // ============================================================
+  {
+    const { VitecClient, VitecAuthError, VitecNotFoundError, VitecApiError } = await import("./lib/vitec-integration");
+    const { fetchHemnetProperty, mapHemnetPropertyToOptiPrompt, isHemnetUrl, HemnetError, HemnetNotFoundError, HemnetRateLimitError } = await import("./lib/hemnet-integration");
+    const { vitecImportSchema, vitecSearchSchema, vitecApiKeySchema, hemnetImportSchema, integrationSettings } = await import("@shared/schema");
+    const crypto = await import("crypto");
+    const { eq } = await import("drizzle-orm"); // hoisted — not re-imported per request
+
+    // Encrypt/decrypt Vitec API key using SESSION_SECRET as key material
+    const ENCRYPTION_KEY = Buffer.from(
+      (process.env.SESSION_SECRET || "fallback-key-change-in-production").padEnd(32, "0").slice(0, 32),
+      "utf8"
+    );
+    function encryptApiKey(plaintext: string): string {
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+      const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+      return iv.toString("hex") + ":" + encrypted.toString("hex");
+    }
+    function decryptApiKey(ciphertext: string): string {
+      const [ivHex, encHex] = ciphertext.split(":");
+      if (!ivHex || !encHex) throw new Error("Invalid ciphertext format");
+      const iv = Buffer.from(ivHex, "hex");
+      const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+      const decrypted = Buffer.concat([decipher.update(Buffer.from(encHex, "hex")), decipher.final()]);
+      return decrypted.toString("utf8");
+    }
+
+    async function getUserVitecClient(userId: string): Promise<InstanceType<typeof VitecClient> | null> {
+      const rows = await db.select().from(integrationSettings).where(
+        eq(integrationSettings.userId, userId)
+      ).limit(1);
+      const settings = rows[0];
+      if (!settings?.vitecEnabled || !settings.vitecApiKey || !settings.vitecCustomerId) return null;
+      try {
+        const apiKey = decryptApiKey(settings.vitecApiKey);
+        return new VitecClient({ apiKey, customerId: settings.vitecCustomerId, baseUrl: settings.vitecBaseUrl || undefined });
+      } catch {
+        return null;
+      }
+    }
+
+    // GET /api/integrations/settings — get current integration settings (masked)
+    app.get("/api/integrations/settings", requireAuth, requirePro, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const rows = await db.select().from(integrationSettings).where(eq(integrationSettings.userId, user.id)).limit(1);
+        const settings = rows[0];
+        res.json({
+          vitecEnabled: settings?.vitecEnabled ?? false,
+          vitecApiKeySet: Boolean(settings?.vitecApiKey),
+          vitecCustomerId: settings?.vitecCustomerId || null,
+          vitecBaseUrl: settings?.vitecBaseUrl || null,
+        });
+      } catch (err) {
+        console.error("Get integration settings error:", err);
+        res.status(500).json({ message: "Kunde inte hämta integrationsinställningar" });
+      }
+    });
+
+    // PUT /api/integrations/vitec/key — save/update Vitec API key
+    app.put("/api/integrations/vitec/key", requireAuth, requirePro, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const parse = vitecApiKeySchema.safeParse(req.body);
+        if (!parse.success) {
+          return res.status(400).json({ message: parse.error.issues[0]?.message || "Ogiltig förfrågan" });
+        }
+        const { apiKey, baseUrl, customerId } = parse.data;
+
+        // Validate the key works before saving
+        const client = new VitecClient({ apiKey, customerId, baseUrl: baseUrl || undefined });
+        const valid = await client.validateApiKey();
+        if (!valid) {
+          return res.status(400).json({ message: "API-nyckeln är ogiltig eller saknar behörighet i Vitec." });
+        }
+
+        const encrypted = encryptApiKey(apiKey);
+        await db.insert(integrationSettings).values({
+          userId: user.id,
+          vitecApiKey: encrypted,
+          vitecCustomerId: customerId,
+          vitecBaseUrl: baseUrl || null,
+          vitecEnabled: true,
+        }).onConflictDoUpdate({
+          target: integrationSettings.userId,
+          set: {
+            vitecApiKey: encrypted,
+            vitecCustomerId: customerId,
+            vitecBaseUrl: baseUrl || null,
+            vitecEnabled: true,
+            updatedAt: new Date(),
+          },
+        });
+
+        res.json({ success: true, message: "Vitec API-nyckel sparad och verifierad." });
+      } catch (err) {
+        if (err instanceof VitecAuthError) {
+          return res.status(400).json({ message: err.message });
+        }
+        console.error("Save Vitec API key error:", err);
+        res.status(500).json({ message: "Kunde inte spara API-nyckeln" });
+      }
+    });
+
+    // DELETE /api/integrations/vitec/key — remove Vitec API key
+    app.delete("/api/integrations/vitec/key", requireAuth, requirePro, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        await db.update(integrationSettings)
+          .set({ vitecApiKey: null, vitecEnabled: false, updatedAt: new Date() })
+          .where(eq(integrationSettings.userId, user.id));
+        res.json({ success: true });
+      } catch (err) {
+        console.error("Delete Vitec API key error:", err);
+        res.status(500).json({ message: "Kunde inte ta bort API-nyckeln" });
+      }
+    });
+
+    // GET /api/integrations/vitec/listings — list broker's active Vitec listings
+    app.get("/api/integrations/vitec/listings", requireAuth, requirePro, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const client = await getUserVitecClient(user.id);
+        if (!client) {
+          return res.status(400).json({ message: "Vitec är inte konfigurerat. Lägg till din API-nyckel i inställningarna." });
+        }
+        const properties = await client.listActiveProperties(20);
+        res.json({ properties });
+      } catch (err) {
+        if (err instanceof VitecAuthError) return res.status(401).json({ message: err.message });
+        if (err instanceof VitecApiError) return res.status(502).json({ message: err.message });
+        console.error("Vitec list listings error:", err);
+        res.status(500).json({ message: "Kunde inte hämta objekt från Vitec" });
+      }
+    });
+
+    // GET /api/integrations/vitec/search?q=... — search Vitec properties
+    app.get("/api/integrations/vitec/search", requireAuth, requirePro, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const parse = vitecSearchSchema.safeParse({ query: req.query.q });
+        if (!parse.success) return res.status(400).json({ message: "Sökterm krävs" });
+
+        const client = await getUserVitecClient(user.id);
+        if (!client) {
+          return res.status(400).json({ message: "Vitec är inte konfigurerat. Lägg till din API-nyckel i inställningarna." });
+        }
+        const properties = await client.searchProperties(parse.data.query);
+        res.json({ properties });
+      } catch (err) {
+        if (err instanceof VitecAuthError) return res.status(401).json({ message: err.message });
+        if (err instanceof VitecApiError) return res.status(502).json({ message: err.message });
+        console.error("Vitec search error:", err);
+        res.status(500).json({ message: "Sökning i Vitec misslyckades" });
+      }
+    });
+
+    // POST /api/integrations/vitec/import — import a specific Vitec object as propertyData
+    app.post("/api/integrations/vitec/import", requireAuth, requirePro, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const parse = vitecImportSchema.safeParse(req.body);
+        if (!parse.success) return res.status(400).json({ message: parse.error.issues[0]?.message || "Ogiltigt objekt-ID" });
+
+        const client = await getUserVitecClient(user.id);
+        if (!client) {
+          return res.status(400).json({ message: "Vitec är inte konfigurerat. Lägg till din API-nyckel i inställningarna." });
+        }
+        const property = await client.getProperty(parse.data.objectId);
+        res.json({ property, propertyData: property });
+      } catch (err) {
+        if (err instanceof VitecAuthError) return res.status(401).json({ message: err.message });
+        if (err instanceof VitecNotFoundError) return res.status(404).json({ message: err.message });
+        if (err instanceof VitecApiError) return res.status(502).json({ message: err.message });
+        console.error("Vitec import error:", err);
+        res.status(500).json({ message: "Kunde inte importera objekt från Vitec" });
+      }
+    });
+
+    // POST /api/integrations/hemnet/import — fetch property data from a Hemnet URL
+    app.post("/api/integrations/hemnet/import", requireAuth, async (req, res) => {
+      try {
+        const parse = hemnetImportSchema.safeParse(req.body);
+        if (!parse.success) return res.status(400).json({ message: parse.error.issues[0]?.message || "Ogiltig URL" });
+
+        if (!isHemnetUrl(parse.data.url)) {
+          return res.status(400).json({ message: "URL:en måste vara en hemnet.se/bostader/-länk." });
+        }
+
+        const property = await fetchHemnetProperty(parse.data.url);
+        const propertyData = mapHemnetPropertyToOptiPrompt(property);
+        res.json({ property, propertyData });
+      } catch (err) {
+        if (err instanceof HemnetNotFoundError) return res.status(404).json({ message: err.message });
+        if (err instanceof HemnetRateLimitError) return res.status(429).json({ message: err.message });
+        if (err instanceof HemnetError) return res.status(502).json({ message: err.message });
+        console.error("Hemnet import error:", err);
+        res.status(500).json({ message: "Kunde inte hämta data från Hemnet" });
+      }
+    });
+  }
+
   // Optimize endpoint
   app.post("/api/optimize", requireAuth, async (req, res) => {
     // Streaming support: if client accepts text/event-stream, send NDJSON progress events

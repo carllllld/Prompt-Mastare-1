@@ -337,3 +337,45 @@ export const pipelineMetrics = pgTable("pipeline_metrics", {
 export const insertPipelineMetricsSchema = createInsertSchema(pipelineMetrics).omit({ id: true, createdAt: true });
 export type PipelineMetrics = typeof pipelineMetrics.$inferSelect;
 export type InsertPipelineMetrics = z.infer<typeof insertPipelineMetricsSchema>;
+
+// ==========================================
+// INTEGRATIONS: Vitec CRM & Hemnet
+// ==========================================
+
+// Stores encrypted Vitec API keys per user (Pro/Premium only)
+export const integrationSettings = pgTable("integration_settings", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id).notNull().unique(),
+  vitecApiKey: text("vitec_api_key"), // stored encrypted
+  vitecCustomerId: text("vitec_customer_id"), // broker's Vitec account ID
+  vitecBaseUrl: text("vitec_base_url"), // optional custom endpoint
+  vitecEnabled: boolean("vitec_enabled").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertIntegrationSettingsSchema = createInsertSchema(integrationSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type IntegrationSettings = typeof integrationSettings.$inferSelect;
+export type InsertIntegrationSettings = z.infer<typeof insertIntegrationSettingsSchema>;
+
+// Zod schemas for integration API endpoints
+export const vitecImportSchema = z.object({
+  objectId: z.string().trim().min(1, "Objekt-ID krävs").max(100),
+});
+
+export const vitecSearchSchema = z.object({
+  query: z.string().trim().min(1, "Sökterm krävs").max(200),
+});
+
+export const vitecApiKeySchema = z.object({
+  apiKey: z.string().trim().min(10, "API-nyckeln är för kort").max(500),
+  customerId: z.string().trim().min(1, "Kund-ID krävs").max(100),
+  baseUrl: z.string().url("Ogiltig URL").optional().or(z.literal("")),
+});
+
+export const hemnetImportSchema = z.object({
+  url: z.string().url("Ogiltig URL").refine(
+    (url) => /hemnet\.se\/bostader\//.test(url),
+    "URL:en måste vara en hemnet.se/bostader/-länk"
+  ),
+});

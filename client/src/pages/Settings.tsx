@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   FileText, ArrowLeft, User, Crown, Shield, Trash2, Loader2,
-  Check, KeyRound, CreditCard, Calendar, BarChart2, Copy,
+  Check, KeyRound, CreditCard, Calendar, BarChart2, Copy, Plug,
 } from "lucide-react";
+import { VitecSettingsSection } from "@/components/IntegrationsPanel";
 
 const AVATAR_COLORS = [
   "#2D6A4F", "#1D4ED8", "#7C3AED", "#B45309", "#0F766E",
@@ -533,6 +534,18 @@ export default function Settings() {
                   <p className="text-xs text-gray-400">{fmtDate(details?.createdAt)}</p>
                 </div>
               </div>
+            </section>
+
+            {/* ── INTEGRATIONS ── */}
+            <section className="bg-white rounded-xl border p-6 space-y-4" style={{ borderColor: "#E8E5DE" }}>
+              <div className="flex items-center gap-2 mb-1">
+                <Plug className="w-4 h-4" style={{ color: "#2D6A4F" }} />
+                <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Integrationer</h2>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Koppla ihop OptiPrompt med ditt mäklarsystem för att importera objektdata direkt.
+              </p>
+              <VitecSettingsSection isPro={details?.plan === "pro" || details?.plan === "premium"} />
             </section>
 
             {/* ── DANGER ZONE ── */}
