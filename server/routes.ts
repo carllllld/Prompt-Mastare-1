@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { randomUUID, timingSafeEqual } from "crypto";
+import * as path from "path";
+import * as fs from "fs";
 import Stripe from "stripe";
 import { createClient, type RedisClientType } from "redis";
 import { storage } from "./storage";
@@ -18,6 +20,7 @@ import { PerfectSwedishOrchestrator } from "./lib/perfect-swedish-orchestrator";
 import { buildDeterministicFallbackDescription } from "./lib/perfect-swedish-fallback";
 
 const MAX_INVITE_EMAILS_PER_HOUR = 5;
+const CACHE_DIR = path.join(process.cwd(), ".image-cache");
 
 // No-op observability stub — the old listing-pipeline-observability module was removed.
 // All calls are silently ignored; real metrics flow through Sentry and the DB.
@@ -2256,7 +2259,7 @@ function normalizeBooleanish(value: unknown): boolean | null {
   return null;
 }
 
-function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
+function buildDispositionFromStructuredData(propertyData: Record<string, any>, imageAnalysis?: any) {
   const propertyTypeRaw = sanitizeStructuredText(propertyData.propertyType || propertyData.type || "lägenhet")?.toLowerCase() || "lägenhet";
   const propertyType = propertyTypeRaw === "apartment" ? "lägenhet" : propertyTypeRaw;
   const livingArea = Number(propertyData.livingArea ?? propertyData.area ?? propertyData.size) || null;
@@ -2389,6 +2392,16 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>) {
       preferred_outdoor_term: preferredOutdoorTerm,
       data_quality_notes: dataQualityNotes,
       emphasis_notes: emphasisNotes,
+      // Image analysis insights
+      ...(imageAnalysis?.aggregated ? {
+        image_insights: {
+          room_types: imageAnalysis.aggregated.roomTypes,
+          observed_features: imageAnalysis.aggregated.allFeatures,
+          materials_observed: imageAnalysis.aggregated.materials,
+          condition_from_images: imageAnalysis.aggregated.condition,
+          lighting_from_images: imageAnalysis.aggregated.lighting,
+        }
+      } : {}),
     },
     economics: {
       price,
@@ -3116,6 +3129,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   {
     const { VitecClient, VitecAuthError, VitecNotFoundError, VitecApiError } = await import("./lib/vitec-integration");
     const { fetchHemnetProperty, mapHemnetPropertyToOptiPrompt, isHemnetUrl, HemnetError, HemnetNotFoundError, HemnetRateLimitError } = await import("./lib/hemnet-integration");
+    const { downloadImages, cleanupCache, getCacheKey, getCachePath } = await import("./lib/image-downloader");
     const { vitecImportSchema, vitecSearchSchema, vitecApiKeySchema, hemnetImportSchema, integrationSettings } = await import("@shared/schema");
     const crypto = await import("crypto");
     const { eq } = await import("drizzle-orm"); // hoisted — not re-imported per request
@@ -3313,6 +3327,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         res.status(500).json({ message: "Kunde inte hämta data från Hemnet" });
       }
     });
+
+    // GET /api/integrations/hemnet/image/:hash — serve cached Hemnet image
+    app.get("/api/integrations/hemnet/image/:hash", (req, res) => {
+      try {
+        const { hash } = req.params;
+        if (!hash || !/^[a-f0-9]{64}$/.test(hash)) {
+          return res.status(400).json({ message: "Invalid image hash" });
+        }
+
+        const imagePath = path.join(CACHE_DIR, hash);
+        if (!fs.existsSync(imagePath)) {
+          return res.status(404).json({ message: "Image not found" });
+        }
+
+        const buffer = fs.readFileSync(imagePath);
+        res.set("Content-Type", "image/jpeg");
+        res.set("Cache-Control", "public, max-age=604800"); // 7 days
+        res.send(buffer);
+      } catch (err) {
+        console.error("Image serve error:", err);
+        res.status(500).json({ message: "Kunde inte hämta bilden" });
+      }
+    });
   }
 
   // Optimize endpoint
@@ -3492,9 +3529,62 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         targetWordMax = WORD_LIMITS.free.max;
       }
 
+      // Analyze images if provided (Pro/Premium feature)
+      let imageAnalysis: any = undefined;
+      if ((plan === "pro" || plan === "premium") && req.body.imageUrls && Array.isArray(req.body.imageUrls) && req.body.imageUrls.length > 0) {
+        // Check vision rate limit
+        const { visionRateLimiter } = await import("./lib/rate-limiter");
+        const limitCheck = await visionRateLimiter.checkLimit(user.id);
+        if (!limitCheck.allowed) {
+          pipelineObservability.endStep({
+            success: false,
+            actionTaken: "blocked_vision_rate_limit",
+            decisionReason: limitCheck.reason,
+          });
+          finalizeObservabilityRun(false);
+          return res.status(429).json({
+            message: `Bildanalys-gränsen nådd. Försök igen om ${limitCheck.retryAfter} sekunder.`,
+            retryAfter: limitCheck.retryAfter,
+            limitReason: limitCheck.reason,
+          });
+        }
+
+        try {
+          const { analyzePropertyImages } = await import("./lib/image-analyzer");
+          sendProgress(1, 3, "Analyserar bilder...");
+          
+          // Add timeout protection
+          imageAnalysis = await Promise.race([
+            analyzePropertyImages(req.body.imageUrls, (current, total) => {
+              sendProgress(1, 3, `Analyserar bilder (${current}/${total})...`);
+            }),
+            new Promise((_, reject) =>
+              setTimeout(
+                () => reject(new Error("Image analysis timeout after 30 seconds")),
+                30_000
+              )
+            )
+          ]);
+          
+          console.log('[Image Analysis] Completed:', imageAnalysis.aggregated);
+        } catch (err) {
+          console.warn('[Image Analysis] Failed:', err);
+          
+          // Add warning but don't fail the request
+          if (err instanceof Error && err.message.includes("timeout")) {
+            warnings.push("Bildanalys tog för lång tid. Fortsätter utan bildanalys.");
+          } else {
+            warnings.push(`Bildanalys misslyckades: ${err instanceof Error ? err.message : 'Okänt fel'}`);
+          }
+          
+          // Continue without image analysis
+          imageAnalysis = undefined;
+        }
+      }
+
       // Execute new pipeline
       const transformedDisposition = req.body.propertyData 
-        ? buildDispositionFromStructuredData(req.body.propertyData)
+        ? buildDispositionFromStructuredData(req.body.propertyData, imageAnalysis)
         : { rawText: prompt };
       
       const result = await orchestrator.execute({

@@ -194,6 +194,7 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
   const { toast } = useToast();
   const [url, setUrl] = useState("");
   const [open, setOpen] = useState(false);
+  const [imageProgress, setImageProgress] = useState<{ current: number; total: number } | null>(null);
 
   const importMutation = useMutation({
     mutationFn: async (hemnetUrl: string) => {
@@ -208,12 +209,15 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
       onImport(data.propertyData);
       setUrl("");
       setOpen(false);
+      setImageProgress(null);
+      const imageCount = data.property?.imageUrls?.length || 0;
       toast({
         title: "Hemnet-data importerad",
-        description: `${data.property?.address || "Objektet"} har fyllts i automatiskt.`,
+        description: `${data.property?.address || "Objektet"} har fyllts i automatiskt${imageCount > 0 ? ` med ${imageCount} bild(er)` : ""}.`,
       });
     },
     onError: (err: any) => {
+      setImageProgress(null);
       toast({ title: "Import misslyckades", description: err.message, variant: "destructive" });
     },
   });
@@ -236,18 +240,26 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
       <ExternalLink className="w-4 h-4 text-blue-500 shrink-0" />
-      <Input
-        type="url"
-        placeholder="https://www.hemnet.se/bostader/..."
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        className="text-xs h-8 bg-white border-blue-200 flex-1"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && url.trim()) importMutation.mutate(url.trim());
-          if (e.key === "Escape") setOpen(false);
-        }}
-        autoFocus
-      />
+      <div className="flex-1 min-w-0">
+        <Input
+          type="url"
+          placeholder="https://www.hemnet.se/bostader/..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="text-xs h-8 bg-white border-blue-200"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && url.trim()) importMutation.mutate(url.trim());
+            if (e.key === "Escape") setOpen(false);
+          }}
+          autoFocus
+          disabled={importMutation.isPending}
+        />
+        {imageProgress && (
+          <p className="text-xs text-blue-600 mt-1">
+            Laddar ned bilder: {imageProgress.current}/{imageProgress.total}
+          </p>
+        )}
+      </div>
       <Button
         type="button"
         size="sm"
@@ -258,7 +270,7 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
       >
         {importMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
       </Button>
-      <Button type="button" variant="ghost" size="sm" className="text-xs h-8 shrink-0 px-2" onClick={() => setOpen(false)}>
+      <Button type="button" variant="ghost" size="sm" className="text-xs h-8 shrink-0 px-2" onClick={() => setOpen(false)} disabled={importMutation.isPending}>
         ✕
       </Button>
     </div>

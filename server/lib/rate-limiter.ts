@@ -1,102 +1,126 @@
-import { createClient, type RedisClientType } from "redis";
+/**
+ * Rate Limiter for Vision API
+ * 
+ * Prevents quota exhaustion by limiting image analysis requests per user
+ */
 
-const OPTIMIZE_RATE_LIMIT = (() => {
-  const n = Number.parseInt(process.env.OPTIMIZE_RATE_LIMIT || "", 10);
-  return Number.isFinite(n) && n > 0 ? n : 10;
-})(); // max requests per minute
-const OPTIMIZE_RATE_WINDOW = (() => {
-  const n = Number.parseInt(process.env.OPTIMIZE_RATE_WINDOW_MS || "", 10);
-  return Number.isFinite(n) && n > 0 ? n : 60 * 1000;
-})(); // 1 minute
-const REDIS_CONNECT_COOLDOWN_MS = (() => {
-  const n = Number.parseInt(process.env.REDIS_CONNECT_COOLDOWN_MS || "", 10);
-  return Number.isFinite(n) && n >= 0 ? n : 30_000;
-})();
+import * as Sentry from "@sentry/node";
 
-const optimizeRateMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkOptimizeRateLimitInMemory(userId: string): boolean {
-  const now = Date.now();
-  const entry = optimizeRateMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    optimizeRateMap.set(userId, { count: 1, resetAt: now + OPTIMIZE_RATE_WINDOW });
-    return true;
-  }
-  if (entry.count >= OPTIMIZE_RATE_LIMIT) return false;
-  entry.count++;
-  return true;
+export interface RateLimitConfig {
+  maxRequestsPerMinute?: number;
+  maxRequestsPerHour?: number;
+  maxRequestsPerDay?: number;
 }
 
-const optimizeRateLuaScript =
-  "local current = redis.call('INCR', KEYS[1])\n" +
-  "if current == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end\n" +
-  "return current";
+interface UserLimit {
+  minute: { count: number; resetAt: number };
+  hour: { count: number; resetAt: number };
+  day: { count: number; resetAt: number };
+}
 
-let redisClient: RedisClientType | null = null;
-let redisInitPromise: Promise<RedisClientType | null> | null = null;
-let redisDisabledUntil = 0;
+export class VisionRateLimiter {
+  private userLimits = new Map<string, UserLimit>();
+  private config: Required<RateLimitConfig>;
 
-async function getRedisClient(): Promise<RedisClientType | null> {
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) return null;
-  if (Date.now() < redisDisabledUntil) return null;
-  if (redisClient?.isReady) return redisClient;
-  if (redisInitPromise) return redisInitPromise;
+  constructor(config: RateLimitConfig = {}) {
+    this.config = {
+      maxRequestsPerMinute: config.maxRequestsPerMinute ?? 10,
+      maxRequestsPerHour: config.maxRequestsPerHour ?? 50,
+      maxRequestsPerDay: config.maxRequestsPerDay ?? 100,
+    };
+  }
 
-  redisInitPromise = (async () => {
-    let client: RedisClientType | null = null;
-    try {
-      client = createClient({ url: redisUrl });
-      client.on("error", (err: unknown) => {
-        console.warn("[Redis] error:", err);
-      });
+  async checkLimit(userId: string): Promise<{
+    allowed: boolean;
+    reason?: string;
+    retryAfter?: number;
+  }> {
+    const now = Date.now();
+    let limit = this.userLimits.get(userId);
 
-      await client.connect();
-      redisClient = client;
-      console.log("[Redis] connected");
-      return client;
-    } catch (err) {
-      console.warn("[Redis] connect failed, falling back to in-memory rate limiting:", err);
-      redisDisabledUntil = Date.now() + REDIS_CONNECT_COOLDOWN_MS;
-      try {
-        await client?.disconnect();
-      } catch {
-      }
-      redisClient = null;
-      return null;
-    } finally {
-      redisInitPromise = null;
+    if (!limit) {
+      limit = {
+        minute: { count: 1, resetAt: now + 60_000 },
+        hour: { count: 1, resetAt: now + 3600_000 },
+        day: { count: 1, resetAt: now + 86400_000 },
+      };
+      this.userLimits.set(userId, limit);
+      return { allowed: true };
     }
-  })();
 
-  return redisInitPromise;
-}
+    // Check minute limit
+    if (now > limit.minute.resetAt) {
+      limit.minute = { count: 1, resetAt: now + 60_000 };
+    } else if (limit.minute.count >= this.config.maxRequestsPerMinute) {
+      const retryAfter = Math.ceil((limit.minute.resetAt - now) / 1000);
+      Sentry.captureMessage(
+        `Vision rate limit exceeded for user ${userId} (minute)`,
+        "warning"
+      );
+      return {
+        allowed: false,
+        reason: "Minute limit exceeded",
+        retryAfter,
+      };
+    } else {
+      limit.minute.count++;
+    }
 
-export async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
-  const client = await getRedisClient();
-  if (!client) return checkOptimizeRateLimitInMemory(userId);
+    // Check hour limit
+    if (now > limit.hour.resetAt) {
+      limit.hour = { count: 1, resetAt: now + 3600_000 };
+    } else if (limit.hour.count >= this.config.maxRequestsPerHour) {
+      const retryAfter = Math.ceil((limit.hour.resetAt - now) / 1000);
+      Sentry.captureMessage(
+        `Vision rate limit exceeded for user ${userId} (hour)`,
+        "warning"
+      );
+      return {
+        allowed: false,
+        reason: "Hour limit exceeded",
+        retryAfter,
+      };
+    } else {
+      limit.hour.count++;
+    }
 
-  const key = `rl:optimize:${userId}`;
-  try {
-    const count = (await client.eval(optimizeRateLuaScript, {
-      keys: [key],
-      arguments: [String(OPTIMIZE_RATE_WINDOW)],
-    })) as number;
+    // Check day limit
+    if (now > limit.day.resetAt) {
+      limit.day = { count: 1, resetAt: now + 86400_000 };
+    } else if (limit.day.count >= this.config.maxRequestsPerDay) {
+      const retryAfter = Math.ceil((limit.day.resetAt - now) / 1000);
+      Sentry.captureMessage(
+        `Vision rate limit exceeded for user ${userId} (day)`,
+        "warning"
+      );
+      return {
+        allowed: false,
+        reason: "Day limit exceeded",
+        retryAfter,
+      };
+    } else {
+      limit.day.count++;
+    }
 
-    return count <= OPTIMIZE_RATE_LIMIT;
-  } catch (err) {
-    console.warn("[Rate Limit] Redis error, falling back to in-memory:", err);
-    return checkOptimizeRateLimitInMemory(userId);
+    return { allowed: true };
+  }
+
+  reset(userId: string): void {
+    this.userLimits.delete(userId);
+  }
+
+  resetAll(): void {
+    this.userLimits.clear();
+  }
+
+  getStatus(userId: string): UserLimit | null {
+    return this.userLimits.get(userId) || null;
   }
 }
 
-// Cleanup stale rate limit entries every 5 minutes
-const cleanupInterval = setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of Array.from(optimizeRateMap)) {
-    if (now > entry.resetAt) optimizeRateMap.delete(key);
-  }
-}, 5 * 60 * 1000);
-
-// Unref to prevent blocking process exit
-cleanupInterval.unref();
+// Export singleton instance
+export const visionRateLimiter = new VisionRateLimiter({
+  maxRequestsPerMinute: 10,
+  maxRequestsPerHour: 50,
+  maxRequestsPerDay: 100,
+});

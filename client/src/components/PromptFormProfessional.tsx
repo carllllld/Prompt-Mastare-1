@@ -571,6 +571,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   const [addressLookupResult, setAddressLookupResult] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [imageUploadProgress, setImageUploadProgress] = useState<{ current: number; total: number } | null>(null);
   const [rooms, setRooms] = useState(3);
   const [bedrooms, setBedrooms] = useState(2);
   const [bathrooms, setBathrooms] = useState(1);
@@ -831,6 +832,44 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
         element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
       }, 2000);
     }
+  }, []);
+
+  // Process image files with proper error handling
+  const processImageFiles = useCallback((files: File[]) => {
+    const validImages = files.filter(f => f.type.startsWith("image/") && f.size < 10 * 1024 * 1024); // 10MB limit
+    
+    if (validImages.length === 0) return;
+    
+    setImageUploadProgress({ current: 0, total: validImages.length });
+    let completed = 0;
+    
+    validImages.forEach((file) => {
+      const reader = new FileReader();
+      
+      reader.onload = () => {
+        try {
+          const result = reader.result as string;
+          setUploadedImages((prev) => prev.length < 20 ? [...prev, result] : prev);
+          completed++;
+          setImageUploadProgress({ current: completed, total: validImages.length });
+          if (completed === validImages.length) {
+            setTimeout(() => setImageUploadProgress(null), 500);
+          }
+        } catch (err) {
+          console.error("Error processing image:", err);
+          completed++;
+          setImageUploadProgress({ current: completed, total: validImages.length });
+        }
+      };
+      
+      reader.onerror = () => {
+        console.error("FileReader error:", reader.error);
+        completed++;
+        setImageUploadProgress({ current: completed, total: validImages.length });
+      };
+      
+      reader.readAsDataURL(file);
+    });
   }, []);
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
@@ -1988,25 +2027,12 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       e.preventDefault();
                       e.currentTarget.style.borderColor = "";
                       const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
-                      files.forEach((file) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setUploadedImages((prev) => prev.length < 5 ? [...prev, reader.result as string] : prev);
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                      processImageFiles(files);
                     }}
                     onPaste={(e) => {
                       const items = Array.from(e.clipboardData.items).filter(i => i.type.startsWith("image/"));
-                      items.forEach((item) => {
-                        const file = item.getAsFile();
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setUploadedImages((prev) => prev.length < 5 ? [...prev, reader.result as string] : prev);
-                        };
-                        reader.readAsDataURL(file);
-                      });
+                      const files = items.map(item => item.getAsFile()).filter((f): f is File => f !== null);
+                      processImageFiles(files);
                     }}
                     tabIndex={0}
                   >
@@ -2018,13 +2044,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       id="image-upload"
                       onChange={(e) => {
                         const files = Array.from(e.target.files || []);
-                        files.forEach((file) => {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setUploadedImages((prev) => prev.length < 5 ? [...prev, reader.result as string] : prev);
-                          };
-                          reader.readAsDataURL(file);
-                        });
+                        processImageFiles(files);
                       }}
                     />
                     <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center gap-1 text-xs text-gray-500">
@@ -2032,6 +2052,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       <span>Ladda upp, dra hit eller klistra in bilder</span>
                       <span className="text-gray-400">Ctrl+V fungerar när rutan är aktiv</span>
                     </label>
+                    {imageUploadProgress && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        Bearbetar bilder: {imageUploadProgress.current}/{imageUploadProgress.total}
+                      </div>
+                    )}
                   </div>
                   {uploadedImages.length > 0 && (
                     <div className="flex gap-2 mt-2 flex-wrap">

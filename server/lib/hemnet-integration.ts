@@ -10,6 +10,7 @@
  */
 
 import * as Sentry from "@sentry/node";
+import { downloadImages, getCacheKey } from "./image-downloader";
 
 export interface HemnetProperty {
   id: string;
@@ -43,7 +44,7 @@ export interface HemnetProperty {
   flooring?: string;
   view?: string;
   transport?: string;
-  imageUrls?: string[];
+  imageUrls?: string[]; // Hemnet image URLs
   brokerName?: string;
   brokerAgency?: string;
   showingDate?: string;
@@ -231,7 +232,7 @@ function buildHemnetProperty(
     flooring: nextProp?.flooring || nextProp?.floorMaterial || undefined,
     view: nextProp?.view || nextProp?.utsikt || undefined,
     transport: nextProp?.transport || nextProp?.communications || undefined,
-    imageUrls: imageUrls.length > 0 ? imageUrls.slice(0, 10) : undefined,
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     brokerName: nextProp?.broker?.name || nextProp?.agent?.name || undefined,
     brokerAgency: nextProp?.broker?.agency || nextProp?.agency?.name || undefined,
     showingDate: nextProp?.showingDate || nextProp?.viewingDate || undefined,
@@ -242,6 +243,12 @@ function buildHemnetProperty(
 
 // Converts a HemnetProperty to OptiPrompt's propertyData format
 export function mapHemnetPropertyToOptiPrompt(prop: HemnetProperty): Record<string, any> {
+  // Convert image URLs to cache URLs
+  const imageUrls = prop.imageUrls?.map((url) => {
+    const cacheKey = getCacheKey(url);
+    return `/api/integrations/hemnet/image/${cacheKey}`;
+  });
+
   return {
     propertyType: prop.propertyType,
     address: [prop.address, prop.city].filter(Boolean).join(", "),
@@ -275,7 +282,7 @@ export function mapHemnetPropertyToOptiPrompt(prop: HemnetProperty): Record<stri
     maklarnamn: prop.brokerName,
     visningstid: prop.showingDate,
     tilltradesdag: prop.accessDate,
-    imageUrls: prop.imageUrls,
+    imageUrls,
     // Source metadata
     _source: "hemnet",
     _sourceId: prop.id,
@@ -283,7 +290,39 @@ export function mapHemnetPropertyToOptiPrompt(prop: HemnetProperty): Record<stri
   };
 }
 
-export async function fetchHemnetProperty(url: string): Promise<HemnetProperty> {
+export async function fetchHemnetProperty(
+  url: string,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<HemnetProperty> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fetchHemnetPropertyInternal(url);
+    } catch (err) {
+      lastError = err;
+
+      // Check if it's a rate limit error
+      if (err instanceof HemnetRateLimitError && attempt < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s, 8s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(
+          `[Hemnet] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Don't retry on other errors
+      throw err;
+    }
+  }
+
+  throw lastError || new HemnetError("Failed to fetch Hemnet property");
+}
+
+async function fetchHemnetPropertyInternal(url: string): Promise<HemnetProperty> {
   if (!isHemnetUrl(url)) {
     throw new HemnetError("Ogiltig Hemnet-URL. URL:en måste vara en hemnet.se/bostader/-länk.");
   }
@@ -328,7 +367,16 @@ export async function fetchHemnetProperty(url: string): Promise<HemnetProperty> 
     );
   }
 
-  return buildHemnetProperty(url, jsonLd, nextProp);
+  const property = buildHemnetProperty(url, jsonLd, nextProp);
+
+  // Download images in parallel with caching (non-blocking)
+  if (property.imageUrls && property.imageUrls.length > 0) {
+    downloadImages(property.imageUrls).catch((err) => {
+      Sentry.captureException(err, { tags: { integration: "hemnet", action: "downloadImages" } });
+    });
+  }
+
+  return property;
 }
 
 export class HemnetError extends Error {
