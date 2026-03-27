@@ -70,12 +70,12 @@ function BeforeAfterDemo() {
             Kvalitetslyft i praktiken
           </span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {BEFORE_AFTER.map((t, i) => (
             <button
               key={i}
               onClick={() => setActiveTab(i)}
-              className="px-2.5 py-1 text-[11px] rounded-full border transition-all font-medium"
+              className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium whitespace-nowrap"
               style={{
                 background: activeTab === i ? "#2D6A4F" : "#fff",
                 color: activeTab === i ? "#fff" : "#9CA3AF",

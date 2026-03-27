@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info, CheckCircle2 } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1389,81 +1389,34 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
 
-          <div className="mb-1 border px-3 py-2 bg-slate-50">
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 bg-slate-200 text-slate-600 text-xs">
-                i
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-900">Skriv det som faktiskt höjer kvaliteten</p>
-                <p className="text-xs mt-0.5 text-slate-600">
-                  Prioritera skick, större renoveringar, planlösning, läge och det som avviker positivt från standard.
-                </p>
-              </div>
-            </div>
-          </div>
-
           {/* Progress Indicator */}
           <ProgressIndicator items={priorityItems} onItemClick={(idx) => handleScrollToField(priorityItems[idx].fieldName)} />
 
-          <div className="mb-5 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-3">
-            <div className="pro-section-card">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Snabbast väg till bra text</p>
-                  <p className="text-sm font-semibold mt-1 text-foreground">Fyll det som styr huvudtexten först</p>
-                </div>
-                <div className="px-2.5 py-1 rounded-full text-xs font-semibold bg-success-bg text-success">
-                  {priorityCompleted}/{priorityChecklist.length} klara
-                </div>
+          {/* Så används dina fält - viktig info */}
+          <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
+            <p className="text-sm font-semibold mb-3" style={{ color: "#1D2939" }}>Så används dina fält</p>
+            <div className="space-y-2 text-xs">
+              <div className="rounded-lg px-3 py-2" style={{ background: "#DCFCE7", color: "#166534" }}>
+                <span className="font-semibold">Direkt i huvudtexten:</span>
+                <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                {[
-                  ["Adress", Boolean(addressValue?.trim())],
-                  ["Boarea", Boolean(livingAreaValue?.trim())],
-                  ["Rum och badrum", Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0)],
-                  ["Kök/badrum med fakta", hasKitchenBathroomFacts],
-                  ["Kommunikation/läge", hasLocationFacts],
-                  ["Särskiljande styrkor", hasStrongDifferentiator],
-                  ["Planlösning/skick", Boolean(layoutValue?.trim() || conditionValue?.trim())],
-                ].map(([label, done]) => (
-                  <div key={String(label)} className={`flex items-center gap-2 px-2 py-1.5 text-xs ${done ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'}`}>
-                    <span className={`w-3 h-3 ${done ? 'bg-slate-400' : 'bg-slate-300'}`}></span>
-                    <span>{label}</span>
-                  </div>
-                ))}
+              <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
+                <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
+                <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
               </div>
-            </div>
-
-            <div className="pro-section-card">
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-muted-foreground">Så används dina fält i modellen</p>
-              <div className="space-y-2 text-xs">
-                <div className="rounded-lg px-3 py-2 bg-success-bg text-success">
-                  <span className="font-semibold">Direkt i huvudtexten:</span>
-                  <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
-                </div>
-                <div className="rounded-lg px-3 py-2 bg-muted text-muted-foreground">
-                  <span className="font-semibold text-foreground">Kontext till AI:n:</span>
-                  <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
-                </div>
-                <div className="rounded-lg px-3 py-2 bg-muted text-muted-foreground">
-                  <span className="font-semibold text-foreground">Regel:</span>
-                  <span> lägg laddbox under Parkering och undvik att upprepa samma fakta i flera fält.</span>
-                </div>
+              <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
+                <span className="font-semibold" style={{ color: "#1D2939" }}>Regel:</span>
+                <span> lägg laddbox under Parkering och undvik att upprepa samma fakta i flera fält.</span>
               </div>
             </div>
           </div>
 
           {/* ── SECTION 1: OBJEKTTYP ── */}
-          <div className="pro-section-card">
-            <div className="flex items-center justify-between mb-2.5">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
                 Objekttyp
               </label>
-              <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-success-bg text-success">
-                <CheckCircle2 className="w-3 h-3" />
-                Steg 1
-              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {([
@@ -1478,9 +1431,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   onClick={() => form.setValue("propertyType", t.value)}
                   className={`px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
                     selectedType === t.value 
-                      ? 'bg-primary text-primary-foreground border-primary' 
-                      : 'bg-background text-muted-foreground border-input hover:bg-accent'
+                      ? 'text-white border-transparent' 
+                      : 'bg-white border-input hover:bg-accent'
                   }`}
+                  style={selectedType === t.value ? { background: "#2D6A4F" } : {}}
                 >
                   {t.label}
                 </button>
