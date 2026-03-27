@@ -1509,15 +1509,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           />
 
           {/* Import buttons wrapper for integration */}
-          <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed" style={{ borderColor: "#2D6A4F", background: "#F0FDF4" }}>
+          <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed bg-slate-50 border-slate-200">
             <div className="w-full flex items-center gap-1.5 mb-1">
-              <span className="text-xs font-semibold" style={{ color: "#2D6A4F" }}>🏠 Importera objektdata automatiskt</span>
-              <span className="text-xs" style={{ color: "#6B7280" }}>— slipper fylla i formuläret manuellt</span>
+              <span className="text-xs font-semibold text-slate-700">Importera objektdata</span>
+              <span className="text-xs text-slate-500">— slipper fylla i formuläret manuellt</span>
             </div>
             <HemnetImportButton onImport={handleExternalImport} />
             <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
             {!isPro && (
-              <span className="text-xs self-center" style={{ color: "#9CA3AF" }}>Vitec-import kräver Pro</span>
+              <span className="text-xs self-center text-slate-400">Vitec-import kräver Pro</span>
             )}
           </div>
 
@@ -1606,12 +1606,36 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             )} />
           </div>
 
-          {/* ── SECTION 6: OPTIONAL DETAILS (wrapped in DetailsSection components) ── */}
+          {/* ── SECTION 5b: LÄGE & KOMMUNIKATIONER ── */}
+          <div className="pro-section-card">
+            <label className="text-xs font-semibold uppercase tracking-wider block mb-3 text-muted-foreground">
+              Läge & Kommunikationer
+            </label>
+            <div className="space-y-3">
+              <FormField control={form.control} name="transport" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
+                  <FormControl><Input placeholder="Ex: Cirka 4 min promenad till tunnelbana och buss runt hörnet" {...field} className={exampleInputClass} /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="neighborhood" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
+                  <FormControl><Input placeholder="Ex: Närhet till mataffärer, caféer, förskola, gym och grönområden inom några minuters promenad" {...field} className={exampleInputClass} /></FormControl>
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="view" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Utsikt (används även som försäljningsargument)</FormLabel>
+                  <FormControl><Input placeholder="Ex: Fri utsikt över park, grönska och takåsar" {...field} className={exampleInputClass} /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+          </div>
           
           {/* Flooring section */}
           <DetailsSection
             title="Golv & Material"
-            icon="🏠"
             color="gold"
             persistKey="flooring-section"
           >
@@ -1631,7 +1655,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* Heating section */}
           <DetailsSection
             title="Uppvärmning"
-            icon="🔥"
             color="gold"
             persistKey="heating-section"
           >
@@ -1644,7 +1667,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* Special features section */}
           <DetailsSection
             title="Särskilda Egenskaper"
-            icon="✨"
             color="gold"
             persistKey="special-features-section"
           >
@@ -1663,7 +1685,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {isHouseOrTownhouseType && (
             <DetailsSection
               title="Trädgård & Uteplats"
-              icon="🌳"
               color="green"
               persistKey="garden-section"
             >
@@ -1678,52 +1699,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </DetailsSection>
           )}
 
-          {/* View & Transport section */}
-          <DetailsSection
-            title="Utsikt & Kommunikationer"
-            icon="🌍"
-            color="blue"
-            persistKey="view-transport-section"
-          >
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField control={form.control} name="view" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Utsikt <span className="text-gray-400 font-normal">(används även som USP)</span></FormLabel>
-                    <FormControl><Input placeholder="Ex: Fri utsikt över park, grönska och takåsar" {...field} className={exampleInputClass} /></FormControl>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="transport" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
-                    <FormControl><Input placeholder="Ex: Cirka 4 min promenad till tunnelbana och buss runt hörnet" {...field} className={exampleInputClass} /></FormControl>
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-          </DetailsSection>
-
-          {/* Neighborhood section */}
-          <DetailsSection
-            title="Områdesbeskrivning"
-            icon="🏘️"
-            color="blue"
-            persistKey="neighborhood-section"
-          >
-            <div className="space-y-3">
-              <FormField control={form.control} name="neighborhood" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Närhet till service och aktiviteter</FormLabel>
-                  <FormControl><Input placeholder="Ex: Närhet till mataffärer, caféer, förskola, gym och grönområden inom några minuters promenad" {...field} className={exampleInputClass} /></FormControl>
-                </FormItem>
-              )} />
-            </div>
-          </DetailsSection>
+          {/* ── SECTION 6: OPTIONAL DETAILS (wrapped in DetailsSection components) ── */}
 
           {/* Energy & Storage section */}
           <DetailsSection
             title="Energi & Förvaring"
-            icon="⚡"
             color="gold"
             persistKey="energy-storage-section"
           >
@@ -1753,7 +1733,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* Parking section */}
           <DetailsSection
             title="Parkering"
-            icon="🚗"
             color="blue"
             persistKey="parking-section"
           >
@@ -1773,7 +1752,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <>
               <DetailsSection
                 title="Byggnadsmaterial"
-                icon="🧱"
                 color="purple"
                 persistKey="material-section"
               >
@@ -1784,7 +1762,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
               <DetailsSection
                 title="Taktyp"
-                icon="🏠"
                 color="purple"
                 persistKey="roof-section"
               >
@@ -1795,7 +1772,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </>
           )}
 
-          {/* ── SECTION 6b: VISNINGSINFORMATION ── */}
+          {/* ── SECTION 7b: VISNINGSINFORMATION ── */}
           <div className="pro-section-card">
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1825,7 +1802,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
           </div>
 
-          {/* ── SECTION 7: PLATTFORM, STIL & SUBMIT ── */}
+          {/* ── SECTION 8: PLATTFORM, STIL & SUBMIT ── */}
           <div className="pro-section-card space-y-4">
 
             {/* Platform + Writing style — compact */}

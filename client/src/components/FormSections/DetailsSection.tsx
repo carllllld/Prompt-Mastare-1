@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface DetailsSectionProps {
   title: string;
-  icon?: string;
   color: "blue" | "gold" | "green" | "purple" | "gray";
   children: React.ReactNode;
   defaultExpanded?: boolean;
@@ -12,40 +11,39 @@ interface DetailsSectionProps {
 
 const colorConfig = {
   blue: {
-    border: "#2563EB",
-    bg: "#F0F9FF",
-    text: "#1E40AF",
-    badge: "bg-blue-50 text-blue-600",
+    border: "#CBD5E1",
+    bg: "#F8FAFC",
+    text: "#475569",
+    badge: "bg-slate-100 text-slate-600",
   },
   gold: {
-    border: "#D4A574",
-    bg: "#FFFBEB",
-    text: "#92400E",
-    badge: "bg-amber-50 text-amber-600",
+    border: "#E2E8F0",
+    bg: "#FAFAF9",
+    text: "#64748B",
+    badge: "bg-slate-100 text-slate-600",
   },
   green: {
-    border: "#16A34A",
-    bg: "#F0FDF4",
-    text: "#15803D",
-    badge: "bg-green-50 text-green-600",
+    border: "#D1D5DB",
+    bg: "#F9FAFB",
+    text: "#6B7280",
+    badge: "bg-slate-100 text-slate-600",
   },
   purple: {
-    border: "#A855F7",
-    bg: "#FAF5FF",
-    text: "#6B21A8",
-    badge: "bg-purple-50 text-purple-600",
+    border: "#E5E7EB",
+    bg: "#FAFBFC",
+    text: "#6B7280",
+    badge: "bg-slate-100 text-slate-600",
   },
   gray: {
-    border: "#9CA3AF",
+    border: "#E5E7EB",
     bg: "#F9FAFB",
-    text: "#374151",
-    badge: "bg-gray-50 text-gray-600",
+    text: "#6B7280",
+    badge: "bg-slate-100 text-slate-600",
   },
 };
 
 export function DetailsSection({
   title,
-  icon,
   color,
   children,
   defaultExpanded = false,
@@ -91,7 +89,6 @@ export function DetailsSection({
         style={{ backgroundColor: isExpanded ? config.bg : "transparent" }}
       >
         <div className="flex items-center gap-2">
-          {icon && <span className="text-lg">{icon}</span>}
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: config.text }}>
             {title}
           </span>
