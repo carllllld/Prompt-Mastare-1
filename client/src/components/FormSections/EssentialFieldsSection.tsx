@@ -99,12 +99,12 @@ export function EssentialFieldsSection({
   const floorsValue = form.watch("floors");
 
   return (
-    <div className="pro-section-card border-l-4" style={{ borderLeftColor: "#DC2626" }}>
+    <div className="pro-section-card border-l-4" style={{ borderLeftColor: "#D1D5DB" }}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-red-600">⭐ Essentiell Information</span>
-            <span className="text-xs font-medium px-2 py-1 rounded-full bg-red-50 text-red-600">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Essentiell Information</span>
+            <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600">
               {priorityCompleted}/{priorityTotal} klara
             </span>
           </div>
@@ -113,24 +113,24 @@ export function EssentialFieldsSection({
       </div>
 
       {/* Progress bar */}
-      <div className="mb-4 p-3 rounded-lg bg-red-50">
+      <div className="mb-4 p-3 bg-slate-50">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-red-700">Framsteg</span>
-          <span className="text-xs font-bold text-red-600">{Math.round((priorityCompleted / priorityTotal) * 100)}%</span>
+          <span className="text-xs font-semibold text-slate-700">Framsteg</span>
+          <span className="text-xs font-bold text-slate-600">{Math.round((priorityCompleted / priorityTotal) * 100)}%</span>
         </div>
-        <div className="w-full h-2 bg-red-200 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-slate-300 overflow-hidden">
           <div
-            className="h-full bg-red-600 transition-all duration-300"
+            className="h-full bg-slate-600 transition-all duration-300"
             style={{ width: `${(priorityCompleted / priorityTotal) * 100}%` }}
           />
         </div>
       </div>
 
       {/* Import section */}
-      <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed" style={{ borderColor: "#16A34A", background: "#F0FDF4" }}>
+      <div className="flex flex-wrap gap-2 mb-4 p-2 border" style={{ borderColor: "#D1D5DB", background: "#FAFBFC" }}>
         <div className="w-full flex items-center gap-1.5 mb-1">
-          <span className="text-xs font-semibold" style={{ color: "#16A34A" }}>🏠 Importera objektdata automatiskt</span>
-          <span className="text-xs" style={{ color: "#6B7280" }}>— slipper fylla i formuläret manuellt</span>
+          <span className="text-xs font-semibold text-slate-700">Importera objektdata</span>
+          <span className="text-xs text-slate-500">— slipper fylla i formuläret manuellt</span>
         </div>
         {/* Import buttons will be passed as children or via props */}
       </div>
@@ -163,7 +163,7 @@ export function EssentialFieldsSection({
               </Button>
             </div>
             {addressLookupResult && (
-              <p className="text-xs mt-1 text-green-600">✓ {addressLookupResult} — kollektivtrafik och närområde ifyllt</p>
+              <p className="text-xs mt-1 text-slate-600">{addressLookupResult} — kollektivtrafik och närområde ifyllt</p>
             )}
             <FormMessage />
           </FormItem>
@@ -311,11 +311,11 @@ export function EssentialFieldsSection({
                 <button
                   type="button"
                   onClick={() => field.onChange(!field.value)}
-                  className={`px-3.5 py-2 text-xs rounded-lg border transition-all font-medium w-full ${
+                  className={`px-3.5 py-2 text-xs border transition-all font-medium w-full ${
                     field.value ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"
                   }`}
                 >
-                  {field.value ? "✓ Hiss" : "Hiss"}
+                  {field.value ? "Hiss: Ja" : "Hiss: Nej"}
                 </button>
               </FormControl>
             </FormItem>

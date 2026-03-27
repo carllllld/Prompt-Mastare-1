@@ -14,13 +14,13 @@ interface ImportSectionProps {
 
 export function ImportSection({ onHemnetImport, onVitecImport, isPro }: ImportSectionProps) {
   return (
-    <div className="border-l-4 border-green-500 bg-green-50 rounded-r-lg p-4 mb-6">
+    <div className="border-l-4 border-slate-400 bg-slate-50 p-4 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <Zap className="w-5 h-5 text-green-600" />
-        <h3 className="font-semibold text-green-900">Snabb väg - Importera objektdata</h3>
+        <Zap className="w-5 h-5 text-slate-600" />
+        <h3 className="font-semibold text-slate-900">Snabb väg - Importera objektdata</h3>
       </div>
       
-      <p className="text-sm text-green-700 mb-4">
+      <p className="text-sm text-slate-700 mb-4">
         Spara tid genom att importera från Hemnet eller Vitec. Formuläret fylls i automatiskt.
       </p>
       

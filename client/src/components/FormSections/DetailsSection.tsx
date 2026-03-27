@@ -11,33 +11,33 @@ interface DetailsSectionProps {
 
 const colorConfig = {
   blue: {
-    border: "#CBD5E1",
-    bg: "#F8FAFC",
-    text: "#475569",
+    border: "#D1D5DB",
+    bg: "#F3F4F6",
+    text: "#4B5563",
     badge: "bg-slate-100 text-slate-600",
   },
   gold: {
-    border: "#E2E8F0",
-    bg: "#FAFAF9",
-    text: "#64748B",
+    border: "#D1D5DB",
+    bg: "#F3F4F6",
+    text: "#4B5563",
     badge: "bg-slate-100 text-slate-600",
   },
   green: {
     border: "#D1D5DB",
-    bg: "#F9FAFB",
-    text: "#6B7280",
+    bg: "#F3F4F6",
+    text: "#4B5563",
     badge: "bg-slate-100 text-slate-600",
   },
   purple: {
-    border: "#E5E7EB",
-    bg: "#FAFBFC",
-    text: "#6B7280",
+    border: "#D1D5DB",
+    bg: "#F3F4F6",
+    text: "#4B5563",
     badge: "bg-slate-100 text-slate-600",
   },
   gray: {
-    border: "#E5E7EB",
-    bg: "#F9FAFB",
-    text: "#6B7280",
+    border: "#D1D5DB",
+    bg: "#F3F4F6",
+    text: "#4B5563",
     badge: "bg-slate-100 text-slate-600",
   },
 };
@@ -81,34 +81,31 @@ export function DetailsSection({
   const config = colorConfig[color];
 
   return (
-    <div className="pro-section-card border-l-4" style={{ borderLeftColor: config.border }}>
+    <div className="border" style={{ borderColor: config.border, backgroundColor: isExpanded ? config.bg : "transparent" }}>
       <button
         type="button"
         onClick={handleToggle}
-        className="w-full flex items-center justify-between p-3 rounded-lg transition-all"
-        style={{ backgroundColor: isExpanded ? config.bg : "transparent" }}
+        className="w-full flex items-center justify-between p-2 transition-all text-left"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: config.text }}>
-            {title}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: config.text }}>
+          {title}
+        </span>
+        <div className="flex items-center gap-1">
           {!isExpanded && (
-            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${config.badge}`}>
+            <span className="text-xs px-1.5 py-0.5" style={{ color: config.text, backgroundColor: config.bg }}>
               Valfritt
             </span>
           )}
           {isExpanded ? (
-            <ChevronUp className="w-4 h-4" style={{ color: config.text }} />
+            <ChevronUp className="w-3 h-3" style={{ color: config.text }} />
           ) : (
-            <ChevronDown className="w-4 h-4" style={{ color: config.text }} />
+            <ChevronDown className="w-3 h-3" style={{ color: config.text }} />
           )}
         </div>
       </button>
 
       {isExpanded && (
-        <div className="mt-3 pt-3 border-t" style={{ borderTopColor: config.bg }}>
+        <div className="p-2 border-t" style={{ borderTopColor: config.border }}>
           {children}
         </div>
       )}

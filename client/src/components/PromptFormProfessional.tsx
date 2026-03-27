@@ -539,7 +539,7 @@ function FieldImpactBadge({ impacts, examples }: FieldImpactBadgeProps) {
               <p className="text-xs font-semibold mb-1">Påverkar:</p>
               <ul className="text-xs space-y-0.5">
                 {examples.map((example, i) => (
-                  <li key={i}>• {example}</li>
+                  <li key={i}>{example}</li>
                 ))}
               </ul>
             </TooltipContent>
@@ -1389,15 +1389,15 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
 
-          <div className="mb-1 rounded-xl border px-4 py-3.5 pro-muted-panel">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-success-bg text-success">
-                <CheckCircle2 className="w-4 h-4" />
+          <div className="mb-1 border px-3 py-2 bg-slate-50">
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 bg-slate-200 text-slate-600 text-xs">
+                i
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">Skriv det som faktiskt höjer kvaliteten i en publicerbar objektsbeskrivning</p>
-                <p className="text-xs mt-1 text-muted-foreground">
-                  Prioritera skick, större renoveringar, planlösning, läge och det som avviker positivt från standard. Saker som oftast är standard ska bara nämnas om de faktiskt är särskiljande för objektet.
+                <p className="text-xs font-semibold text-slate-900">Skriv det som faktiskt höjer kvaliteten</p>
+                <p className="text-xs mt-0.5 text-slate-600">
+                  Prioritera skick, större renoveringar, planlösning, läge och det som avviker positivt från standard.
                 </p>
               </div>
             </div>
@@ -1427,10 +1427,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   ["Särskiljande styrkor", hasStrongDifferentiator],
                   ["Planlösning/skick", Boolean(layoutValue?.trim() || conditionValue?.trim())],
                 ].map(([label, done]) => (
-                  <div key={String(label)} className={`flex items-center gap-2 rounded-lg px-3 py-2 ${done ? 'bg-success-bg text-success' : 'bg-muted text-muted-foreground'}`}>
-                    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold ${done ? 'bg-success-bg text-success' : 'bg-muted text-muted-foreground'}`}>
-                      {done ? "✓" : "•"}
-                    </div>
+                  <div key={String(label)} className={`flex items-center gap-2 px-2 py-1.5 text-xs ${done ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'}`}>
+                    <span className={`w-3 h-3 ${done ? 'bg-slate-400' : 'bg-slate-300'}`}></span>
                     <span>{label}</span>
                   </div>
                 ))}
@@ -1569,8 +1567,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
           {/* ── SECTION 4: SÄLJPUNKTER (prominent!) ── */}
           <div className="pro-section-card">
-            <label className="text-xs font-semibold uppercase tracking-wider block mb-1 text-success">
-              ★ Vad gör objektet speciellt?
+            <label className="text-xs font-semibold uppercase tracking-wider block mb-1 text-slate-700">
+              Vad gör objektet speciellt?
             </label>
             <p className="text-[10px] text-gray-400 mb-3">
               Det här påverkar textens styrka mest. Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.

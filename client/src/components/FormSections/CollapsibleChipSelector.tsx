@@ -38,7 +38,7 @@ export function CollapsibleChipSelector({
               key={chip}
               type="button"
               onClick={() => onToggle(chip)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-all font-medium ${
+              className={`px-3 py-1.5 text-xs border transition-all font-medium ${
                 isSelected
                   ? "bg-primary text-primary-foreground border-primary"
                   : "bg-background text-foreground border-input hover:border-primary hover:bg-accent"

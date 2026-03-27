@@ -29,7 +29,7 @@ export function ProgressIndicator({ items, onItemClick }: ProgressIndicatorProps
           </span>
           <span className="text-xs font-bold text-primary">{percentage}%</span>
         </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-gray-200 overflow-hidden">
           <div
             className="h-full bg-primary transition-all duration-300"
             style={{ width: `${percentage}%` }}
@@ -43,7 +43,7 @@ export function ProgressIndicator({ items, onItemClick }: ProgressIndicatorProps
             key={idx}
             type="button"
             onClick={() => onItemClick?.(idx)}
-            className={`flex items-center gap-2 p-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 p-2 transition-all ${
               item.completed
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
                 : item.priority === "critical"
@@ -66,7 +66,7 @@ export function ProgressIndicator({ items, onItemClick }: ProgressIndicatorProps
         {criticalItems.length > 0 && (
           <>
             {" "}
-            • <span className="font-semibold text-red-600">{criticalCompleted}/{criticalItems.length}</span> kritiska
+            <span className="font-semibold text-red-600">({criticalCompleted}/{criticalItems.length} kritiska)</span>
           </>
         )}
       </div>

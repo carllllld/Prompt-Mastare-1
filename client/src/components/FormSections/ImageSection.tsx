@@ -31,16 +31,16 @@ export function ImageSection({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.add("bg-blue-50", "border-blue-400");
+    e.currentTarget.classList.add("bg-slate-100", "border-slate-400");
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove("bg-blue-50", "border-blue-400");
+    e.currentTarget.classList.remove("bg-slate-100", "border-slate-400");
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    e.currentTarget.classList.remove("bg-blue-50", "border-blue-400");
+    e.currentTarget.classList.remove("bg-slate-100", "border-slate-400");
     const files = Array.from(e.dataTransfer.files || []);
     const imageFiles = files.filter((f) => f.type.startsWith("image/"));
     if (imageFiles.length > 0) {
@@ -49,11 +49,11 @@ export function ImageSection({
   };
 
   return (
-    <div className="pro-section-card border-l-4" style={{ borderLeftColor: "#2563EB" }}>
+    <div className="pro-section-card border-l-4" style={{ borderLeftColor: "#D1D5DB" }}>
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-600">📸 Objektbilder</span>
-          <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-50 text-blue-600">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Objektbilder</span>
+          <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600">
             {uploadedImages.length}/20
           </span>
         </div>
@@ -62,7 +62,7 @@ export function ImageSection({
 
       {/* Upload area */}
       <div
-        className="mb-4 p-6 rounded-lg border-2 border-dashed border-blue-300 bg-blue-50 transition-colors cursor-pointer hover:border-blue-400 hover:bg-blue-100"
+        className="mb-4 p-6 border-2 border-dashed border-slate-300 bg-slate-50 transition-colors cursor-pointer hover:border-slate-400 hover:bg-slate-100"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -77,26 +77,26 @@ export function ImageSection({
           className="hidden"
         />
         <div className="flex flex-col items-center justify-center gap-2">
-          <Upload className="w-6 h-6 text-blue-600" />
+          <Upload className="w-6 h-6 text-slate-600" />
           <div className="text-center">
-            <p className="text-sm font-semibold text-blue-900">Dra bilder här eller klicka för att välja</p>
-            <p className="text-xs text-blue-700 mt-1">Max 20 bilder, upp till 10 MB vardera</p>
+            <p className="text-sm font-semibold text-slate-900">Dra bilder här eller klicka för att välja</p>
+            <p className="text-xs text-slate-700 mt-1">Max 20 bilder, upp till 10 MB vardera</p>
           </div>
         </div>
       </div>
 
       {/* Upload progress */}
       {imageUploadProgress && (
-        <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200">
+        <div className="mb-4 p-3 bg-slate-50 border border-slate-300">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-blue-700">Laddar upp bilder...</span>
-            <span className="text-xs font-bold text-blue-600">
+            <span className="text-xs font-semibold text-slate-700">Laddar upp bilder...</span>
+            <span className="text-xs font-bold text-slate-600">
               {imageUploadProgress.current}/{imageUploadProgress.total}
             </span>
           </div>
-          <div className="w-full h-2 bg-blue-200 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-slate-300 overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all duration-300"
+              className="h-full bg-slate-600 transition-all duration-300"
               style={{ width: `${(imageUploadProgress.current / imageUploadProgress.total) * 100}%` }}
             />
           </div>
@@ -123,7 +123,7 @@ export function ImageSection({
             onClick={onFromHemnet}
             className="flex-1 text-xs"
           >
-            🏠 Från Hemnet
+            Från Hemnet
           </Button>
         )}
       </div>
@@ -136,16 +136,16 @@ export function ImageSection({
               <img
                 src={image}
                 alt={`Bild ${idx + 1}`}
-                className="w-full h-20 object-cover rounded-lg border border-blue-200"
+                className="w-full h-20 object-cover border border-slate-300"
               />
               <button
                 type="button"
                 onClick={() => onImageRemoved(idx)}
-                className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 p-1 bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="w-3 h-3" />
               </button>
-              <span className="absolute bottom-1 right-1 text-xs font-bold bg-black/50 text-white px-1.5 py-0.5 rounded">
+              <span className="absolute bottom-1 right-1 text-xs font-bold bg-black/50 text-white px-1.5 py-0.5">
                 {idx + 1}
               </span>
             </div>
