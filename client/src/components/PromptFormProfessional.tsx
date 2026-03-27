@@ -1980,7 +1980,36 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
               {isPro ? (
                 <>
-                  <div className="border border-dashed border-border rounded-lg p-3 text-center transition-colors hover:border-muted-foreground">
+                  <div
+                    className="border border-dashed border-border rounded-lg p-3 text-center transition-colors hover:border-muted-foreground"
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = "#2D6A4F"; }}
+                    onDragLeave={(e) => { e.currentTarget.style.borderColor = ""; }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.borderColor = "";
+                      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+                      files.forEach((file) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setUploadedImages((prev) => prev.length < 5 ? [...prev, reader.result as string] : prev);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    onPaste={(e) => {
+                      const items = Array.from(e.clipboardData.items).filter(i => i.type.startsWith("image/"));
+                      items.forEach((item) => {
+                        const file = item.getAsFile();
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setUploadedImages((prev) => prev.length < 5 ? [...prev, reader.result as string] : prev);
+                        };
+                        reader.readAsDataURL(file);
+                      });
+                    }}
+                    tabIndex={0}
+                  >
                     <Input
                       type="file"
                       accept="image/*"
@@ -1992,15 +2021,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                         files.forEach((file) => {
                           const reader = new FileReader();
                           reader.onloadend = () => {
-                            setUploadedImages((prev) => [...prev, reader.result as string]);
+                            setUploadedImages((prev) => prev.length < 5 ? [...prev, reader.result as string] : prev);
                           };
                           reader.readAsDataURL(file);
                         });
                       }}
                     />
-                    <label htmlFor="image-upload" className="cursor-pointer flex items-center justify-center gap-2 text-xs text-gray-500">
+                    <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center gap-1 text-xs text-gray-500">
                       <Plus className="w-3.5 h-3.5" />
-                      Ladda upp bilder
+                      <span>Ladda upp, dra hit eller klistra in bilder</span>
+                      <span className="text-gray-400">Ctrl+V fungerar när rutan är aktiv</span>
                     </label>
                   </div>
                   {uploadedImages.length > 0 && (
