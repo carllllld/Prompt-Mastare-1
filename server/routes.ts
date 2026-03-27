@@ -36,7 +36,34 @@ const pipelineObservability = {
 };
 
 // Rate limiting for /api/optimize (per user, per minute)
-// Note: checkOptimizeRateLimit is defined elsewhere in this file
+const optimizeRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
+  const now = Date.now();
+  let limit = optimizeRateLimits.get(userId);
+
+  if (!limit) {
+    // First request - set up new limit
+    optimizeRateLimits.set(userId, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+
+  // Check if minute window has expired
+  if (now > limit.resetAt) {
+    // Reset for new minute
+    optimizeRateLimits.set(userId, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+
+  // Check if limit exceeded (10 requests per minute)
+  if (limit.count >= 10) {
+    return false;
+  }
+
+  // Increment and allow
+  limit.count++;
+  return true;
+}
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",

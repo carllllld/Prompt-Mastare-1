@@ -11,6 +11,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { validateRequiredFields, getFieldLabel, type PropertyType, type Platform } from "@/lib/form-validation";
 import { HemnetImportButton, VitecImportPicker } from "@/components/IntegrationsPanel";
+import { EssentialFieldsSection } from "@/components/FormSections/EssentialFieldsSection";
+import { ImageSection } from "@/components/FormSections/ImageSection";
+import { DetailsSection } from "@/components/FormSections/DetailsSection";
+import { CollapsibleChipSelector } from "@/components/FormSections/CollapsibleChipSelector";
+import { ProgressIndicator } from "@/components/FormSections/ProgressIndicator";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -545,6 +550,164 @@ function FieldImpactBadge({ impacts, examples }: FieldImpactBadgeProps) {
   );
 }
 
+// ── SECTION COMPONENT: Collapsible section with color coding ──
+interface SectionProps {
+  title: string;
+  icon?: React.ReactNode;
+  color: 'red' | 'blue' | 'gold' | 'green' | 'purple' | 'gray';
+  defaultExpanded?: boolean;
+  persistKey?: string;
+  children: React.ReactNode;
+  helpText?: string;
+  badge?: React.ReactNode;
+}
+
+function Section({ title, icon, color, defaultExpanded = true, persistKey, children, helpText, badge }: SectionProps) {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (!persistKey) return defaultExpanded;
+    try {
+      const saved = localStorage.getItem(`section-${persistKey}`);
+      return saved !== null ? saved === 'true' : defaultExpanded;
+    } catch {
+      return defaultExpanded;
+    }
+  });
+
+  const toggleExpanded = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    if (persistKey) {
+      try {
+        localStorage.setItem(`section-${persistKey}`, String(newState));
+      } catch {}
+    }
+  };
+
+  const colorClasses = {
+    red: 'bg-red-50 border-red-200',
+    blue: 'bg-blue-50 border-blue-200',
+    gold: 'bg-amber-50 border-amber-200',
+    green: 'bg-green-50 border-green-200',
+    purple: 'bg-purple-50 border-purple-200',
+    gray: 'bg-gray-50 border-gray-200',
+  };
+
+  const colorAccent = {
+    red: 'text-red-700',
+    blue: 'text-blue-700',
+    gold: 'text-amber-700',
+    green: 'text-green-700',
+    purple: 'text-purple-700',
+    gray: 'text-gray-700',
+  };
+
+  return (
+    <div className={`rounded-lg border p-4 ${colorClasses[color]}`}>
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
+      >
+        <div className="flex items-center gap-2">
+          {icon && <span className={colorAccent[color]}>{icon}</span>}
+          <h3 className={`text-sm font-semibold ${colorAccent[color]}`}>{title}</h3>
+          {badge && <div className="ml-auto">{badge}</div>}
+        </div>
+        {isExpanded ? (
+          <ChevronUp className={`w-4 h-4 ${colorAccent[color]}`} />
+        ) : (
+          <ChevronDown className={`w-4 h-4 ${colorAccent[color]}`} />
+        )}
+      </button>
+
+      {helpText && isExpanded && (
+        <p className="text-xs text-gray-600 mb-3">{helpText}</p>
+      )}
+
+      {isExpanded && <div className="space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+// ── SECTION COMPONENT: Collapsible section with color coding ──
+interface SectionProps {
+  title: string;
+  icon?: React.ReactNode;
+  color: 'red' | 'blue' | 'gold' | 'green' | 'purple' | 'gray';
+  defaultExpanded?: boolean;
+  persistKey?: string;
+  children: React.ReactNode;
+  helpText?: string;
+  badge?: React.ReactNode;
+}
+
+function Section({ title, icon, color, defaultExpanded = true, persistKey, children, helpText, badge }: SectionProps) {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (!persistKey) return defaultExpanded;
+    try {
+      const saved = localStorage.getItem(`section-${persistKey}`);
+      return saved !== null ? saved === 'true' : defaultExpanded;
+    } catch {
+      return defaultExpanded;
+    }
+  });
+
+  const toggleExpanded = () => {
+    const newState = !isExpanded;
+    setIsExpanded(newState);
+    if (persistKey) {
+      try {
+        localStorage.setItem(`section-${persistKey}`, String(newState));
+      } catch {}
+    }
+  };
+
+  const colorClasses = {
+    red: 'bg-red-50 border-red-200',
+    blue: 'bg-blue-50 border-blue-200',
+    gold: 'bg-amber-50 border-amber-200',
+    green: 'bg-green-50 border-green-200',
+    purple: 'bg-purple-50 border-purple-200',
+    gray: 'bg-gray-50 border-gray-200',
+  };
+
+  const colorAccent = {
+    red: 'text-red-700',
+    blue: 'text-blue-700',
+    gold: 'text-amber-700',
+    green: 'text-green-700',
+    purple: 'text-purple-700',
+    gray: 'text-gray-700',
+  };
+
+  return (
+    <div className={`rounded-lg border p-4 ${colorClasses[color]}`}>
+      <button
+        type="button"
+        onClick={toggleExpanded}
+        className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
+      >
+        <div className="flex items-center gap-2">
+          {icon && <span className={colorAccent[color]}>{icon}</span>}
+          <h3 className={`text-sm font-semibold ${colorAccent[color]}`}>{title}</h3>
+          {badge && <div className="ml-auto">{badge}</div>}
+        </div>
+        {isExpanded ? (
+          <ChevronUp className={`w-4 h-4 ${colorAccent[color]}`} />
+        ) : (
+          <ChevronDown className={`w-4 h-4 ${colorAccent[color]}`} />
+        )}
+      </button>
+
+      {helpText && isExpanded && (
+        <p className="text-xs text-gray-600 mb-3">{helpText}</p>
+      )}
+
+      {isExpanded && <div className="space-y-3">{children}</div>}
+    </div>
+  );
+}
+
 export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = false }: PromptFormProps) {
   const { toast } = useToast();
 
@@ -561,7 +724,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [materialChips, setMaterialChips] = useState<string[]>([]);
 
   // UI state
-  const [showDetails, setShowDetails] = useState(false);
   const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
 
@@ -1197,7 +1359,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       if (data.transport) form.setValue("transport", data.transport);
       if (data.neighborhood) form.setValue("neighborhood", data.neighborhood);
       setAddressLookupResult(`${data.places?.length || 0} platser hittade`);
-      if (!showDetails) setShowDetails(true);
     } catch (err) {
       console.error("Address lookup failed:", err);
       setAddressLookupResult("Kunde inte slå upp adressen");
@@ -1321,8 +1482,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
           </div>
 
-          {/* Priority Checklist */}
-          <PriorityChecklist items={priorityItems} onItemClick={handleScrollToField} />
+          {/* Progress Indicator */}
+          <ProgressIndicator items={priorityItems} onItemClick={(idx) => handleScrollToField(priorityItems[idx].fieldName)} />
 
           <div className="mb-5 grid grid-cols-1 xl:grid-cols-[1.3fr_0.9fr] gap-3">
             <div className="pro-section-card">
@@ -1408,246 +1569,47 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
           </div>
 
-          {/* ── SECTION 2: GRUNDFAKTA ── */}
-          <div className="pro-section-card">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Grundfakta
-                </label>
-                <p className="text-xs mt-1 text-muted-foreground">Det här är basen för hela objektbeskrivningen. Fyll i detta först för bäst resultat.</p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-warning-bg text-warning">
-                <div className="w-3 h-3 rounded-full border-2 border-warning" />
-                Högst prioritet
-              </div>
-            </div>
+          {/* ── SECTION 2: ESSENTIELL INFORMATION (NEW COMPONENT) ── */}
+          <EssentialFieldsSection
+            form={form}
+            isApartmentType={isApartmentType}
+            isHouseOrTownhouseType={isHouseOrTownhouseType}
+            rooms={rooms}
+            bedrooms={bedrooms}
+            bathrooms={bathrooms}
+            setRooms={setRooms}
+            setBedrooms={setBedrooms}
+            setBathrooms={setBathrooms}
+            addressLookupLoading={addressLookupLoading}
+            addressLookupResult={addressLookupResult}
+            onAddressLookup={handleAddressLookup}
+            priorityCompleted={priorityCompleted}
+            priorityTotal={priorityItems.length}
+          />
 
-            {/* Import from Hemnet or Vitec */}
-            <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed" style={{ borderColor: "#2D6A4F", background: "#F0FDF4" }}>
-              <div className="w-full flex items-center gap-1.5 mb-1">
-                <span className="text-xs font-semibold" style={{ color: "#2D6A4F" }}>Importera objektdata automatiskt</span>
-                <span className="text-xs" style={{ color: "#6B7280" }}>— slipper fylla i formuläret manuellt</span>
-              </div>
-              <HemnetImportButton onImport={handleExternalImport} />
-              <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
-              {!isPro && (
-                <span className="text-xs self-center" style={{ color: "#9CA3AF" }}>Vitec-import kräver Pro</span>
-              )}
+          {/* Import buttons wrapper for integration */}
+          <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed" style={{ borderColor: "#2D6A4F", background: "#F0FDF4" }}>
+            <div className="w-full flex items-center gap-1.5 mb-1">
+              <span className="text-xs font-semibold" style={{ color: "#2D6A4F" }}>🏠 Importera objektdata automatiskt</span>
+              <span className="text-xs" style={{ color: "#6B7280" }}>— slipper fylla i formuläret manuellt</span>
             </div>
-
-            {/* Address + Area */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
-                  <div className="flex gap-2">
-                    <FormControl><Input placeholder="Ex: Karlavägen 12, 114 31 Stockholm" {...field} className={`${exampleInputClass} flex-1`} /></FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={addressLookupLoading || !field.value}
-                      className="h-10 text-xs px-3 whitespace-nowrap border-input text-primary disabled:text-muted-foreground"
-                      onClick={() => handleAddressLookup(field.value)}
-                    >
-                      {addressLookupLoading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <><MapPin className="w-3.5 h-3.5 mr-1" />Sök läge</>
-                      )}
-                    </Button>
-                  </div>
-                  {addressLookupResult && (
-                    <p className="text-xs mt-1 text-success">
-                      ✓ {addressLookupResult} — kollektivtrafik och närområde ifyllt
-                    </p>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Stadsdel / Område *</FormLabel>
-                  <FormControl><Input placeholder="Ex: Vasastan, Linnéstaden eller Centrala Sundbyberg" {...field} className={exampleInputClass} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
-            {/* Size + Price + Fee */}
-            <div className="grid grid-cols-3 gap-3 mt-3">
-              <FormField control={form.control} name="livingArea" rules={{ required: "Ange boarea" }} render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Boarea (kvm) *</FormLabel>
-                  <FormControl><Input type="number" placeholder="Ex: 84" {...field} className={exampleInputClass} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="price" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Pris (kr)</FormLabel>
-                  <FormControl><Input type="number" placeholder="Ex: 4 495 000" {...field} className={exampleInputClass} /></FormControl>
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="monthlyFee" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">
-                    {isApartmentType ? "Avgift (kr/mån)" : "Driftskostnad (kr/år)"}
-                  </FormLabel>
-                  <FormControl><Input type="number" placeholder={isApartmentType ? "Ex: 3 842" : "Ex: 39 600"} {...field} className={exampleInputClass} /></FormControl>
-                </FormItem>
-              )} />
-            </div>
-
-            {/* Rooms — number steppers + Condition */}
-            <div className="flex items-end gap-6 mt-4">
-              <NumberStepper label="Rum" value={rooms} onChange={setRooms} min={1} max={15} />
-              <NumberStepper label="Sovrum" value={bedrooms} onChange={setBedrooms} min={0} max={10} />
-              <NumberStepper label="Badrum" value={bathrooms} onChange={setBathrooms} min={1} max={6} />
-              <div className="flex-1">
-                <FormField control={form.control} name="condition" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Skick</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent className="bg-white border border-input shadow-lg">
-                        {PROPERTY_CONDITIONS.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )} />
-              </div>
-            </div>
-
-            {/* Apartment-specific: Floor, BRF, BuildYear, Elevator */}
-            {isApartmentType && (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                  <FormField control={form.control} name="floor" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Våning</FormLabel>
-                      <FormControl><Input placeholder="Ex: 3 av 5" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="brfName" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">BRF-namn</FormLabel>
-                      <FormControl><Input placeholder="Ex: Brf Lokstallet 7" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="buildYear" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                      <FormControl><Input type="number" placeholder="Ex: 1998" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="elevator" render={({ field }) => (
-                    <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
-                      <FormControl>
-                        <button
-                          type="button"
-                          onClick={() => field.onChange(!field.value)}
-                          className={`px-3.5 py-2 text-xs rounded-lg border transition-all font-medium ${
-                            field.value 
-                              ? 'bg-primary text-primary-foreground border-primary' 
-                              : 'bg-background text-muted-foreground border-input'
-                          }`}
-                        >
-                          {field.value ? "✓ Hiss" : "Hiss"}
-                        </button>
-                      </FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-              </>
+            <HemnetImportButton onImport={handleExternalImport} />
+            <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+            {!isPro && (
+              <span className="text-xs self-center" style={{ color: "#9CA3AF" }}>Vitec-import kräver Pro</span>
             )}
-
-            {/* House/Villa/Radhus-specific */}
-            {isHouseOrTownhouseType && (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                  <FormField control={form.control} name="buildYear" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Byggår</FormLabel>
-                      <FormControl><Input type="number" placeholder="Ex: 1987" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="floors" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Antal plan</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white border border-input shadow-lg">
-                          {PROPERTY_FLOORS_OPTIONS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="lotArea" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Tomtarea (kvm)</FormLabel>
-                      <FormControl><Input type="number" placeholder="Ex: 824" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="biarea" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Biarea (kvm)</FormLabel>
-                      <FormControl><Input type="number" placeholder="Ex: 38" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-              </>
-            )}
-
-            {/* Balcony toggle + details */}
-            <div className="mt-3 flex items-start gap-4">
-              <button
-                type="button"
-                onClick={() => setHasBalcony(!hasBalcony)}
-                className={`px-3.5 py-2 text-xs rounded-lg border transition-all font-medium shrink-0 mt-5 ${
-                  hasBalcony 
-                    ? 'bg-primary text-primary-foreground border-primary' 
-                    : 'bg-background text-muted-foreground border-input'
-                }`}
-              >
-                {hasBalcony ? "✓ Balkong/Uteplats" : "Balkong/Uteplats"}
-              </button>
-              {hasBalcony && (
-                <div className="flex gap-3 flex-1">
-                  <FormField control={form.control} name="balconyArea" render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs text-gray-500">Storlek (kvm)</FormLabel>
-                      <FormControl><Input type="number" placeholder="Ex: 7" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="balconyDirection" render={({ field }) => (
-                    <FormItem className="flex-1">
-                      <FormLabel className="text-xs text-gray-500">Väderstreck</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white border border-input shadow-lg">
-                          {BALCONY_DIRECTIONS.map((dir) => <SelectItem key={dir} value={dir}>{dir}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                </div>
-              )}
-            </div>
-
-            {/* Tillträdesdag — all property types */}
-            <div className="mt-3">
-              <FormField control={form.control} name="tilltradesdag" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs text-gray-500">Tillträdesdag</FormLabel>
-                  <FormControl><Input placeholder="Ex: Enligt överenskommelse eller snabbt tillträde möjligt" {...field} className={exampleInputClass} /></FormControl>
-                </FormItem>
-              )} />
-            </div>
           </div>
+
+          {/* ── SECTION 2.5: OBJEKTBILDER (NEW COMPONENT) ── */}
+          <ImageSection
+            uploadedImages={uploadedImages}
+            onImagesAdded={processImageFiles}
+            onImageRemoved={(idx) => setUploadedImages(uploadedImages.filter((_, i) => i !== idx))}
+            imageUploadProgress={imageUploadProgress}
+            onFromHemnet={() => {
+              toast({ title: "Hemnet-import", description: "Kommer snart", variant: "default" });
+            }}
+          />
 
           {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
           <div className="pro-section-card">
@@ -1658,7 +1620,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               {/* Kitchen chips */}
               <div>
                 <span className="text-xs text-gray-500 font-medium block mb-2" id="kitchen-label">Kök — välj det som stämmer</span>
-                <ChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} variant="kitchen" tooltips={KITCHEN_TOOLTIPS} id="kitchen-chips" />
+                <CollapsibleChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} tooltips={KITCHEN_TOOLTIPS} maxInitialChips={4} />
                 <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
                   <FormItem className="mt-2">
                     <p className="text-[10px] text-gray-400 mb-1">Komplettera bara chipsen med sådant som ger bättre text, till exempel material, fabrikat eller årtal.</p>
@@ -1671,7 +1633,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               {/* Bathroom chips */}
               <div>
                 <span className="text-xs text-gray-500 font-medium block mb-2" id="bathroom-label">Badrum — välj det som stämmer</span>
-                <ChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} variant="bathroom" tooltips={BATHROOM_TOOLTIPS} id="bathroom-chips" />
+                <CollapsibleChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} tooltips={BATHROOM_TOOLTIPS} maxInitialChips={4} />
                 <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
                   <FormItem className="mt-2">
                     <p className="text-[10px] text-gray-400 mb-1">Lägg bara till fakta som inte redan täcks av chipsen, till exempel årtal, tvättdel eller materialval.</p>
@@ -1692,7 +1654,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <p className="text-[10px] text-gray-400 mb-3">
               Det här påverkar textens styrka mest. Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
             </p>
-            <ChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} variant="usp" tooltips={USP_TOOLTIPS} id="usp-chips" />
+            <CollapsibleChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} tooltips={USP_TOOLTIPS} maxInitialChips={4} />
             <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
               <FormItem className="mt-2">
                 <FormControl>
@@ -1723,159 +1685,194 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             )} />
           </div>
 
-          {/* ── SECTION 6: MER DETALJER (expandable) ── */}
-          <div className="pro-section-card">
-            <p className="text-[10px] text-gray-400 mb-2">
-              Detaljerna här fungerar främst som kontext. De skrivs ut i huvudtexten när de stärker beslutsvärdet.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowDetails(!showDetails)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${
-                showDetails 
-                  ? 'bg-success-bg border-success' 
-                  : 'bg-background border-border'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-semibold ${showDetails ? 'text-success' : 'text-foreground'}`}>Material, läge &amp; fler detaljer</span>
-                {!showDetails && (
-                  <span className="text-xs text-muted-foreground">— golv, uppvärmning, parkering, utsikt och mer</span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5">
-                {!showDetails && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                    Bra att ha
-                  </span>
-                )}
-                <span className={`text-xs font-semibold ${showDetails ? 'text-success' : 'text-muted-foreground'}`}>
-                  {showDetails ? "Dölj" : "Lägg till"}
-                </span>
-                {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </button>
-
-            {showDetails && (
-              <div className="mt-3 pb-1 space-y-4 pro-muted-panel p-4">
-                {/* Flooring chips */}
-                <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2" id="flooring-label">Golv</span>
-                  <ChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} id="flooring-chips" />
-                  <FormField control={form.control} name="flooring" render={({ field }) => (
-                    <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Ex: Enstavsparkett i vardagsrum och sovrum, klinker med golvvärme i hall och badrum" {...field} className={exampleCompactInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-
-                {/* Heating chips — chip-only (Task 5.5) */}
-                <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2" id="heating-label">Uppvärmning</span>
-                  <p className="text-[10px] text-gray-400 mb-1">Välj den primära uppvärmningskällan. Kombinationer som fjärrvärme + golvvärme är vanliga.</p>
-                  <ChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} id="heating-chips" tooltips={HEATING_TOOLTIPS} />
-                </div>
-
-                {/* Special features chips — consolidated with otherInfo (Task 5.1, 5.3) */}
-                <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2" id="special-label">Särskilda egenskaper</span>
-                  <p className="text-[10px] text-gray-400 mb-1">Välj sådant som inte redan täcks av kök, badrum, parkering eller trädgård. Inkludera även renoveringar och tekniska uppgraderingar här.</p>
-                  <ChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} id="special-chips" tooltips={SPECIAL_TOOLTIPS} />
-                  <FormField control={form.control} name="specialFeatures" render={({ field }) => (
-                    <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Ex: Stambyte 2017, nya 3-glasfönster 2021, kakelugn, platsbyggd förvaring" {...field} className={exampleCompactInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-
-                {/* House/Villa/Radhus: Garden chips */}
-                {isHouseOrTownhouseType && (
-                  <div>
-                    <span className="text-xs text-gray-500 font-medium block mb-2" id="garden-label">Trädgård & uteplats</span>
-                    <ChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} id="garden-chips" tooltips={GARDEN_TOOLTIPS} />
-                    <FormField control={form.control} name="gardenDescription" render={({ field }) => (
-                      <FormItem className="mt-2">
-                        <FormControl><Input placeholder="Ex: Plan trädgårdstomt med häck, äppelträd, odlingslådor och stor altan i västerläge" {...field} className={exampleCompactInputClass} /></FormControl>
-                      </FormItem>
-                    )} />
-                  </div>
-                )}
-
-                {/* View + Transport */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <FormField control={form.control} name="view" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Utsikt <span className="text-gray-400 font-normal">(används även som USP)</span></FormLabel>
-                      <FormControl><Input placeholder="Ex: Fri utsikt över park, grönska och takåsar" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="transport" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
-                      <FormControl><Input placeholder="Ex: Cirka 4 min promenad till tunnelbana och buss runt hörnet" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-
-                {/* Neighborhood */}
-                <FormField control={form.control} name="neighborhood" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs text-gray-500">Områdesbeskrivning</FormLabel>
-                    <FormControl><Input placeholder="Ex: Närhet till mataffärer, caféer, förskola, gym och grönområden inom några minuters promenad" {...field} className={exampleInputClass} /></FormControl>
+          {/* ── SECTION 6: OPTIONAL DETAILS (wrapped in DetailsSection components) ── */}
+          
+          {/* Flooring section */}
+          <DetailsSection
+            title="Golv & Material"
+            icon="🏠"
+            color="gold"
+            persistKey="flooring-section"
+          >
+            <div className="space-y-3">
+              <div>
+                <span className="text-xs text-gray-500 font-medium block mb-2" id="flooring-label">Golvtyp</span>
+                <CollapsibleChipSelector chips={FLOORING_CHIPS} selected={flooringChips} onToggle={(c) => toggleChip(flooringChips, setFlooringChips, c)} maxInitialChips={4} />
+                <FormField control={form.control} name="flooring" render={({ field }) => (
+                  <FormItem className="mt-2">
+                    <FormControl><Input placeholder="Ex: Enstavsparkett i vardagsrum och sovrum, klinker med golvvärme i hall och badrum" {...field} className={exampleCompactInputClass} /></FormControl>
                   </FormItem>
                 )} />
-
-                {/* Energy & Storage */}
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField control={form.control} name="energyClass" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
-                        <SelectContent className="bg-white border border-input shadow-lg">
-                          {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="storage" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-gray-500">Förråd</FormLabel>
-                      <FormControl><Input placeholder="Ex: Källarförråd om cirka 6 kvm samt matkällare" {...field} className={exampleInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-
-                {/* Parking chips */}
-                <div>
-                  <span className="text-xs text-gray-500 font-medium block mb-2" id="parking-label">Parkering</span>
-                  <p className="text-[10px] text-gray-400 mb-1">Laddbox och garageinfo ska ligga här för att undvika dubbla formuleringar i texten.</p>
-                  <ChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} id="parking-chips" tooltips={PARKING_TOOLTIPS} />
-                  <FormField control={form.control} name="parking" render={({ field }) => (
-                    <FormItem className="mt-2">
-                      <FormControl><Input placeholder="Ex: Isolerat garage med laddbox samt uppfart med plats för två bilar" {...field} className={exampleCompactInputClass} /></FormControl>
-                    </FormItem>
-                  )} />
-                </div>
-
-                {/* House/Villa/Radhus: Building material + roof type */}
-                {isHouseOrTownhouseType && (
-                  <>
-                    <div>
-                      <span className="text-xs text-gray-500 font-medium block mb-2" id="material-label">Byggnadsmaterial</span>
-                      <ChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} id="material-chips" tooltips={MATERIAL_TOOLTIPS} />
-                    </div>
-                    <div>
-                      <span className="text-xs text-gray-500 font-medium block mb-2" id="roof-label">Taktyp</span>
-                      <ChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} id="roof-chips" />
-                    </div>
-                  </>
-                )}
-
-                {/* Task 5.1: otherInfo removed — consolidated into specialFeatures */}
               </div>
-            )}
-          </div>
+            </div>
+          </DetailsSection>
+
+          {/* Heating section */}
+          <DetailsSection
+            title="Uppvärmning"
+            icon="🔥"
+            color="gold"
+            persistKey="heating-section"
+          >
+            <div className="space-y-3">
+              <p className="text-[10px] text-gray-400">Välj den primära uppvärmningskällan. Kombinationer som fjärrvärme + golvvärme är vanliga.</p>
+              <CollapsibleChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} tooltips={HEATING_TOOLTIPS} maxInitialChips={4} />
+            </div>
+          </DetailsSection>
+
+          {/* Special features section */}
+          <DetailsSection
+            title="Särskilda Egenskaper"
+            icon="✨"
+            color="gold"
+            persistKey="special-features-section"
+          >
+            <div className="space-y-3">
+              <p className="text-[10px] text-gray-400">Välj sådant som inte redan täcks av kök, badrum, parkering eller trädgård. Inkludera även renoveringar och tekniska uppgraderingar här.</p>
+              <CollapsibleChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} tooltips={SPECIAL_TOOLTIPS} maxInitialChips={4} />
+              <FormField control={form.control} name="specialFeatures" render={({ field }) => (
+                <FormItem>
+                  <FormControl><Input placeholder="Ex: Stambyte 2017, nya 3-glasfönster 2021, kakelugn, platsbyggd förvaring" {...field} className={exampleCompactInputClass} /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+          </DetailsSection>
+
+          {/* Garden section (house/villa/townhouse only) */}
+          {isHouseOrTownhouseType && (
+            <DetailsSection
+              title="Trädgård & Uteplats"
+              icon="🌳"
+              color="green"
+              persistKey="garden-section"
+            >
+              <div className="space-y-3">
+                <CollapsibleChipSelector chips={GARDEN_CHIPS} selected={gardenChips} onToggle={(c) => toggleChip(gardenChips, setGardenChips, c)} tooltips={GARDEN_TOOLTIPS} maxInitialChips={4} />
+                <FormField control={form.control} name="gardenDescription" render={({ field }) => (
+                  <FormItem>
+                    <FormControl><Input placeholder="Ex: Plan trädgårdstomt med häck, äppelträd, odlingslådor och stor altan i västerläge" {...field} className={exampleCompactInputClass} /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            </DetailsSection>
+          )}
+
+          {/* View & Transport section */}
+          <DetailsSection
+            title="Utsikt & Kommunikationer"
+            icon="🌍"
+            color="blue"
+            persistKey="view-transport-section"
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField control={form.control} name="view" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Utsikt <span className="text-gray-400 font-normal">(används även som USP)</span></FormLabel>
+                    <FormControl><Input placeholder="Ex: Fri utsikt över park, grönska och takåsar" {...field} className={exampleInputClass} /></FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="transport" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Kommunikationer</FormLabel>
+                    <FormControl><Input placeholder="Ex: Cirka 4 min promenad till tunnelbana och buss runt hörnet" {...field} className={exampleInputClass} /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            </div>
+          </DetailsSection>
+
+          {/* Neighborhood section */}
+          <DetailsSection
+            title="Områdesbeskrivning"
+            icon="🏘️"
+            color="blue"
+            persistKey="neighborhood-section"
+          >
+            <div className="space-y-3">
+              <FormField control={form.control} name="neighborhood" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs text-gray-500">Närhet till service och aktiviteter</FormLabel>
+                  <FormControl><Input placeholder="Ex: Närhet till mataffärer, caféer, förskola, gym och grönområden inom några minuters promenad" {...field} className={exampleInputClass} /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+          </DetailsSection>
+
+          {/* Energy & Storage section */}
+          <DetailsSection
+            title="Energi & Förvaring"
+            icon="⚡"
+            color="gold"
+            persistKey="energy-storage-section"
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={form.control} name="energyClass" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Energiklass</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Välj..." /></SelectTrigger></FormControl>
+                      <SelectContent className="bg-white border border-input shadow-lg">
+                        {ENERGY_CLASSES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="storage" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs text-gray-500">Förråd</FormLabel>
+                    <FormControl><Input placeholder="Ex: Källarförråd om cirka 6 kvm samt matkällare" {...field} className={exampleInputClass} /></FormControl>
+                  </FormItem>
+                )} />
+              </div>
+            </div>
+          </DetailsSection>
+
+          {/* Parking section */}
+          <DetailsSection
+            title="Parkering"
+            icon="🚗"
+            color="blue"
+            persistKey="parking-section"
+          >
+            <div className="space-y-3">
+              <p className="text-[10px] text-gray-400">Laddbox och garageinfo ska ligga här för att undvika dubbla formuleringar i texten.</p>
+              <CollapsibleChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} tooltips={PARKING_TOOLTIPS} maxInitialChips={4} />
+              <FormField control={form.control} name="parking" render={({ field }) => (
+                <FormItem>
+                  <FormControl><Input placeholder="Ex: Isolerat garage med laddbox samt uppfart med plats för två bilar" {...field} className={exampleCompactInputClass} /></FormControl>
+                </FormItem>
+              )} />
+            </div>
+          </DetailsSection>
+
+          {/* Building material & roof (house/villa/townhouse only) */}
+          {isHouseOrTownhouseType && (
+            <>
+              <DetailsSection
+                title="Byggnadsmaterial"
+                icon="🧱"
+                color="purple"
+                persistKey="material-section"
+              >
+                <div className="space-y-3">
+                  <CollapsibleChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} tooltips={MATERIAL_TOOLTIPS} maxInitialChips={4} />
+                </div>
+              </DetailsSection>
+
+              <DetailsSection
+                title="Taktyp"
+                icon="🏠"
+                color="purple"
+                persistKey="roof-section"
+              >
+                <div className="space-y-3">
+                  <CollapsibleChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} maxInitialChips={4} />
+                </div>
+              </DetailsSection>
+            </>
+          )}
 
           {/* ── SECTION 6b: VISNINGSINFORMATION ── */}
           <div className="pro-section-card">
