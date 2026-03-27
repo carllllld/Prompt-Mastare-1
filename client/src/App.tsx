@@ -23,7 +23,7 @@ function PageSpinner() {
 }
 
 // Lazy load pages for code splitting
-const Home = lazy(() => import("@/pages/HomeClean"));
+const Home = lazy(() => import("@/pages/Home"));
 const Teams = lazy(() => import("@/pages/Teams"));
 const PromptEditor = lazy(() => import("@/pages/PromptEditor"));
 const JoinTeam = lazy(() => import("@/pages/JoinTeam"));
