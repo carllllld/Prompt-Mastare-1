@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearch } from "wouter";
 import { Link, useLocation } from "wouter";
-import { PromptFormProfessionalV2 } from "@/components/PromptFormProfessionalV2";
+import { PromptFormClean } from "@/components/PromptFormClean";
 import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
@@ -476,8 +476,8 @@ export default function Home() {
 
           {/* ── LEFT: Form ── */}
           <div className="lg:col-span-7">
-            <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
-              <PromptFormProfessionalV2
+            <div className="bg-card rounded-xl border p-6 shadow-sm">
+              <PromptFormClean
                 onSubmit={handleSubmit}
                 isPending={isPending}
                 disabled={isAuthenticated && remaining === 0}
