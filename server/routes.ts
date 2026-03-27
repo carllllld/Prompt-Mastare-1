@@ -36,7 +36,7 @@ const pipelineObservability = {
 };
 
 // Rate limiting for /api/optimize (per user, per minute)
-import { checkOptimizeRateLimit } from "./lib/rate-limiter";
+// Note: checkOptimizeRateLimit is defined elsewhere in this file
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
