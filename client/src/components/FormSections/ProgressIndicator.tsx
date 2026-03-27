@@ -1,5 +1,4 @@
 import React from "react";
-import { CheckCircle2, Circle } from "lucide-react";
 
 interface ProgressItem {
   label: string;
@@ -19,56 +18,33 @@ export function ProgressIndicator({ items, onItemClick }: ProgressIndicatorProps
 
   const criticalItems = items.filter((i) => i.priority === "critical");
   const criticalCompleted = criticalItems.filter((i) => i.completed).length;
+  const criticalMissing = criticalItems.length - criticalCompleted;
 
   return (
-    <div className="pro-section-card mb-4">
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Framsteg
+    <div className="bg-white border-b px-4 py-3" style={{ borderColor: "#E8E5DE" }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium" style={{ color: "#4B5563" }}>
+            {completed} av {total} fält ifyllda
           </span>
-          <span className="text-xs font-bold text-primary">{percentage}%</span>
+          {criticalMissing > 0 && (
+            <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "#FEF3C7", color: "#92400E" }}>
+              {criticalMissing} viktiga fält kvar
+            </span>
+          )}
         </div>
-        <div className="w-full h-2 bg-gray-200 overflow-hidden">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${percentage}%` }}
-          />
+        <div className="flex items-center gap-2">
+          <div className="w-32 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all duration-300"
+              style={{ 
+                width: `${percentage}%`,
+                background: "#2D6A4F"
+              }}
+            />
+          </div>
+          <span className="text-xs font-semibold text-gray-600 w-10 text-right">{percentage}%</span>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-        {items.map((item, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => onItemClick?.(idx)}
-            className={`flex items-center gap-2 p-2 transition-all ${
-              item.completed
-                ? "bg-green-50 text-green-700 hover:bg-green-100"
-                : item.priority === "critical"
-                  ? "bg-red-50 text-red-700 hover:bg-red-100"
-                  : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            {item.completed ? (
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-            ) : (
-              <Circle className="w-4 h-4 flex-shrink-0" />
-            )}
-            <span className="font-medium truncate">{item.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
-        <span className="font-semibold text-foreground">{completed}/{total}</span> fält ifyllda
-        {criticalItems.length > 0 && (
-          <>
-            {" "}
-            <span className="font-semibold text-red-600">({criticalCompleted}/{criticalItems.length} kritiska)</span>
-          </>
-        )}
       </div>
     </div>
   );

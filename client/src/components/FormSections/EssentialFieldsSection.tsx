@@ -99,38 +99,41 @@ export function EssentialFieldsSection({
   const floorsValue = form.watch("floors");
 
   return (
-    <div className="pro-section-card border-l-4" style={{ borderLeftColor: "#D1D5DB" }}>
+    <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Essentiell Information</span>
-            <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600">
+            <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>Grundläggande uppgifter</span>
+            <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ background: "#F3F4F6", color: "#6B7280" }}>
               {priorityCompleted}/{priorityTotal} klara
             </span>
           </div>
-          <p className="text-xs text-muted-foreground">Dessa fält måste fyllas i för att generera en bra beskrivning</p>
+          <p className="text-xs" style={{ color: "#6B7280" }}>Dessa fält behövs för att skapa en bra beskrivning</p>
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mb-4 p-3 bg-slate-50">
+      {/* Progress bar - enklare design */}
+      <div className="mb-4 p-3 rounded-lg" style={{ background: "#F8F6F1" }}>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-slate-700">Framsteg</span>
-          <span className="text-xs font-bold text-slate-600">{Math.round((priorityCompleted / priorityTotal) * 100)}%</span>
+          <span className="text-xs font-medium" style={{ color: "#4B5563" }}>Framsteg</span>
+          <span className="text-xs font-semibold" style={{ color: "#2D6A4F" }}>{Math.round((priorityCompleted / priorityTotal) * 100)}%</span>
         </div>
-        <div className="w-full h-2 bg-slate-300 overflow-hidden">
+        <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "#E8E5DE" }}>
           <div
-            className="h-full bg-slate-600 transition-all duration-300"
-            style={{ width: `${(priorityCompleted / priorityTotal) * 100}%` }}
+            className="h-full transition-all duration-300"
+            style={{ 
+              width: `${(priorityCompleted / priorityTotal) * 100}%`,
+              background: "#2D6A4F"
+            }}
           />
         </div>
       </div>
 
-      {/* Import section */}
-      <div className="flex flex-wrap gap-2 mb-4 p-2 border" style={{ borderColor: "#D1D5DB", background: "#FAFBFC" }}>
+      {/* Import section - enklare design */}
+      <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
         <div className="w-full flex items-center gap-1.5 mb-1">
-          <span className="text-xs font-semibold text-slate-700">Importera objektdata</span>
-          <span className="text-xs text-slate-500">— slipper fylla i formuläret manuellt</span>
+          <span className="text-xs font-medium" style={{ color: "#1D2939" }}>Importera objektdata</span>
+          <span className="text-xs" style={{ color: "#9CA3AF" }}>— slipper fylla i formuläret manuellt</span>
         </div>
         {/* Import buttons will be passed as children or via props */}
       </div>
@@ -139,7 +142,7 @@ export function EssentialFieldsSection({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
           <FormItem className="sm:col-span-2">
-            <FormLabel className="text-xs text-gray-500">Adress *</FormLabel>
+            <FormLabel className="text-xs font-medium" style={{ color: "#4B5563" }}>Adress *</FormLabel>
             <div className="flex gap-2">
               <FormControl>
                 <Input placeholder="Ex: Karlavägen 12, 114 31 Stockholm" {...field} className={`${exampleInputClass} flex-1`} />
@@ -149,7 +152,8 @@ export function EssentialFieldsSection({
                 variant="outline"
                 size="sm"
                 disabled={addressLookupLoading || !field.value}
-                className="h-10 text-xs px-3 whitespace-nowrap border-input text-primary disabled:text-muted-foreground"
+                className="h-10 text-xs px-3 whitespace-nowrap"
+                style={{ borderColor: "#E8E5DE", color: "#2D6A4F" }}
                 onClick={() => onAddressLookup(field.value)}
               >
                 {addressLookupLoading ? (
@@ -163,14 +167,14 @@ export function EssentialFieldsSection({
               </Button>
             </div>
             {addressLookupResult && (
-              <p className="text-xs mt-1 text-slate-600">{addressLookupResult} — kollektivtrafik och närområde ifyllt</p>
+              <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{addressLookupResult} — kollektivtrafik och närområde ifyllt</p>
             )}
             <FormMessage />
           </FormItem>
         )} />
         <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-xs text-gray-500">Stadsdel / Område *</FormLabel>
+            <FormLabel className="text-xs font-medium" style={{ color: "#4B5563" }}>Stadsdel / Område *</FormLabel>
             <FormControl>
               <Input placeholder="Ex: Vasastan, Linnéstaden" {...field} className={exampleInputClass} />
             </FormControl>

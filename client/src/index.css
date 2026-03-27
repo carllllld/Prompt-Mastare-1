@@ -10,29 +10,29 @@
   --font-display: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* Primary Colors (Brand identity) */
-  --primary: 220 70% 50%;           /* Modern blue #2563EB */
+  /* Primary Colors (Brand identity) - Mäklargrön */
+  --primary: 158 48% 30%;           /* Mäklargrön #2D6A4F */
   --primary-foreground: 0 0% 100%;  /* White text on primary */
-  --primary-hover: 220 70% 45%;     /* Darker on hover */
-  --primary-border: 220 70% 55%;    /* Border variant */
+  --primary-hover: 158 48% 25%;     /* Darker on hover */
+  --primary-border: 158 48% 35%;    /* Border variant */
 
-  /* Neutral Colors (Backgrounds, text, borders) */
+  /* Neutral Colors (Backgrounds, text, borders) - Varmare toner */
   --background: 0 0% 100%;          /* Pure white */
-  --foreground: 220 13% 18%;        /* Near-black text #1E293B */
+  --foreground: 215 25% 15%;        /* Varmare mörkgrå #1D2939 */
 
-  --muted: 220 13% 96%;             /* Light gray bg #F8FAFC */
-  --muted-foreground: 220 9% 46%;   /* Muted text #64748B */
+  --muted: 220 14% 96%;             /* Ljusgrå bg #F3F4F6 */
+  --muted-foreground: 220 9% 42%;   /* Muted text #6B7280 */
 
   --card: 0 0% 100%;                /* White cards */
-  --card-foreground: 220 13% 18%;   /* Card text */
-  --card-border: 220 13% 91%;       /* Card borders #E2E8F0 */
+  --card-foreground: 215 25% 15%;   /* Card text */
+  --card-border: 30 10% 91%;        /* Varm beige kant #E8E5DE */
 
   --popover: 0 0% 100%;             /* White popover */
   --popover-foreground: 220 13% 18%; /* Popover text */
 
-  --border: 220 13% 91%;            /* Default borders */
-  --input: 220 13% 91%;             /* Input borders */
-  --ring: 220 70% 50%;              /* Focus rings */
+  --border: 220 13% 85%;            /* Default borders #D1D5DB */
+  --input: 220 13% 85%;             /* Input borders */
+  --ring: 158 48% 30%;              /* Focus rings - mäklargrön */
 
   /* Semantic Colors */
   --success: 142 71% 45%;           /* Green #10B981 */
@@ -51,14 +51,14 @@
   --info-foreground: 0 0% 100%;
   --info-bg: 199 95% 96%;           /* Light cyan bg */
 
-  /* Accent Colors (Secondary actions, highlights) */
-  --accent: 220 13% 96%;            /* Light gray */
-  --accent-foreground: 220 13% 18%;
-  --accent-hover: 220 13% 91%;
+  /* Accent Colors (Secondary actions, highlights) - Varmare */
+  --accent: 30 20% 97%;             /* Varm off-white #F8F6F1 */
+  --accent-foreground: 215 25% 15%;
+  --accent-hover: 30 20% 94%;
 
-  --secondary: 220 13% 96%;
-  --secondary-foreground: 220 13% 18%;
-  --secondary-border: 220 13% 86%;
+  --secondary: 30 20% 97%;          /* Varm off-white */
+  --secondary-foreground: 215 25% 15%;
+  --secondary-border: 30 10% 91%;
 
   /* Legacy destructive (maps to error) */
   --destructive: 0 72% 51%;

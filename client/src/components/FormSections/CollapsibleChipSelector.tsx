@@ -38,11 +38,12 @@ export function CollapsibleChipSelector({
               key={chip}
               type="button"
               onClick={() => onToggle(chip)}
-              className={`px-3 py-1.5 text-xs border transition-all font-medium ${
+              className={`px-3 py-2 text-xs rounded-lg border transition-all font-medium ${
                 isSelected
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-foreground border-input hover:border-primary hover:bg-accent"
+                  ? "border-transparent text-white"
+                  : "bg-white border-input hover:border-primary hover:bg-accent"
               }`}
+              style={isSelected ? { background: "#2D6A4F" } : {}}
             >
               {isSelected && "✓ "}
               {chip}
@@ -67,7 +68,8 @@ export function CollapsibleChipSelector({
         <button
           type="button"
           onClick={() => setShowAll(true)}
-          className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1 mt-2"
+          className="text-xs font-medium flex items-center gap-1 mt-2 transition-colors"
+          style={{ color: "#2D6A4F" }}
         >
           + Visa {hiddenCount} fler
           <ChevronDown className="w-3 h-3" />
@@ -79,7 +81,8 @@ export function CollapsibleChipSelector({
         <button
           type="button"
           onClick={() => setShowAll(false)}
-          className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1 mt-2"
+          className="text-xs font-medium flex items-center gap-1 mt-2 transition-colors"
+          style={{ color: "#2D6A4F" }}
         >
           − Visa färre
           <ChevronDown className="w-3 h-3 rotate-180" />
@@ -88,7 +91,7 @@ export function CollapsibleChipSelector({
 
       {/* Selected count indicator */}
       {selectedCount > 0 && (
-        <div className="text-xs text-muted-foreground mt-2">
+        <div className="text-xs mt-2" style={{ color: "#6B7280" }}>
           {selectedCount} vald{selectedCount !== 1 ? "a" : ""}
         </div>
       )}
