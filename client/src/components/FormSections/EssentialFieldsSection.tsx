@@ -3,7 +3,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
 // PropertyFormData type - must match the form component
@@ -65,6 +65,7 @@ interface EssentialFieldsSectionProps {
   addressLookupLoading: boolean;
   addressLookupResult: string | null;
   onAddressLookup: (address: string) => void;
+  importButtons?: React.ReactNode;
 }
 
 const exampleInputClass = "h-10 bg-white border-input text-sm";
@@ -85,6 +86,7 @@ export function EssentialFieldsSection({
   addressLookupLoading,
   addressLookupResult,
   onAddressLookup,
+  importButtons,
 }: EssentialFieldsSectionProps) {
   const addressValue = form.watch("address");
   const buildYearValue = form.watch("buildYear");
@@ -106,7 +108,7 @@ export function EssentialFieldsSection({
           <span className="text-xs font-medium" style={{ color: "#1D2939" }}>Importera objektdata</span>
           <span className="text-xs" style={{ color: "#9CA3AF" }}>— slipper fylla i formuläret manuellt</span>
         </div>
-        {/* Import buttons will be passed as children or via props */}
+        {importButtons}
       </div>
 
       {/* Address + Area */}

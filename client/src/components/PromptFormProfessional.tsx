@@ -15,7 +15,6 @@ import { EssentialFieldsSection } from "@/components/FormSections/EssentialField
 import { ImageSection } from "@/components/FormSections/ImageSection";
 import { DetailsSection } from "@/components/FormSections/DetailsSection";
 import { CollapsibleChipSelector } from "@/components/FormSections/CollapsibleChipSelector";
-import { ProgressIndicator } from "@/components/FormSections/ProgressIndicator";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -1389,9 +1388,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
 
-          {/* Progress Indicator */}
-          <ProgressIndicator items={priorityItems} onItemClick={(idx) => handleScrollToField(priorityItems[idx].fieldName)} />
-
           {/* Så används dina fält - viktig info */}
           <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
             <p className="text-sm font-semibold mb-3" style={{ color: "#1D2939" }}>Så används dina fält</p>
@@ -1452,20 +1448,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             addressLookupLoading={addressLookupLoading}
             addressLookupResult={addressLookupResult}
             onAddressLookup={handleAddressLookup}
+            importButtons={
+              <>
+                <HemnetImportButton onImport={handleExternalImport} />
+                <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+                {!isPro && (
+                  <span className="text-xs self-center text-slate-400">Vitec-import kräver Pro</span>
+                )}
+              </>
+            }
           />
-
-          {/* Import buttons wrapper for integration */}
-          <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border border-dashed bg-slate-50 border-slate-200">
-            <div className="w-full flex items-center gap-1.5 mb-1">
-              <span className="text-xs font-semibold text-slate-700">Importera objektdata</span>
-              <span className="text-xs text-slate-500">— slipper fylla i formuläret manuellt</span>
-            </div>
-            <HemnetImportButton onImport={handleExternalImport} />
-            <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
-            {!isPro && (
-              <span className="text-xs self-center text-slate-400">Vitec-import kräver Pro</span>
-            )}
-          </div>
 
           {/* ── SECTION 2.5: OBJEKTBILDER (NEW COMPONENT) ── */}
           <ImageSection
