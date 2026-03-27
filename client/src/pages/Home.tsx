@@ -346,42 +346,88 @@ export default function Home() {
         {/* Hero — only when no result is showing (logged in users) */}
         {isAuthenticated && !result && (
           <div className="mb-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-              <div>
+            {/* Compact header row with usage and actions */}
+            <div className="flex flex-col lg:flex-row lg:items-start gap-4 mb-4">
+              {/* Left: Title and description */}
+              <div className="flex-1 min-w-0">
                 <h1 className="text-xl sm:text-2xl leading-snug" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
                   Fyll i fastighetsdata. Få 5 texter.
                 </h1>
-                <p className="text-xs sm:text-sm mt-1.5 max-w-3xl" style={{ color: "#6B7280" }}>
-                  Börja med grundfakta, lägg sedan kraft på det som faktiskt säljer objektet: skick, planlösning, renoveringar, material, läge och unika kvaliteter.
+                <p className="text-xs sm:text-sm mt-1.5 max-w-2xl" style={{ color: "#6B7280" }}>
+                  Börja med grundfakta, lägg sedan kraft på det som faktiskt säljer objektet.
                 </p>
               </div>
-              {userStatus?.resetTime && (
-                <span className="text-xs shrink-0" style={{ color: "#9CA3AF" }}>
-                  Kvot återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
-                </span>
-              )}
+
+              {/* Right: Compact usage card and actions */}
+              <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
+                {/* Usage indicator - compact */}
+                <div className="pro-card rounded-xl overflow-hidden min-w-[200px]">
+                  <div className="px-4 py-2.5 border-b border-border flex items-center justify-between bg-muted">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Månadskvot</span>
+                    {plan === "premium" ? (
+                      <Badge size="sm" className="bg-purple-600 text-white border-transparent text-[10px]">Premium</Badge>
+                    ) : plan === "pro" ? (
+                      <Badge variant="success" size="sm" className="text-[10px]">Pro</Badge>
+                    ) : (
+                      <Badge variant="secondary" size="sm" className="text-[10px]">Gratis</Badge>
+                    )}
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="flex items-baseline gap-1 mb-2">
+                      <span className={`text-2xl font-bold ${remaining === 0 ? "text-error" : "text-foreground"}`}>{remaining}</span>
+                      <span className="text-xs text-muted-foreground">/ {limit}</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full overflow-hidden bg-muted">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          remaining === 0 ? "bg-error" : plan === "premium" ? "bg-purple-600" : "bg-success"
+                        }`}
+                        style={{ width: `${Math.min(100, (used / limit) * 100)}%` }}
+                      />
+                    </div>
+                    {userStatus?.resetTime && (
+                      <p className="text-[10px] mt-1.5 text-muted-foreground">
+                        Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "short" })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick actions */}
+                <div className="flex flex-col gap-2">
+                  <Link href="/history">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      Historik
+                    </Button>
+                  </Link>
+                  {(plan === "pro" || plan === "premium") && (
+                    <Link href="/settings">
+                      <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs gap-1.5">
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                        Personlig stil
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 mb-3">
+
+            {/* Output formats pills - more compact */}
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {[
                 { label: "Objektbeskrivning", sub: "Hemnet & Booli" },
-                { label: "Rubrik", sub: "kort och klickstark" },
-                { label: "Socialt inlägg", sub: "+ hashtags" },
-                { label: "Visningsinbjudan", sub: "mäklarinfo" },
-                { label: "Kortannons", sub: "kort format" },
+                { label: "Rubrik", sub: "kort" },
+                { label: "Socialt", sub: "+ hashtags" },
+                { label: "Visning", sub: "mäklarinfo" },
+                { label: "Kortannons", sub: "kort" },
               ].map((pill) => (
-                <div key={pill.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#2D6A4F" }} />
+                <div key={pill.label} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
+                  <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: "#2D6A4F" }} />
                   <span className="font-medium" style={{ color: "#374151" }}>{pill.label}</span>
                   <span style={{ color: "#9CA3AF" }}>· {pill.sub}</span>
                 </div>
               ))}
-            </div>
-            <div className="pro-card-soft rounded-xl px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: "#4B5563" }}>
-              <span className="font-semibold" style={{ color: "#1D2939" }}>Rekommenderat arbetsflöde:</span>
-              <span>1. Grundfakta</span>
-              <span>2. Vad som gör objektet speciellt</span>
-              <span>3. Planlösning</span>
-              <span>4. Mer detaljer vid behov</span>
             </div>
           </div>
         )}
@@ -520,48 +566,13 @@ export default function Home() {
               )}
 
               {/* Usage indicator */}
-              {isAuthenticated && (
+              {isAuthenticated && !result && (
                 <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
                   <div className="px-5 py-3 border-b border-border flex items-center justify-between bg-muted">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Månadskvot</span>
-                    {plan === "premium" ? (
-                      <Badge size="sm" className="bg-purple-600 text-white border-transparent">
-                        Premium
-                      </Badge>
-                    ) : plan === "pro" ? (
-                      <Badge variant="success" size="sm">
-                        Pro
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" size="sm">
-                        Gratis
-                      </Badge>
-                    )}
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tips</span>
                   </div>
-                  <div className="p-5">
-                    <div className="flex items-end justify-between mb-3">
-                      <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${remaining === 0 ? "text-error" : "text-foreground"}`}>{remaining}</span>
-                        <span className="text-sm text-muted-foreground">/ {limit} kvar</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{used} använda</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden bg-muted">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          remaining === 0 ? "bg-error" : plan === "premium" ? "bg-purple-600" : "bg-success"
-                        }`}
-                        style={{
-                          width: `${Math.min(100, (used / limit) * 100)}%`,
-                        }}
-                      />
-                    </div>
-                    {userStatus?.resetTime && (
-                      <p className="text-xs mt-2.5 text-muted-foreground">
-                        Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
-                      </p>
-                    )}
-                    <div className="mt-4 rounded-lg border border-border px-3 py-3 text-xs bg-muted text-muted-foreground">
+                  <div className="p-4">
+                    <div className="rounded-lg border border-border px-3 py-3 text-xs bg-muted text-muted-foreground">
                       <p className="font-semibold mb-1 text-foreground">För bäst resultat</p>
                       <p>Fyll först i adress, område, boarea, skick, planlösning och objektets starkaste säljpunkter. Resten är förfining.</p>
                     </div>
@@ -569,8 +580,8 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Upgrade CTA */}
-              {isAuthenticated && plan !== "premium" && (
+              {/* Upgrade CTA - only when not showing result */}
+              {!result && isAuthenticated && plan !== "premium" && (
                 <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
                   <div className="px-5 py-4 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
                     <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
@@ -586,7 +597,7 @@ export default function Home() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-sm font-bold" style={{ color: "#2D6A4F" }}>Pro</span>
+                              <span className="text-sm font-bold" style={{ color: "#16A34A" }}>Pro</span>
                               <span className="text-xs font-semibold" style={{ color: "#1D2939" }}>299 kr/mån</span>
                             </div>
                             <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px]" style={{ color: "#4B5563" }}>
@@ -644,32 +655,6 @@ export default function Home() {
                         Se full planjämförelse i Inställningar
                       </Link>
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* History panel — logged in users */}
-              {isAuthenticated && (
-                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
-                  <div className="px-5 py-3 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Historik</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>Tidigare genereringar</p>
-                  </div>
-                  <div className="p-4">
-                    <HistoryPanel />
-                  </div>
-                </div>
-              )}
-
-              {/* Personal Style — Pro & Premium users */}
-              {isAuthenticated && (plan === "pro" || plan === "premium") && (
-                <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
-                  <div className="px-5 py-3 border-b" style={{ background: "#F8F6F1", borderColor: "#E8E5DE" }}>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>Kalibrera tonalitet med dina exempel</p>
-                  </div>
-                  <div className="p-4">
-                    <PersonalStyle />
                   </div>
                 </div>
               )}
