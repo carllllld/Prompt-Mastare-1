@@ -32,6 +32,7 @@ export const usageTracking = pgTable("usage_tracking", {
   areaSearchesUsed: integer("area_searches_used").default(0).notNull(),
   textEditsUsed: integer("text_edits_used").default(0).notNull(),
   personalStyleAnalyses: integer("personal_style_analyses").default(0).notNull(),
+  hemnetAnalysesUsed: integer("hemnet_analyses_used").default(0).notNull(),
   planType: text("plan_type").default("free").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -263,6 +264,9 @@ export const userStatusSchema = z.object({
   textEditsLimit: z.number(),
   personalStyleAnalyses: z.number(),
   personalStyleAnalysesLimit: z.number(),
+  hemnetAnalysesUsed: z.number().optional().default(0),
+  hemnetAnalysesRemaining: z.number().optional().default(0),
+  hemnetAnalysesLimit: z.number().optional().default(0),
   isLoggedIn: z.boolean(),
   resetTime: z.string(),
   stripeCustomerId: z.string().optional().nullable(),
@@ -273,9 +277,9 @@ export type OptimizeResponse = z.infer<typeof optimizeResponseSchema>;
 export type UserStatus = z.infer<typeof userStatusSchema>;
 
 export const PLAN_LIMITS = {
-  free: { texts: 2, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0 },
-  pro: { texts: 10, areaSearches: 999999, textEdits: 40, personalStyleAnalyses: 999999 },
-  premium: { texts: 25, areaSearches: 999999, textEdits: 120, personalStyleAnalyses: 999999 },
+  free: { texts: 2, areaSearches: 0, textEdits: 0, personalStyleAnalyses: 0, hemnetAnalyses: 1 },
+  pro: { texts: 10, areaSearches: 999999, textEdits: 40, personalStyleAnalyses: 999999, hemnetAnalyses: 5 },
+  premium: { texts: 25, areaSearches: 999999, textEdits: 120, personalStyleAnalyses: 999999, hemnetAnalyses: 15 },
 } as const;
 
 // Model-based text edit limits

@@ -31,6 +31,7 @@ const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
 const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Settings = lazy(() => import("@/pages/Settings"));
+const HemnetAnalysis = lazy(() => import("@/pages/HemnetAnalysis"));
 
 function Router() {
   return (
@@ -59,6 +60,11 @@ function Router() {
       <Route path="/history">
         <Suspense fallback={<PageSpinner />}>
           <HistoryPage />
+        </Suspense>
+      </Route>
+      <Route path="/hemnet-analysis">
+        <Suspense fallback={<PageSpinner />}>
+          <HemnetAnalysis />
         </Suspense>
       </Route>
       <Route path="/verify-email" component={VerifyEmail} />

@@ -2875,6 +2875,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           const areaSearchesRemaining = Math.max(0, limits.areaSearches - usage.areaSearchesUsed);
           const textEditsRemaining = Math.max(0, limits.textEdits - usage.textEditsUsed);
           const personalStyleAnalysesRemaining = Math.max(0, limits.personalStyleAnalyses - usage.personalStyleAnalyses);
+          const hemnetAnalysesUsed = usage.hemnetAnalysesUsed || 0;
+          const hemnetAnalysesLimit = limits.hemnetAnalyses || 0;
+          const hemnetAnalysesRemaining = Math.max(0, hemnetAnalysesLimit - hemnetAnalysesUsed);
 
           return res.json({
             plan,
@@ -2887,6 +2890,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             textEditsLimit: limits.textEdits,
             personalStyleAnalyses: usage.personalStyleAnalyses,
             personalStyleAnalysesLimit: limits.personalStyleAnalyses,
+            hemnetAnalysesUsed,
+            hemnetAnalysesRemaining,
+            hemnetAnalysesLimit,
             isLoggedIn: true,
             resetTime: resetTime.toISOString(),
             stripeCustomerId: user.stripeCustomerId || null,
@@ -2911,6 +2917,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           textEditsLimit: PLAN_LIMITS.free.textEdits,
           personalStyleAnalyses: 0,
           personalStyleAnalysesLimit: PLAN_LIMITS.free.personalStyleAnalyses,
+          hemnetAnalysesUsed: 0,
+          hemnetAnalysesRemaining: PLAN_LIMITS.free.hemnetAnalyses,
+          hemnetAnalysesLimit: PLAN_LIMITS.free.hemnetAnalyses,
           isLoggedIn: false,
           resetTime: resetTime.toISOString(),
         });
@@ -3420,6 +3429,99 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (err instanceof HemnetError) return res.status(502).json({ message: err.message });
         console.error("Hemnet import error:", err);
         res.status(500).json({ message: "Kunde inte hämta data från Hemnet" });
+      }
+    });
+
+    // POST /api/integrations/hemnet/analyze — analyze existing Hemnet listing text
+    app.post("/api/integrations/hemnet/analyze", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const parse = hemnetImportSchema.safeParse(req.body);
+        if (!parse.success) return res.status(400).json({ message: parse.error.issues[0]?.message || "Ogiltig URL" });
+
+        if (!isHemnetUrl(parse.data.url)) {
+          return res.status(400).json({ message: "URL:en måste vara en hemnet.se/bostader/-länk." });
+        }
+
+        // Check analysis quota
+        const plan = (user.plan as PlanType) || "free";
+        const usage = await storage.getMonthlyUsage(user.id, user) || {
+          textsGenerated: 0,
+          areaSearchesUsed: 0,
+          textEditsUsed: 0,
+          personalStyleAnalyses: 0,
+          hemnetAnalysesUsed: 0,
+        };
+
+        const limits = PLAN_LIMITS[plan];
+        const hemnetAnalysesLimit = limits.hemnetAnalyses || 0;
+        const hemnetAnalysesUsed = usage.hemnetAnalysesUsed || 0;
+
+        if (hemnetAnalysesUsed >= hemnetAnalysesLimit) {
+          return res.status(429).json({
+            message: "Analyskvoten är slut för denna månad",
+            code: "QUOTA_EXCEEDED",
+            usage: {
+              used: hemnetAnalysesUsed,
+              limit: hemnetAnalysesLimit,
+            },
+            upgradeRequired: plan !== "premium",
+            currentPlan: plan,
+          });
+        }
+
+        // Fetch Hemnet property
+        const property = await fetchHemnetProperty(parse.data.url);
+        
+        // Extract description text
+        const originalText = property.description || '';
+        if (!originalText || originalText.trim().length < 50) {
+          return res.status(400).json({
+            message: "Ingen beskrivning hittades i annonsen eller texten är för kort",
+            code: "NO_DESCRIPTION",
+          });
+        }
+
+        // Run expert analysis
+        const { ExpertAIAnalyzer } = await import('./lib/perfect-swedish-analyzer');
+        const analyzer = new ExpertAIAnalyzer();
+        
+        const analysis = await analyzer.analyze({
+          improvedPrompt: originalText,
+          headline: property.address || '',
+          instagramCaption: '',
+          showingInvitation: '',
+          shortAd: '',
+        });
+
+        // Track usage
+        await storage.incrementUsage(user.id, 'hemnetAnalyses');
+
+        // Return results
+        res.json({
+          property: {
+            id: property.id,
+            url: property.url,
+            address: property.address,
+            city: property.city,
+            description: property.description,
+            imageUrls: property.imageUrls,
+          },
+          originalText,
+          analysis,
+          images: property.imageUrls || [],
+          metadata: {
+            wordCount: originalText.split(/\s+/).filter(Boolean).length,
+            paragraphCount: originalText.split(/\n\n+/).filter(Boolean).length,
+            sentenceCount: originalText.split(/[.!?]+/).filter(Boolean).length - 1,
+          },
+        });
+      } catch (err) {
+        if (err instanceof HemnetNotFoundError) return res.status(404).json({ message: err.message });
+        if (err instanceof HemnetRateLimitError) return res.status(429).json({ message: err.message });
+        if (err instanceof HemnetError) return res.status(502).json({ message: err.message });
+        console.error("Hemnet analysis error:", err);
+        res.status(500).json({ message: "Kunde inte analysera Hemnet-texten" });
       }
     });
 

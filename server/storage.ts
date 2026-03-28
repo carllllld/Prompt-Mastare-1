@@ -643,7 +643,7 @@ export class DatabaseStorage implements IStorage {
     return result[0] || null;
   }
 
-  async incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking> {
+  async incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses' | 'hemnetAnalyses'): Promise<UsageTracking> {
     const now = new Date();
 
     // Get user's current plan
@@ -665,6 +665,7 @@ export class DatabaseStorage implements IStorage {
         areaSearchesUsed: type === 'areaSearches' ? 1 : 0,
         textEditsUsed: type === 'textEdits' ? 1 : 0,
         personalStyleAnalyses: type === 'personalStyleAnalyses' ? 1 : 0,
+        hemnetAnalysesUsed: type === 'hemnetAnalyses' ? 1 : 0,
       })
       .onConflictDoUpdate({
         target: [usageTracking.userId, usageTracking.month, usageTracking.year],
@@ -681,6 +682,9 @@ export class DatabaseStorage implements IStorage {
           personalStyleAnalyses: type === 'personalStyleAnalyses'
             ? sql`${usageTracking.personalStyleAnalyses} + 1`
             : sql`${usageTracking.personalStyleAnalyses}`,
+          hemnetAnalysesUsed: type === 'hemnetAnalyses'
+            ? sql`${usageTracking.hemnetAnalysesUsed} + 1`
+            : sql`${usageTracking.hemnetAnalysesUsed}`,
           updatedAt: new Date(),
         },
       })

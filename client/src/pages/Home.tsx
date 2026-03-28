@@ -176,6 +176,12 @@ export default function Home() {
                   <span>Historik</span>
                 </Link>
 
+                {/* Hemnet Analysis - plain link */}
+                <Link href="/hemnet-analysis" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Sparkles className="w-4 h-4" />
+                  <span>Hemnet Analys</span>
+                </Link>
+
                 {/* Team - locked for free and pro users */}
                 {plan === "premium" ? (
                   <Link href="/teams" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
