@@ -211,3 +211,79 @@
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Form Layout Compression Animations */
+@keyframes highlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.section-highlight {
+  animation: highlightPulse 2s ease-out;
+}
+
+/* Collapsible section animations */
+.collapsible-content {
+  overflow: hidden;
+  transition: height 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-content {
+    transition: none;
+  }
+  .section-highlight {
+    animation: none;
+  }
+  .animate-fade-in,
+  .animate-slide-up {
+    animation: none;
+  }
+}
+
+/* Print mode styles */
+@media print {
+  /* Remove sticky positioning */
+  .sticky {
+    position: static !important;
+  }
+  
+  /* Single column layout */
+  .grid {
+    display: block !important;
+  }
+  
+  .grid > * {
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+  }
+  
+  /* Hide interactive elements */
+  button,
+  .hover\:bg-black\/5,
+  [role="button"] {
+    display: none !important;
+  }
+  
+  /* Expand all sections */
+  .collapsible-content {
+    display: block !important;
+    height: auto !important;
+  }
+  
+  /* Remove shadows and backgrounds for print */
+  .pro-card,
+  .pro-card-soft,
+  .pro-section-card {
+    box-shadow: none !important;
+    background: white !important;
+  }
+}

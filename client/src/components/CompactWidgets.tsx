@@ -11,9 +11,25 @@ interface UsageWidgetProps {
   resetTime?: string;
 }
 
+/**
+ * CompactWidgetsPanel - Wrapper for equal height widgets
+ * Uses flexbox with align-items: stretch to ensure all widgets have equal height
+ */
+interface CompactWidgetsPanelProps {
+  children: React.ReactNode;
+}
+
+export function CompactWidgetsPanel({ children }: CompactWidgetsPanelProps) {
+  return (
+    <div className="flex flex-col md:flex-row gap-3 items-stretch">
+      {children}
+    </div>
+  );
+}
+
 export function CompactUsageWidget({ remaining, limit, used, plan, resetTime }: UsageWidgetProps) {
   return (
-    <div className="pro-card rounded-xl overflow-hidden">
+    <div className="pro-card rounded-xl overflow-hidden flex flex-col h-full">
       <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kvot</span>
         {plan === "premium" ? (
@@ -24,7 +40,7 @@ export function CompactUsageWidget({ remaining, limit, used, plan, resetTime }: 
           <Badge variant="secondary" size="sm" className="text-[10px]">Gratis</Badge>
         )}
       </div>
-      <div className="px-3 py-2.5">
+      <div className="px-3 py-2.5 flex-1 flex flex-col justify-center">
         <div className="flex items-baseline gap-1 mb-1.5">
           <span className={`text-xl font-bold ${remaining === 0 ? "text-error" : "text-foreground"}`}>{remaining}</span>
           <span className="text-[10px] text-muted-foreground">/ {limit}</span>
@@ -54,11 +70,11 @@ interface CompactHistoryWidgetProps {
 export function CompactHistoryWidget({ historyCount }: CompactHistoryWidgetProps) {
   return (
     <Link href="/history">
-      <div className="pro-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow h-full">
+      <div className="pro-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow flex flex-col h-full">
         <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Historik</span>
         </div>
-        <div className="px-3 py-2.5">
+        <div className="px-3 py-2.5 flex-1 flex flex-col justify-center">
           <div className="flex items-baseline gap-1 mb-1.5">
             <span className="text-xl font-bold text-foreground">{historyCount}</span>
             <span className="text-[10px] text-muted-foreground">st</span>
@@ -85,13 +101,13 @@ export function CompactUpgradeWidget({ plan, onUpgrade, isLoading }: CompactUpgr
   if (plan === "premium") return null;
   
   return (
-    <div className="pro-card rounded-xl overflow-hidden" style={{ background: plan === "free" ? "#F0FDF4" : "#F5F3FF", borderColor: plan === "free" ? "#BBF7D0" : "#DDD6FE" }}>
+    <div className="pro-card rounded-xl overflow-hidden flex flex-col h-full" style={{ background: plan === "free" ? "#F0FDF4" : "#F5F3FF", borderColor: plan === "free" ? "#BBF7D0" : "#DDD6FE" }}>
       <div className="px-3 py-2 border-b flex items-center justify-between" style={{ background: plan === "free" ? "#DCFCE7" : "#EDE9FE", borderColor: plan === "free" ? "#BBF7D0" : "#DDD6FE" }}>
         <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: plan === "free" ? "#16A34A" : "#7C3AED" }}>
           {plan === "free" ? "Uppgradera" : "Premium"}
         </span>
       </div>
-      <div className="px-3 py-2.5">
+      <div className="px-3 py-2.5 flex-1 flex flex-col justify-center">
         <p className="text-xs font-semibold mb-1" style={{ color: "#1D2939" }}>
           {plan === "free" ? "Pro" : "Premium"}
         </p>

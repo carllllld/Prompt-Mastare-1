@@ -31,6 +31,14 @@ import { DetailsSection } from "@/components/FormSections/DetailsSection";
 import { CollapsibleChipSelector } from "@/components/FormSections/CollapsibleChipSelector";
 import { ProgressIndicator } from "@/components/FormSections/ProgressIndicator";
 import { FormGridLayout, FormSection, FormSectionFull, CollapsibleFormSection } from "@/components/FormSections/FormGridLayout";
+import { StickyHeader } from "@/components/FormSections/StickyHeader";
+import { StickyFooter } from "@/components/FormSections/StickyFooter";
+import { CompactWidgetsPanel } from "@/components/CompactWidgets";
+import { useCollapsedSections } from "@/hooks/use-collapsed-sections";
+import { useCompactMode } from "@/hooks/use-compact-mode";
+import { usePrintMode } from "@/hooks/use-print-mode";
+import { scrollToField } from "@/lib/scroll-to-section";
+import { calculateSectionCompletion, type SectionConfig } from "@/lib/section-completion";
 
 // ── INTERFACES ──
 interface PropertyFormData {
@@ -100,6 +108,73 @@ interface PriorityItem {
   fieldName: string;
   priority: 'critical' | 'important' | 'optional';
 }
+
+// ── SECTION CONFIGURATIONS ──
+const SECTION_CONFIGS: SectionConfig[] = [
+  {
+    id: 'essential-fields',
+    title: 'Essentiell Information',
+    priority: 'critical',
+    defaultCollapsed: false,
+    fields: ['address', 'area', 'livingArea', 'totalRooms', 'bedrooms', 'bathrooms'],
+    order: 1,
+    mobileOrder: 1,
+  },
+  {
+    id: 'images',
+    title: 'Objektbilder',
+    priority: 'important',
+    defaultCollapsed: false,
+    fields: ['uploadedImages'],
+    order: 2,
+    mobileOrder: 3,
+  },
+  {
+    id: 'selling-points',
+    title: 'Försäljningsargument',
+    priority: 'critical',
+    defaultCollapsed: false,
+    fields: ['uniqueSellingPoints', 'uspChips'],
+    order: 3,
+    mobileOrder: 2,
+  },
+  {
+    id: 'kitchen-bathroom',
+    title: 'Kök & Badrum',
+    priority: 'important',
+    defaultCollapsed: false,
+    fields: ['kitchenDescription', 'bathroomDescription', 'kitchenChips', 'bathroomChips'],
+    order: 4,
+    mobileOrder: 4,
+  },
+  {
+    id: 'location-transport',
+    title: 'Läge & Transport',
+    priority: 'important',
+    defaultCollapsed: false,
+    fields: ['neighborhood', 'transport', 'view'],
+    order: 5,
+    mobileOrder: 5,
+  },
+  {
+    id: 'material-tech',
+    title: 'Material & Teknik',
+    priority: 'optional',
+    defaultCollapsed: true,
+    fields: ['flooring', 'heating', 'konstruktionMaterial', 'taktyp'],
+    order: 6,
+    mobileOrder: 7,
+  },
+  {
+    id: 'layout-details',
+    title: 'Planlösning & Detaljer',
+    priority: 'optional',
+    defaultCollapsed: true,
+    fields: ['layoutDescription', 'gardenDescription'],
+    order: 7,
+    mobileOrder: 8,
+  },
+];
 
 // ── CHIP OPTIONS ──
 const KITCHEN_CHIPS = [
@@ -441,6 +516,26 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
   const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
+  // ── LAYOUT COMPRESSION STATE ──
+  const defaultCollapsed = new Set(
+    SECTION_CONFIGS.filter(s => s.defaultCollapsed).map(s => s.id)
+  );
+
+  const {
+    collapsedSections: managedCollapsedSections,
+    toggleSection,
+    expandAll,
+    collapseAll,
+    isCollapsed,
+  } = useCollapsedSections(defaultCollapsed);
+
+  const { compactMode, toggleCompactMode } = useCompactMode();
+
+  // Print mode hook
+  usePrintMode(managedCollapsedSections, (sections) => {
+    // Print mode automatically handles section expansion/restoration
+  });
+
   // ── STATE: Form values ──
   const modelLimits = { min: 200, max: 600, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
@@ -588,15 +683,20 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
 
   // ── HELPER: Scroll to field ──
   const handleScrollToField = useCallback((fieldName: string) => {
-    const element = document.querySelector(`[name="${fieldName}"]`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
-      setTimeout(() => {
-        element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
-      }, 2000);
-    }
+    scrollToField(fieldName);
   }, []);
+
+  // ── HELPER: Expand/Collapse all ──
+  const handleExpandAll = useCallback(() => {
+    expandAll();
+  }, [expandAll]);
+
+  const handleCollapseAll = useCallback(() => {
+    const optionalIds = SECTION_CONFIGS
+      .filter(s => s.priority === 'optional')
+      .map(s => s.id);
+    collapseAll(optionalIds);
+  }, [collapseAll]);
 
   // ── PRIORITY ITEMS ──
   const priorityItems: PriorityItem[] = [
@@ -1134,16 +1234,19 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="min-h-screen flex flex-col bg-slate-50">
           
           {/* STICKY HEADER */}
-          <div className="sticky top-0 z-50 bg-white border-b-2 border-slate-200 p-3 shadow-sm">
-            <div className="max-w-7xl mx-auto">
-              <ProgressIndicator items={priorityItems} onItemClick={(idx) => handleScrollToField(priorityItems[idx].fieldName)} />
-            </div>
-          </div>
+          <StickyHeader
+            priorityItems={priorityItems}
+            compactMode={compactMode}
+            onCompactModeToggle={toggleCompactMode}
+            onExpandAll={handleExpandAll}
+            onCollapseAll={handleCollapseAll}
+            onItemClick={handleScrollToField}
+          />
 
           {/* MAIN CONTENT - GRID LAYOUT */}
           <div className="flex-1 overflow-auto">
             <div className="max-w-7xl mx-auto p-3">
-              <FormGridLayout>
+              <FormGridLayout compactMode={compactMode}>
                 
                 {/* ROW 1 */}
                 
@@ -1162,8 +1265,12 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
                     addressLookupLoading={addressLookupLoading}
                     addressLookupResult={addressLookupResult}
                     onAddressLookup={handleAddressLookup}
-                    priorityCompleted={priorityCompleted}
-                    priorityTotal={priorityItems.length}
+                    importButtons={
+                      <>
+                        <HemnetImportButton onImport={handleExternalImport} />
+                        <VitecImportPicker onImport={handleExternalImport} />
+                      </>
+                    }
                   />
                 </FormSection>
 
@@ -1274,18 +1381,18 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
 
                 {/* Column 3: Material & Teknik */}
                 <CollapsibleFormSection 
+                  id="material-tech"
                   title="Material & Teknik" 
                   priority="optional"
-                  isCollapsed={collapsedSections.has('material')}
-                  onToggleCollapse={() => {
-                    const newSet = new Set(collapsedSections);
-                    if (newSet.has('material')) {
-                      newSet.delete('material');
-                    } else {
-                      newSet.add('material');
-                    }
-                    setCollapsedSections(newSet);
-                  }}
+                  isCollapsed={isCollapsed('material-tech')}
+                  onToggleCollapse={() => toggleSection('material-tech')}
+                  completionPercentage={
+                    calculateSectionCompletion(
+                      SECTION_CONFIGS.find(s => s.id === 'material-tech')!,
+                      form.getValues(),
+                      form.formState.errors
+                    ).percentage
+                  }
                 >
                   <div className="space-y-3">
                     <div>
@@ -1320,19 +1427,19 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
 
                 {/* Planlösning & Detaljer */}
                 <CollapsibleFormSection 
+                  id="layout-details"
                   title="Planlösning & Detaljer" 
                   priority="optional"
                   className="col-span-full"
-                  isCollapsed={collapsedSections.has('layout')}
-                  onToggleCollapse={() => {
-                    const newSet = new Set(collapsedSections);
-                    if (newSet.has('layout')) {
-                      newSet.delete('layout');
-                    } else {
-                      newSet.add('layout');
-                    }
-                    setCollapsedSections(newSet);
-                  }}
+                  isCollapsed={isCollapsed('layout-details')}
+                  onToggleCollapse={() => toggleSection('layout-details')}
+                  completionPercentage={
+                    calculateSectionCompletion(
+                      SECTION_CONFIGS.find(s => s.id === 'layout-details')!,
+                      form.getValues(),
+                      form.formState.errors
+                    ).percentage
+                  }
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField control={form.control} name="layoutDescription" render={({ field }) => (
@@ -1359,27 +1466,11 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
           </div>
 
           {/* STICKY FOOTER */}
-          <div className="sticky bottom-0 z-50 bg-white border-t-2 border-slate-200 p-3 shadow-sm">
-            <div className="max-w-7xl mx-auto flex gap-3">
-              <Button
-                type="submit"
-                disabled={isPending || disabled}
-                className="flex-1 h-10"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Genererar...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generera Objektbeskrivning
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          <StickyFooter
+            onSubmit={form.handleSubmit(onLocalSubmit)}
+            isPending={isPending}
+            disabled={disabled}
+          />
 
         </form>
       </Form>
