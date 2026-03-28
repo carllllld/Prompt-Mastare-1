@@ -320,21 +320,21 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   tooltips?: Record<string, string>;
 }) {
   /**
-   * Mäklaraktig ChipSelector Styling
+   * Mäklaraktig Chip Styling - Human Design
    * 
    * Design Philosophy:
-   * - Unselected: White background, light gray border, gray text
-   * - Selected: Dark green background (#2D5016), white text, checkmark
-   * - NO colored variants (warning-bg, info-bg, success-bg, error-bg)
-   * - ALL chips use the same styling regardless of variant
+   * - Unselected: White background, warm gray border, charcoal text
+   * - Selected: Forest green background, white text, subtle checkmark
+   * - NO colored variants - all chips look the same
+   * - Clean, professional, minimal
    */
   const getChipClasses = (isOn: boolean) => {
     if (!isOn) {
-      // Unselected: White background, light gray border, gray text
+      // Unselected: White with warm gray border
       return "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
     }
     
-    // Selected: Dark green background, white text (ALL variants use same style)
+    // Selected: Forest green (all variants use same style)
     return "bg-primary text-primary-foreground border-primary hover:bg-primary-hover";
   };
 
@@ -346,7 +346,46 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label={id || "Chip-väljare"} id={id}>
+    <div className="flex flex-wrap gap-2" role="group" aria-label={id || "Chip-väljare"} id={id}>
+      {chips.map((chip) => {
+        const isOn = selected.includes(chip);
+        const chipClasses = getChipClasses(isOn);
+        const tooltip = tooltips?.[chip];
+        
+        const chipButton = (
+          <button
+            key={chip}
+            type="button"
+            onClick={() => onToggle(chip)}
+            onKeyDown={(e) => handleKeyDown(e, chip)}
+            role="checkbox"
+            aria-checked={isOn}
+            aria-label={tooltip ? `${chip}: ${tooltip}` : chip}
+            className={`min-h-[44px] min-w-[44px] px-3 py-2 text-sm border transition-all font-normal select-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:outline-none inline-flex items-center gap-1.5 ${chipClasses}`}
+          >
+            {isOn && <CheckCircle2 className="w-3.5 h-3.5" />}
+            {chip}
+          </button>
+        );
+        
+        if (tooltip) {
+          return (
+            <Tooltip key={chip}>
+              <TooltipTrigger asChild>
+                {chipButton}
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-sm">{tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        
+        return chipButton;
+      })}
+    </div>
+  );
+}
       {chips.map((chip) => {
         const isOn = selected.includes(chip);
         const chipClasses = getChipClasses(isOn);
@@ -433,54 +472,48 @@ function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
   const percentage = Math.round((completedCount / totalCount) * 100);
   
   const getProgressLevel = () => {
-    if (percentage < 40) return { label: "Grundläggande", color: "text-warning" };
-    if (percentage < 70) return { label: "Bra", color: "text-success" };
-    return { label: "Utmärkt", color: "text-success" };
+    if (percentage < 40) return { label: "Grundläggande", color: "text-gray-600" };
+    if (percentage < 70) return { label: "Bra", color: "text-primary" };
+    return { label: "Utmärkt", color: "text-primary" };
   };
   
   const progressLevel = getProgressLevel();
   
   /**
-   * Mäklaraktig Priority Indicator Styling
+   * Mäklaraktig Priority Styling - Human Design
    * 
    * Design Philosophy:
-   * - NO colored backgrounds (no warning-bg, success-bg)
-   * - Use subtle left border (border-l-4) with semantic color
-   * - White background for all priority levels
-   * - Light gray border for container
+   * - NO colored backgrounds
+   * - Subtle left border (3px) indicates priority
+   * - White background for all items
+   * - Warm gray border
    */
-  const getPriorityColor = (priority: string) => {
-    // All use white background with light gray border
-    return 'border-gray-200 bg-white';
-  };
-  
-  const getPriorityAccent = (priority: string) => {
-    // Left border color indicates priority
+  const getPriorityBorder = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'bg-amber-500';  // Amber for critical
-      case 'important': return 'bg-green-500'; // Green for important
-      case 'optional': return 'bg-gray-400';   // Gray for optional
-      default: return 'bg-gray-400';
+      case 'critical': return 'border-l-amber-500';  // Amber accent
+      case 'important': return 'border-l-primary';   // Forest green
+      case 'optional': return 'border-l-gray-300';   // Light gray
+      default: return 'border-l-gray-300';
     }
   };
   
   return (
-    <div className="bg-card border border-card-border rounded-lg p-4 mb-3">
+    <div className="bg-white border border-gray-200 p-4 mb-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-foreground">Prioriterade fält</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Prioriterade fält</h3>
         <div className="flex items-center gap-2">
           <span className={`text-sm font-medium ${progressLevel.color}`}>
             {progressLevel.label}
           </span>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-sm text-gray-500">
             {completedCount}/{totalCount}
           </span>
         </div>
       </div>
       
-      <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+      <div className="w-full bg-gray-100 h-2 mb-4 overflow-hidden">
         <div 
-          className="h-2 rounded-full transition-all duration-300 bg-primary"
+          className="h-2 transition-all duration-300 bg-primary"
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -491,18 +524,15 @@ function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
             key={index}
             type="button"
             onClick={() => onItemClick?.(item.fieldName)}
-            className={`w-full flex items-center gap-3 p-2 rounded border transition-all ${
-              getPriorityColor(item.priority)
-            } ${!item.completed ? 'animate-pulse' : ''} hover:shadow-sm`}
+            className={`w-full flex items-center gap-3 p-3 border border-gray-200 border-l-4 ${getPriorityBorder(item.priority)} transition-all bg-white hover:bg-gray-50 hover:shadow-sm`}
           >
-            <div className={`w-1 h-6 rounded ${getPriorityAccent(item.priority)}`} />
             <div className="flex-1 text-left">
-              <span className="text-sm text-foreground">{item.label}</span>
+              <span className="text-sm text-gray-900">{item.label}</span>
             </div>
             {item.completed ? (
-              <CheckCircle2 className="w-4 h-4 text-success" />
+              <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />
+              <div className="w-4 h-4 border-2 border-gray-300 flex-shrink-0" />
             )}
           </button>
         ))}

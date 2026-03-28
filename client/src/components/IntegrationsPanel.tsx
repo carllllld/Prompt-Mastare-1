@@ -78,9 +78,9 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
 
   if (!isPro) {
     return (
-      <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
-        <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-        <p className="text-sm text-amber-700">Vitec-integration kräver Pro eller Premium.</p>
+      <div className="flex items-start gap-3 p-4 border border-gray-200 bg-white">
+        <AlertCircle className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+        <p className="text-sm text-gray-700">Vitec-integration kräver Pro eller Premium.</p>
       </div>
     );
   }
@@ -96,7 +96,7 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
           <Building2 className="w-4 h-4" style={{ color: "#2D6A4F" }} />
           <span className="text-sm font-medium text-gray-800">Vitec Mäklarsystem</span>
           {settings?.vitecEnabled && settings.vitecApiKeySet && (
-            <Badge variant="outline" className="text-xs border-green-300 text-green-700 bg-green-50">
+            <Badge variant="outline" className="text-xs border-primary text-primary bg-white">
               <CheckCircle2 className="w-3 h-3 mr-1" /> Ansluten
             </Badge>
           )}
@@ -105,7 +105,7 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
           <Button
             variant="ghost"
             size="sm"
-            className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
+            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 text-xs"
             onClick={() => deleteMutation.mutate()}
             disabled={deleteMutation.isPending}
           >
@@ -238,15 +238,15 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
-      <ExternalLink className="w-4 h-4 text-blue-500 shrink-0" />
+    <div className="flex items-center gap-2 p-3 border border-gray-200 bg-white">
+      <ExternalLink className="w-4 h-4 text-gray-500 shrink-0" />
       <div className="flex-1 min-w-0">
         <Input
           type="url"
           placeholder="https://www.hemnet.se/bostader/..."
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="text-xs h-8 bg-white border-blue-200"
+          className="text-xs h-8 bg-white border-gray-200"
           onKeyDown={(e) => {
             if (e.key === "Enter" && url.trim()) importMutation.mutate(url.trim());
             if (e.key === "Escape") setOpen(false);
@@ -255,7 +255,7 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
           disabled={importMutation.isPending}
         />
         {imageProgress && (
-          <p className="text-xs text-blue-600 mt-1">
+          <p className="text-xs text-gray-600 mt-1">
             Laddar ned bilder: {imageProgress.current}/{imageProgress.total}
           </p>
         )}
@@ -263,8 +263,7 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
       <Button
         type="button"
         size="sm"
-        className="text-xs h-8 shrink-0"
-        style={{ background: "#2D6A4F" }}
+        className="text-xs h-8 shrink-0 bg-primary hover:bg-primary-hover"
         onClick={() => importMutation.mutate(url.trim())}
         disabled={!url.trim() || importMutation.isPending}
       >

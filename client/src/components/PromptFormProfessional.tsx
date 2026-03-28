@@ -193,23 +193,23 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
   tooltips?: Record<string, string>;
 }) {
+  /**
+   * Mäklaraktig Chip Styling - Human Design
+   * 
+   * Design Philosophy:
+   * - Unselected: White background, warm gray border, charcoal text
+   * - Selected: Forest green background, white text, subtle checkmark
+   * - NO colored variants - all chips look the same
+   * - Clean, professional, minimal
+   */
   const getChipClasses = (isOn: boolean) => {
-    if (!isOn) return "bg-background text-muted-foreground border-border hover:bg-accent hover:border-accent-hover";
-
-    const variantClasses = {
-      default: "bg-primary text-primary-foreground border-primary hover:bg-primary-hover",
-      kitchen: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
-      bathroom: "bg-info-bg text-info border-info hover:bg-info-bg/80",
-      flooring: "bg-secondary text-secondary-foreground border-secondary-border hover:bg-accent",
-      heating: "bg-error-bg text-error border-error hover:bg-error-bg/80",
-      special: "bg-accent text-accent-foreground border-border hover:bg-accent-hover",
-      garden: "bg-success-bg text-success border-success hover:bg-success-bg/80",
-      usp: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
-      parking: "bg-info-bg text-info border-info hover:bg-info-bg/80",
-      roof: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
-      material: "bg-muted text-muted-foreground border-border hover:bg-accent",
-    };
-    return variantClasses[variant];
+    if (!isOn) {
+      // Unselected: White with warm gray border
+      return "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+    }
+    
+    // Selected: Forest green (all variants use same style)
+    return "bg-primary text-primary-foreground border-primary hover:bg-primary-hover";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, chip: string) => {
@@ -220,7 +220,7 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label={id || "Chip-väljare"} id={id}>
+    <div className="flex flex-wrap gap-2" role="group" aria-label={id || "Chip-väljare"} id={id}>
       {chips.map((chip) => {
         const isOn = selected.includes(chip);
         const chipClasses = getChipClasses(isOn);
@@ -235,9 +235,9 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
             role="checkbox"
             aria-checked={isOn}
             aria-label={tooltip ? `${chip}: ${tooltip}` : chip}
-            className={`min-h-[44px] min-w-[44px] px-3 py-2 text-xs rounded-full border transition-all font-medium select-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:outline-none inline-flex items-center gap-1 ${chipClasses}`}
+            className={`min-h-[44px] min-w-[44px] px-3 py-2 text-sm border transition-all font-normal select-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:outline-none inline-flex items-center gap-1.5 ${chipClasses}`}
           >
-            {isOn && <CheckCircle2 className="w-3 h-3" />}
+            {isOn && <CheckCircle2 className="w-3.5 h-3.5" />}
             {chip}
           </button>
         );
@@ -249,7 +249,7 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
                 {chipButton}
               </TooltipTrigger>
               <TooltipContent>
-                <p className="text-xs">{tooltip}</p>
+                <p className="text-sm">{tooltip}</p>
               </TooltipContent>
             </Tooltip>
           );
@@ -583,45 +583,49 @@ function Section({ title, icon, color, defaultExpanded = true, persistKey, child
     }
   };
 
-  const colorClasses = {
-    red: 'bg-red-50 border-red-200',
-    blue: 'bg-blue-50 border-blue-200',
-    gold: 'bg-amber-50 border-amber-200',
-    green: 'bg-green-50 border-green-200',
-    purple: 'bg-purple-50 border-purple-200',
-    gray: 'bg-gray-50 border-gray-200',
-  };
-
-  const colorAccent = {
-    red: 'text-red-700',
-    blue: 'text-blue-700',
-    gold: 'text-amber-700',
-    green: 'text-green-700',
-    purple: 'text-purple-700',
-    gray: 'text-gray-700',
+  /**
+   * Mäklaraktig Section Styling - Human Design
+   * 
+   * Design Philosophy:
+   * - NO colored backgrounds
+   * - Subtle left border (4px) indicates section type
+   * - White background for all sections
+   * - Warm gray border
+   * - Charcoal text
+   */
+  const getBorderAccent = (color: string) => {
+    switch (color) {
+      case 'red': return 'border-l-amber-500';    // Critical: Amber
+      case 'blue': return 'border-l-blue-400';    // Info: Subtle blue
+      case 'gold': return 'border-l-amber-400';   // Material: Gold
+      case 'green': return 'border-l-primary';    // Success: Forest green
+      case 'purple': return 'border-l-purple-400';// Construction: Purple
+      case 'gray': return 'border-l-gray-300';    // Optional: Gray
+      default: return 'border-l-gray-300';
+    }
   };
 
   return (
-    <div className={`rounded-lg border p-4 ${colorClasses[color]}`}>
+    <div className={`bg-white border border-gray-200 border-l-4 ${getBorderAccent(color)} p-4`}>
       <button
         type="button"
         onClick={toggleExpanded}
-        className="w-full flex items-center justify-between mb-3 hover:opacity-80 transition-opacity"
+        className="w-full flex items-center justify-between mb-3 hover:opacity-70 transition-opacity"
       >
         <div className="flex items-center gap-2">
-          {icon && <span className={colorAccent[color]}>{icon}</span>}
-          <h3 className={`text-sm font-semibold ${colorAccent[color]}`}>{title}</h3>
+          {icon && <span className="text-gray-600">{icon}</span>}
+          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
           {badge && <div className="ml-auto">{badge}</div>}
         </div>
         {isExpanded ? (
-          <ChevronUp className={`w-4 h-4 ${colorAccent[color]}`} />
+          <ChevronUp className="w-4 h-4 text-gray-500" />
         ) : (
-          <ChevronDown className={`w-4 h-4 ${colorAccent[color]}`} />
+          <ChevronDown className="w-4 h-4 text-gray-500" />
         )}
       </button>
 
       {helpText && isExpanded && (
-        <p className="text-xs text-gray-600 mb-3">{helpText}</p>
+        <p className="text-sm text-gray-600 mb-3">{helpText}</p>
       )}
 
       {isExpanded && <div className="space-y-3">{children}</div>}

@@ -11,156 +11,133 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
   /* ═══════════════════════════════════════════════════════════════════
-     MÄKLARAKTIG COLOR SYSTEM - Professional Swedish Real Estate Style
+     MÄKLARAKTIG COLOR SYSTEM - Human-Designed Professional Style
      ═══════════════════════════════════════════════════════════════════
      Design Philosophy:
-     - 90% white backgrounds (clean, professional)
-     - ONE accent color: dark green #2D5016 (ONLY for CTAs)
-     - Subtle gray accents (#F8F9FA)
-     - Light gray borders (#E5E7EB) - ALL borders use this
-     - NO colored backgrounds (no red-50, blue-50, yellow-50)
-     - NO colored borders (no red-300, blue-300, yellow-300)
+     - Clean, minimal, professional (like Hemnet, Booli, Vitec)
+     - Warm neutrals with subtle depth
+     - ONE accent: Forest green #2D5016 (trust, stability, nature)
+     - NO bright colors, NO colored backgrounds
+     - Subtle hierarchy through typography and spacing
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Primary Color - Dark Green (ONLY for CTAs) */
-  --primary: 100 45% 25%;           /* Dark green #2D5016 - ONLY for primary buttons */
-  --primary-foreground: 0 0% 100%;  /* White text on dark green */
-  --primary-hover: 100 45% 20%;     /* Slightly darker on hover #234010 */
-  --primary-border: 100 45% 25%;    /* Same as primary */
+  /* Primary - Forest Green (Swedish real estate standard) */
+  --primary: 142 45% 28%;           /* Forest green #2D5016 - trust & stability */
+  --primary-foreground: 0 0% 100%;  /* White text */
+  --primary-hover: 142 45% 24%;     /* Slightly darker on hover */
+  --primary-border: 142 45% 28%;    /* Same as primary */
 
-  /* Backgrounds - 90% White Rule */
-  --background: 0 0% 100%;          /* Pure white #FFFFFF - 90% of interface */
-  --background-subtle: 210 17% 98%; /* Subtle gray #F8F9FA - 10% of interface */
+  /* Backgrounds - Warm Neutrals */
+  --background: 0 0% 100%;          /* Pure white #FFFFFF */
+  --background-subtle: 40 20% 98%;  /* Warm off-white #FAFAF8 */
 
-  /* Text Colors - Dark Gray (Not Black) */
-  --foreground: 0 0% 10%;           /* Dark gray #1A1A1A - primary text (not pure black) */
-  --muted-foreground: 220 9% 46%;   /* Muted gray #6B7280 - labels, secondary text */
+  /* Text - Natural Hierarchy */
+  --foreground: 220 13% 15%;        /* Charcoal #1D2939 - not pure black */
+  --muted-foreground: 220 9% 46%;   /* Medium gray #6B7280 */
 
-  /* Borders - ALL Use Light Gray */
-  --border: 220 13% 91%;            /* Light gray #E5E7EB - ALL borders use this */
-  --input: 220 13% 91%;             /* Same for inputs #E5E7EB */
-  --ring: 100 45% 25%;              /* Focus rings - dark green */
+  /* Borders - Subtle & Warm */
+  --border: 30 10% 91%;             /* Warm gray #E8E5DE */
+  --input: 30 10% 91%;              /* Same for inputs */
+  --ring: 142 45% 28%;              /* Focus: forest green */
 
-  /* Cards - White with Subtle Border */
-  --card: 0 0% 100%;                /* White cards #FFFFFF */
-  --card-foreground: 0 0% 10%;      /* Dark gray text #1A1A1A */
-  --card-border: 220 13% 91%;       /* Light gray border #E5E7EB */
+  /* Cards - Clean White */
+  --card: 0 0% 100%;                /* White #FFFFFF */
+  --card-foreground: 220 13% 15%;   /* Charcoal #1D2939 */
+  --card-border: 30 10% 91%;        /* Warm gray #E8E5DE */
 
-  /* Popovers - White with Subtle Border */
-  --popover: 0 0% 100%;             /* White popover #FFFFFF */
-  --popover-foreground: 0 0% 10%;   /* Dark gray text #1A1A1A */
-  --popover-border: 220 13% 91%;    /* Light gray border #E5E7EB */
+  /* Popovers */
+  --popover: 0 0% 100%;             /* White */
+  --popover-foreground: 220 13% 15%;/* Charcoal */
+  --popover-border: 30 10% 91%;     /* Warm gray */
 
-  /* Hover States - Very Subtle Gray */
-  --accent: 220 13% 96%;            /* Very subtle gray #F3F4F6 - hover states */
-  --accent-foreground: 0 0% 10%;    /* Dark gray text */
-  --accent-hover: 220 13% 91%;      /* Slightly darker #E5E7EB */
-  --accent-border: 220 13% 91%;     /* Light gray border */
+  /* Hover States - Barely Visible */
+  --accent: 40 20% 97%;             /* Very subtle warm gray #F7F6F4 */
+  --accent-foreground: 220 13% 15%; /* Charcoal */
+  --accent-hover: 40 20% 95%;       /* Slightly darker */
+  --accent-border: 30 10% 91%;      /* Warm gray */
 
-  /* Secondary - White with Gray Border */
-  --secondary: 0 0% 100%;           /* White #FFFFFF */
-  --secondary-foreground: 0 0% 10%; /* Dark gray text #1A1A1A */
-  --secondary-border: 220 13% 91%;  /* Light gray border #E5E7EB */
+  /* Secondary - Neutral */
+  --secondary: 0 0% 100%;           /* White */
+  --secondary-foreground: 220 13% 15%; /* Charcoal */
+  --secondary-border: 30 10% 91%;   /* Warm gray */
 
-  /* Muted - Subtle Gray Background */
-  --muted: 220 13% 96%;             /* Subtle gray #F3F4F6 */
-  --muted-foreground: 220 9% 46%;   /* Muted gray text #6B7280 */
-  --muted-border: 220 13% 91%;      /* Light gray border #E5E7EB */
+  /* Muted - Subtle Background */
+  --muted: 40 20% 97%;              /* Warm gray #F7F6F4 */
+  --muted-foreground: 220 9% 46%;   /* Medium gray #6B7280 */
+  --muted-border: 30 10% 91%;       /* Warm gray */
 
-  /* Semantic Colors - TEXT ONLY (Minimal Usage) */
-  --success: 142 71% 45%;           /* Green #10B981 - text only */
-  --success-foreground: 0 0% 100%;  /* White on green */
-  --success-bg: 142 76% 96%;        /* Very light green #F0FDF4 - RARE usage */
+  /* Semantic Colors - Minimal, Professional */
+  --success: 142 45% 28%;           /* Forest green (same as primary) */
+  --success-foreground: 0 0% 100%;  /* White */
+  --success-bg: 0 0% 100%;          /* White (NO colored bg) */
 
-  --warning: 38 92% 50%;            /* Amber #F59E0B - text only */
-  --warning-foreground: 0 0% 100%;  /* White on amber */
-  --warning-bg: 48 96% 95%;         /* Very light amber #FFFBEB - RARE usage */
+  --warning: 38 92% 50%;            /* Amber (rare usage) */
+  --warning-foreground: 0 0% 100%;  /* White */
+  --warning-bg: 0 0% 100%;          /* White (NO colored bg) */
 
-  --error: 0 72% 51%;               /* Red #DC2626 - text only */
-  --error-foreground: 0 0% 100%;    /* White on red */
-  --error-bg: 0 86% 97%;            /* Very light red #FEF2F2 - RARE usage */
+  --error: 0 72% 51%;               /* Red (rare usage) */
+  --error-foreground: 0 0% 100%;    /* White */
+  --error-bg: 0 0% 100%;            /* White (NO colored bg) */
 
-  --info: 199 89% 48%;              /* Cyan #0EA5E9 - text only */
-  --info-foreground: 0 0% 100%;     /* White on cyan */
-  --info-bg: 199 95% 96%;           /* Very light cyan #F0F9FF - RARE usage */
+  --info: 220 13% 15%;              /* Charcoal (no special color) */
+  --info-foreground: 0 0% 100%;     /* White */
+  --info-bg: 0 0% 100%;             /* White (NO colored bg) */
 
-  /* Legacy Destructive (Maps to Error) */
-  --destructive: 0 72% 51%;         /* Red #DC2626 */
+  /* Destructive */
+  --destructive: 0 72% 51%;         /* Red */
   --destructive-foreground: 0 0% 100%;
   --destructive-border: 0 72% 51%;
 
   /* ═══════════════════════════════════════════════════════════════════
-     MÄKLARAKTIG TYPOGRAPHY SYSTEM - Three Sizes Only
+     TYPOGRAPHY - Natural, Human Scale
      ═══════════════════════════════════════════════════════════════════
-     - Labels: 13px (text-sm) - normal weight, gray color
-     - Body: 15px (text-base) - readable, professional
-     - Headings: 16px (text-md) - semibold, dark gray
-     - NO uppercase text
-     - Minimal bold usage
+     - Readable sizes (14-16px body)
+     - Subtle hierarchy through weight, not size
+     - Natural line heights for Swedish text
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Font Sizes - Only 3 Sizes for Forms */
-  --text-xs: 0.75rem;      /* 12px - minimum (rare usage) */
-  --text-sm: 0.8125rem;    /* 13px - labels, secondary text */
-  --text-base: 0.9375rem;  /* 15px - body text (standard) */
-  --text-md: 1rem;         /* 16px - section headings */
+  /* Font Sizes - Natural Scale */
+  --text-xs: 0.75rem;      /* 12px - helper text */
+  --text-sm: 0.875rem;     /* 14px - labels, secondary */
+  --text-base: 0.9375rem;  /* 15px - body text */
+  --text-md: 1rem;         /* 16px - section titles */
+  --text-lg: 1.125rem;     /* 18px - page titles */
   
-  /* Legacy sizes (avoid in new code) */
-  --text-lg: 1.125rem;     /* 18px - avoid */
-  --text-xl: 1.25rem;      /* 20px - avoid */
-  --text-2xl: 1.5rem;      /* 24px - avoid */
-  --text-3xl: 1.875rem;    /* 30px - avoid */
-  --text-4xl: 2.25rem;     /* 36px - avoid */
-  --text-5xl: 3rem;        /* 48px - avoid */
+  /* Font Weights - Subtle Hierarchy */
+  --font-normal: 400;      /* Body text */
+  --font-medium: 500;      /* Emphasis */
+  --font-semibold: 600;    /* Headings */
 
-  /* Font Weights - Minimal Usage */
-  --font-normal: 400;      /* Default for all text */
-  --font-medium: 500;      /* Rare, for emphasis */
-  --font-semibold: 600;    /* Only for headings */
-  --font-bold: 700;        /* Avoid in new code */
-
-  /* Line Heights */
-  --leading-tight: 1.2;    /* Headings */
-  --leading-snug: 1.375;   /* Compact text */
-  --leading-normal: 1.5;   /* Body text (standard) */
-  --leading-relaxed: 1.625;
-  --leading-loose: 2;
+  /* Line Heights - Natural Reading */
+  --leading-tight: 1.25;   /* Headings */
+  --leading-normal: 1.5;   /* Body text */
+  --leading-relaxed: 1.625;/* Comfortable reading */
 
   /* ═══════════════════════════════════════════════════════════════════
-     MÄKLARAKTIG SPACING SYSTEM - Generous White Space
+     SPACING - Comfortable, Not Cramped
      ═══════════════════════════════════════════════════════════════════
-     - gap-3 (12px): Between chips, small elements
-     - gap-4 (16px): Between form fields
-     - p-5/p-6 (20-24px): Inside sections
-     - gap-6 (24px): Between sections
-     - Never less than 16px for interactive elements
+     - Breathing room between elements
+     - Consistent rhythm
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Spacing Scale - Generous */
-  --space-3: 0.75rem;      /* 12px - minimum gap between chips */
-  --space-4: 1rem;         /* 16px - gap between form fields */
-  --space-5: 1.25rem;      /* 20px - section padding */
-  --space-6: 1.5rem;       /* 24px - gap between sections */
-  --space-8: 2rem;         /* 32px - large section spacing */
+  /* Spacing Scale */
+  --space-2: 0.5rem;       /* 8px - tight */
+  --space-3: 0.75rem;      /* 12px - compact */
+  --space-4: 1rem;         /* 16px - standard */
+  --space-5: 1.25rem;      /* 20px - comfortable */
+  --space-6: 1.5rem;       /* 24px - spacious */
+  --space-8: 2rem;         /* 32px - section breaks */
 
   /* ═══════════════════════════════════════════════════════════════════
-     MÄKLARAKTIG SHADOW SYSTEM - Minimal Usage
+     SHADOWS - Subtle Depth
      ═══════════════════════════════════════════════════════════════════
-     - shadow-sm: Subtle cards
-     - shadow-md: Sticky header/footer only
-     - NO heavy shadows (shadow-lg, shadow-xl)
-     - NO shadows on buttons (except sticky elements)
+     - Barely visible elevation
+     - Natural, not dramatic
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Shadow Scale - Minimal */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);  /* Subtle cards */
-  --shadow-md: 0 2px 4px 0 rgb(0 0 0 / 0.08);  /* Sticky elements only */
-  
-  /* Legacy shadows (avoid in new code) */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  /* Shadow Scale */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);  /* Barely visible */
+  --shadow-md: 0 2px 4px 0 rgb(0 0 0 / 0.06);  /* Subtle elevation */
 
   /* ═══════════════════════════════════════════════════════════════════
      MÄKLARAKTIG BORDER RADIUS - KANTIGA KANTER (INGA RUNDADE)
@@ -241,46 +218,27 @@
   .animate-delay-250 {
     animation-delay: 0.25s;
   }
+  /* Mäklaraktig Background - Subtle, Professional */
   .app-shell-bg {
-    background:
-      radial-gradient(1000px 500px at 0% -10%, hsl(34 48% 92% / 0.5), transparent 60%),
-      radial-gradient(900px 500px at 100% -10%, hsl(152 35% 86% / 0.36), transparent 55%),
-      radial-gradient(1200px 700px at 50% 115%, hsl(220 38% 96% / 0.55), transparent 65%),
-      hsl(38 33% 97%);
+    background: hsl(40 20% 98%); /* Warm off-white */
   }
+  
+  /* Card Styles - Clean & Minimal */
   .pro-card {
-    background: hsl(0 0% 100% / 0.94);
-    border: 1px solid hsl(34 20% 84% / 0.9);
-    border-radius: 0; /* Kantiga kanter */
-    box-shadow:
-      0 1px 2px hsl(220 20% 10% / 0.05),
-      0 16px 42px hsl(220 20% 10% / 0.07);
-    backdrop-filter: blur(8px);
+    background: hsl(0 0% 100%);
+    border: 1px solid hsl(30 10% 91%);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
   }
-  .pro-card-soft {
-    background: hsl(0 0% 100% / 0.72);
-    border: 1px solid hsl(34 18% 86% / 0.78);
-    border-radius: 0; /* Kantiga kanter */
-    box-shadow: 0 1px 2px hsl(220 20% 10% / 0.03);
-    backdrop-filter: blur(4px);
-  }
-  .pro-card-premium {
-    border-radius: 0; /* Kantiga kanter */
-    box-shadow:
-      0 2px 6px hsl(220 20% 10% / 0.05),
-      0 22px 48px hsl(220 20% 10% / 0.08);
-  }
-  .pro-section-card {
-    background: hsl(0 0% 100% / 0.96);
-    border: 1px solid hsl(34 18% 86% / 0.92);
-    border-radius: 0; /* Kantiga kanter */
+  
+  .pro-section {
+    background: hsl(0 0% 100%);
+    border: 1px solid hsl(30 10% 91%);
     padding: 1rem;
-    box-shadow: 0 1px 2px hsl(220 20% 10% / 0.04);
   }
-  .pro-muted-panel {
-    background: hsl(36 24% 97%);
-    border: 1px solid hsl(34 16% 88%);
-    border-radius: 0; /* Kantiga kanter */
+  
+  .pro-muted {
+    background: hsl(40 20% 97%);
+    border: 1px solid hsl(30 10% 91%);
   }
 }
 

@@ -178,9 +178,9 @@ export function VitecExportButton({
               </div>
 
               {/* Info box */}
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 border border-blue-200">
-                <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                <div className="text-xs text-blue-700">
+              <div className="flex items-start gap-3 p-3 border border-gray-200 bg-white">
+                <AlertCircle className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
+                <div className="text-xs text-gray-700">
                   <p className="font-medium mb-1">Vad händer efter export?</p>
                   <ul className="space-y-1 list-disc list-inside">
                     <li>Objektbeskrivningen uppdateras i Vitec</li>

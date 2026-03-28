@@ -158,8 +158,8 @@ export default function HomeClean() {
                 </div>
 
                 {(plan === "pro" || plan === "premium") ? (
-                  <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
-                    plan === "premium" ? "bg-purple-600 text-white" : "bg-amber-500 text-white"
+                  <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 ${
+                    plan === "premium" ? "bg-primary text-white" : "bg-primary text-white"
                   }`}>
                     <Crown className="w-3 h-3" />
                     {plan === "premium" ? "Premium" : "Pro"}
@@ -344,9 +344,9 @@ export default function HomeClean() {
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-semibold">Månadskvot</h3>
                       {plan === "premium" ? (
-                        <Badge className="bg-purple-600 text-white">Premium</Badge>
+                        <Badge className="bg-primary text-white">Premium</Badge>
                       ) : plan === "pro" ? (
-                        <Badge className="bg-amber-500 text-white">Pro</Badge>
+                        <Badge className="bg-primary text-white">Pro</Badge>
                       ) : (
                         <Badge variant="secondary">Gratis</Badge>
                       )}
@@ -360,10 +360,10 @@ export default function HomeClean() {
                       </div>
                       <span className="text-xs text-muted-foreground">{used} använda</span>
                     </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden bg-muted mb-3">
+                    <div className="w-full h-2 overflow-hidden bg-muted mb-3">
                       <div
-                        className={`h-full rounded-full transition-all ${
-                          remaining === 0 ? "bg-destructive" : plan === "premium" ? "bg-purple-600" : "bg-primary"
+                        className={`h-full transition-all ${
+                          remaining === 0 ? "bg-gray-400" : "bg-primary"
                         }`}
                         style={{ width: `${Math.min(100, (used / limit) * 100)}%` }}
                       />
