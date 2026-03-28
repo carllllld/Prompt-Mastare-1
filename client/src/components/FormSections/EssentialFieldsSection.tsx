@@ -97,14 +97,14 @@ export function EssentialFieldsSection({
   const floorsValue = form.watch("floors");
 
   return (
-    <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
-      <div className="mb-4">
+    <div className="bg-white border rounded-lg p-3" style={{ borderColor: "#E8E5DE" }}>
+      <div className="mb-3">
         <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>Grundläggande uppgifter</span>
       </div>
 
       {/* Import section - enklare design */}
-      <div className="flex flex-wrap gap-2 mb-4 p-3 rounded-lg border" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
-        <div className="w-full flex items-center gap-1.5 mb-1">
+      <div className="flex flex-wrap gap-2 mb-3 p-2.5 rounded-lg border" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
+        <div className="w-full flex items-center gap-1.5 mb-0.5">
           <span className="text-xs font-medium" style={{ color: "#1D2939" }}>Importera objektdata</span>
           <span className="text-xs" style={{ color: "#9CA3AF" }}>— slipper fylla i formuläret manuellt</span>
         </div>
@@ -112,7 +112,7 @@ export function EssentialFieldsSection({
       </div>
 
       {/* Address + Area */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
         <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
           <FormItem className="sm:col-span-2">
             <FormLabel className="text-xs font-medium" style={{ color: "#4B5563" }}>Adress *</FormLabel>
@@ -157,7 +157,7 @@ export function EssentialFieldsSection({
       </div>
 
       {/* Size + Price + Fee */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-2.5 mb-3">
         <FormField control={form.control} name="livingArea" rules={{ required: "Ange boarea" }} render={({ field }) => (
           <FormItem>
             <FormLabel className="text-xs text-gray-500">Boarea (kvm) *</FormLabel>
@@ -186,7 +186,7 @@ export function EssentialFieldsSection({
       </div>
 
       {/* Rooms + Condition */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-4 gap-2.5 mb-3">
         <FormItem>
           <FormLabel className="text-xs text-gray-500">Rum *</FormLabel>
           <div className="flex items-center gap-2 h-10">
@@ -246,7 +246,7 @@ export function EssentialFieldsSection({
 
       {/* Apartment-specific fields */}
       {isApartmentType && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
           <FormField control={form.control} name="floor" render={({ field }) => (
             <FormItem>
               <FormLabel className="text-xs text-gray-500">Våning *</FormLabel>
@@ -302,7 +302,7 @@ export function EssentialFieldsSection({
 
       {/* House-specific fields */}
       {isHouseOrTownhouseType && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
           <FormField control={form.control} name="buildYear" render={({ field }) => (
             <FormItem>
               <FormLabel className="text-xs text-gray-500">Byggår *</FormLabel>

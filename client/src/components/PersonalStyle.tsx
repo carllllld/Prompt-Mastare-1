@@ -212,16 +212,16 @@ export function PersonalStyle() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-base font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
             Personlig skrivstil
           </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Lär AI:n din skrivstil med 1–3 stilprover från olika delar av en stark objektsbeskrivning.
+          <p className="text-xs text-gray-600 mt-0.5">
+            Lär AI:n din skrivstil med 1–3 stilprover.
           </p>
         </div>
 
@@ -231,7 +231,7 @@ export function PersonalStyle() {
               checked={personalStyle.isActive}
               onCheckedChange={handleToggleActive}
             />
-            <span className="text-sm text-gray-600">
+            <span className="text-xs text-gray-600">
               {personalStyle.isActive ? "Aktiv" : "Inaktiv"}
             </span>
           </div>
@@ -240,20 +240,19 @@ export function PersonalStyle() {
 
       {/* Status Alert */}
       {personalStyle?.hasStyle && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
+        <Alert className="py-2">
+          <CheckCircle className="h-3 w-3" />
+          <AlertDescription className="text-xs">
             Din personliga stil är {personalStyle.isActive ? "aktiv" : "inaktiv"}.
-            AI:n anpassar texterna efter din skrivstil när den är aktiv.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Reference Texts */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">
+            <CardTitle className="text-sm">
               {personalStyle?.hasStyle ? "Uppdatera Exempeltexter" : "Lägg till Exempeltexter"}
             </CardTitle>
             {personalStyle?.hasStyle && (
@@ -261,31 +260,30 @@ export function PersonalStyle() {
                 variant="outline"
                 size="sm"
                 onClick={handleDelete}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 h-7 text-xs"
               >
-                <Trash2 className="h-4 w-4 mr-1" />
+                <Trash2 className="h-3 w-3 mr-1" />
                 Radera
               </Button>
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Klistra in 1–3 korta stilprover från texter som verkligen låter som du (minst 100 tecken vardera).
-              Använd helst exempel 1 för öppning och tonalitet, exempel 2 för mittparti och rumsflöde, och exempel 3 för läge och avslut.
+        <CardContent className="space-y-2.5">
+          <Alert className="py-2">
+            <AlertCircle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              Klistra in 1–3 korta stilprover (minst 100 tecken vardera).
             </AlertDescription>
           </Alert>
 
           {referenceTexts.map((text, index) => (
-            <div key={index} className="space-y-2">
+            <div key={index} className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
+                <label className="text-xs font-medium">
                   Exempel {index + 1}{index === 0 ? " (obligatorisk)" : " (valfri)"}
                 </label>
-                <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"}>
-                  {text.length}/100 tecken
+                <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"} className="text-[10px] h-4">
+                  {text.length}/100
                 </Badge>
               </div>
               <Textarea
@@ -296,25 +294,25 @@ export function PersonalStyle() {
                   setReferenceTexts(newTexts);
                 }}
                 placeholder={index === 0
-                  ? "Klistra in ett utdrag som visar hur du brukar öppna en objektbeskrivning och sätta tonen..."
+                  ? "Öppning och tonalitet..."
                   : index === 1
-                    ? "Klistra in ett utdrag som visar hur du beskriver planlösning, rum och flöde..."
-                    : "Klistra in ett utdrag som visar hur du skriver om läge, vardagsnytta och avslut..."}
-                className="min-h-[90px]"
+                    ? "Planlösning och rumsflöde..."
+                    : "Läge och avslut..."}
+                className="min-h-[75px] text-xs"
               />
             </div>
           ))}
 
-          <div className="flex items-center gap-2 pt-3">
+          <div className="flex items-center gap-2 pt-2">
             <Button
               onClick={handleSave}
               disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
-              className="flex-1"
+              className="flex-1 h-8 text-xs"
             >
               {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
               ) : (
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-3 w-3 mr-1.5" />
               )}
               {personalStyle?.hasStyle ? "Uppdatera stil" : "Spara stil"}
             </Button>

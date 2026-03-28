@@ -342,13 +342,13 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-5 sm:py-6">
+      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-3 sm:py-4">
 
         {/* Kompakt widget-rad + info-paneler (horisontell) - endast när inloggad och inget resultat */}
         {isAuthenticated && !result && (
-          <div className="mb-5 space-y-3">
+          <div className="mb-3 space-y-2">
             {/* Rad 1: Widgets */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
               {/* Hero-text */}
               <div className="lg:col-span-1">
                 <h1 className="text-base font-semibold leading-snug mb-1" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
@@ -504,12 +504,12 @@ export default function Home() {
 
         {/* Pro/Premium: Formulär med PersonalStyle */}
         {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
-          <div className="space-y-5">
+          <div className="space-y-3">
             {/* Grundläggande uppgifter + Personlig stil i 2-kolumner */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
               {/* Grundläggande uppgifter (2/3) */}
               <div className="lg:col-span-2 flex">
-                <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6 w-full">
+                <div className="pro-card pro-card-premium rounded-2xl p-4 sm:p-5 w-full">
                   <PromptFormProfessional
                     onSubmit={handleSubmit}
                     isPending={isPending}
@@ -522,8 +522,8 @@ export default function Home() {
               
               {/* Personlig stil (1/3) */}
               <div className="flex">
-                <div className="pro-card pro-card-premium rounded-2xl p-5 w-full flex flex-col">
-                  <div className="mb-4">
+                <div className="pro-card pro-card-premium rounded-2xl p-4 w-full flex flex-col">
+                  <div className="mb-3">
                     <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
                     <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
                       Kalibrera tonalitet
@@ -537,7 +537,7 @@ export default function Home() {
             </div>
 
             {/* Resten av formuläret i full bredd */}
-            <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
+            <div className="pro-card pro-card-premium rounded-2xl p-4 sm:p-5">
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -551,8 +551,8 @@ export default function Home() {
 
         {/* Formulär full bredd (för free users eller när resultat visas) */}
         {isAuthenticated && !result && plan === "free" && (
-          <div className="mb-5">
-            <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
+          <div className="mb-3">
+            <div className="pro-card pro-card-premium rounded-2xl p-4 sm:p-5">
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -565,7 +565,7 @@ export default function Home() {
 
         {/* Loading progress */}
         {isPending && (
-          <div className="mb-5 pro-card pro-card-premium rounded-2xl p-5">
+          <div className="mb-3 pro-card pro-card-premium rounded-2xl p-4">
             <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-medium">Generering pågår — steg {progressStep}/{LOADING_STEPS_COUNT}</span>
               <span>{progressPercent}%</span>
@@ -582,7 +582,7 @@ export default function Home() {
 
         {/* Resultat (full bredd) */}
         {result && (
-          <div ref={resultRef} className="mb-5">
+          <div ref={resultRef} className="mb-3">
             <ResultSection
               result={result}
               onNewPrompt={() => setResult(null)}
