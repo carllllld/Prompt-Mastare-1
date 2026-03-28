@@ -71,6 +71,7 @@ interface EssentialFieldsSectionProps {
   addressLookupResult: string | null;
   onAddressLookup: (address: string) => void;
   importButtons?: React.ReactNode;
+  isPro?: boolean;
 }
 
 const exampleInputClass = "h-10 bg-white border-input text-sm";
@@ -92,6 +93,7 @@ export function EssentialFieldsSection({
   addressLookupResult,
   onAddressLookup,
   importButtons,
+  isPro = false,
 }: EssentialFieldsSectionProps) {
   const addressValue = form.watch("address");
   const buildYearValue = form.watch("buildYear");
@@ -129,10 +131,11 @@ export function EssentialFieldsSection({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={addressLookupLoading || !field.value}
-                className="h-10 text-xs px-3 whitespace-nowrap"
-                style={{ borderColor: "#E8E5DE", color: "#2D6A4F" }}
-                onClick={() => onAddressLookup(field.value)}
+                disabled={!isPro || addressLookupLoading || !field.value}
+                className="h-10 text-xs px-3 whitespace-nowrap relative"
+                style={{ borderColor: "#E8E5DE", color: isPro ? "#2D6A4F" : "#9CA3AF" }}
+                onClick={() => isPro && onAddressLookup(field.value)}
+                title={!isPro ? "Adressökning kräver Pro" : ""}
               >
                 {addressLookupLoading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -140,6 +143,7 @@ export function EssentialFieldsSection({
                   <>
                     <MapPin className="w-3.5 h-3.5 mr-1" />
                     Sök läge
+                    {!isPro && <span className="ml-1 text-[10px]">🔒</span>}
                   </>
                 )}
               </Button>

@@ -8,6 +8,7 @@ import { PdfExport } from "./PdfExport";
 import { InlineHighlights } from "./InlineHighlights";
 import { ExpertFeedbackPanel } from "./ExpertFeedbackPanel";
 import { VitecExportButton } from "./VitecExportButton";
+import { LockedFeature } from "./LockedFeature";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,6 +19,7 @@ interface ResultSectionProps {
   isRegenerating?: boolean;
   propertyData?: Record<string, any>;
   vitecObjectId?: string;
+  isPro?: boolean;
 }
 
 function CopyCard({ title, icon: Icon, text, iconColor, delayClass }: {
@@ -99,7 +101,7 @@ function CopyAllButton({ result }: { result: OptimizeResponse }) {
   );
 }
 
-export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating, propertyData, vitecObjectId }: ResultSectionProps) {
+export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating, propertyData, vitecObjectId, isPro = false }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
   const [activeFeedback, setActiveFeedback] = useState<string[]>([]);
@@ -514,20 +516,30 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           </div>
 
           {/* Show InlineHighlights if expertAnalysis is available */}
-          {expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 ? (
-            <div className="mb-4 rounded-lg border border-border bg-background p-4 space-y-4">
-              <div className="text-base leading-relaxed text-foreground font-serif">
-                <InlineHighlights
-                  text={editedText}
-                  feedback={expertAnalysis.improvements}
-                  field="improvedPrompt"
-                  onFixClick={handleFixClick}
-                  onTextChange={setEditedText}
-                />
+          {isPro ? (
+            expertAnalysis && expertAnalysis.improvements && expertAnalysis.improvements.length > 0 ? (
+              <div className="mb-4 rounded-lg border border-border bg-background p-4 space-y-4">
+                <div className="text-base leading-relaxed text-foreground font-serif">
+                  <InlineHighlights
+                    text={editedText}
+                    feedback={expertAnalysis.improvements}
+                    field="improvedPrompt"
+                    onFixClick={handleFixClick}
+                    onTextChange={setEditedText}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <TextEditor text={editedText} onTextChange={setEditedText} />
+            )
           ) : (
-            <TextEditor text={editedText} onTextChange={setEditedText} />
+            <LockedFeature requiredPlan="pro" featureName="Textredigering" currentPlan="free">
+              <div className="mb-4 rounded-lg border border-border bg-background p-4">
+                <div className="text-base leading-relaxed text-foreground font-serif whitespace-pre-wrap">
+                  {editedText}
+                </div>
+              </div>
+            </LockedFeature>
           )}
         </div>
       </div>

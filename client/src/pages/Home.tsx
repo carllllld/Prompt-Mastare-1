@@ -6,6 +6,7 @@ import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { CompactUsageWidget, CompactHistoryWidget, CompactUpgradeWidget } from "@/components/CompactWidgets";
+import { LockedFeature } from "@/components/LockedFeature";
 import { AuthModal } from "@/components/AuthModal";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
@@ -15,7 +16,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -175,6 +176,38 @@ export default function Home() {
                   <span>Historik</span>
                 </Link>
 
+                {/* Team - locked for free users */}
+                {plan === "free" ? (
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Team-samarbete kräver Pro",
+                        description: "Uppgradera till Pro för att bjuda in kollegor och dela prompter.",
+                        action: (
+                          <Button
+                            onClick={() => startCheckout("pro")}
+                            disabled={isCheckoutPending}
+                            size="sm"
+                            className="text-xs"
+                          >
+                            Uppgradera till Pro
+                          </Button>
+                        ),
+                      });
+                    }}
+                    className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span>Team</span>
+                    <Lock className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <Link href="/teams" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Users className="w-4 h-4" />
+                    <span>Team</span>
+                  </Link>
+                )}
+
                 {/* Uppgradera/Plan - plain text/button */}
                 {(plan === "pro" || plan === "premium") ? (
                   <button
@@ -216,6 +249,39 @@ export default function Home() {
                         Historik
                       </Link>
                     </DropdownMenuItem>
+                    {/* Team link - locked for free users */}
+                    {plan === "free" ? (
+                      <DropdownMenuItem 
+                        onClick={() => {
+                          toast({
+                            title: "Team-samarbete kräver Pro",
+                            description: "Uppgradera till Pro för att bjuda in kollegor och dela prompter.",
+                            action: (
+                              <Button
+                                onClick={() => startCheckout("pro")}
+                                disabled={isCheckoutPending}
+                                size="sm"
+                                className="text-xs"
+                              >
+                                Uppgradera till Pro
+                              </Button>
+                            ),
+                          });
+                        }}
+                        className="cursor-pointer"
+                      >
+                        <Users className="w-3.5 h-3.5 mr-2" />
+                        Team
+                        <Lock className="w-3 h-3 ml-auto text-muted-foreground" />
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem asChild>
+                        <Link href="/teams" className="flex items-center gap-2 cursor-pointer">
+                          <Users className="w-3.5 h-3.5" />
+                          Team
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     {plan === "free" ? (
                       <DropdownMenuItem onClick={() => startCheckout("pro")} disabled={isCheckoutPending} className="cursor-pointer">
                         <ArrowUp className="w-3.5 h-3.5 mr-2" />
@@ -381,19 +447,35 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Personlig stil (1/3) */}
+              {/* Personlig stil (1/3) - låst för free users */}
               <div className="flex flex-col gap-2">
-                <div className="pro-card pro-card-premium p-3 flex flex-col">
-                  <div className="mb-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                      Kalibrera tonalitet
-                    </p>
+                {isPro ? (
+                  <div className="pro-card pro-card-premium p-3 flex flex-col">
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                      <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                        Kalibrera tonalitet
+                      </p>
+                    </div>
+                    <div className="flex-1">
+                      <PersonalStyle />
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <PersonalStyle />
+                ) : (
+                  <div className="pro-card pro-card-premium p-3 flex flex-col">
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                      <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                        Kalibrera tonalitet
+                      </p>
+                    </div>
+                    <LockedFeature requiredPlan="pro" featureName="Personlig skrivstil" currentPlan="free">
+                      <div className="flex-1 p-4 bg-muted/20">
+                        <p className="text-xs text-muted-foreground">Lär AI:n din unika skrivstil med exempeltexter.</p>
+                      </div>
+                    </LockedFeature>
                   </div>
-                </div>
+                )}
                 
                 {/* Uppgradera widget under PersonalStyle */}
                 {plan !== "premium" && (
@@ -460,6 +542,9 @@ export default function Home() {
               onNewPrompt={() => setResult(null)}
               onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
               isRegenerating={isPending}
+              propertyData={lastSubmitData?.propertyData}
+              vitecObjectId={lastSubmitData?.propertyData?._sourceId}
+              isPro={plan === "pro" || plan === "premium"}
             />
           </div>
         )}

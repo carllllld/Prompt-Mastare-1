@@ -15,6 +15,7 @@ import { EssentialFieldsSection } from "@/components/FormSections/EssentialField
 import { ImageSection } from "@/components/FormSections/ImageSection";
 import { DetailsSection } from "@/components/FormSections/DetailsSection";
 import { CollapsibleChipSelector } from "@/components/FormSections/CollapsibleChipSelector";
+import { LockedFeature } from "@/components/LockedFeature";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -652,7 +653,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
 
-  const modelLimits = { min: 200, max: 600, defaultMin: 350, defaultMax: 450 };
+  const modelLimits = isPro 
+    ? { min: 200, max: 600, defaultMin: 350, defaultMax: 450 }
+    : { min: 300, max: 450, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
   const [wordCountMax, setWordCountMax] = useState(modelLimits.defaultMax);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
@@ -1456,12 +1459,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 addressLookupLoading={addressLookupLoading}
                 addressLookupResult={addressLookupResult}
                 onAddressLookup={handleAddressLookup}
+                isPro={isPro}
                 importButtons={
                   <>
                     <HemnetImportButton onImport={handleExternalImport} />
-                    <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
-                    {!isPro && (
-                      <span className="text-xs self-center text-slate-400">Vitec-import kräver Pro</span>
+                    {isPro ? (
+                      <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+                    ) : (
+                      <LockedFeature requiredPlan="pro" featureName="Vitec-import" currentPlan={isPro ? "pro" : "free"}>
+                        <VitecImportPicker onImport={() => {}} isPro={false} />
+                      </LockedFeature>
                     )}
                   </>
                 }
@@ -1811,8 +1818,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
 
-            {/* Pro: word count */}
-            {isPro && (
+            {/* Word count - låst för free users */}
+            {isPro ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
                 <div className="flex items-center gap-2">
@@ -1836,6 +1843,22 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   <span className="text-xs text-gray-400 ml-2">(anpassas efter din plan)</span>
                 </div>
               </div>
+            ) : (
+              <LockedFeature requiredPlan="pro" featureName="Textlängdskontroll" currentPlan="free">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
+                  <div className="flex items-center gap-2">
+                    <Select value="150" disabled>
+                      <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    </Select>
+                    <span className="text-xs text-gray-400">till</span>
+                    <Select value="250" disabled>
+                      <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    </Select>
+                    <span className="text-xs text-gray-400 ml-2">(anpassas efter din plan)</span>
+                  </div>
+                </div>
+              </LockedFeature>
             )}
 
             {/* AI Model Info - Fixed GPT-5.2 */}

@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Crown, ArrowUp, Loader2 } from "lucide-react";
+import { Clock, Crown, ArrowUp, Loader2, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 
 interface UsageWidgetProps {
@@ -100,30 +100,76 @@ interface CompactUpgradeWidgetProps {
 export function CompactUpgradeWidget({ plan, onUpgrade, isLoading }: CompactUpgradeWidgetProps) {
   if (plan === "premium") return null;
   
+  const isPro = plan === "pro";
+  const targetPlan = isPro ? "Premium" : "Pro";
+  const price = isPro ? "599 kr/mån" : "299 kr/mån";
+  const texts = isPro ? "25 texter/mån" : "10 texter/mån";
+  
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 flex items-center justify-between">
+      <div className="px-3 py-2 flex items-center justify-between border-b border-border">
         <span className="text-sm font-semibold text-foreground">
-          {plan === "free" ? "Uppgradera" : "Premium"}
+          Uppgradera till {targetPlan}
         </span>
+        <span className="text-sm font-bold text-primary">{price}</span>
       </div>
-      <div className="px-3 py-2.5 flex-1 flex flex-col justify-center">
-        <p className="text-sm font-semibold mb-1 text-foreground">
-          {plan === "free" ? "Pro" : "Premium"}
+      <div className="px-3 py-3 flex-1 flex flex-col">
+        <p className="text-base font-semibold mb-2 text-foreground">
+          {texts}
         </p>
-        <p className="text-xs mb-2 text-muted-foreground">
-          {plan === "free" ? "10 texter/mån" : "25 texter/mån"}
-        </p>
+        <ul className="space-y-1.5 mb-3 flex-1">
+          {isPro ? (
+            <>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>100 AI-redigeringar per text</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>Prioriterad support</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>Högre kapacitet</span>
+              </li>
+            </>
+          ) : (
+            <>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>40 AI-redigeringar per text</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>Hemnet & Vitec-import</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>Bildanalys & adressuppslag</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>Personlig skrivstil</span>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-foreground">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                <span>Team-samarbete</span>
+              </li>
+            </>
+          )}
+        </ul>
         <Button
           onClick={onUpgrade}
           disabled={isLoading}
           size="sm"
-          className="w-full h-8 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary-hover"
+          className="w-full h-9 text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary-hover"
         >
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
             <>
-              <ArrowUp className="w-4 h-4 mr-1" />
-              {plan === "free" ? "299 kr/mån" : "599 kr/mån"}
+              <ArrowUp className="w-4 h-4 mr-1.5" />
+              Uppgradera nu
             </>
           )}
         </Button>
