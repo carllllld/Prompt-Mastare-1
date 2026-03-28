@@ -264,7 +264,7 @@ export default function Home() {
         {/* Kompakt widget-rad - endast när inloggad och inget resultat */}
         {isAuthenticated && !result && (
           <div className="mb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {/* Hero-text */}
               <div className="lg:col-span-1">
                 <h1 className="text-sm font-semibold leading-snug mb-0.5" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
@@ -286,15 +286,6 @@ export default function Home() {
               
               {/* Historik widget */}
               <CompactHistoryWidget historyCount={0} />
-              
-              {/* Upgrade widget */}
-              {plan !== "premium" && (
-                <CompactUpgradeWidget
-                  plan={plan}
-                  onUpgrade={() => startCheckout(plan === "free" ? "pro" : "premium")}
-                  isLoading={isCheckoutPending}
-                />
-              )}
             </div>
           </div>
         )}
@@ -391,8 +382,8 @@ export default function Home() {
               </div>
               
               {/* Personlig stil (1/3) */}
-              <div className="flex">
-                <div className="pro-card pro-card-premium p-3 w-full flex flex-col">
+              <div className="flex flex-col gap-2">
+                <div className="pro-card pro-card-premium p-3 flex flex-col">
                   <div className="mb-2">
                     <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
                     <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
@@ -403,6 +394,17 @@ export default function Home() {
                     <PersonalStyle />
                   </div>
                 </div>
+                
+                {/* Uppgradera widget under PersonalStyle */}
+                {plan !== "premium" && (
+                  <div className="pro-card pro-card-premium p-3">
+                    <CompactUpgradeWidget
+                      plan={plan}
+                      onUpgrade={() => startCheckout(plan === "free" ? "pro" : "premium")}
+                      isLoading={isCheckoutPending}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
