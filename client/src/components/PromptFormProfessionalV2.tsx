@@ -1231,7 +1231,7 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
   return (
     <TooltipProvider>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onLocalSubmit)} className="min-h-screen flex flex-col bg-slate-50">
+        <form onSubmit={form.handleSubmit(onLocalSubmit)} className="min-h-screen flex flex-col bg-white">
           
           {/* STICKY HEADER */}
           <StickyHeader
@@ -1244,8 +1244,8 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
           />
 
           {/* MAIN CONTENT - GRID LAYOUT */}
-          <div className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto p-3">
+          <div className="flex-1 overflow-auto bg-gray-50">
+            <div className="max-w-7xl mx-auto p-6">
               <FormGridLayout compactMode={compactMode}>
                 
                 {/* ROW 1 */}

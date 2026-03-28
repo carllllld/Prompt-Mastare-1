@@ -1,22 +1,14 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles } from 'lucide-react';
 
 interface StickyFooterProps {
   onSubmit: () => void;
   isPending: boolean;
-  disabled: boolean;
+  disabled?: boolean;
 }
 
 /**
- * StickyFooter - Fixed footer with submit button
- * 
- * Features:
- * - Sticky positioning (bottom: 0, z-index: 50)
- * - Full-width submit button on mobile
- * - Auto-width on desktop
- * - Loading state
- * - Disabled state
+ * StickyFooter - Mäklaraktig design
+ * Clean, stor knapp, mörk grön accent
  */
 export function StickyFooter({
   onSubmit,
@@ -24,33 +16,16 @@ export function StickyFooter({
   disabled,
 }: StickyFooterProps) {
   return (
-    <div className="sticky bottom-0 z-50 bg-white border-t-2 border-slate-200 shadow-lg">
-      <div className="max-w-7xl mx-auto px-3 py-3">
-        <Button
+    <div className="sticky bottom-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+      <div className="max-w-7xl mx-auto px-6 py-4">
+        <button
           type="submit"
           onClick={onSubmit}
           disabled={isPending || disabled}
-          size="lg"
-          className="w-full md:w-auto md:min-w-[200px] h-12 text-base font-semibold"
-          style={{ background: '#2D6A4F' }}
+          className="w-full md:w-auto md:min-w-[240px] px-8 py-4 text-base font-semibold text-white bg-[#2D5016] hover:bg-[#234010] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
-          {isPending ? (
-            <>
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Genererar text...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-5 h-5 mr-2" />
-              Generera mäklartext
-            </>
-          )}
-        </Button>
-        
-        {/* Keyboard shortcut hint */}
-        <p className="text-xs text-muted-foreground mt-2 text-center md:text-left">
-          Tryck <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded">Cmd</kbd> + <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded">Enter</kbd> för att generera
-        </p>
+          {isPending ? 'Genererar text...' : 'Generera mäklartext'}
+        </button>
       </div>
     </div>
   );
