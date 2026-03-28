@@ -298,7 +298,7 @@ export function PersonalStyle() {
                   : index === 1
                     ? "Planlösning och rumsflöde..."
                     : "Läge och avslut..."}
-                className="min-h-[75px] text-xs"
+                className="min-h-[120px] text-xs resize-y"
               />
             </div>
           ))}

@@ -250,41 +250,47 @@ export default function Home() {
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             ) : isAuthenticated ? (
               <>
-                {/* Usage pill */}
-                <div className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
-                  <span className="font-semibold text-primary">{remaining}</span>
+                {/* Kvot - plain text */}
+                <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{remaining}</span>
                   <span>/</span>
                   <span>{limit}</span>
+                  <span className="text-xs">kvar</span>
                 </div>
 
-                {/* Plan badge or upgrade */}
+                {/* Historik - plain link */}
+                <Link href="/history" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Clock className="w-4 h-4" />
+                  <span>Historik</span>
+                </Link>
+
+                {/* Uppgradera/Plan - plain text/button */}
                 {(plan === "pro" || plan === "premium") ? (
-                  <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
-                    plan === "premium" 
-                      ? "bg-primary text-white" 
-                      : "bg-primary text-white"
-                  }`}>
-                    <Crown className="w-3 h-3" />
-                    {plan === "premium" ? "Premium" : "Pro"}
-                  </div>
+                  <button
+                    onClick={() => openPortal()}
+                    disabled={isPortalPending}
+                    className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Crown className="w-4 h-4 text-primary" />
+                    <span>{plan === "premium" ? "Premium" : "Pro"}</span>
+                  </button>
                 ) : (
-                  <Button
-                    size="sm"
+                  <button
                     onClick={() => startCheckout("pro")}
                     disabled={isCheckoutPending}
-                    className="text-xs font-medium gap-1 bg-primary text-primary-foreground hover:bg-primary-hover"
+                    className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />}
-                    <span className="hidden sm:inline">Uppgradera</span>
-                  </Button>
+                    {isCheckoutPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+                    <span>Uppgradera</span>
+                  </button>
                 )}
 
                 {/* User dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors border border-border">
-                      <User className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline max-w-[120px] truncate">{user?.email?.split("@")[0]}</span>
+                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                      <User className="w-4 h-4" />
+                      <span className="hidden md:inline max-w-[120px] truncate">{user?.email?.split("@")[0]}</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                   </DropdownMenuTrigger>
