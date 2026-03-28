@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { validateRequiredFields, getFieldLabel, type PropertyType, type Platform } from "@/lib/form-validation";
 import { HemnetImportButton, VitecImportPicker } from "@/components/IntegrationsPanel";
+import { LockedFeature } from "@/components/LockedFeature";
 import { EssentialFieldsSection } from "@/components/FormSections/EssentialFieldsSection";
 import { ImageSection } from "@/components/FormSections/ImageSection";
 import { DetailsSection } from "@/components/FormSections/DetailsSection";
@@ -1460,8 +1461,20 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 importButtons={
                   <>
                     <HemnetImportButton onImport={handleExternalImport} />
-                    {isPro && (
+                    {isPro ? (
                       <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+                    ) : (
+                      <LockedFeature requiredPlan="pro" featureName="Vitec-import" currentPlan="free" showOverlay={false}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled
+                          className="h-9 text-xs font-medium"
+                        >
+                          <Lock className="w-3 h-3 mr-1.5" />
+                          Vitec-import
+                        </Button>
+                      </LockedFeature>
                     )}
                   </>
                 }
@@ -1837,19 +1850,21 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
-                <div className="flex items-center gap-2">
-                  <Select value="150" disabled>
-                    <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
-                  </Select>
-                  <span className="text-xs text-gray-400">till</span>
-                  <Select value="250" disabled>
-                    <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
-                  </Select>
-                  <span className="text-xs text-gray-400 ml-2">(anpassas efter din plan)</span>
+              <LockedFeature requiredPlan="pro" featureName="Textlängdskontroll" currentPlan="free" showOverlay={false}>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
+                  <div className="flex items-center gap-2">
+                    <Select value="300" disabled>
+                      <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    </Select>
+                    <span className="text-xs text-gray-400">till</span>
+                    <Select value="450" disabled>
+                      <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
+                    </Select>
+                    <span className="text-xs text-gray-400 ml-2">🔒 Fast för gratis-plan</span>
+                  </div>
                 </div>
-              </div>
+              </LockedFeature>
             )}
 
             {/* AI Model Info - Fixed GPT-5.2 */}
