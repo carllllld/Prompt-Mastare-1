@@ -56,15 +56,15 @@ export default function Teams() {
     );
   }
 
-  // Kontrollera om användaren har pro- eller premium-plan
-  if (user?.subscriptionStatus !== "pro" && user?.subscriptionStatus !== "premium") {
+  // Kontrollera om användaren har premium-plan
+  if (user?.subscriptionStatus !== "premium") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="max-w-md w-full mx-4">
           <CardHeader className="text-center">
-            <CardTitle>Pro eller Premium krävs</CardTitle>
+            <CardTitle>Premium krävs</CardTitle>
             <CardDescription>
-              Team-samarbete ingår i Pro och Premium. Uppgradera för att bjuda in kollegor och dela prompter.
+              Team-samarbete ingår i Premium. Uppgradera för att bjuda in kollegor och dela prompter.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">

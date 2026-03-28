@@ -176,8 +176,8 @@ export default function Home() {
                   <span>Historik</span>
                 </Link>
 
-                {/* Team - locked for free users */}
-                {(plan === "pro" || plan === "premium") ? (
+                {/* Team - locked for free and pro users */}
+                {plan === "premium" ? (
                   <Link href="/teams" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <Users className="w-4 h-4" />
                     <span>Team</span>
@@ -186,11 +186,11 @@ export default function Home() {
                   <button
                     onClick={() => {
                       toast({
-                        title: "Team-samarbete kräver Pro",
-                        description: "Uppgradera till Pro för att skapa team och dela stilprofiler.",
+                        title: "Team-samarbete kräver Premium",
+                        description: "Uppgradera till Premium för att skapa team och dela stilprofiler.",
                         action: (
-                          <Button size="sm" onClick={() => startCheckout("pro")} disabled={isCheckoutPending}>
-                            Uppgradera till Pro
+                          <Button size="sm" onClick={() => startCheckout("premium")} disabled={isCheckoutPending}>
+                            Uppgradera till Premium
                           </Button>
                         ),
                       });
@@ -244,7 +244,7 @@ export default function Home() {
                         Historik
                       </Link>
                     </DropdownMenuItem>
-                    {(plan === "pro" || plan === "premium") ? (
+                    {plan === "premium" ? (
                       <DropdownMenuItem asChild>
                         <Link href="/teams" className="flex items-center gap-2 cursor-pointer">
                           <Users className="w-3.5 h-3.5" />
@@ -255,11 +255,11 @@ export default function Home() {
                       <DropdownMenuItem
                         onClick={() => {
                           toast({
-                            title: "Team-samarbete kräver Pro",
-                            description: "Uppgradera till Pro för att skapa team och dela stilprofiler.",
+                            title: "Team-samarbete kräver Premium",
+                            description: "Uppgradera till Premium för att skapa team och dela stilprofiler.",
                             action: (
-                              <Button size="sm" onClick={() => startCheckout("pro")} disabled={isCheckoutPending}>
-                                Uppgradera till Pro
+                              <Button size="sm" onClick={() => startCheckout("premium")} disabled={isCheckoutPending}>
+                                Uppgradera till Premium
                               </Button>
                             ),
                           });
