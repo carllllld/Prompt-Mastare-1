@@ -3609,6 +3609,84 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     });
 
+    // POST /api/text/rewrite — rewrite text with AI based on analysis and context
+    app.post("/api/text/rewrite", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { originalText, improvements, context } = req.body;
+
+        // Validate input
+        if (!originalText || typeof originalText !== 'string') {
+          return res.status(400).json({ message: "Text krävs" });
+        }
+
+        const trimmedText = originalText.trim();
+        if (trimmedText.length < 50) {
+          return res.status(400).json({ message: "Texten är för kort (minst 50 tecken)" });
+        }
+
+        if (trimmedText.length > 10000) {
+          return res.status(400).json({ message: "Texten är för lång (max 10000 tecken)" });
+        }
+
+        // Build rewrite prompt
+        let rewritePrompt = `Du är en expert på svenska mäklartexter och ska skriva om följande objektbeskrivning.
+
+ORIGINAL TEXT:
+${trimmedText}
+
+FEEDBACK SOM SKA ÅTGÄRDAS:
+${improvements && improvements.length > 0 
+  ? improvements.map((imp: any, idx: number) => `${idx + 1}. ${imp.issue}: ${imp.suggestion}`).join('\n')
+  : 'Inga specifika förbättringsförslag'}
+
+${context ? `EXTRA INSTRUKTIONER FRÅN MÄKLAREN:\n${context}\n` : ''}
+
+UPPGIFT:
+Skriv om texten så att den:
+1. Åtgärdar alla problem i feedbacken
+2. Följer mäklarens extra instruktioner (om några)
+3. Behåller all viktig faktainformation
+4. Låter naturlig och professionell
+5. Undviker AI-klyschéer som "välkommen", "charmig", "drömmen"
+
+Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
+
+        // Call OpenAI
+        const openai = getOpenAIClient();
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: "Du är en expert på svenska mäklartexter som skriver professionella, faktabaserade objektbeskrivningar utan klyschéer."
+            },
+            {
+              role: "user",
+              content: rewritePrompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 2000,
+        });
+
+        const rewrittenText = completion.choices[0]?.message?.content?.trim() || '';
+
+        if (!rewrittenText) {
+          return res.status(500).json({ message: "Kunde inte generera omskriven text" });
+        }
+
+        // Return rewritten text
+        res.json({
+          rewrittenText,
+          changes: improvements?.map((imp: any) => imp.issue) || [],
+        });
+      } catch (err) {
+        console.error("Text rewrite error:", err);
+        res.status(500).json({ message: "Kunde inte skriva om texten" });
+      }
+    });
+
     // GET /api/integrations/hemnet/image/:hash — serve cached Hemnet image
     app.get("/api/integrations/hemnet/image/:hash", (req, res) => {
       try {
@@ -3629,6 +3707,76 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       } catch (err) {
         console.error("Image serve error:", err);
         res.status(500).json({ message: "Kunde inte hämta bilden" });
+      }
+    });
+
+    // POST /api/vitec/export — export generated text to Vitec mäklarsystem
+    app.post("/api/vitec/export", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { objectId, propertyData, generatedText } = req.body;
+
+        // Validate input
+        if (!objectId || !generatedText) {
+          return res.status(400).json({
+            message: "Objekt-ID och genererad text krävs"
+          });
+        }
+
+        // Get Vitec credentials from user settings
+        const settings = await storage.getIntegrationSettings(user.id);
+        if (!settings?.vitecApiKey || !settings?.vitecCustomerId) {
+          return res.status(400).json({
+            message: "Vitec-integration är inte konfigurerad. Gå till Integrationer för att konfigurera.",
+            code: "VITEC_NOT_CONFIGURED"
+          });
+        }
+
+        // Build export data
+        const { VitecExportData, validateExportData, exportToVitec } = await import('./lib/vitec-export');
+        
+        const exportData: any = {
+          objectId,
+          customerId: settings.vitecCustomerId,
+          propertyType: propertyData.propertyType || "apartment",
+          description: generatedText,
+          headline: propertyData.headline,
+          shortDescription: propertyData.shortDescription,
+          landOwnership: propertyData.landOwnership,
+          brfUnits: propertyData.brfUnits,
+          nearbySchools: propertyData.nearbySchools,
+          nearbyServices: propertyData.nearbyServices,
+          generatedBy: "OptiPrompt",
+          generatedAt: new Date().toISOString(),
+        };
+
+        // Validate export data
+        const validation = validateExportData(exportData);
+        if (!validation.valid) {
+          return res.status(400).json({
+            message: `Valideringsfel: ${validation.errors.join(', ')}`,
+            code: "VALIDATION_ERROR",
+            errors: validation.errors
+          });
+        }
+
+        // Export to Vitec
+        const result = await exportToVitec(
+          {
+            apiKey: settings.vitecApiKey,
+            customerId: settings.vitecCustomerId,
+          },
+          exportData
+        );
+
+        res.json(result);
+      } catch (err) {
+        console.error("Vitec export error:", err);
+        Sentry.captureException(err, { tags: { integration: "vitec", action: "export" } });
+        res.status(500).json({
+          message: "Ett oväntat fel uppstod vid export till Vitec",
+          code: "EXPORT_ERROR"
+        });
       }
     });
   }

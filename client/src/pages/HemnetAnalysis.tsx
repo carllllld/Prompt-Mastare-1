@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useHemnetAnalysis, useTextAnalysis } from "@/hooks/use-hemnet-analysis";
+import { useHemnetAnalysis, useTextAnalysis, useRewriteText } from "@/hooks/use-hemnet-analysis";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useAuth } from "@/hooks/use-auth";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
@@ -34,6 +34,9 @@ export default function HemnetAnalysis() {
   const [manualText, setManualText] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [editedText, setEditedText] = useState("");
+  const [rewriteContext, setRewriteContext] = useState("");
+  const [showRewriteSection, setShowRewriteSection] = useState(false);
+  const [rewrittenText, setRewrittenText] = useState("");
   const [acceptedFixes, setAcceptedFixes] = useState<string[]>([]);
   const [dismissedFixes, setDismissedFixes] = useState<string[]>([]);
   const [copiedText, setCopiedText] = useState(false);
@@ -41,6 +44,7 @@ export default function HemnetAnalysis() {
   // Mutations
   const hemnetMutation = useHemnetAnalysis();
   const textMutation = useTextAnalysis();
+  const rewriteMutation = useRewriteText();
 
   // One-click fix hook
   const { applyFix, undo, canUndo } = useOneClickFix({
@@ -182,6 +186,50 @@ export default function HemnetAnalysis() {
       });
     }
   }, [undo, toast]);
+
+  // Handle rewrite text
+  const handleRewrite = useCallback(() => {
+    if (!editedText.trim()) {
+      toast({
+        title: "Ingen text",
+        description: "Det finns ingen text att skriva om",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    rewriteMutation.mutate({
+      originalText: editedText,
+      improvements: analysisResult?.analysis.improvements || [],
+      context: rewriteContext.trim() || undefined,
+    }, {
+      onSuccess: (data) => {
+        setRewrittenText(data.rewrittenText);
+        toast({
+          title: "Text omskriven!",
+          description: "AI:n har skrivit om texten baserat på feedbacken",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Omskrivning misslyckades",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  }, [editedText, analysisResult, rewriteContext, rewriteMutation, toast]);
+
+  // Handle use rewritten text
+  const handleUseRewrittenText = useCallback(() => {
+    setEditedText(rewrittenText);
+    setRewrittenText("");
+    setShowRewriteSection(false);
+    toast({
+      title: "Text uppdaterad",
+      description: "Den omskrivna texten används nu",
+    });
+  }, [rewrittenText, toast]);
 
   // Filter out dismissed feedback
   const visibleFeedback = analysisResult?.analysis.improvements.filter(
@@ -515,6 +563,107 @@ export default function HemnetAnalysis() {
                 </div>
               </div>
             )}
+
+            {/* AI Rewrite Section */}
+            <div className="pro-card pro-card-premium p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">
+                    Skriv om text med AI
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Låt AI:n skriva om hela texten baserat på feedbacken och dina instruktioner
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRewriteSection(!showRewriteSection)}
+                >
+                  {showRewriteSection ? "Dölj" : "Visa"}
+                </Button>
+              </div>
+
+              {showRewriteSection && (
+                <div className="space-y-4 mt-4 pt-4 border-t border-border">
+                  <div>
+                    <label className="text-xs font-medium text-foreground mb-2 block">
+                      Extra instruktioner (valfritt)
+                    </label>
+                    <textarea
+                      placeholder="T.ex. 'Fokusera mer på läget', 'Gör texten kortare', 'Lägg till info om renoveringen 2020'..."
+                      value={rewriteContext}
+                      onChange={(e) => setRewriteContext(e.target.value)}
+                      className="w-full min-h-[100px] p-3 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+                      disabled={rewriteMutation.isPending}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Beskriv vad du vill ändra eller lägga till i texten
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={handleRewrite}
+                    disabled={rewriteMutation.isPending}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary-hover"
+                  >
+                    {rewriteMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Skriver om...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Skriv om text
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Rewritten text result */}
+                  {rewrittenText && (
+                    <div className="mt-6 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-foreground">
+                          Omskriven text
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(rewrittenText);
+                              toast({ title: "Kopierad!", description: "Texten har kopierats" });
+                            }}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Kopiera
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleUseRewrittenText}
+                            className="bg-primary text-primary-foreground"
+                          >
+                            <Check className="w-3 h-3 mr-1" />
+                            Använd denna text
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-lg border border-border bg-muted/30">
+                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                          {rewrittenText}
+                        </p>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        💡 Jämför med originalet ovan och välj vilken version du föredrar
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

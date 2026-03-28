@@ -136,3 +136,31 @@ export function useGenerateImproved() {
     },
   });
 }
+
+/**
+ * Hook for rewriting text with AI based on analysis and context
+ */
+export function useRewriteText() {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ rewrittenText: string; changes: string[] }, Error, { 
+    originalText: string; 
+    improvements: any[]; 
+    context?: string;
+  }>({
+    mutationFn: async (data) => {
+      const res = await apiRequest('POST', '/api/text/rewrite', data);
+      
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Okänt fel' }));
+        throw new Error(error.message || 'Kunde inte skriva om texten');
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate user status to update quota if needed
+      queryClient.invalidateQueries({ queryKey: ['/api/user/status'] });
+    },
+  });
+}
