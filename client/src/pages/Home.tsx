@@ -6,7 +6,6 @@ import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { CompactUsageWidget, CompactHistoryWidget, CompactUpgradeWidget } from "@/components/CompactWidgets";
-import { LockedFeature } from "@/components/LockedFeature";
 import { AuthModal } from "@/components/AuthModal";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
@@ -382,35 +381,19 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Personlig stil (1/3) - låst för free users */}
+              {/* Personlig stil (1/3) */}
               <div className="flex flex-col gap-2">
-                {isPro ? (
-                  <div className="pro-card pro-card-premium p-3 flex flex-col">
-                    <div className="mb-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
-                      <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                        Kalibrera tonalitet
-                      </p>
-                    </div>
-                    <div className="flex-1">
-                      <PersonalStyle />
-                    </div>
+                <div className="pro-card pro-card-premium p-3 flex flex-col">
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                      Kalibrera tonalitet
+                    </p>
                   </div>
-                ) : (
-                  <div className="pro-card pro-card-premium p-3 flex flex-col">
-                    <div className="mb-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
-                      <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                        Kalibrera tonalitet
-                      </p>
-                    </div>
-                    <LockedFeature requiredPlan="pro" featureName="Personlig skrivstil" currentPlan={plan}>
-                      <div className="flex-1 p-4 bg-muted/20">
-                        <p className="text-xs text-muted-foreground">Lär AI:n din unika skrivstil med exempeltexter.</p>
-                      </div>
-                    </LockedFeature>
+                  <div className="flex-1">
+                    <PersonalStyle />
                   </div>
-                )}
+                </div>
                 
                 {/* Uppgradera widget under PersonalStyle */}
                 {plan !== "premium" && (

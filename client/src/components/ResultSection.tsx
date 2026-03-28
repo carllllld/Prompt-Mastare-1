@@ -8,7 +8,6 @@ import { PdfExport } from "./PdfExport";
 import { InlineHighlights } from "./InlineHighlights";
 import { ExpertFeedbackPanel } from "./ExpertFeedbackPanel";
 import { VitecExportButton } from "./VitecExportButton";
-import { LockedFeature } from "./LockedFeature";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
 import { useToast } from "@/hooks/use-toast";
 
@@ -533,13 +532,11 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
               <TextEditor text={editedText} onTextChange={setEditedText} />
             )
           ) : (
-            <LockedFeature requiredPlan="pro" featureName="Textredigering" currentPlan={isPro ? "pro" : "free"}>
-              <div className="mb-4 rounded-lg border border-border bg-background p-4">
-                <div className="text-base leading-relaxed text-foreground font-serif whitespace-pre-wrap">
-                  {editedText}
-                </div>
+            <div className="mb-4 rounded-lg border border-border bg-background p-4">
+              <div className="text-base leading-relaxed text-foreground font-serif whitespace-pre-wrap">
+                {editedText}
               </div>
-            </LockedFeature>
+            </div>
           )}
         </div>
       </div>
