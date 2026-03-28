@@ -84,6 +84,11 @@ interface PropertyFormData {
   visningstid: string;
   maklarnamn: string;
   maklartelefon: string;
+  // Phase 2: Critical additions for Swedish brokers
+  landOwnership?: "aganderatt" | "tomtratt";  // Äganderätt vs Tomträtt (houses only)
+  brfUnits?: string;  // Antal lägenheter i föreningen (apartments only)
+  nearbySchools?: string;  // Förskola/Skola nearby
+  nearbyServices?: string;  // Affärer & Service nearby
 }
 
 interface PromptFormProps {
@@ -605,6 +610,11 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
       visningstid: "",
       maklarnamn: "",
       maklartelefon: "",
+      // Phase 2: New fields
+      landOwnership: undefined,
+      brfUnits: "",
+      nearbySchools: "",
+      nearbyServices: "",
     },
   });
 
@@ -979,8 +989,13 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
     if (isApartmentType) {
       if (merged.floor) d += `Våning: ${merged.floor}\n`;
       d += `Hiss: ${merged.elevator ? "Ja" : "Nej"}\n`;
+      if (merged.brfName) d += `Förening: ${merged.brfName}\n`;
+      if (merged.brfUnits) d += `Antal lägenheter i föreningen: ${merged.brfUnits}\n`;
     }
-    if (merged.brfName) d += `Förening: ${merged.brfName}\n`;
+    if (isHouseType && merged.landOwnership) {
+      const ownershipLabel = merged.landOwnership === "aganderatt" ? "Äganderätt" : "Tomträtt";
+      d += `Ägandeform: ${ownershipLabel}\n`;
+    }
     if (merged.storage) d += `Förråd/Förvaring: ${merged.storage}\n`;
 
     if (merged.layoutDescription) {
@@ -1002,11 +1017,13 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
       if (merged.konstruktionMaterial) d += `Byggnadsmaterial: ${merged.konstruktionMaterial}\n`;
       if (merged.taktyp) d += `Taktyp: ${merged.taktyp}\n`;
     }
-    if (merged.view || merged.neighborhood || merged.transport || merged.parking) {
+    if (merged.view || merged.neighborhood || merged.transport || merged.parking || merged.nearbySchools || merged.nearbyServices) {
       d += "\n=== LÄGE & OMGIVNING ===\n";
       if (merged.view) d += `Utsikt: ${merged.view}\n`;
       if (merged.neighborhood) d += `Områdesbeskrivning: ${merged.neighborhood}\n`;
       if (merged.transport) d += `Kommunikationer: ${merged.transport}\n`;
+      if (merged.nearbySchools) d += `Förskola/Skola: ${merged.nearbySchools}\n`;
+      if (merged.nearbyServices) d += `Affärer & Service: ${merged.nearbyServices}\n`;
       if (merged.parking) d += `Parkering: ${merged.parking}\n`;
     }
     if (merged.uniqueSellingPoints) {
@@ -1365,25 +1382,43 @@ export function PromptFormProfessionalV2({ onSubmit, isPending, disabled, isPro 
                   <div className="space-y-3">
                     <FormField control={form.control} name="neighborhood" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-slate-600">Område</FormLabel>
+                        <FormLabel className="text-sm text-gray-600">Område</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Vasastan" {...field} className="h-9 text-xs" />
+                          <Input placeholder="Ex: Vasastan" {...field} className="h-10" />
                         </FormControl>
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="transport" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-slate-600">Transport</FormLabel>
+                        <FormLabel className="text-sm text-gray-600">Transport</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Kollektivtrafik, pendling..." {...field} className="min-h-[60px] text-xs" />
+                          <Textarea placeholder="Kollektivtrafik, pendling..." {...field} className="min-h-[60px]" />
                         </FormControl>
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="nearbySchools" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-gray-600">Förskola/Skola</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: Vasaskolan 500m, Förskola Solrosen 200m" {...field} className="h-10" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="nearbyServices" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm text-gray-600">Affärer & Service</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: ICA Maxi 300m, Systembolaget, apotek" {...field} className="h-10" />
+                        </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="view" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs text-slate-600">Utsikt</FormLabel>
+                        <FormLabel className="text-sm text-gray-600">Utsikt</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ex: Fri utsikt över park..." {...field} className="h-9 text-xs" />
+                          <Input placeholder="Ex: Fri utsikt över park..." {...field} className="h-10" />
                         </FormControl>
                       </FormItem>
                     )} />

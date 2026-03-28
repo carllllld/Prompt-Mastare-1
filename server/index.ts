@@ -274,6 +274,31 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Setup auth routes
   validateEnvForProduction();
   await initializeDatabase();
+  
+  // Run startup validations (non-blocking)
+  const { runStartupValidations } = await import('./lib/startup-validations');
+  runStartupValidations().catch(err => {
+    console.error('[Startup] Validation error:', err);
+  });
+  
+  // Create Stripe webhook log table
+  const { createWebhookLogTable } = await import('./lib/stripe-webhook-logger');
+  await createWebhookLogTable();
+  
+  // Create Resend webhook tables
+  const { createEmailDeliveryLogTable } = await import('./lib/resend-webhook-handler');
+  await createEmailDeliveryLogTable();
+  
+  // Create email queue table
+  const { createEmailQueueTable, startEmailQueueProcessor } = await import('./lib/email-queue-persistent');
+  await createEmailQueueTable();
+  
+  // Start email queue processor (only in production)
+  if (isProduction) {
+    startEmailQueueProcessor();
+    log("info", "email_queue_processor_started", { intervalSeconds: 10 });
+  }
+  
   setupAuth(app);
 
   app.get("/health", async (_req: Request, res: Response) => {
@@ -287,6 +312,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   // Setup email webhook routes
   app.use('/api/email', emailWebhooks);
+  
+  // Setup Resend webhook routes
+  const resendWebhooks = (await import('./routes/resend-webhooks')).default;
+  app.use('/api/resend', resendWebhooks);
 
   // Create HTTP server
   const server = createServer(app);
@@ -308,6 +337,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const { initializeScheduler } = await import('./lib/perfect-swedish-scheduler');
     initializeScheduler(60); // Run health checks every 60 minutes
     log("info", "monitoring_scheduler_started", { intervalMinutes: 60 });
+    
+    // Start Hemnet health monitoring (daily checks)
+    const { startHemnetHealthMonitor } = await import('./lib/hemnet-health-monitor');
+    startHemnetHealthMonitor(86400000); // 24 hours
+    log("info", "hemnet_health_monitor_started", { intervalHours: 24 });
   }
 
   // Setup error handler for API routes

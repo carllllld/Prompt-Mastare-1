@@ -334,6 +334,8 @@ export default function HomeClean() {
                   onNewPrompt={() => setResult(null)}
                   onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
                   isRegenerating={isPending}
+                  propertyData={lastSubmitData?.propertyData}
+                  vitecObjectId={lastSubmitData?.propertyData?._sourceId}
                 />
               ) : (
                 /* Usage card */

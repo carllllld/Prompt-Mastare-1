@@ -7,6 +7,7 @@ import { TextEditor } from "./TextEditor";
 import { PdfExport } from "./PdfExport";
 import { InlineHighlights } from "./InlineHighlights";
 import { ExpertFeedbackPanel } from "./ExpertFeedbackPanel";
+import { VitecExportButton } from "./VitecExportButton";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,6 +16,8 @@ interface ResultSectionProps {
   onNewPrompt: () => void;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
+  propertyData?: Record<string, any>;
+  vitecObjectId?: string;
 }
 
 function CopyCard({ title, icon: Icon, text, iconColor, delayClass }: {
@@ -96,7 +99,7 @@ function CopyAllButton({ result }: { result: OptimizeResponse }) {
   );
 }
 
-export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating }: ResultSectionProps) {
+export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating, propertyData, vitecObjectId }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
   const [activeFeedback, setActiveFeedback] = useState<string[]>([]);
@@ -706,7 +709,14 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       </p>
 
       {/* ── ACTION BUTTONS ── */}
-      <div className="flex gap-3 pt-2 border-t border-border">
+      <div className="flex gap-3 pt-2 border-t border-border flex-wrap">
+        {vitecObjectId && propertyData && (
+          <VitecExportButton
+            propertyData={propertyData}
+            generatedText={editedText}
+            vitecObjectId={vitecObjectId}
+          />
+        )}
         {onRegenerate && (
           <Button
             variant="outline"

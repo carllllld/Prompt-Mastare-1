@@ -50,6 +50,11 @@ interface PropertyFormData {
   visningstid: string;
   maklarnamn: string;
   maklartelefon: string;
+  // Phase 2: Critical additions for Swedish brokers
+  landOwnership?: "aganderatt" | "tomtratt";
+  brfUnits?: string;
+  nearbySchools?: string;
+  nearbyServices?: string;
 }
 
 interface EssentialFieldsSectionProps {
@@ -246,118 +251,165 @@ export function EssentialFieldsSection({
 
       {/* Apartment-specific fields */}
       {isApartmentType && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
-          <FormField control={form.control} name="floor" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Våning *</FormLabel>
-              <FormControl>
-                <Input placeholder="Ex: 3 av 5" {...field} className={exampleInputClass} />
-              </FormControl>
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="buildYear" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Byggår *</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="Ex: 1998" {...field} className={exampleInputClass} />
-              </FormControl>
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="energyClass" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Energiklass *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+            <FormField control={form.control} name="floor" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Våning *</FormLabel>
                 <FormControl>
-                  <SelectTrigger className="h-10 bg-white">
-                    <SelectValue placeholder="Välj..." />
-                  </SelectTrigger>
+                  <Input placeholder="Ex: 3 av 5" {...field} className={exampleInputClass} />
                 </FormControl>
-                <SelectContent className="bg-white border border-input shadow-lg">
-                  {["A", "B", "C", "D", "E", "F", "G"].map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {e}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="elevator" render={({ field }) => (
-            <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
-              <FormControl>
-                <button
-                  type="button"
-                  onClick={() => field.onChange(!field.value)}
-                  className={`px-3.5 py-2 text-xs border transition-all font-medium w-full ${
-                    field.value ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"
-                  }`}
-                >
-                  {field.value ? "Hiss: Ja" : "Hiss: Nej"}
-                </button>
-              </FormControl>
-            </FormItem>
-          )} />
-        </div>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="buildYear" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Byggår *</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Ex: 1998" {...field} className={exampleInputClass} />
+                </FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="energyClass" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Energiklass *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-10 bg-white">
+                      <SelectValue placeholder="Välj..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-white border border-input shadow-lg">
+                    {["A", "B", "C", "D", "E", "F", "G"].map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="elevator" render={({ field }) => (
+              <FormItem className="flex flex-row items-end gap-2 space-y-0 pb-1">
+                <FormControl>
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(!field.value)}
+                    className={`px-3.5 py-2 text-sm border rounded-lg transition-all font-normal w-full ${
+                      field.value ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-input"
+                    }`}
+                  >
+                    {field.value ? "Hiss: Ja" : "Hiss: Nej"}
+                  </button>
+                </FormControl>
+              </FormItem>
+            )} />
+          </div>
+          
+          {/* BRF Information - Phase 2 Addition */}
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
+            <FormField control={form.control} name="brfName" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">BRF Namn</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ex: BRF Vasastaden 12" {...field} className={exampleInputClass} />
+                </FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="brfUnits" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Antal lägenheter i föreningen</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Ex: 24" {...field} className={exampleInputClass} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </div>
+        </>
       )}
 
       {/* House-specific fields */}
       {isHouseOrTownhouseType && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
-          <FormField control={form.control} name="buildYear" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Byggår *</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="Ex: 1987" {...field} className={exampleInputClass} />
-              </FormControl>
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="floors" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Antal plan *</FormLabel>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3">
+            <FormField control={form.control} name="buildYear" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Byggår *</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Ex: 1987" {...field} className={exampleInputClass} />
+                </FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="floors" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Antal plan *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-10 bg-white">
+                      <SelectValue placeholder="Välj..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-white border border-input shadow-lg">
+                    {PROPERTY_FLOORS_OPTIONS.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {f}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="lotArea" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Tomtarea (kvm) *</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Ex: 824" {...field} className={exampleInputClass} />
+                </FormControl>
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="energyClass" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600">Energiklass *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="h-10 bg-white">
+                      <SelectValue placeholder="Välj..." />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-white border border-input shadow-lg">
+                    {["A", "B", "C", "D", "E", "F", "G"].map((e) => (
+                      <SelectItem key={e} value={e}>
+                        {e}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
+            )} />
+          </div>
+          
+          {/* Land Ownership - Phase 2 Addition (CRITICAL for Swedish houses) */}
+          <FormField control={form.control} name="landOwnership" render={({ field }) => (
+            <FormItem className="mb-3">
+              <FormLabel className="text-sm text-gray-600">Ägandeform *</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger className="h-10 bg-white">
-                    <SelectValue placeholder="Välj..." />
+                    <SelectValue placeholder="Välj ägandeform..." />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-white border border-input shadow-lg">
-                  {PROPERTY_FLOORS_OPTIONS.map((f) => (
-                    <SelectItem key={f} value={f}>
-                      {f}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="aganderatt">Äganderätt (äger marken)</SelectItem>
+                  <SelectItem value="tomtratt">Tomträtt (årlig avgift till kommun)</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-gray-500 mt-1">
+                Äganderätt = du äger marken. Tomträtt = du betalar årlig avgift till kommunen.
+              </p>
+              <FormMessage />
             </FormItem>
           )} />
-          <FormField control={form.control} name="lotArea" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Tomtarea (kvm) *</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="Ex: 824" {...field} className={exampleInputClass} />
-              </FormControl>
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="energyClass" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs text-gray-500">Energiklass *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger className="h-10 bg-white">
-                    <SelectValue placeholder="Välj..." />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent className="bg-white border border-input shadow-lg">
-                  {["A", "B", "C", "D", "E", "F", "G"].map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {e}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormItem>
-          )} />
-        </div>
+        </>
       )}
 
       {/* Tillträdesdag */}

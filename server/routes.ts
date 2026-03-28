@@ -3333,6 +3333,74 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     });
 
+    // POST /api/vitec/export — export AI-generated text back to Vitec
+    app.post("/api/vitec/export", requireAuth, requirePro, async (req, res) => {
+      try {
+        const { exportToVitec, validateExportData } = await import("./lib/vitec-export");
+        const user = (req as any).user as User;
+        const { objectId, propertyData, generatedText } = req.body;
+
+        // Get user's Vitec configuration
+        const rows = await db.select().from(integrationSettings).where(
+          eq(integrationSettings.userId, user.id)
+        ).limit(1);
+        const settings = rows[0];
+
+        if (!settings?.vitecApiKey || !settings?.vitecCustomerId) {
+          return res.status(400).json({
+            success: false,
+            message: "Vitec API-nyckel saknas. Konfigurera under Inställningar → Integrationer.",
+          });
+        }
+
+        // Decrypt API key
+        const apiKey = decryptApiKey(settings.vitecApiKey);
+
+        // Build export data
+        const exportData = {
+          objectId,
+          customerId: settings.vitecCustomerId,
+          propertyType: propertyData?.propertyType || "apartment",
+          description: generatedText,
+          headline: propertyData?.headline,
+          shortDescription: propertyData?.shortDescription,
+          landOwnership: propertyData?.landOwnership,
+          brfUnits: propertyData?.brfUnits ? Number(propertyData.brfUnits) : undefined,
+          nearbySchools: propertyData?.nearbySchools,
+          nearbyServices: propertyData?.nearbyServices,
+          generatedBy: "OptiPrompt" as const,
+          generatedAt: new Date().toISOString(),
+        };
+
+        // Validate export data
+        const validation = validateExportData(exportData);
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: "Ogiltig exportdata: " + validation.errors.join(", "),
+          });
+        }
+
+        // Export to Vitec
+        const result = await exportToVitec(
+          {
+            apiKey,
+            customerId: settings.vitecCustomerId,
+            baseUrl: settings.vitecBaseUrl || undefined,
+          },
+          exportData
+        );
+
+        res.json(result);
+      } catch (err) {
+        console.error("Vitec export error:", err);
+        res.status(500).json({
+          success: false,
+          message: "Ett oväntat fel uppstod vid export till Vitec",
+        });
+      }
+    });
+
     // POST /api/integrations/hemnet/import — fetch property data from a Hemnet URL
     app.post("/api/integrations/hemnet/import", requireAuth, async (req, res) => {
       try {
@@ -4304,6 +4372,9 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
       return res.status(400).json({ message: `Webhook Error: ${err.message}` });
     }
 
+    const startTime = Date.now();
+    const { logWebhookEvent } = await import("./lib/stripe-webhook-logger");
+
     try {
       const eventId = event.id;
       if (!eventId) {
@@ -4312,6 +4383,16 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
 
       const lockAcquired = await acquireStripeWebhookEventLock(eventId);
       if (!lockAcquired) {
+        // Log duplicate event
+        await logWebhookEvent({
+          eventId,
+          eventType: event.type,
+          data: event.data.object,
+          processedAt: new Date(),
+          processingTimeMs: Date.now() - startTime,
+          success: true,
+          error: "Duplicate event (already processed)",
+        });
         return res.json({ received: true, duplicate: true });
       }
 
@@ -4394,8 +4475,30 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
       }
 
       await finalizeStripeWebhookEvent(eventId);
+      
+      // Log successful webhook processing
+      await logWebhookEvent({
+        eventId,
+        eventType: event.type,
+        data: event.data.object,
+        processedAt: new Date(),
+        processingTimeMs: Date.now() - startTime,
+        success: true,
+      });
+      
       res.json({ received: true });
     } catch (err) {
+      // Log failed webhook processing
+      await logWebhookEvent({
+        eventId: event.id,
+        eventType: event.type,
+        data: event.data.object,
+        processedAt: new Date(),
+        processingTimeMs: Date.now() - startTime,
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      
       try {
         if (event?.id) {
           await releaseStripeWebhookEventLock(event.id);
