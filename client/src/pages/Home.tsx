@@ -502,32 +502,47 @@ export default function Home() {
           </div>
         )}
 
-        {/* Formulär + PersonalStyle i 2-kolumner (endast när inloggad och inget resultat) */}
+        {/* Pro/Premium: Formulär med PersonalStyle */}
         {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-            {/* Formulär (2/3) */}
-            <div className="lg:col-span-2">
-              <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
-                <PromptFormProfessional
-                  onSubmit={handleSubmit}
-                  isPending={isPending}
-                  disabled={remaining === 0}
-                  isPro={true}
-                />
+          <div className="space-y-5">
+            {/* Grundläggande uppgifter + Personlig stil i 2-kolumner */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              {/* Grundläggande uppgifter (2/3) */}
+              <div className="lg:col-span-2">
+                <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
+                  <PromptFormProfessional
+                    onSubmit={handleSubmit}
+                    isPending={isPending}
+                    disabled={remaining === 0}
+                    isPro={true}
+                    renderMode="essential-only"
+                  />
+                </div>
+              </div>
+              
+              {/* Personlig stil (1/3) */}
+              <div>
+                <div className="pro-card pro-card-premium rounded-2xl p-5">
+                  <div className="mb-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                      Kalibrera tonalitet
+                    </p>
+                  </div>
+                  <PersonalStyle />
+                </div>
               </div>
             </div>
-            
-            {/* Personlig stil (1/3) */}
-            <div>
-              <div className="pro-card pro-card-premium rounded-2xl p-5">
-                <div className="mb-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
-                  <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                    Kalibrera tonalitet
-                  </p>
-                </div>
-                <PersonalStyle />
-              </div>
+
+            {/* Resten av formuläret i full bredd */}
+            <div className="pro-card pro-card-premium rounded-2xl p-5 sm:p-6">
+              <PromptFormProfessional
+                onSubmit={handleSubmit}
+                isPending={isPending}
+                disabled={remaining === 0}
+                isPro={true}
+                renderMode="rest-only"
+              />
             </div>
           </div>
         )}

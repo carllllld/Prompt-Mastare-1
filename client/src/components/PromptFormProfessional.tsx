@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info, CheckCircle2 } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -309,6 +309,7 @@ interface PromptFormProps {
   isPending: boolean;
   disabled?: boolean;
   isPro?: boolean;
+  renderMode?: 'full' | 'essential-only' | 'rest-only';
 }
 
 // PriorityChecklist Component
@@ -628,7 +629,7 @@ function Section({ title, icon, color, defaultExpanded = true, persistKey, child
   );
 }
 
-export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = false }: PromptFormProps) {
+export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = false, renderMode = 'full' }: PromptFormProps) {
   const { toast } = useToast();
 
   // Chip selections (merged into form values on submit)
@@ -1388,87 +1389,100 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
 
-          {/* Så används dina fält - viktig info */}
-          <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
-            <p className="text-sm font-semibold mb-3" style={{ color: "#1D2939" }}>Så används dina fält</p>
-            <div className="space-y-2 text-xs">
-              <div className="rounded-lg px-3 py-2" style={{ background: "#DCFCE7", color: "#166534" }}>
-                <span className="font-semibold">Direkt i huvudtexten:</span>
-                <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
+          {/* Render mode: essential-only - only show objekttyp and essential fields */}
+          {renderMode === 'essential-only' && (
+            <>
+              {/* Så används dina fält - viktig info */}
+              <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
+                <p className="text-sm font-semibold mb-3" style={{ color: "#1D2939" }}>Så används dina fält</p>
+                <div className="space-y-2 text-xs">
+                  <div className="rounded-lg px-3 py-2" style={{ background: "#DCFCE7", color: "#166534" }}>
+                    <span className="font-semibold">Direkt i huvudtexten:</span>
+                    <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
+                  </div>
+                  <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
+                    <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
+                    <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
-                <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
-                <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
+
+              {/* ── SECTION 1: OBJEKTTYP ── */}
+              <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
+                    Objekttyp
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { value: "apartment" as const, label: "Lägenhet" },
+                    { value: "house" as const, label: "Hus" },
+                    { value: "townhouse" as const, label: "Radhus" },
+                    { value: "villa" as const, label: "Villa" },
+                  ]).map((t) => (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => form.setValue("propertyType", t.value)}
+                      className={`px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
+                        selectedType === t.value 
+                          ? 'text-white border-transparent' 
+                          : 'bg-white border-input hover:bg-accent'
+                      }`}
+                      style={selectedType === t.value ? { background: "#2D6A4F" } : {}}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* ── SECTION 1: OBJEKTTYP ── */}
-          <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
-                Objekttyp
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {([
-                { value: "apartment" as const, label: "Lägenhet" },
-                { value: "house" as const, label: "Hus" },
-                { value: "townhouse" as const, label: "Radhus" },
-                { value: "villa" as const, label: "Villa" },
-              ]).map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => form.setValue("propertyType", t.value)}
-                  className={`px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
-                    selectedType === t.value 
-                      ? 'text-white border-transparent' 
-                      : 'bg-white border-input hover:bg-accent'
-                  }`}
-                  style={selectedType === t.value ? { background: "#2D6A4F" } : {}}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* ── SECTION 2: ESSENTIELL INFORMATION (NEW COMPONENT) ── */}
+              <EssentialFieldsSection
+                form={form}
+                isApartmentType={isApartmentType}
+                isHouseOrTownhouseType={isHouseOrTownhouseType}
+                rooms={rooms}
+                bedrooms={bedrooms}
+                bathrooms={bathrooms}
+                setRooms={setRooms}
+                setBedrooms={setBedrooms}
+                setBathrooms={setBathrooms}
+                addressLookupLoading={addressLookupLoading}
+                addressLookupResult={addressLookupResult}
+                onAddressLookup={handleAddressLookup}
+                importButtons={
+                  <>
+                    <HemnetImportButton onImport={handleExternalImport} />
+                    <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+                    {!isPro && (
+                      <span className="text-xs self-center text-slate-400">Vitec-import kräver Pro</span>
+                    )}
+                  </>
+                }
+              />
+            </>
+          )}
 
-          {/* ── SECTION 2: ESSENTIELL INFORMATION (NEW COMPONENT) ── */}
-          <EssentialFieldsSection
-            form={form}
-            isApartmentType={isApartmentType}
-            isHouseOrTownhouseType={isHouseOrTownhouseType}
-            rooms={rooms}
-            bedrooms={bedrooms}
-            bathrooms={bathrooms}
-            setRooms={setRooms}
-            setBedrooms={setBedrooms}
-            setBathrooms={setBathrooms}
-            addressLookupLoading={addressLookupLoading}
-            addressLookupResult={addressLookupResult}
-            onAddressLookup={handleAddressLookup}
-            importButtons={
-              <>
-                <HemnetImportButton onImport={handleExternalImport} />
-                <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
-                {!isPro && (
-                  <span className="text-xs self-center text-slate-400">Vitec-import kräver Pro</span>
-                )}
-              </>
-            }
-          />
+          {/* Render mode: rest-only - show everything except objekttyp and essential fields */}
+          {renderMode === 'rest-only' && (
+            </>
+          )}
 
-          {/* ── SECTION 2.5: OBJEKTBILDER (NEW COMPONENT) ── */}
-          <ImageSection
-            uploadedImages={uploadedImages}
-            onImagesAdded={processImageFiles}
-            onImageRemoved={(idx) => setUploadedImages(uploadedImages.filter((_, i) => i !== idx))}
-            imageUploadProgress={imageUploadProgress}
-            onFromHemnet={() => {
-              toast({ title: "Hemnet-import", description: "Kommer snart", variant: "default" });
-            }}
-          />
+          {/* Render mode: rest-only - show everything except objekttyp and essential fields */}
+          {(renderMode === 'rest-only' || renderMode === 'full') && (
+            <>
+              {/* ── SECTION 2.5: OBJEKTBILDER (NEW COMPONENT) ── */}
+              <ImageSection
+                uploadedImages={uploadedImages}
+                onImagesAdded={processImageFiles}
+                onImageRemoved={(idx) => setUploadedImages(uploadedImages.filter((_, i) => i !== idx))}
+                imageUploadProgress={imageUploadProgress}
+                onFromHemnet={() => {
+                  toast({ title: "Hemnet-import", description: "Kommer snart", variant: "default" });
+                }}
+              />
 
           {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
           <div className="pro-section-card">
@@ -1798,12 +1812,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
 
-            <div className="rounded-lg border border-input px-3.5 py-3 bg-muted">
-              <span className="text-xs font-medium text-muted-foreground">
-                Hemnet använder hårdast klyschfilter. Booli/Egen sida tillåter mer berättande ton när fakta förblir konkreta.
-              </span>
-            </div>
-
             {/* Pro: word count */}
             {isPro && (
               <div className="flex items-center gap-3 flex-wrap">
@@ -1841,83 +1849,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </div>
             </div>
 
-            {/* Images — Pro feature */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs text-gray-400 font-medium">Bilder (valfritt)</span>
-                <span className="text-xs font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning text-warning-foreground">Pro</span>
-                {isPro && uploadedImages.length > 0 && (
-                  <span className="text-xs text-gray-400 ml-auto">{uploadedImages.length} bild(er)</span>
-                )}
-              </div>
-              {isPro ? (
-                <>
-                  <div
-                    className="border border-dashed border-border rounded-lg p-3 text-center transition-colors hover:border-muted-foreground"
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = "#2D6A4F"; }}
-                    onDragLeave={(e) => { e.currentTarget.style.borderColor = ""; }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.style.borderColor = "";
-                      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
-                      processImageFiles(files);
-                    }}
-                    onPaste={(e) => {
-                      const items = Array.from(e.clipboardData.items).filter(i => i.type.startsWith("image/"));
-                      const files = items.map(item => item.getAsFile()).filter((f): f is File => f !== null);
-                      processImageFiles(files);
-                    }}
-                    tabIndex={0}
-                  >
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      id="image-upload"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files || []);
-                        processImageFiles(files);
-                      }}
-                    />
-                    <label htmlFor="image-upload" className="cursor-pointer flex flex-col items-center justify-center gap-1 text-xs text-gray-500">
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Ladda upp, dra hit eller klistra in bilder</span>
-                      <span className="text-gray-400">Ctrl+V fungerar när rutan är aktiv</span>
-                    </label>
-                    {imageUploadProgress && (
-                      <div className="mt-2 text-xs text-gray-500">
-                        Bearbetar bilder: {imageUploadProgress.current}/{imageUploadProgress.total}
-                      </div>
-                    )}
-                  </div>
-                  {uploadedImages.length > 0 && (
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {uploadedImages.map((img, idx) => (
-                        <div key={idx} className="relative group">
-                          <img src={img} alt={`Bild ${idx + 1}`} className="w-14 h-14 object-cover rounded-lg border border-input" />
-                          <button
-                            type="button"
-                            onClick={() => setUploadedImages((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute -top-1.5 -right-1.5 bg-error text-error-foreground rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="border border-dashed border-input rounded-lg p-3 text-center bg-muted">
-                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Lock className="w-3.5 h-3.5" />
-                    Uppgradera till Pro för bildtolkning
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Submit - sticky on mobile */}
             <div className="sticky bottom-0 left-0 right-0 pt-4 pb-2 -mx-6 px-6 sm:relative sm:mx-0 sm:px-0 sm:pb-0 bg-gradient-to-t from-muted via-muted to-transparent">
               <Button
@@ -1940,6 +1871,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </Button>
             </div>
           </div>
+            </>
+          )}
         </form>
       </Form>
       
