@@ -212,7 +212,7 @@ export function PersonalStyle() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -269,7 +269,7 @@ export function PersonalStyle() {
             )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -300,12 +300,12 @@ export function PersonalStyle() {
                   : index === 1
                     ? "Klistra in ett utdrag som visar hur du beskriver planlösning, rum och flöde..."
                     : "Klistra in ett utdrag som visar hur du skriver om läge, vardagsnytta och avslut..."}
-                className="min-h-[100px]"
+                className="min-h-[90px]"
               />
             </div>
           ))}
 
-          <div className="flex items-center gap-2 pt-4">
+          <div className="flex items-center gap-2 pt-3">
             <Button
               onClick={handleSave}
               disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
