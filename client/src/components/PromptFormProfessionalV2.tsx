@@ -181,6 +181,7 @@ const KITCHEN_CHIPS = [
   "Renoverat kök", "Köksö", "Stenbänk", "Kompositbänk",
   "Integrerade vitvaror", "Platsbyggt kök", "Matplats i kök",
   "Öppen planlösning", "Moderna vitvaror", "Fönster vid matplats",
+  "Diskmaskin", "Induktionshäll",
 ];
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
@@ -198,17 +199,20 @@ const HEATING_CHIPS = [
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
   "Dränering utförd", "Solceller", "Fiber indraget",
-  "Braskamin", "Säkerhetsdörr", "Hiss", "Varmvattenberedare",
+  "Braskamin", "Säkerhetsdörr", "Varmvattenberedare", "Bastu",
+  // Note: "Hiss" removed - already captured in elevator boolean field
 ];
 const GARDEN_CHIPS = [
   "Välskött trädgård", "Uteplats i söder", "Altan", "Trädäck",
-  "Fruktträd", "Förråd", "Bod", "Pergola",
+  "Fruktträd", "Förråd", "Bod", "Pergola", "Växthus", "Insynsskyddat",
 ];
 const USP_CHIPS = [
   "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
-  "Nära pendling", "Garage", "Laddbox för elbil", "Flera badrum",
-  "Hög standard", "Nyproduktion", "Balkong i söder",
+  "Nära pendling", "Hög standard", "Nyproduktion",
+  "Högt i tak", "Ljust", "Centralt läge",
+  // Note: Removed duplicates - "Garage", "Laddbox för elbil" (in PARKING_CHIPS),
+  // "Flera badrum" (use bathrooms counter), "Balkong i söder" (use balconyDirection field)
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
@@ -230,6 +234,8 @@ const KITCHEN_TOOLTIPS: Record<string, string> = {
   "Moderna vitvaror": "Nyare vitvaror i gott skick",
   "Matplats i kök": "Plats för matbord med 4–6 sittplatser i köket",
   "Köksö": "Fristående arbetsyta mitt i köket",
+  "Diskmaskin": "Inbyggd diskmaskin",
+  "Induktionshäll": "Modern induktionsspis (energieffektiv)",
 };
 
 const BATHROOM_TOOLTIPS: Record<string, string> = {
@@ -253,8 +259,8 @@ const SPECIAL_TOOLTIPS: Record<string, string> = {
   "Dränering utförd": "System för bortledning av grundvatten",
   "Fiber indraget": "Fiberoptisk bredbandsanslutning",
   "Säkerhetsdörr": "Säkerhetsklassad ytterdörr med extra inbrottsskydd",
-  "Hiss": "Hiss installerad i fastigheten",
   "Varmvattenberedare": "Egen varmvattenberedare (vanligt i villor)",
+  "Bastu": "Egen bastu i bostaden eller gemensam i föreningen",
 };
 
 const GARDEN_TOOLTIPS: Record<string, string> = {
@@ -268,10 +274,11 @@ const GARDEN_TOOLTIPS: Record<string, string> = {
 const USP_TOOLTIPS: Record<string, string> = {
   "Genomgående planlösning": "Fönster på flera väderstreck ger genomljusning",
   "Stabil BRF": "Bostadsrättsförening med god ekonomi",
-  "Laddbox för elbil": "Installerad laddstation för elfordon",
   "Hög standard": "Genomgående hög materialkvalitet och finish",
   "Nyproduktion": "Nybyggd bostad eller färdigställd senaste åren",
-  "Balkong i söder": "Balkong med söderläge för maximalt solljus",
+  "Högt i tak": "Takhöjd över 2,7 meter",
+  "Ljust": "Gott ljusinsläpp från flera väderstreck",
+  "Centralt läge": "Nära stadskärna, service och kommunikationer",
 };
 
 const PARKING_TOOLTIPS: Record<string, string> = {
@@ -307,23 +314,23 @@ function ChipSelector({ chips, selected, onToggle, variant = "default", tooltips
   variant?: "default" | "kitchen" | "bathroom" | "flooring" | "heating" | "special" | "garden" | "usp" | "parking" | "roof" | "material";
   tooltips?: Record<string, string>;
 }) {
+  /**
+   * Mäklaraktig ChipSelector Styling
+   * 
+   * Design Philosophy:
+   * - Unselected: White background, light gray border, gray text
+   * - Selected: Dark green background (#2D5016), white text, checkmark
+   * - NO colored variants (warning-bg, info-bg, success-bg, error-bg)
+   * - ALL chips use the same styling regardless of variant
+   */
   const getChipClasses = (isOn: boolean) => {
-    if (!isOn) return "bg-background text-muted-foreground border-border hover:bg-accent hover:border-accent-hover";
-
-    const variantClasses = {
-      default: "bg-primary text-primary-foreground border-primary hover:bg-primary-hover",
-      kitchen: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
-      bathroom: "bg-info-bg text-info border-info hover:bg-info-bg/80",
-      flooring: "bg-secondary text-secondary-foreground border-secondary-border hover:bg-accent",
-      heating: "bg-error-bg text-error border-error hover:bg-error-bg/80",
-      special: "bg-accent text-accent-foreground border-border hover:bg-accent-hover",
-      garden: "bg-success-bg text-success border-success hover:bg-success-bg/80",
-      usp: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
-      parking: "bg-info-bg text-info border-info hover:bg-info-bg/80",
-      roof: "bg-warning-bg text-warning border-warning hover:bg-warning-bg/80",
-      material: "bg-muted text-muted-foreground border-border hover:bg-accent",
-    };
-    return variantClasses[variant];
+    if (!isOn) {
+      // Unselected: White background, light gray border, gray text
+      return "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+    }
+    
+    // Selected: Dark green background, white text (ALL variants use same style)
+    return "bg-primary text-primary-foreground border-primary hover:bg-primary-hover";
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, chip: string) => {
@@ -428,21 +435,27 @@ function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
   
   const progressLevel = getProgressLevel();
   
+  /**
+   * Mäklaraktig Priority Indicator Styling
+   * 
+   * Design Philosophy:
+   * - NO colored backgrounds (no warning-bg, success-bg)
+   * - Use subtle left border (border-l-4) with semantic color
+   * - White background for all priority levels
+   * - Light gray border for container
+   */
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'border-warning bg-warning-bg';
-      case 'important': return 'border-success bg-success-bg';
-      case 'optional': return 'border-border bg-muted';
-      default: return 'border-border bg-muted';
-    }
+    // All use white background with light gray border
+    return 'border-gray-200 bg-white';
   };
   
   const getPriorityAccent = (priority: string) => {
+    // Left border color indicates priority
     switch (priority) {
-      case 'critical': return 'bg-warning';
-      case 'important': return 'bg-success';
-      case 'optional': return 'bg-muted-foreground';
-      default: return 'bg-muted-foreground';
+      case 'critical': return 'bg-amber-500';  // Amber for critical
+      case 'important': return 'bg-green-500'; // Green for important
+      case 'optional': return 'bg-gray-400';   // Gray for optional
+      default: return 'bg-gray-400';
     }
   };
   
@@ -460,11 +473,9 @@ function PriorityChecklist({ items, onItemClick }: PriorityChecklistProps) {
         </div>
       </div>
       
-      <div className="w-full bg-muted rounded-full h-2 mb-4 overflow-hidden">
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
         <div 
-          className={`h-2 rounded-full transition-all duration-300 ${
-            percentage < 40 ? 'bg-warning' : percentage < 70 ? 'bg-success' : 'bg-success'
-          }`}
+          className="h-2 rounded-full transition-all duration-300 bg-primary"
           style={{ width: `${percentage}%` }}
         />
       </div>

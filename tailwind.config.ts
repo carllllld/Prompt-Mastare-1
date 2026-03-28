@@ -5,11 +5,57 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      /* ═══════════════════════════════════════════════════════════════════
+         MÄKLARAKTIG TAILWIND CONFIGURATION
+         ═══════════════════════════════════════════════════════════════════ */
+      
       borderRadius: {
-        lg: ".5625rem", /* 9px */
-        md: ".375rem", /* 6px */
-        sm: ".1875rem", /* 3px */
+        lg: ".5rem",    /* 8px - buttons, chips */
+        md: ".375rem",  /* 6px - inputs */
+        sm: ".1875rem", /* 3px - rare */
       },
+      
+      fontSize: {
+        /* Only 3 sizes for form components */
+        xs: ['0.75rem', { lineHeight: '1rem' }],      /* 12px - minimum */
+        sm: ['0.8125rem', { lineHeight: '1.25rem' }], /* 13px - labels */
+        base: ['0.9375rem', { lineHeight: '1.5rem' }],/* 15px - body */
+        md: ['1rem', { lineHeight: '1.5rem' }],       /* 16px - headings */
+        /* Legacy sizes (avoid in new code) */
+        lg: ['1.125rem', { lineHeight: '1.75rem' }],
+        xl: ['1.25rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
+        '5xl': ['3rem', { lineHeight: '1' }],
+      },
+      
+      fontWeight: {
+        normal: '400',    /* Default */
+        medium: '500',    /* Rare */
+        semibold: '600',  /* Headings only */
+        bold: '700',      /* Avoid */
+      },
+      
+      spacing: {
+        /* Generous white space */
+        '3': '0.75rem',   /* 12px - minimum gap */
+        '4': '1rem',      /* 16px - form fields */
+        '5': '1.25rem',   /* 20px - section padding */
+        '6': '1.5rem',    /* 24px - section gaps */
+        '8': '2rem',      /* 32px - large gaps */
+      },
+      
+      boxShadow: {
+        /* Minimal shadows */
+        sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',  /* Subtle */
+        md: '0 2px 4px 0 rgb(0 0 0 / 0.08)',  /* Sticky elements */
+        /* Legacy (avoid) */
+        lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+        xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+      },
+      
       colors: {
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",

@@ -1,9 +1,9 @@
 /**
  * ImportSection - Snabb väg för att importera objektdata
  * Visar Hemnet och Vitec import-alternativ
+ * Mäklaraktig design: white background, light gray border, NO colored backgrounds
  */
-import { Download, Building2, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Zap } from "lucide-react";
 import { HemnetImportButton, VitecImportPicker } from "@/components/IntegrationsPanel";
 
 interface ImportSectionProps {
@@ -14,13 +14,13 @@ interface ImportSectionProps {
 
 export function ImportSection({ onHemnetImport, onVitecImport, isPro }: ImportSectionProps) {
   return (
-    <div className="border-l-4 border-slate-400 bg-slate-50 p-4 mb-6">
+    <div className="border border-gray-200 bg-white rounded-lg p-4 mb-6">
       <div className="flex items-center gap-2 mb-3">
-        <Zap className="w-5 h-5 text-slate-600" />
-        <h3 className="font-semibold text-slate-900">Snabb väg - Importera objektdata</h3>
+        <Zap className="w-4 h-4 text-gray-600" />
+        <h3 className="text-md font-semibold text-gray-900">Snabb väg - Importera objektdata</h3>
       </div>
       
-      <p className="text-sm text-slate-700 mb-4">
+      <p className="text-sm text-gray-600 mb-4">
         Spara tid genom att importera från Hemnet eller Vitec. Formuläret fylls i automatiskt.
       </p>
       

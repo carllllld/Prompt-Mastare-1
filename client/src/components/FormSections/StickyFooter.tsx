@@ -8,7 +8,7 @@ interface StickyFooterProps {
 
 /**
  * StickyFooter - Mäklaraktig design
- * Clean, stor knapp, mörk grön accent
+ * Clean, white background, dark green primary button
  */
 export function StickyFooter({
   onSubmit,
@@ -16,13 +16,13 @@ export function StickyFooter({
   disabled,
 }: StickyFooterProps) {
   return (
-    <div className="sticky bottom-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+    <div className="sticky bottom-0 z-50 bg-white border-t border-gray-200 shadow-md">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <button
           type="submit"
           onClick={onSubmit}
           disabled={isPending || disabled}
-          className="w-full md:w-auto md:min-w-[240px] px-8 py-4 text-base font-semibold text-white bg-[#2D5016] hover:bg-[#234010] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="w-full md:w-auto md:min-w-[240px] px-6 py-3 text-base font-normal text-white bg-primary hover:bg-primary-hover disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors rounded-lg"
         >
           {isPending ? 'Genererar text...' : 'Generera mäklartext'}
         </button>
