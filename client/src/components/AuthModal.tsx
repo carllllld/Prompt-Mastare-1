@@ -192,8 +192,8 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
         )}
 
         {successMessage && (
-          <div className="bg-green-500/10 text-green-700 dark:text-green-400 text-sm p-3 rounded-md flex items-start gap-2" data-testid="text-auth-success">
-            <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="bg-white border border-gray-200 text-gray-700 text-sm p-3 flex items-start gap-2" data-testid="text-auth-success">
+            <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
             {successMessage}
           </div>
         )}

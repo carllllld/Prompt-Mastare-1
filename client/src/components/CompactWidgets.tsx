@@ -33,7 +33,7 @@ export function CompactUsageWidget({ remaining, limit, used, plan, resetTime }: 
       <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Kvot</span>
         {plan === "premium" ? (
-          <Badge size="sm" className="bg-purple-600 text-white border-transparent text-[10px]">Premium</Badge>
+          <Badge size="sm" className="bg-primary text-white border-transparent text-[10px]">Premium</Badge>
         ) : plan === "pro" ? (
           <Badge variant="success" size="sm" className="text-[10px]">Pro</Badge>
         ) : (
@@ -47,8 +47,8 @@ export function CompactUsageWidget({ remaining, limit, used, plan, resetTime }: 
         </div>
         <div className="w-full h-1 rounded-full overflow-hidden bg-muted mb-1">
           <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              remaining === 0 ? "bg-error" : plan === "premium" ? "bg-purple-600" : "bg-success"
+            className={`h-full transition-all duration-500 ${
+              remaining === 0 ? "bg-gray-400" : "bg-primary"
             }`}
             style={{ width: `${Math.min(100, (used / limit) * 100)}%` }}
           />

@@ -73,7 +73,7 @@ export default function ResetPassword() {
           {status === "form" && (
             <form onSubmit={handleSubmit} className="w-full space-y-4">
               {error && (
-                <div className="bg-red-50 text-red-700 text-sm p-3 rounded-md">
+                <div className="bg-white border border-gray-200 text-gray-700 text-sm p-3">
                   {error}
                 </div>
               )}

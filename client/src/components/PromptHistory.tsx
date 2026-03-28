@@ -150,7 +150,7 @@ export function PromptHistory() {
               <Button
                 variant="outline"
                 size="sm"
-                className="w-full border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="w-full border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 data-testid="button-delete-all-history"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -218,7 +218,7 @@ export function PromptHistory() {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        className="h-8 w-8 text-gray-400 hover:text-gray-900 hover:bg-gray-100"
                         data-testid={`button-delete-history-${item.id}`}
                       >
                         <Trash2 className="w-4 h-4" />

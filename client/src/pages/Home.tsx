@@ -261,8 +261,8 @@ export default function Home() {
                 {(plan === "pro" || plan === "premium") ? (
                   <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${
                     plan === "premium" 
-                      ? "bg-purple-600 text-white" 
-                      : "bg-amber-500 text-white"
+                      ? "bg-primary text-white" 
+                      : "bg-primary text-white"
                   }`}>
                     <Crown className="w-3 h-3" />
                     {plan === "premium" ? "Premium" : "Pro"}

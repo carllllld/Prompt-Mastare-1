@@ -1841,8 +1841,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             {/* AI Model Info - Fixed GPT-5.2 */}
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-400 font-medium">AI-modell:</span>
-              <div className="flex items-center gap-2 px-3 py-1 bg-gray-800 rounded-md">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-gray-800">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                 <span className="text-xs font-medium text-white">GPT-5.2</span>
                 <span className="text-xs text-gray-400">optimerad för objektsbeskrivning</span>
               </div>

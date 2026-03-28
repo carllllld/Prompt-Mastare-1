@@ -192,8 +192,8 @@ export function ExpertFeedbackPanelExample() {
             </div>
 
             {/* Instructions */}
-            <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-              <h3 className="text-sm font-semibold text-blue-900 mb-2">
+            <div className="bg-white border border-gray-200 p-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">
                 Hur man använder
               </h3>
               <ul className="text-sm text-blue-800 space-y-1">

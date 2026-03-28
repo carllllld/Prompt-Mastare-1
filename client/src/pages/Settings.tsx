@@ -564,7 +564,7 @@ export default function Settings() {
                 variant="outline"
                 size="sm"
                 onClick={() => setDeleteDialogOpen(true)}
-                className="text-red-600 border-red-200 hover:bg-red-50 font-medium"
+                className="text-gray-600 border-gray-200 hover:bg-gray-100 font-medium"
               >
                 <Trash2 className="w-3 h-3 mr-2" />
                 Radera mitt konto

@@ -674,7 +674,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           <div className="border border-gray-200 bg-white p-5">
             <div className="flex items-center gap-2 mb-3">
               <Star className="w-3.5 h-3.5 text-primary" />
-              <span className="text-xs font-semibold uppercase tracking-wider text-purple-700">Styrkor i texten</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-700">Styrkor i texten</span>
             </div>
             <ul className="space-y-1.5">
               {result.improvement_suggestions.strengths.map((s, i) => (
