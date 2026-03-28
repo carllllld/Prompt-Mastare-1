@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Sparkles, Trash2, Save, Eye, EyeOff, Users, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Trash2, Save } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,7 +32,6 @@ export function PersonalStyle() {
   const [saving, setSaving] = useState(false);
   const [personalStyle, setPersonalStyle] = useState<PersonalStyleData | null>(null);
   const [referenceTexts, setReferenceTexts] = useState(["", "", ""]);
-  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     fetchPersonalStyle();
@@ -203,195 +200,89 @@ export function PersonalStyle() {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span className="ml-2">Laddar personlig stil...</span>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center py-6">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Personlig skrivstil
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Lär AI:n din skrivstil med 1–3 stilprover från olika delar av en stark objektsbeskrivning.
-          </p>
+    <div className="space-y-3">
+      {/* Status toggle */}
+      {personalStyle?.hasStyle && (
+        <div className="flex items-center justify-between p-2 rounded-lg" style={{ background: "#F3F4F6" }}>
+          <span className="text-xs font-medium" style={{ color: "#4B5563" }}>
+            {personalStyle.isActive ? "Aktiv" : "Inaktiv"}
+          </span>
+          <Switch
+            checked={personalStyle.isActive}
+            onCheckedChange={handleToggleActive}
+          />
         </div>
+      )}
 
-        {personalStyle?.hasStyle && (
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={personalStyle.isActive}
-              onCheckedChange={handleToggleActive}
+      {/* Compact info */}
+      <p className="text-[10px]" style={{ color: "#6B7280" }}>
+        Lär AI:n din skrivstil med 1–3 stilprover (minst 100 tecken vardera).
+      </p>
+
+      {/* Reference Texts - Compact */}
+      <div className="space-y-2">
+        {referenceTexts.map((text, index) => (
+          <div key={index} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-medium" style={{ color: "#4B5563" }}>
+                Exempel {index + 1}{index === 0 ? " *" : ""}
+              </label>
+              <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"} className="text-[9px] h-4">
+                {text.length}/100
+              </Badge>
+            </div>
+            <Textarea
+              value={text}
+              onChange={(e) => {
+                const newTexts = [...referenceTexts];
+                newTexts[index] = e.target.value;
+                setReferenceTexts(newTexts);
+              }}
+              placeholder={index === 0
+                ? "Öppning och ton..."
+                : index === 1
+                  ? "Planlösning och rum..."
+                  : "Läge och avslut..."}
+              className="min-h-[60px] text-xs"
             />
-            <span className="text-sm text-gray-600">
-              {personalStyle.isActive ? "Aktiv" : "Inaktiv"}
-            </span>
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Status Alert */}
-      {personalStyle?.hasStyle && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            Din personliga stil är {personalStyle.isActive ? "aktiv" : "inaktiv"}.
-            AI:n anpassar texterna efter din skrivstil när den är aktiv.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Action buttons */}
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
+          size="sm"
+          className="flex-1 h-8 text-xs"
+        >
+          {saving ? (
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          ) : (
+            <Save className="h-3 w-3 mr-1" />
+          )}
+          {personalStyle?.hasStyle ? "Uppdatera" : "Spara"}
+        </Button>
 
-      {/* Style Profile Display */}
-      {personalStyle?.styleProfile && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Din stilprofil</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Object.entries(personalStyle.styleProfile).map(([key, value]) => (
-                <div key={key} className="space-y-1">
-                  <div className="text-sm font-medium capitalize">
-                    {{
-                      formality: "Formalitet",
-                      detailLevel: "Detaljnivå",
-                      emotionalTone: "Emotionell ton",
-                      sentenceLength: "Meningslängd",
-                      adjectiveUsage: "Adjektivnivå",
-                      factFocus: "Faktafokus",
-                    }[key] || key.replace(/([A-Z])/g, ' $1').trim()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${(value as number) * 10}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-600">
-                      {getStyleLabel(value as number, key)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Reference Texts */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">
-              {personalStyle?.hasStyle ? "Uppdatera Exempeltexter" : "Lägg till Exempeltexter"}
-            </CardTitle>
-            {personalStyle?.hasStyle && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDelete}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Radera
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Klistra in 1–3 korta stilprover från texter som verkligen låter som du (minst 100 tecken vardera).
-              Använd helst exempel 1 för öppning och tonalitet, exempel 2 för mittparti och rumsflöde, och exempel 3 för läge och avslut.
-            </AlertDescription>
-          </Alert>
-
-          {referenceTexts.map((text, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
-                  Exempel {index + 1}{index === 0 ? " (obligatorisk)" : " (valfri)"}
-                </label>
-                <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"}>
-                  {text.length}/100 tecken
-                </Badge>
-              </div>
-              <Textarea
-                value={text}
-                onChange={(e) => {
-                  const newTexts = [...referenceTexts];
-                  newTexts[index] = e.target.value;
-                  setReferenceTexts(newTexts);
-                }}
-                placeholder={index === 0
-                  ? "Klistra in ett utdrag som visar hur du brukar öppna en objektbeskrivning och sätta tonen..."
-                  : index === 1
-                    ? "Klistra in ett utdrag som visar hur du beskriver planlösning, rum och flöde..."
-                    : "Klistra in ett utdrag som visar hur du skriver om läge, vardagsnytta och avslut..."}
-                className="min-h-[120px]"
-              />
-            </div>
-          ))}
-
-          <div className="flex items-center gap-2 pt-4">
-            <Button
-              onClick={handleSave}
-              disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
-              className="flex-1"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {personalStyle?.hasStyle ? "Uppdatera stil" : "Spara stil"}
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => setShowPreview(!showPreview)}
-            >
-              {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview */}
-      {showPreview && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Förhandsgranskning</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {referenceTexts.map((text, index) => (
-                text && (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="text-xs font-medium text-gray-500 mb-1">
-                      Exempel {index + 1}
-                    </div>
-                    <div className="text-sm text-gray-700 whitespace-pre-wrap">
-                      {text}
-                    </div>
-                  </div>
-                )
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {personalStyle?.hasStyle && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDelete}
+            className="h-8 text-xs text-red-600 hover:text-red-700"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

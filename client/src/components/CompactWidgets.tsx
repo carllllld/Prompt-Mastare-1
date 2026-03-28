@@ -54,16 +54,21 @@ interface CompactHistoryWidgetProps {
 export function CompactHistoryWidget({ historyCount }: CompactHistoryWidgetProps) {
   return (
     <Link href="/history">
-      <div className="pro-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow">
+      <div className="pro-card rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow h-full">
         <div className="px-3 py-2 border-b border-border flex items-center justify-between bg-muted">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Historik</span>
         </div>
-        <div className="px-3 py-2.5 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-semibold text-foreground">{historyCount}</p>
-            <p className="text-[9px] text-muted-foreground">genereringar</p>
+        <div className="px-3 py-2.5">
+          <div className="flex items-baseline gap-1 mb-1.5">
+            <span className="text-xl font-bold text-foreground">{historyCount}</span>
+            <span className="text-[10px] text-muted-foreground">st</span>
           </div>
+          <p className="text-[9px] text-muted-foreground mb-1">
+            Tidigare genereringar
+          </p>
+          <p className="text-[9px] text-muted-foreground">
+            Klicka för att se alla
+          </p>
         </div>
       </div>
     </Link>
