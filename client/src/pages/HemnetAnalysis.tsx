@@ -282,7 +282,11 @@ export default function HemnetAnalysis() {
                   <Badge variant="outline" size="sm">
                     Kvalitet: {analysisResult.analysis.overallQuality}/10
                   </Badge>
-                  <Badge variant={analysisResult.analysis.legalCheck.compliant ? "success" : "error"} size="sm">
+                  <Badge 
+                    variant="outline" 
+                    size="sm"
+                    className={analysisResult.analysis.legalCheck.compliant ? "border-green-600 text-green-700 bg-green-50" : "border-red-600 text-red-700 bg-red-50"}
+                  >
                     {analysisResult.analysis.legalCheck.compliant ? "Juridiskt OK" : "Juridiska problem"}
                   </Badge>
                   <Button
