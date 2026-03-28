@@ -3525,6 +3525,90 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
     });
 
+    // POST /api/text/analyze — analyze any text (manual input)
+    app.post("/api/text/analyze", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { text } = req.body;
+
+        // Validate input
+        if (!text || typeof text !== 'string') {
+          return res.status(400).json({ message: "Text krävs" });
+        }
+
+        const trimmedText = text.trim();
+        if (trimmedText.length < 50) {
+          return res.status(400).json({ message: "Texten är för kort (minst 50 tecken)" });
+        }
+
+        if (trimmedText.length > 10000) {
+          return res.status(400).json({ message: "Texten är för lång (max 10000 tecken)" });
+        }
+
+        // Check analysis quota (same as Hemnet analysis)
+        const plan = (user.plan as PlanType) || "free";
+        const usage = await storage.getMonthlyUsage(user.id, user) || {
+          textsGenerated: 0,
+          areaSearchesUsed: 0,
+          textEditsUsed: 0,
+          personalStyleAnalyses: 0,
+          hemnetAnalysesUsed: 0,
+        };
+
+        const limits = PLAN_LIMITS[plan];
+        const hemnetAnalysesLimit = limits.hemnetAnalyses || 0;
+        const hemnetAnalysesUsed = usage.hemnetAnalysesUsed || 0;
+
+        if (hemnetAnalysesUsed >= hemnetAnalysesLimit) {
+          return res.status(429).json({
+            message: "Analyskvoten är slut för denna månad",
+            code: "QUOTA_EXCEEDED",
+            usage: {
+              used: hemnetAnalysesUsed,
+              limit: hemnetAnalysesLimit,
+            },
+            upgradeRequired: plan !== "premium",
+            currentPlan: plan,
+          });
+        }
+
+        // Run expert analysis
+        const { ExpertAIAnalyzer } = await import('./lib/perfect-swedish-analyzer');
+        const analyzer = new ExpertAIAnalyzer();
+        
+        const analysis = await analyzer.analyze({
+          improvedPrompt: trimmedText,
+          headline: '',
+          instagramCaption: '',
+          showingInvitation: '',
+          shortAd: '',
+        });
+
+        // Track usage (same quota as Hemnet analysis)
+        await storage.incrementUsage(user.id, 'hemnetAnalyses');
+
+        // Calculate metadata
+        const wordCount = trimmedText.split(/\s+/).filter(Boolean).length;
+        const paragraphCount = trimmedText.split(/\n\n+/).filter(Boolean).length;
+        const sentenceCount = trimmedText.split(/[.!?]+/).filter(Boolean).length - 1;
+
+        // Return results
+        res.json({
+          originalText: trimmedText,
+          analysis,
+          metadata: {
+            wordCount,
+            paragraphCount,
+            sentenceCount: Math.max(1, sentenceCount),
+          },
+          images: [], // No images for manual text
+        });
+      } catch (err) {
+        console.error("Text analysis error:", err);
+        res.status(500).json({ message: "Kunde inte analysera texten" });
+      }
+    });
+
     // GET /api/integrations/hemnet/image/:hash — serve cached Hemnet image
     app.get("/api/integrations/hemnet/image/:hash", (req, res) => {
       try {

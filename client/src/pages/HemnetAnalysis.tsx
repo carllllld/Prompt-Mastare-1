@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useHemnetAnalysis } from "@/hooks/use-hemnet-analysis";
+import { useHemnetAnalysis, useTextAnalysis } from "@/hooks/use-hemnet-analysis";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useAuth } from "@/hooks/use-auth";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
@@ -29,7 +29,9 @@ export default function HemnetAnalysis() {
   }, [authLoading, isAuthenticated, setLocation]);
 
   // State
+  const [inputMode, setInputMode] = useState<"url" | "manual">("url");
   const [hemnetUrl, setHemnetUrl] = useState("");
+  const [manualText, setManualText] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [editedText, setEditedText] = useState("");
   const [acceptedFixes, setAcceptedFixes] = useState<string[]>([]);
@@ -37,7 +39,8 @@ export default function HemnetAnalysis() {
   const [copiedText, setCopiedText] = useState(false);
 
   // Mutations
-  const analysisMutation = useHemnetAnalysis();
+  const hemnetMutation = useHemnetAnalysis();
+  const textMutation = useTextAnalysis();
 
   // One-click fix hook
   const { applyFix, undo, canUndo } = useOneClickFix({
@@ -60,35 +63,77 @@ export default function HemnetAnalysis() {
 
   // Handle import and analyze
   const handleAnalyze = useCallback(() => {
-    if (!hemnetUrl.trim()) {
-      toast({
-        title: "URL saknas",
-        description: "Ange en Hemnet-URL för att analysera",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    analysisMutation.mutate(hemnetUrl, {
-      onSuccess: (data) => {
-        setAnalysisResult(data);
-        setEditedText(data.originalText);
-        setAcceptedFixes([]);
-        setDismissedFixes([]);
+    if (inputMode === "url") {
+      // URL mode - use Hemnet import
+      if (!hemnetUrl.trim()) {
         toast({
-          title: "Analys klar",
-          description: `${data.analysis.improvements.length} förbättringsförslag hittade`,
-        });
-      },
-      onError: (error: any) => {
-        toast({
-          title: "Analys misslyckades",
-          description: error.message,
+          title: "URL saknas",
+          description: "Ange en URL för att analysera",
           variant: "destructive",
         });
-      },
-    });
-  }, [hemnetUrl, analysisMutation, toast]);
+        return;
+      }
+
+      hemnetMutation.mutate(hemnetUrl, {
+        onSuccess: (data) => {
+          setAnalysisResult(data);
+          setEditedText(data.originalText);
+          setAcceptedFixes([]);
+          setDismissedFixes([]);
+          toast({
+            title: "Analys klar",
+            description: `${data.analysis.improvements.length} förbättringsförslag hittade`,
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Analys misslyckades",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      });
+    } else {
+      // Manual mode - analyze text directly
+      if (!manualText.trim()) {
+        toast({
+          title: "Text saknas",
+          description: "Ange en text för att analysera",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      textMutation.mutate(manualText, {
+        onSuccess: (data) => {
+          // Create a result object with mock property data
+          setAnalysisResult({
+            ...data,
+            property: {
+              id: "manual",
+              url: "",
+              address: "Manuell text",
+              city: "",
+            },
+          });
+          setEditedText(data.originalText);
+          setAcceptedFixes([]);
+          setDismissedFixes([]);
+          toast({
+            title: "Analys klar",
+            description: `${data.analysis.improvements.length} förbättringsförslag hittade`,
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: "Analys misslyckades",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      });
+    }
+  }, [inputMode, hemnetUrl, manualText, hemnetMutation, textMutation, toast]);
 
   // Handle feedback click
   const handleFeedbackClick = useCallback((feedbackId: string) => {
@@ -171,7 +216,7 @@ export default function HemnetAnalysis() {
                 <FileText className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="text-lg font-semibold text-foreground">
-                Hemnet Textanalys
+                Textanalys
               </span>
               <Badge variant="outline" size="sm">
                 Beta
@@ -189,70 +234,149 @@ export default function HemnetAnalysis() {
           <div className="max-w-3xl mx-auto space-y-4">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-foreground mb-2">
-                Analysera befintlig Hemnet-text
+                Analysera befintlig mäklartext
               </h1>
               <p className="text-sm text-muted-foreground">
-                Importera en befintlig Hemnet-annons och få AI-drivna förbättringsförslag
+                Importera från Hemnet/Booli eller klistra in din egen text för AI-drivna förbättringsförslag
               </p>
             </div>
 
+            {/* Mode selector */}
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Button
+                variant={inputMode === "url" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setInputMode("url")}
+                className="min-w-[120px]"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                URL-import
+              </Button>
+              <Button
+                variant={inputMode === "manual" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setInputMode("manual")}
+                className="min-w-[120px]"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Manuell text
+              </Button>
+            </div>
+
             <div className="pro-card pro-card-premium p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <ExternalLink className="w-5 h-5 text-primary mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-foreground mb-1">
-                    Hemnet URL
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Klistra in länken till en Hemnet-annons för att analysera texten
-                  </p>
-                </div>
-              </div>
+              {inputMode === "url" ? (
+                <>
+                  <div className="flex items-start gap-3 mb-4">
+                    <ExternalLink className="w-5 h-5 text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        Importera från URL
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Klistra in länken till en Hemnet- eller Booli-annons för att analysera texten
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="space-y-3">
-                <Input
-                  type="url"
-                  placeholder="https://www.hemnet.se/bostader/..."
-                  value={hemnetUrl}
-                  onChange={(e) => setHemnetUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAnalyze();
-                  }}
-                  className="text-sm"
-                  disabled={analysisMutation.isPending}
-                />
+                  <div className="space-y-3">
+                    <Input
+                      type="url"
+                      placeholder="https://www.hemnet.se/bostader/... eller https://www.booli.se/..."
+                      value={hemnetUrl}
+                      onChange={(e) => setHemnetUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAnalyze();
+                      }}
+                      className="text-sm"
+                      disabled={hemnetMutation.isPending}
+                    />
 
-                <Button
-                  onClick={handleAnalyze}
-                  disabled={!hemnetUrl.trim() || analysisMutation.isPending}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary-hover"
-                >
-                  {analysisMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyserar...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Analysera text
-                    </>
-                  )}
-                </Button>
-              </div>
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={!hemnetUrl.trim() || hemnetMutation.isPending}
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary-hover"
+                    >
+                      {hemnetMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Analyserar...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Analysera text
+                        </>
+                      )}
+                    </Button>
+                  </div>
 
-              {/* Info box */}
-              <div className="mt-4 rounded-lg border border-info bg-info-bg px-3 py-2 flex items-start gap-2">
-                <Info className="w-4 h-4 text-info mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-info">
-                  <p className="font-medium mb-1">Vad händer?</p>
-                  <p>
-                    Vi hämtar den befintliga texten från Hemnet och analyserar den med AI-experter 
-                    (mäklare + jurist) för att hitta förbättringsmöjligheter inom grammatik, stil, 
-                    juridik, mäklarrealism och tydlighet.
-                  </p>
-                </div>
-              </div>
+                  {/* Info box */}
+                  <div className="mt-4 rounded-lg border border-info bg-info-bg px-3 py-2 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-info mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-info">
+                      <p className="font-medium mb-1">Automatisk import</p>
+                      <p>
+                        Vi hämtar automatiskt texten och bilderna från Hemnet eller Booli och analyserar 
+                        med AI-experter (mäklare + jurist) för att hitta förbättringsmöjligheter.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start gap-3 mb-4">
+                    <FileText className="w-5 h-5 text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-1">
+                        Klistra in text
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Klistra in din befintliga mäklartext från vilken källa som helst
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <textarea
+                      placeholder="Välkommen till denna charmiga 3:a i hjärtat av Södermalm..."
+                      value={manualText}
+                      onChange={(e) => setManualText(e.target.value)}
+                      className="w-full min-h-[200px] p-3 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+                      disabled={textMutation.isPending}
+                    />
+
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={!manualText.trim() || textMutation.isPending}
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary-hover"
+                    >
+                      {textMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Analyserar...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Analysera text
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Info box */}
+                  <div className="mt-4 rounded-lg border border-info bg-info-bg px-3 py-2 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-info mt-0.5 flex-shrink-0" />
+                    <div className="text-xs text-info">
+                      <p className="font-medium mb-1">Fungerar för alla texter</p>
+                      <p>
+                        Analyserar texten med AI-experter (mäklare + jurist) för att hitta 
+                        förbättringsmöjligheter inom grammatik, stil, juridik, mäklarrealism och tydlighet.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Quota info */}

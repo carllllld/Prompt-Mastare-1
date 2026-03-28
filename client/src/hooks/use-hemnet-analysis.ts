@@ -96,6 +96,30 @@ export function useHemnetAnalysis() {
 }
 
 /**
+ * Hook for analyzing any text (manual input)
+ */
+export function useTextAnalysis() {
+  const queryClient = useQueryClient();
+
+  return useMutation<Omit<HemnetAnalysisResult, 'property'>, Error, string>({
+    mutationFn: async (text: string) => {
+      const res = await apiRequest('POST', '/api/text/analyze', { text });
+      
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: 'Okänt fel' }));
+        throw new Error(error.message || 'Kunde inte analysera texten');
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate user status to update quota
+      queryClient.invalidateQueries({ queryKey: ['/api/user/status'] });
+    },
+  });
+}
+
+/**
  * Hook for generating improved version with accepted fixes
  */
 export function useGenerateImproved() {
