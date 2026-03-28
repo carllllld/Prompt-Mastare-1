@@ -183,17 +183,8 @@ export default function Home() {
                       toast({
                         title: "Team-samarbete kräver Pro",
                         description: "Uppgradera till Pro för att bjuda in kollegor och dela prompter.",
-                        action: (
-                          <Button
-                            onClick={() => startCheckout("pro")}
-                            disabled={isCheckoutPending}
-                            size="sm"
-                            className="text-xs"
-                          >
-                            Uppgradera till Pro
-                          </Button>
-                        ),
                       });
+                      setTimeout(() => startCheckout("pro"), 500);
                     }}
                     className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
@@ -256,17 +247,8 @@ export default function Home() {
                           toast({
                             title: "Team-samarbete kräver Pro",
                             description: "Uppgradera till Pro för att bjuda in kollegor och dela prompter.",
-                            action: (
-                              <Button
-                                onClick={() => startCheckout("pro")}
-                                disabled={isCheckoutPending}
-                                size="sm"
-                                className="text-xs"
-                              >
-                                Uppgradera till Pro
-                              </Button>
-                            ),
                           });
+                          setTimeout(() => startCheckout("pro"), 500);
                         }}
                         className="cursor-pointer"
                       >
