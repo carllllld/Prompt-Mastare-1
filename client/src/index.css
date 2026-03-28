@@ -89,18 +89,20 @@
   --destructive-border: 0 72% 51%;
 
   /* ═══════════════════════════════════════════════════════════════════
-     TYPOGRAPHY - Natural, Human Scale
+     TYPOGRAPHY - Natural, Human Scale (STANDARDIZED)
      ═══════════════════════════════════════════════════════════════════
-     - Readable sizes (14-16px body)
-     - Subtle hierarchy through weight, not size
-     - Natural line heights for Swedish text
+     - Konsekvent storlek genom hela formuläret
+     - Labels: 14px (text-sm)
+     - Hjälptext: 12px (text-xs)
+     - Input text: 15px (text-base)
+     - Headings: 16px (text-base)
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Font Sizes - Natural Scale */
-  --text-xs: 0.75rem;      /* 12px - helper text */
-  --text-sm: 0.875rem;     /* 14px - labels, secondary */
-  --text-base: 0.9375rem;  /* 15px - body text */
-  --text-md: 1rem;         /* 16px - section titles */
+  /* Font Sizes - Standardized Scale */
+  --text-xs: 0.75rem;      /* 12px - hjälptext, badges */
+  --text-sm: 0.875rem;     /* 14px - labels, secondary text */
+  --text-base: 0.9375rem;  /* 15px - body text, inputs */
+  --text-md: 1rem;         /* 16px - section headings */
   --text-lg: 1.125rem;     /* 18px - page titles */
   
   /* Font Weights - Subtle Hierarchy */
@@ -239,6 +241,38 @@
   .pro-muted {
     background: hsl(40 20% 97%);
     border: 1px solid hsl(30 10% 91%);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     STANDARDIZED FORM TYPOGRAPHY
+     ═══════════════════════════════════════════════════════════════════
+     Konsekvent storlek på alla formulärelement
+     ═══════════════════════════════════════════════════════════════════ */
+  
+  /* All form labels should be text-sm (14px) */
+  label, .form-label {
+    font-size: 0.875rem !important; /* 14px */
+    font-weight: 500;
+  }
+  
+  /* All help text should be text-xs (12px) */
+  .form-description, .help-text, p.text-xs {
+    font-size: 0.75rem !important; /* 12px */
+  }
+  
+  /* All inputs and textareas should be text-base (15px) */
+  input, textarea, select {
+    font-size: 0.9375rem !important; /* 15px */
+  }
+  
+  /* All section headings should be text-base (16px) */
+  h3, .section-title {
+    font-size: 1rem !important; /* 16px */
+  }
+  
+  /* Chip text should be text-sm (14px) */
+  .chip-text, button[role="checkbox"] {
+    font-size: 0.875rem !important; /* 14px */
   }
 }
 
