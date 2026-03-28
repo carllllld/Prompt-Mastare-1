@@ -1466,11 +1466,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           )}
 
           {/* Render mode: rest-only - show everything except objekttyp and essential fields */}
-          {renderMode === 'rest-only' && (
-            </>
-          )}
-
-          {/* Render mode: rest-only - show everything except objekttyp and essential fields */}
           {(renderMode === 'rest-only' || renderMode === 'full') && (
             <>
               {/* ── SECTION 2.5: OBJEKTBILDER (NEW COMPONENT) ── */}
