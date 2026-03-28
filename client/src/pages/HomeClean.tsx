@@ -140,47 +140,58 @@ export default function HomeClean() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
+            <div className="w-8 h-8 flex items-center justify-center bg-primary">
               <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold text-foreground">OptiPrompt</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-6">
             {authLoading ? (
               <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
             ) : isAuthenticated ? (
               <>
-                <div className="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
-                  <span className="font-semibold text-primary">{remaining}</span>
+                {/* Kvot - direkt i headern */}
+                <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">{remaining}</span>
                   <span>/</span>
                   <span>{limit}</span>
+                  <span className="text-xs">kvar</span>
                 </div>
 
+                {/* Historik - direkt i headern */}
+                <Link href="/history" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Clock className="w-4 h-4" />
+                  <span>Historik</span>
+                </Link>
+
+                {/* Uppgradera/Plan - direkt i headern */}
                 {(plan === "pro" || plan === "premium") ? (
-                  <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2.5 py-1 ${
-                    plan === "premium" ? "bg-primary text-white" : "bg-primary text-white"
-                  }`}>
-                    <Crown className="w-3 h-3" />
-                    {plan === "premium" ? "Premium" : "Pro"}
-                  </div>
+                  <button
+                    onClick={() => openPortal()}
+                    disabled={isPortalPending}
+                    className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Crown className="w-4 h-4 text-primary" />
+                    <span>{plan === "premium" ? "Premium" : "Pro"}</span>
+                  </button>
                 ) : (
-                  <Button
-                    size="sm"
+                  <button
                     onClick={() => startCheckout("pro")}
                     disabled={isCheckoutPending}
-                    className="text-xs font-medium gap-1"
+                    className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowUp className="w-3 h-3" />}
-                    <span className="hidden sm:inline">Uppgradera</span>
-                  </Button>
+                    {isCheckoutPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+                    <span>Uppgradera</span>
+                  </button>
                 )}
 
+                {/* User menu - mobile fallback */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors border">
-                      <User className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline max-w-[120px] truncate">{user?.email?.split("@")[0]}</span>
+                    <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors border border-gray-200">
+                      <User className="w-4 h-4" />
+                      <span className="hidden md:inline max-w-[120px] truncate">{user?.email?.split("@")[0]}</span>
                       <ChevronDown className="w-3 h-3" />
                     </button>
                   </DropdownMenuTrigger>
@@ -191,25 +202,34 @@ export default function HomeClean() {
                         {plan === "premium" ? "Premium" : plan === "pro" ? "Pro" : "Gratis"}
                       </p>
                     </div>
-                    <DropdownMenuItem asChild>
-                      <Link href="/history" className="flex items-center gap-2 cursor-pointer">
-                        <Clock className="w-3.5 h-3.5" />
-                        Historik
-                      </Link>
-                    </DropdownMenuItem>
-                    {plan === "free" ? (
-                      <DropdownMenuItem onClick={() => startCheckout("pro")} disabled={isCheckoutPending} className="cursor-pointer">
-                        <ArrowUp className="w-3.5 h-3.5 mr-2" />
-                        Uppgradera till Pro
+                    {/* Mobile: Show kvot, historik, uppgradera */}
+                    <div className="sm:hidden">
+                      <DropdownMenuItem asChild>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs">Kvot</span>
+                          <span className="text-xs font-semibold">{remaining}/{limit}</span>
+                        </div>
                       </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem onClick={() => openPortal()} disabled={isPortalPending} className="cursor-pointer">
-                        <Settings className="w-3.5 h-3.5 mr-2" />
-                        Hantera prenumeration
+                      <DropdownMenuItem asChild>
+                        <Link href="/history" className="flex items-center gap-2 cursor-pointer">
+                          <Clock className="w-3.5 h-3.5" />
+                          Historik
+                        </Link>
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
+                      {plan === "free" ? (
+                        <DropdownMenuItem onClick={() => startCheckout("pro")} disabled={isCheckoutPending} className="cursor-pointer">
+                          <ArrowUp className="w-3.5 h-3.5 mr-2" />
+                          Uppgradera till Pro
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => openPortal()} disabled={isPortalPending} className="cursor-pointer">
+                          <Settings className="w-3.5 h-3.5 mr-2" />
+                          Hantera prenumeration
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                    </div>
+                    <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-gray-600">
                       <LogOut className="w-3.5 h-3.5 mr-2" />
                       Logga ut
                     </DropdownMenuItem>
@@ -295,107 +315,46 @@ export default function HomeClean() {
           </div>
         )}
 
-        {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main content - full width */}
+        <div className="max-w-4xl mx-auto">
           {/* Form */}
-          <div className="lg:col-span-2">
-            <PromptFormClean
-              onSubmit={handleSubmit}
-              isPending={isPending}
-              disabled={isAuthenticated && remaining === 0}
-              isPro={plan === "pro" || plan === "premium"}
-            />
+          <PromptFormClean
+            onSubmit={handleSubmit}
+            isPending={isPending}
+            disabled={isAuthenticated && remaining === 0}
+            isPro={plan === "pro" || plan === "premium"}
+          />
 
-            {/* Loading */}
-            {isPending && (
-              <div className="mt-6 bg-card rounded-lg border p-6">
-                <div className="mb-4 flex items-center justify-between text-sm">
-                  <span className="font-medium">Genererar texter...</span>
-                  <span className="text-muted-foreground">{progressPercent}%</span>
-                </div>
-                <div className="w-full h-2 rounded-full overflow-hidden bg-muted mb-4">
-                  <div
-                    className="h-full rounded-full transition-all duration-500 bg-primary"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <PromptGenerationSkeleton step={loadingStep} total={LOADING_STEPS_COUNT} message={loadingMessage} />
+          {/* Loading */}
+          {isPending && (
+            <div className="mt-6 bg-card border p-6">
+              <div className="mb-4 flex items-center justify-between text-sm">
+                <span className="font-medium">Genererar texter...</span>
+                <span className="text-muted-foreground">{progressPercent}%</span>
               </div>
-            )}
-          </div>
-
-          {/* Sidebar */}
-          <div ref={resultRef} className="lg:col-span-1">
-            <div className="space-y-6 lg:sticky lg:top-24">
-              {/* Result */}
-              {result ? (
-                <ResultSection
-                  result={result}
-                  onNewPrompt={() => setResult(null)}
-                  onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
-                  isRegenerating={isPending}
-                  propertyData={lastSubmitData?.propertyData}
-                  vitecObjectId={lastSubmitData?.propertyData?._sourceId}
+              <div className="w-full h-2 overflow-hidden bg-muted mb-4">
+                <div
+                  className="h-full transition-all duration-500 bg-primary"
+                  style={{ width: `${progressPercent}%` }}
                 />
-              ) : (
-                /* Usage card */
-                isAuthenticated && (
-                  <div className="bg-card rounded-lg border p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold">Månadskvot</h3>
-                      {plan === "premium" ? (
-                        <Badge className="bg-primary text-white">Premium</Badge>
-                      ) : plan === "pro" ? (
-                        <Badge className="bg-primary text-white">Pro</Badge>
-                      ) : (
-                        <Badge variant="secondary">Gratis</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-end justify-between mb-3">
-                      <div className="flex items-baseline gap-1">
-                        <span className={`text-3xl font-bold ${remaining === 0 ? "text-destructive" : "text-foreground"}`}>
-                          {remaining}
-                        </span>
-                        <span className="text-sm text-muted-foreground">/ {limit} kvar</span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{used} använda</span>
-                    </div>
-                    <div className="w-full h-2 overflow-hidden bg-muted mb-3">
-                      <div
-                        className={`h-full transition-all ${
-                          remaining === 0 ? "bg-gray-400" : "bg-primary"
-                        }`}
-                        style={{ width: `${Math.min(100, (used / limit) * 100)}%` }}
-                      />
-                    </div>
-                    {userStatus?.resetTime && (
-                      <p className="text-xs text-muted-foreground">
-                        Återställs {new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" })}
-                      </p>
-                    )}
-                  </div>
-                )
-              )}
-
-              {/* Upgrade CTA */}
-              {isAuthenticated && plan === "free" && !result && (
-                <div className="bg-card rounded-lg border p-6">
-                  <h3 className="text-sm font-semibold mb-2">Uppgradera till Pro</h3>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Få 10 genereringar per månad, adressuppslag, bildanalys och mycket mer.
-                  </p>
-                  <Button
-                    className="w-full"
-                    onClick={() => startCheckout("pro")}
-                    disabled={isCheckoutPending}
-                  >
-                    {isCheckoutPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Crown className="w-4 h-4 mr-2" />}
-                    Uppgradera till Pro
-                  </Button>
-                </div>
-              )}
+              </div>
+              <PromptGenerationSkeleton step={loadingStep} total={LOADING_STEPS_COUNT} message={loadingMessage} />
             </div>
-          </div>
+          )}
+
+          {/* Result - full width below form */}
+          {result && (
+            <div ref={resultRef} className="mt-6">
+              <ResultSection
+                result={result}
+                onNewPrompt={() => setResult(null)}
+                onRegenerate={lastSubmitData ? () => handleSubmit(lastSubmitData) : undefined}
+                isRegenerating={isPending}
+                propertyData={lastSubmitData?.propertyData}
+                vitecObjectId={lastSubmitData?.propertyData?._sourceId}
+              />
+            </div>
+          )}
         </div>
       </main>
 
