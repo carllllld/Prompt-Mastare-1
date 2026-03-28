@@ -1842,7 +1842,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 </div>
               </div>
             ) : (
-              <LockedFeature requiredPlan="pro" featureName="Textlängdskontroll" currentPlan="free">
+              <LockedFeature requiredPlan="pro" featureName="Textlängdskontroll" currentPlan={isPro ? "pro" : "free"}>
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
                   <div className="flex items-center gap-2">

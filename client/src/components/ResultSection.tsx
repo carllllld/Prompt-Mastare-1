@@ -533,7 +533,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
               <TextEditor text={editedText} onTextChange={setEditedText} />
             )
           ) : (
-            <LockedFeature requiredPlan="pro" featureName="Textredigering" currentPlan="free">
+            <LockedFeature requiredPlan="pro" featureName="Textredigering" currentPlan={isPro ? "pro" : "free"}>
               <div className="mb-4 rounded-lg border border-border bg-background p-4">
                 <div className="text-base leading-relaxed text-foreground font-serif whitespace-pre-wrap">
                   {editedText}

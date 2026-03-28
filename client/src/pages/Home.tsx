@@ -404,7 +404,7 @@ export default function Home() {
                         Kalibrera tonalitet
                       </p>
                     </div>
-                    <LockedFeature requiredPlan="pro" featureName="Personlig skrivstil" currentPlan="free">
+                    <LockedFeature requiredPlan="pro" featureName="Personlig skrivstil" currentPlan={plan}>
                       <div className="flex-1 p-4 bg-muted/20">
                         <p className="text-xs text-muted-foreground">Lär AI:n din unika skrivstil med exempeltexter.</p>
                       </div>
