@@ -16,7 +16,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -176,29 +176,6 @@ export default function Home() {
                   <span>Historik</span>
                 </Link>
 
-                {/* Team - locked for free users */}
-                {plan === "free" ? (
-                  <button
-                    onClick={() => {
-                      toast({
-                        title: "Team-samarbete kräver Pro",
-                        description: "Uppgradera till Pro för att bjuda in kollegor och dela prompter.",
-                      });
-                      setTimeout(() => startCheckout("pro"), 500);
-                    }}
-                    className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Users className="w-4 h-4" />
-                    <span>Team</span>
-                    <Lock className="w-3 h-3" />
-                  </button>
-                ) : (
-                  <Link href="/teams" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <Users className="w-4 h-4" />
-                    <span>Team</span>
-                  </Link>
-                )}
-
                 {/* Uppgradera/Plan - plain text/button */}
                 {(plan === "pro" || plan === "premium") ? (
                   <button
@@ -240,30 +217,6 @@ export default function Home() {
                         Historik
                       </Link>
                     </DropdownMenuItem>
-                    {/* Team link - locked for free users */}
-                    {plan === "free" ? (
-                      <DropdownMenuItem 
-                        onClick={() => {
-                          toast({
-                            title: "Team-samarbete kräver Pro",
-                            description: "Uppgradera till Pro för att bjuda in kollegor och dela prompter.",
-                          });
-                          setTimeout(() => startCheckout("pro"), 500);
-                        }}
-                        className="cursor-pointer"
-                      >
-                        <Users className="w-3.5 h-3.5 mr-2" />
-                        Team
-                        <Lock className="w-3 h-3 ml-auto text-muted-foreground" />
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem asChild>
-                        <Link href="/teams" className="flex items-center gap-2 cursor-pointer">
-                          <Users className="w-3.5 h-3.5" />
-                          Team
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
                     {plan === "free" ? (
                       <DropdownMenuItem onClick={() => startCheckout("pro")} disabled={isCheckoutPending} className="cursor-pointer">
                         <ArrowUp className="w-3.5 h-3.5 mr-2" />
