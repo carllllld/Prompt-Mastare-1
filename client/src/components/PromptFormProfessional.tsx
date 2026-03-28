@@ -1812,9 +1812,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </div>
 
             {/* Word count */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
-              <div className="flex items-center gap-2">
+            {isPro ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs text-gray-400 font-medium">Textlängd:</span>
+                <div className="flex items-center gap-2">
                   <Select value={String(wordCountMin)} onValueChange={(v: string) => handleWordCountMin(Number(v))}>
                     <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-white border border-input shadow-lg">
