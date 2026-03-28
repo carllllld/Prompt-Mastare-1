@@ -163,27 +163,31 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
   /* ═══════════════════════════════════════════════════════════════════
-     MÄKLARAKTIG BORDER RADIUS - Minimal
+     MÄKLARAKTIG BORDER RADIUS - KANTIGA KANTER (INGA RUNDADE)
      ═══════════════════════════════════════════════════════════════════
-     - rounded-md (6px): Inputs
-     - rounded-lg (8px): Buttons, chips
-     - rounded-full: ChipSelector only
-     - NO large radius (rounded-xl, rounded-2xl)
+     - ALLA kanter är kantiga och spetsiga (0px)
+     - Inga rundade hörn någonstans
+     - Skarpa, professionella kanter
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Border Radius - Minimal */
-  --radius-sm: 0.375rem;   /* 6px - inputs */
-  --radius-md: 0.5rem;     /* 8px - buttons, chips */
-  --radius-lg: 0.75rem;    /* 12px - avoid in new code */
-  --radius-xl: 1rem;       /* 16px - avoid */
-  --radius-2xl: 1.5rem;    /* 24px - avoid */
-  --radius-full: 9999px;   /* Pills/circles - ChipSelector only */
+  /* Border Radius - ALLA KANTIGA */
+  --radius-sm: 0;          /* 0px - kantiga kanter */
+  --radius-md: 0;          /* 0px - kantiga kanter */
+  --radius-lg: 0;          /* 0px - kantiga kanter */
+  --radius-xl: 0;          /* 0px - kantiga kanter */
+  --radius-2xl: 0;         /* 0px - kantiga kanter */
+  --radius-full: 0;        /* 0px - kantiga kanter (även chips) */
 
-  /* Legacy radius (maps to md) */
-  --radius: 0.5rem;        /* 8px */
+  /* Legacy radius (maps to 0) */
+  --radius: 0;             /* 0px - kantiga kanter */
 }
 
 @layer base {
+  /* TVINGA ALLA KANTER ATT VARA KANTIGA */
+  * {
+    border-radius: 0 !important;
+  }
+  
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
@@ -247,6 +251,7 @@
   .pro-card {
     background: hsl(0 0% 100% / 0.94);
     border: 1px solid hsl(34 20% 84% / 0.9);
+    border-radius: 0; /* Kantiga kanter */
     box-shadow:
       0 1px 2px hsl(220 20% 10% / 0.05),
       0 16px 42px hsl(220 20% 10% / 0.07);
@@ -255,11 +260,12 @@
   .pro-card-soft {
     background: hsl(0 0% 100% / 0.72);
     border: 1px solid hsl(34 18% 86% / 0.78);
+    border-radius: 0; /* Kantiga kanter */
     box-shadow: 0 1px 2px hsl(220 20% 10% / 0.03);
     backdrop-filter: blur(4px);
   }
   .pro-card-premium {
-    border-radius: 1rem;
+    border-radius: 0; /* Kantiga kanter */
     box-shadow:
       0 2px 6px hsl(220 20% 10% / 0.05),
       0 22px 48px hsl(220 20% 10% / 0.08);
@@ -267,14 +273,14 @@
   .pro-section-card {
     background: hsl(0 0% 100% / 0.96);
     border: 1px solid hsl(34 18% 86% / 0.92);
-    border-radius: 0.9rem;
+    border-radius: 0; /* Kantiga kanter */
     padding: 1rem;
     box-shadow: 0 1px 2px hsl(220 20% 10% / 0.04);
   }
   .pro-muted-panel {
     background: hsl(36 24% 97%);
     border: 1px solid hsl(34 16% 88%);
-    border-radius: 0.75rem;
+    border-radius: 0; /* Kantiga kanter */
   }
 }
 

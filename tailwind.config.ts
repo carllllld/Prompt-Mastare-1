@@ -10,9 +10,12 @@ export default {
          ═══════════════════════════════════════════════════════════════════ */
       
       borderRadius: {
-        lg: ".5rem",    /* 8px - buttons, chips */
-        md: ".375rem",  /* 6px - inputs */
-        sm: ".1875rem", /* 3px - rare */
+        lg: "0",    /* 0px - kantiga kanter */
+        md: "0",    /* 0px - kantiga kanter */
+        sm: "0",    /* 0px - kantiga kanter */
+        DEFAULT: "0", /* 0px - kantiga kanter */
+        none: "0",  /* 0px - kantiga kanter */
+        full: "0",  /* 0px - kantiga kanter (även chips) */
       },
       
       fontSize: {
