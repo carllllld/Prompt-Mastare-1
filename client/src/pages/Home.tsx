@@ -25,95 +25,6 @@ import { Badge } from "@/components/ui/badge";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-const BEFORE_AFTER = [
-  {
-    label: "Objektbeskrivning",
-    before: `Välkommen till denna fantastiska bostad med ljus och rymd. Här bor du i ett attraktivt område med närhet till det mesta. Köket passar både vardag och fest och planlösningen är väl genomtänkt. Missa inte chansen att uppleva denna unika möjlighet!`,
-    after: `Karlavägen 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett och utgång till balkong med plats för utemöbler. Köket renoverades 2022 med induktionshäll, stenbänkskiva och matplats vid fönster.\n\nTvå sovrum ligger avskilt mot gården. Badrummet är helkaklat och uppdaterat 2020 med golvvärme. Avgift 3 900 kr/mån i välskött BRF.\n\nT-bana Östermalmstorg 4 min till fots.`,
-  },
-  {
-    label: "Rubrik",
-    before: `Drömboende i toppskick!`,
-    after: `Trea med söderbalkong och renoverat kök — Karlavägen 12`,
-  },
-  {
-    label: "Socialt inlägg",
-    before: `Nu finns en fin lägenhet till salu i ett bra område! Ljus och fräsch med perfekt läge. Hör av dig för mer information! #bostad #lägenhet`,
-    after: `Karlavägen 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge, 4 min till T-bana.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #östermalm #balkong`,
-  },
-  {
-    label: "Instagram",
-    before: `Drömmer du om ditt nya hem? Den här pärlan måste upplevas på plats! ✨\n\n#nytthem #drömboende`,
-    after: `🏡 Karlavägen 12 — trea om 76 kvm med söderbalkong.\n🍳 Kök renoverat 2022, stenbänkskiva och induktionshäll.\n🚿 Helkaklat badrum med golvvärme (uppdaterat 2020).\n💬 Avgift 3 900 kr/mån. T-bana 4 min.\n\nVälkommen på visning: [TID].`,
-  },
-  {
-    label: "Visningsinbjudan",
-    before: `Varmt välkommen på visning av denna fantastiska lägenhet! Här får du ett hem med härlig känsla och smart planlösning i ett attraktivt område.\n\nTid: [TID]\nPlats: Karlavägen 12\nAnmälan: [KONTAKT]`,
-    after: `Visning — Karlavägen 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Karlavägen 12, 3 tr (port B)\nAnmälan: [KONTAKT]`,
-  },
-  {
-    label: "Kortannons",
-    before: `Fin trea i bra område. Balkong. Måste ses!`,
-    after: `Karlavägen 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022, helkaklat badrum med golvvärme 2020. Avgift 3 900 kr/mån. T-bana 4 min. Visning: [TID].`,
-  },
-];
-
-function BeforeAfterDemo() {
-  const [activeTab, setActiveTab] = useState(0);
-  const item = BEFORE_AFTER[activeTab];
-
-  return (
-    <div className="pro-card pro-card-premium rounded-2xl overflow-hidden">
-      <div className="px-5 pt-4 pb-3 border-b" style={{ borderColor: "#E8E5DE" }}>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2D6A4F" }}></div>
-          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
-            Kvalitetslyft i praktiken
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {BEFORE_AFTER.map((t, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveTab(i)}
-              className="px-3 py-1.5 text-xs rounded-full border transition-all font-medium whitespace-nowrap"
-              style={{
-                background: activeTab === i ? "#2D6A4F" : "#fff",
-                color: activeTab === i ? "#fff" : "#9CA3AF",
-                borderColor: activeTab === i ? "#2D6A4F" : "#E8E5DE",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="p-5 space-y-4">
-        <div>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "#FEE2E2", color: "#DC2626" }}>
-              Utan optimering
-            </span>
-          </div>
-          <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#9CA3AF", fontStyle: "italic" }}>
-            {item.before}
-          </p>
-        </div>
-        <div className="border-t pt-4" style={{ borderColor: "#F3F4F6" }}>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: "#DCFCE7", color: "#16A34A" }}>
-              Publiceringsklar version
-            </span>
-          </div>
-          <p className="text-xs leading-relaxed whitespace-pre-wrap" style={{ color: "#1D2939" }}>
-            {item.after}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Home() {
   const { mutate, isPending, setProgressCallback, lastError, clearLastError } = useOptimize();
   const { data: userStatus } = useUserStatus();
@@ -233,7 +144,7 @@ export default function Home() {
 
       {/* ── NAV ── */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="max-w-[2200px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-10 2xl:px-14 h-16">
+        <div className="max-w-[2200px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-10 2xl:px-14 h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
@@ -348,19 +259,18 @@ export default function Home() {
       </header>
 
       {/* ── MAIN ── */}
-      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-3 sm:py-4">
+      <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-2">
 
-        {/* Kompakt widget-rad + info-paneler (horisontell) - endast när inloggad och inget resultat */}
+        {/* Kompakt widget-rad - endast när inloggad och inget resultat */}
         {isAuthenticated && !result && (
-          <div className="mb-3 space-y-2">
-            {/* Rad 1: Widgets */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+          <div className="mb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {/* Hero-text */}
               <div className="lg:col-span-1">
-                <h1 className="text-base font-semibold leading-snug mb-1" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
+                <h1 className="text-sm font-semibold leading-snug mb-0.5" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
                   Fyll i data. Få 5 texter.
                 </h1>
-                <p className="text-[10px]" style={{ color: "#6B7280" }}>
+                <p className="text-xs" style={{ color: "#6B7280" }}>
                   Börja med grundfakta och säljpunkter.
                 </p>
               </div>
@@ -377,68 +287,22 @@ export default function Home() {
               {/* Historik widget */}
               <CompactHistoryWidget historyCount={0} />
               
-              {/* Upgrade widget - förbättrad */}
+              {/* Upgrade widget */}
               {plan !== "premium" && (
-                <div className="lg:col-span-2">
-                  <div className="pro-card rounded-xl overflow-hidden h-full" style={{ background: plan === "free" ? "#F0FDF4" : "#F5F3FF", borderColor: plan === "free" ? "#BBF7D0" : "#DDD6FE" }}>
-                    <div className="px-3 py-2 border-b flex items-center justify-between" style={{ background: plan === "free" ? "#DCFCE7" : "#EDE9FE", borderColor: plan === "free" ? "#BBF7D0" : "#DDD6FE" }}>
-                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: plan === "free" ? "#16A34A" : "#7C3AED" }}>
-                        {plan === "free" ? "Uppgradera till Pro" : "Uppgradera till Premium"}
-                      </span>
-                      <Badge size="sm" style={{ background: plan === "free" ? "#16A34A" : "#7C3AED", color: "#fff" }}>
-                        {plan === "free" ? "299 kr/mån" : "599 kr/mån"}
-                      </Badge>
-                    </div>
-                    <div className="px-3 py-2.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold mb-1" style={{ color: "#1D2939" }}>
-                            {plan === "free" ? "10 texter/mån" : "25 texter/mån"}
-                          </p>
-                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[9px]" style={{ color: "#6B7280" }}>
-                            <span>40 AI-redigeringar</span>
-                            <span>•</span>
-                            <span>Adressuppslag</span>
-                            <span>•</span>
-                            <span>Bildanalys</span>
-                            {plan === "pro" && (
-                              <>
-                                <span>•</span>
-                                <span>Mer kapacitet</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          onClick={() => startCheckout(plan === "free" ? "pro" : "premium")}
-                          disabled={isCheckoutPending}
-                          size="sm"
-                          className="shrink-0 h-7 text-[10px] font-semibold px-3"
-                          style={{ background: plan === "free" ? "#2D6A4F" : "#7C3AED", color: "#fff" }}
-                        >
-                          {isCheckoutPending ? <Loader2 className="w-3 h-3 animate-spin" /> : (
-                            <>
-                              <ArrowUp className="w-3 h-3 mr-1" />
-                              Uppgradera
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <CompactUpgradeWidget
+                  plan={plan}
+                  onUpgrade={() => startCheckout(plan === "free" ? "pro" : "premium")}
+                  isLoading={isCheckoutPending}
+                />
               )}
             </div>
-
-            {/* Rad 2: Kvalitetslyft i praktiken (BeforeAfterDemo) */}
-            <BeforeAfterDemo />
           </div>
         )}
 
         {/* Limit warning */}
         {isAuthenticated && remaining === 0 && !result && (
-          <div className="mb-6 rounded-xl border border-warning overflow-hidden">
-            <div className="px-5 py-3.5 flex items-center gap-4 bg-warning-bg">
+          <div className="mb-3 border border-warning overflow-hidden">
+            <div className="px-4 py-2 flex items-center gap-3 bg-warning-bg">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 text-warning" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-warning">Månadskvoten är slut</p>
@@ -463,17 +327,17 @@ export default function Home() {
         )}
 
         {isAuthenticated && lastError && !isPending && (
-          <div className="mb-6 rounded-xl border overflow-hidden" style={{ borderColor: "#FECACA" }}>
-            <div className="px-5 py-4" style={{ background: "#FEF2F2" }}>
+          <div className="mb-3 border overflow-hidden" style={{ borderColor: "#FECACA" }}>
+            <div className="px-4 py-2.5" style={{ background: "#FEF2F2" }}>
               <div className="flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 mt-0.5" style={{ color: "#DC2626" }} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold" style={{ color: "#991B1B" }}>{lastError.title}</p>
                   <p className="text-xs mt-1" style={{ color: "#7F1D1D" }}>{lastError.message}</p>
                   {lastError.code && (
-                    <p className="text-[11px] mt-1.5" style={{ color: "#B91C1C" }}>Kod: {lastError.code}</p>
+                    <p className="text-xs mt-1" style={{ color: "#B91C1C" }}>Kod: {lastError.code}</p>
                   )}
-                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
                     {lastSubmitData && (
                       <Button
                         variant="outline"
@@ -510,12 +374,12 @@ export default function Home() {
 
         {/* Pro/Premium: Formulär med PersonalStyle */}
         {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Grundläggande uppgifter + Personlig stil i 2-kolumner */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-stretch">
               {/* Grundläggande uppgifter (2/3) */}
               <div className="lg:col-span-2 flex">
-                <div className="pro-card pro-card-premium rounded-2xl p-4 sm:p-5 w-full">
+                <div className="pro-card pro-card-premium p-3 w-full">
                   <PromptFormProfessional
                     onSubmit={handleSubmit}
                     isPending={isPending}
@@ -528,9 +392,9 @@ export default function Home() {
               
               {/* Personlig stil (1/3) */}
               <div className="flex">
-                <div className="pro-card pro-card-premium rounded-2xl p-4 w-full flex flex-col">
-                  <div className="mb-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                <div className="pro-card pro-card-premium p-3 w-full flex flex-col">
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
                     <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
                       Kalibrera tonalitet
                     </p>
@@ -543,7 +407,7 @@ export default function Home() {
             </div>
 
             {/* Resten av formuläret i full bredd */}
-            <div className="pro-card pro-card-premium rounded-2xl p-4 sm:p-5">
+            <div className="pro-card pro-card-premium p-3">
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -557,8 +421,8 @@ export default function Home() {
 
         {/* Formulär full bredd (för free users eller när resultat visas) */}
         {isAuthenticated && !result && plan === "free" && (
-          <div className="mb-3">
-            <div className="pro-card pro-card-premium rounded-2xl p-4 sm:p-5">
+          <div className="mb-2">
+            <div className="pro-card pro-card-premium p-3">
               <PromptFormProfessional
                 onSubmit={handleSubmit}
                 isPending={isPending}
@@ -571,14 +435,14 @@ export default function Home() {
 
         {/* Loading progress */}
         {isPending && (
-          <div className="mb-3 pro-card pro-card-premium rounded-2xl p-4">
-            <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="mb-2 pro-card pro-card-premium p-3">
+            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
               <span className="font-medium">Generering pågår — steg {progressStep}/{LOADING_STEPS_COUNT}</span>
               <span>{progressPercent}%</span>
             </div>
-            <div className="w-full h-1.5 rounded-full overflow-hidden mb-4 bg-border">
+            <div className="w-full h-1.5 overflow-hidden mb-3 bg-border">
               <div
-                className="h-full rounded-full transition-all duration-500 bg-primary"
+                className="h-full transition-all duration-500 bg-primary"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -588,7 +452,7 @@ export default function Home() {
 
         {/* Resultat (full bredd) */}
         {result && (
-          <div ref={resultRef} className="mb-3">
+          <div ref={resultRef} className="mb-2">
             <ResultSection
               result={result}
               onNewPrompt={() => setResult(null)}
