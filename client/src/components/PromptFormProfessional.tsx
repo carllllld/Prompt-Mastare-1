@@ -653,9 +653,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
 
-  const modelLimits = isPro 
-    ? { min: 200, max: 600, defaultMin: 350, defaultMax: 450 }
-    : { min: 300, max: 450, defaultMin: 350, defaultMax: 450 };
+  const modelLimits = { min: 200, max: 600, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
   const [wordCountMax, setWordCountMax] = useState(modelLimits.defaultMax);
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
