@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Trash2, Save } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Sparkles, Trash2, Save, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -200,89 +202,124 @@ export function PersonalStyle() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-6">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-      </div>
+      <Card>
+        <CardContent className="flex items-center justify-center py-6">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="ml-2 text-sm">Laddar...</span>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Status toggle */}
-      {personalStyle?.hasStyle && (
-        <div className="flex items-center justify-between p-2 rounded-lg" style={{ background: "#F3F4F6" }}>
-          <span className="text-xs font-medium" style={{ color: "#4B5563" }}>
-            {personalStyle.isActive ? "Aktiv" : "Inaktiv"}
-          </span>
-          <Switch
-            checked={personalStyle.isActive}
-            onCheckedChange={handleToggleActive}
-          />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Personlig skrivstil
+          </h3>
+          <p className="text-xs text-gray-600 mt-1">
+            Lär AI:n din skrivstil med 1–3 stilprover.
+          </p>
         </div>
-      )}
-
-      {/* Compact info */}
-      <p className="text-[10px]" style={{ color: "#6B7280" }}>
-        Lär AI:n din skrivstil med 1–3 stilprover (minst 100 tecken vardera).
-      </p>
-
-      {/* Reference Texts - Compact */}
-      <div className="space-y-2">
-        {referenceTexts.map((text, index) => (
-          <div key={index} className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] font-medium" style={{ color: "#4B5563" }}>
-                Exempel {index + 1}{index === 0 ? " *" : ""}
-              </label>
-              <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"} className="text-[9px] h-4">
-                {text.length}/100
-              </Badge>
-            </div>
-            <Textarea
-              value={text}
-              onChange={(e) => {
-                const newTexts = [...referenceTexts];
-                newTexts[index] = e.target.value;
-                setReferenceTexts(newTexts);
-              }}
-              placeholder={index === 0
-                ? "Öppning och ton..."
-                : index === 1
-                  ? "Planlösning och rum..."
-                  : "Läge och avslut..."}
-              className="min-h-[60px] text-xs"
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={handleSave}
-          disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
-          size="sm"
-          className="flex-1 h-8 text-xs"
-        >
-          {saving ? (
-            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          ) : (
-            <Save className="h-3 w-3 mr-1" />
-          )}
-          {personalStyle?.hasStyle ? "Uppdatera" : "Spara"}
-        </Button>
 
         {personalStyle?.hasStyle && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            className="h-8 text-xs text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={personalStyle.isActive}
+              onCheckedChange={handleToggleActive}
+            />
+            <span className="text-xs text-gray-600">
+              {personalStyle.isActive ? "Aktiv" : "Inaktiv"}
+            </span>
+          </div>
         )}
       </div>
+
+      {/* Status Alert */}
+      {personalStyle?.hasStyle && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            Din personliga stil är {personalStyle.isActive ? "aktiv" : "inaktiv"}.
+            AI:n anpassar texterna efter din skrivstil när den är aktiv.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Reference Texts */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">
+              {personalStyle?.hasStyle ? "Uppdatera Exempeltexter" : "Lägg till Exempeltexter"}
+            </CardTitle>
+            {personalStyle?.hasStyle && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDelete}
+                className="text-red-600 hover:text-red-700 h-7 text-xs"
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Radera
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Alert>
+            <AlertCircle className="h-3 w-3" />
+            <AlertDescription className="text-xs">
+              Klistra in 1–3 korta stilprover (minst 100 tecken vardera).
+            </AlertDescription>
+          </Alert>
+
+          {referenceTexts.map((text, index) => (
+            <div key={index} className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium">
+                  Exempel {index + 1}{index === 0 ? " (obligatorisk)" : " (valfri)"}
+                </label>
+                <Badge variant={text.length >= 100 ? "success" : text.length > 0 ? "error" : "secondary"} className="text-[10px] h-4">
+                  {text.length}/100
+                </Badge>
+              </div>
+              <Textarea
+                value={text}
+                onChange={(e) => {
+                  const newTexts = [...referenceTexts];
+                  newTexts[index] = e.target.value;
+                  setReferenceTexts(newTexts);
+                }}
+                placeholder={index === 0
+                  ? "Öppning och tonalitet..."
+                  : index === 1
+                    ? "Planlösning och rumsflöde..."
+                    : "Läge och avslut..."}
+                className="min-h-[80px] text-xs"
+              />
+            </div>
+          ))}
+
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              onClick={handleSave}
+              disabled={saving || referenceTexts.filter(text => text.trim().length >= 100).length < 1}
+              className="flex-1 h-8 text-xs"
+            >
+              {saving ? (
+                <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+              ) : (
+                <Save className="h-3 w-3 mr-1.5" />
+              )}
+              {personalStyle?.hasStyle ? "Uppdatera stil" : "Spara stil"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
