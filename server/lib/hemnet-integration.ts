@@ -71,7 +71,7 @@ export function extractHemnetId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-// Maps Hemnet property type strings to OptiPrompt types
+// Maps Hemnet property type strings to Mäklartexter types
 function mapHemnetPropertyType(raw: string): string {
   const t = (raw || "").toLowerCase();
   if (t.includes("lägenhet") || t.includes("bostadsrätt")) return "apartment";
@@ -241,8 +241,8 @@ function buildHemnetProperty(
   };
 }
 
-// Converts a HemnetProperty to OptiPrompt's propertyData format
-export function mapHemnetPropertyToOptiPrompt(prop: HemnetProperty): Record<string, any> {
+// Converts a HemnetProperty to Mäklartexter's propertyData format
+export function mapHemnetPropertyToMaklartexter(prop: HemnetProperty): Record<string, any> {
   // Convert image URLs to cache URLs
   const imageUrls = prop.imageUrls?.map((url) => {
     const cacheKey = getCacheKey(url);

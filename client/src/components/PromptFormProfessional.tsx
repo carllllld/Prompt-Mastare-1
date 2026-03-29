@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { validateRequiredFields, getFieldLabel, type PropertyType, type Platform } from "@/lib/form-validation";
-import { HemnetImportButton, VitecImportPicker } from "@/components/IntegrationsPanel";
+import { VitecImportPicker } from "@/components/IntegrationsPanel";
 import { LockedFeature } from "@/components/LockedFeature";
 import { EssentialFieldsSection } from "@/components/FormSections/EssentialFieldsSection";
 import { ImageSection } from "@/components/FormSections/ImageSection";
@@ -1459,20 +1459,18 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 onAddressLookup={handleAddressLookup}
                 isPro={isPro}
                 importButtons={
-                  <>
-                    <HemnetImportButton onImport={handleExternalImport} />
-                    {isPro ? (
-                      <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
-                    ) : (
-                      <LockedFeature requiredPlan="pro" featureName="Vitec-import" currentPlan="free" showOverlay={false}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled
-                          className="h-9 text-xs font-medium"
-                        >
-                          <Lock className="w-3 h-3 mr-1.5" />
-                          Vitec-import
+                  isPro ? (
+                    <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+                  ) : (
+                    <LockedFeature requiredPlan="pro" featureName="Vitec-import" currentPlan="free" showOverlay={false}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="h-9 text-xs font-medium"
+                      >
+                        <Lock className="w-3 h-3 mr-1.5" />
+                        Vitec-import
                         </Button>
                       </LockedFeature>
                     )}

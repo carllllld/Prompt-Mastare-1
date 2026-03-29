@@ -92,7 +92,7 @@ function DemoTabs() {
 
         <div className="p-6 bg-success-bg/30">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3 bg-success-bg text-success border border-success/20">
-            OptiPrompt
+            Mäklartexter
           </div>
           <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">
             {item.after}
@@ -246,7 +246,7 @@ export default function Landing() {
       <header className="sticky top-0 z-40 border-b" style={{ background: "rgba(250,250,248,0.95)", backdropFilter: "blur(8px)", borderColor: "#E8E5DE" }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <span className="font-semibold text-lg tracking-tight" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-            OptiPrompt
+            Mäklartexter
           </span>
           <nav className="hidden sm:flex items-center gap-6 text-sm" style={{ color: "#6B7280" }}>
             <a href="#hur-det-funkar" className="hover:text-gray-900 transition-colors">Hur det funkar</a>
@@ -414,7 +414,7 @@ export default function Landing() {
               Ser du skillnaden?
             </h2>
             <p className="text-sm" style={{ color: "#6B7280" }}>
-              Vänster: generisk chatt-AI. Höger: OptiPrompt som skriver från dina uppgifter och levererar i rätt format.
+              Vänster: generisk chatt-AI. Höger: Mäklartexter som skriver från dina uppgifter och levererar i rätt format.
             </p>
           </div>
           <DemoTabs />
@@ -543,7 +543,7 @@ export default function Landing() {
       <footer className="py-10 border-t" style={{ background: "#1D2939", borderColor: "#374151" }}>
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#F9FAFB" }}>
-            OptiPrompt
+            Mäklartexter
           </span>
           <div className="flex items-center gap-6 text-xs" style={{ color: "#9CA3AF" }}>
             <Link href="/privacy" className="hover:text-white transition-colors">Integritetspolicy</Link>
@@ -551,7 +551,7 @@ export default function Landing() {
             <a href="mailto:support@optiprompt.se" className="hover:text-white transition-colors">support@optiprompt.se</a>
           </div>
           <p className="text-xs" style={{ color: "#6B7280" }}>
-            © {new Date().getFullYear()} OptiPrompt
+            © {new Date().getFullYear()} Mäklartexter
           </p>
         </div>
       </footer>

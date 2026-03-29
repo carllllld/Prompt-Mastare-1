@@ -143,7 +143,7 @@ export default function HomeClean() {
             <div className="w-8 h-8 flex items-center justify-center bg-primary">
               <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold text-foreground">OptiPrompt</span>
+            <span className="text-lg font-semibold text-foreground">Mäklartexter</span>
           </Link>
 
           <div className="flex items-center gap-6">

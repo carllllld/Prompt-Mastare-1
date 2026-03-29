@@ -27,7 +27,7 @@ export class EmailTemplateEngine {
   private initializeTemplates(): void {
     // Verification Email Template
     this.templates.set('verification', {
-      subject: 'Verifiera din e-postadress - OptiPrompt Mäklare',
+      subject: 'Verifiera din e-postadress - Mäklartexter',
       html: this.getVerificationTemplate(),
       text: this.getVerificationTextTemplate(),
       variables: { verificationUrl: '' }
@@ -35,7 +35,7 @@ export class EmailTemplateEngine {
 
     // Team Invite Template
     this.templates.set('team_invite', {
-      subject: 'Inbjudan att gå med i team - OptiPrompt Mäklare',
+      subject: 'Inbjudan att gå med i team - Mäklartexter',
       html: this.getTeamInviteTemplate(),
       text: this.getTeamInviteTextTemplate(),
       variables: { teamName: '', inviterEmail: '', verificationUrl: '' }
@@ -43,7 +43,7 @@ export class EmailTemplateEngine {
 
     // Password Reset Template
     this.templates.set('password_reset', {
-      subject: 'Återställ ditt lösenord - OptiPrompt Mäklare',
+      subject: 'Återställ ditt lösenord - Mäklartexter',
       html: this.getPasswordResetTemplate(),
       text: this.getPasswordResetTextTemplate(),
       variables: { resetUrl: '', userName: '' }
@@ -51,7 +51,7 @@ export class EmailTemplateEngine {
 
     // Subscription Confirmed Template
     this.templates.set('subscription_confirmed', {
-      subject: 'Din {{planName}}-prenumeration är aktiverad — OptiPrompt',
+      subject: 'Din {{planName}}-prenumeration är aktiverad — Mäklartexter',
       html: this.getSubscriptionConfirmedTemplate(),
       text: this.getSubscriptionConfirmedTextTemplate(),
       variables: { userName: '', planName: '', planPrice: '', loginUrl: '' }
@@ -59,7 +59,7 @@ export class EmailTemplateEngine {
 
     // Welcome Email Template
     this.templates.set('welcome', {
-      subject: 'Välkommen till OptiPrompt Mäklare!',
+      subject: 'Välkommen till Mäklartexter!',
       html: this.getWelcomeTemplate(),
       text: this.getWelcomeTextTemplate(),
       variables: { userName: '', loginUrl: '' }
@@ -114,11 +114,11 @@ export class EmailTemplateEngine {
     <body>
       <div class="container">
         <div class="header">
-          <h1>OptiPrompt Mäklare</h1>
+          <h1>Mäklartexter</h1>
         </div>
         <div class="content">
           <h2 style="color: #1f2937; margin-top: 0;">Välkommen!</h2>
-          <p>Tack för att du registrerade dig hos OptiPrompt Mäklare. För att aktivera ditt konto behöver du verifiera din e-postadress.</p>
+          <p>Tack för att du registrerade dig hos Mäklartexter. För att aktivera ditt konto behöver du verifiera din e-postadress.</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="{{verificationUrl}}" class="button">Verifiera e-postadress</a>
           </div>
@@ -133,7 +133,7 @@ export class EmailTemplateEngine {
   }
 
   private getVerificationTextTemplate(): string {
-    return `Välkommen till OptiPrompt Mäklare!
+    return `Välkommen till Mäklartexter!
 
 Tack för att du registrerade dig. För att aktivera ditt konto behöver du verifiera din e-postadress.
 
@@ -143,7 +143,7 @@ Klicka på länken nedan för att verifiera:
 Länken är giltig i 24 timmar. Om du inte begärt detta mail kan du ignorera det.
 
 Med vänliga hälsningar,
-OptiPrompt Mäklare Teamet`;
+Mäklartexter Teamet`;
   }
 
   private getTeamInviteTemplate(): string {
@@ -169,11 +169,11 @@ OptiPrompt Mäklare Teamet`;
     <body>
       <div class="container">
         <div class="header">
-          <h1>OptiPrompt Mäklare</h1>
+          <h1>Mäklartexter</h1>
         </div>
         <div class="content">
           <h2 style="color: #1f2937; margin-top: 0;">Inbjudan till team</h2>
-          <p>Du har bjudits in att gå med i teamet <strong>{{teamName}}</strong> på OptiPrompt Mäklare.</p>
+          <p>Du har bjudits in att gå med i teamet <strong>{{teamName}}</strong> på Mäklartexter.</p>
           
           <div class="invite-box">
             <p style="margin: 0;"><strong>Inbjudan från:</strong> {{inviterEmail}}</p>
@@ -194,7 +194,7 @@ OptiPrompt Mäklare Teamet`;
   }
 
   private getTeamInviteTextTemplate(): string {
-    return `Inbjudan till team - OptiPrompt Mäklare
+    return `Inbjudan till team - Mäklartexter
 
 Du har bjudits in att gå med i teamet {{teamName}}.
 
@@ -206,7 +206,7 @@ Klicka på länken nedan för att acceptera inbjudan:
 Inbjudan är giltig i 7 dagar. Om du inte vill gå med i detta team kan du ignorera detta mail.
 
 Med vänliga hälsningar,
-OptiPrompt Mäklare Teamet`;
+Mäklartexter Teamet`;
   }
 
   private getPasswordResetTemplate(): string {
@@ -232,12 +232,12 @@ OptiPrompt Mäklare Teamet`;
     <body>
       <div class="container">
         <div class="header">
-          <h1>OptiPrompt Mäklare</h1>
+          <h1>Mäklartexter</h1>
         </div>
         <div class="content">
           <h2 style="color: #1f2937; margin-top: 0;">Återställ ditt lösenord</h2>
           <p>Hej {{userName}},</p>
-          <p>Vi har tagit emot en förfrågan om att återställa ditt lösenord för ditt OptiPrompt Mäklare-konto.</p>
+          <p>Vi har tagit emot en förfrågan om att återställa ditt lösenord för ditt Mäklartexter-konto.</p>
           
           <div class="warning">
             <p style="margin: 0;"><strong>Säkerhetsinformation:</strong> Om du inte begärt denna återställning, vänligen ignorera detta mail. Ditt lösenord kommer inte att ändras.</p>
@@ -258,11 +258,11 @@ OptiPrompt Mäklare Teamet`;
   }
 
   private getPasswordResetTextTemplate(): string {
-    return `Återställ lösenord - OptiPrompt Mäklare
+    return `Återställ lösenord - Mäklartexter
 
 Hej {{userName}},
 
-Vi har tagit emot en förfrågan om att återställa ditt lösenord för ditt OptiPrompt Mäklare-konto.
+Vi har tagit emot en förfrågan om att återställa ditt lösenord för ditt Mäklartexter-konto.
 
 Säkerhetsinformation: Om du inte begär denna återställning, vänligen ignorera detta mail. Ditt lösenord kommer inte att ändras.
 
@@ -272,7 +272,7 @@ Klicka på länken nedan för att återställa ditt lösenord:
 Länken är giltig i 1 timme. Efter det behöver du begära en ny återställning.
 
 Med vänliga hälsningar,
-OptiPrompt Mäklare Teamet`;
+Mäklartexter Teamet`;
   }
 
   private getSubscriptionConfirmedTemplate(): string {
@@ -299,7 +299,7 @@ OptiPrompt Mäklare Teamet`;
     <body>
       <div class="container">
         <div class="header">
-          <h1>OptiPrompt Mäklare</h1>
+          <h1>Mäklartexter</h1>
         </div>
         <div class="content">
           <h2 style="color: #1f2937; margin-top: 0;">Tack för ditt köp!</h2>
@@ -318,7 +318,7 @@ OptiPrompt Mäklare Teamet`;
             <a href="{{loginUrl}}" class="button">Börja skapa texter</a>
           </div>
           
-          <p class="footer">Frågor? Kontakta oss på <a href="mailto:support@optiprompt.se" style="color: #2D6A4F;">support@optiprompt.se</a>.</p>
+          <p class="footer">Frågor? Kontakta oss på <a href="mailto:support@maklartexter.se" style="color: #2D6A4F;">support@maklartexter.se</a>.</p>
         </div>
       </div>
     </body>
@@ -326,7 +326,7 @@ OptiPrompt Mäklare Teamet`;
   }
 
   private getSubscriptionConfirmedTextTemplate(): string {
-    return `Tack för ditt köp — OptiPrompt Mäklare
+    return `Tack för ditt köp — Mäklartexter
 
 Hej {{userName}},
 
@@ -340,10 +340,10 @@ Du kan hantera din prenumeration via kundportalen inne i appen.
 
 Börja skapa texter: {{loginUrl}}
 
-Frågor? Kontakta oss på support@optiprompt.se.
+Frågor? Kontakta oss på support@maklartexter.se.
 
 Med vänliga hälsningar,
-OptiPrompt Mäklare Teamet`;
+Mäklartexter Teamet`;
   }
 
   private getWelcomeTemplate(): string {
@@ -371,7 +371,7 @@ OptiPrompt Mäklare Teamet`;
     <body>
       <div class="container">
         <div class="header">
-          <h1>OptiPrompt Mäklare</h1>
+          <h1>Mäklartexter</h1>
         </div>
         <div class="content">
           <h2 style="color: #1f2937; margin-top: 0;">Välkommen, {{userName}}!</h2>
@@ -399,7 +399,7 @@ OptiPrompt Mäklare Teamet`;
           
           <p class="footer">Har du frågor? Tveka inte att kontakta vår support.</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-          <p class="small-text" style="margin-bottom: 0;">Detta mail skickades till {{userName}} eftersom du skapade ett konto hos OptiPrompt Mäklare.</p>
+          <p class="small-text" style="margin-bottom: 0;">Detta mail skickades till {{userName}} eftersom du skapade ett konto hos Mäklartexter.</p>
         </div>
       </div>
     </body>
@@ -407,7 +407,7 @@ OptiPrompt Mäklare Teamet`;
   }
 
   private getWelcomeTextTemplate(): string {
-    return `Välkommen till OptiPrompt Mäklare!
+    return `Välkommen till Mäklartexter!
 
 Hej {{userName}},
 
@@ -424,7 +424,7 @@ Börja här: {{loginUrl}}
 Har du frågor? Tveka inte att kontakta vår support.
 
 Med vänliga hälsningar,
-OptiPrompt Mäklare Teamet`;
+Mäklartexter Teamet`;
   }
 
   getAvailableTemplates(): string[] {

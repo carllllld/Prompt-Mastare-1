@@ -28,7 +28,7 @@ export default function Terms() {
 
           <section>
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#1D2939" }}>1. Tjänsten</h2>
-            <p>OptiPrompt är ett AI-verktyg som genererar objektbeskrivningar och marknadsföringstexter för svenska fastighetsmäklare. Tjänsten tillhandahålls av OptiPrompt ("vi", "oss").</p>
+            <p>Mäklartexter är ett AI-verktyg som genererar objektbeskrivningar och marknadsföringstexter för svenska fastighetsmäklare. Tjänsten tillhandahålls av Mäklartexter ("vi", "oss").</p>
           </section>
 
           <section>
@@ -80,7 +80,7 @@ export default function Terms() {
 
           <section>
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#1D2939" }}>7. Ansvarsbegränsning</h2>
-            <p>OptiPrompt tillhandahålls "i befintligt skick". Vi ansvarar inte för:</p>
+            <p>Mäklartexter tillhandahålls "i befintligt skick". Vi ansvarar inte för:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Indirekta skador, förlorad vinst, eller förlorade affärsmöjligheter.</li>
               <li>Felaktigheter i AI-genererat innehåll.</li>

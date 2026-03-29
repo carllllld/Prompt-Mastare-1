@@ -3164,7 +3164,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // ============================================================
   {
     const { VitecClient, VitecAuthError, VitecNotFoundError, VitecApiError } = await import("./lib/vitec-integration");
-    const { fetchHemnetProperty, mapHemnetPropertyToOptiPrompt, isHemnetUrl, HemnetError, HemnetNotFoundError, HemnetRateLimitError } = await import("./lib/hemnet-integration");
+    const { fetchHemnetProperty, mapHemnetPropertyToMaklartexter: mapHemnetPropertyToOptiPrompt, isHemnetUrl, HemnetError, HemnetNotFoundError, HemnetRateLimitError } = await import("./lib/hemnet-integration");
     const { downloadImages, cleanupCache, getCacheKey, getCachePath } = await import("./lib/image-downloader");
     const { vitecImportSchema, vitecSearchSchema, vitecApiKeySchema, hemnetImportSchema, integrationSettings } = await import("@shared/schema");
     const crypto = await import("crypto");
@@ -3377,7 +3377,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           brfUnits: propertyData?.brfUnits ? Number(propertyData.brfUnits) : undefined,
           nearbySchools: propertyData?.nearbySchools,
           nearbyServices: propertyData?.nearbyServices,
-          generatedBy: "OptiPrompt" as const,
+          generatedBy: "Mäklartexter" as const,
           generatedAt: new Date().toISOString(),
         };
 
@@ -3747,7 +3747,7 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
           brfUnits: propertyData.brfUnits,
           nearbySchools: propertyData.nearbySchools,
           nearbyServices: propertyData.nearbyServices,
-          generatedBy: "OptiPrompt",
+          generatedBy: "Mäklartexter",
           generatedAt: new Date().toISOString(),
         };
 
@@ -4492,7 +4492,7 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ", Sverige")}&limit=1&addressdetails=1`,
           {
             headers: {
-              'User-Agent': 'OptiPrompt-Maklare/1.0 (contact@optiprompt.se)' // Required by Nominatim
+              'User-Agent': 'Maklartexter/1.0 (contact@maklartexter.se)' // Required by Nominatim
             }
           }
         );
@@ -4707,7 +4707,7 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
 
       // If user already has a subscription, use Billing Portal for plan changes
       if (user.stripeCustomerId && user.stripeSubscriptionId) {
-        const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
+        const baseUrl = (process.env.APP_URL || 'https://maklartexter.se').replace(/\/+$/, '');
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: user.stripeCustomerId,
           return_url: `${baseUrl}/app`,
@@ -4738,7 +4738,7 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
         console.log("[Stripe Checkout] Using existing Stripe customer:", customerId);
       }
 
-      const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
+      const baseUrl = (process.env.APP_URL || 'https://maklartexter.se').replace(/\/+$/, '');
 
       console.log("[Stripe Checkout] Creating checkout session with base URL:", baseUrl);
 
@@ -4769,7 +4769,7 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
         return res.status(400).json({ message: "Ingen prenumeration hittades" });
       }
 
-      const baseUrl = (process.env.APP_URL || 'https://optiprompt.se').replace(/\/+$/, '');
+      const baseUrl = (process.env.APP_URL || 'https://maklartexter.se').replace(/\/+$/, '');
 
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: user.stripeCustomerId,

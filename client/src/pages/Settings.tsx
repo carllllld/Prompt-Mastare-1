@@ -240,7 +240,7 @@ export default function Settings() {
               <FileText className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-              OptiPrompt
+              Mäklartexter
             </span>
           </Link>
           <Link href="/app" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors no-underline">

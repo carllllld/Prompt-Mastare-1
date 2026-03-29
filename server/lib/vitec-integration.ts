@@ -71,7 +71,7 @@ export interface VitecProperty {
   rawData?: Record<string, any>;
 }
 
-// Maps Vitec property type codes to OptiPrompt types
+// Maps Vitec property type codes to Mäklartexter types
 function mapPropertyType(vitecType: string): string {
   const t = vitecType?.toLowerCase() || "";
   if (t.includes("lägenhet") || t.includes("bostadsrätt") || t === "apartment") return "apartment";
@@ -92,8 +92,8 @@ function mapEnergyClass(raw: string | number | undefined): string | undefined {
   return undefined;
 }
 
-// Normalizes a Vitec API property object into OptiPrompt's propertyData shape
-export function mapVitecPropertyToOptiPrompt(raw: Record<string, any>): VitecProperty {
+// Normalizes a Vitec API property object into Mäklartexter's propertyData shape
+export function mapVitecPropertyToMaklartexter(raw: Record<string, any>): VitecProperty {
   const address = [raw.streetAddress || raw.address, raw.streetNumber]
     .filter(Boolean)
     .join(" ")
@@ -215,7 +215,7 @@ export class VitecClient {
       const raw = await this.request<Record<string, any>>(
         `/Fetcher/Singelobject/${encodeURIComponent(this.customerId)}/${encodeURIComponent(objectId)}`
       );
-      return mapVitecPropertyToOptiPrompt(raw);
+      return mapVitecPropertyToMaklartexter(raw);
     } catch (err) {
       if (err instanceof VitecAuthError || err instanceof VitecNotFoundError) throw err;
       Sentry.captureException(err, { tags: { integration: "vitec", action: "getProperty" } });
@@ -237,7 +237,7 @@ export class VitecClient {
       const items: any[] = Array.isArray(raw)
         ? raw
         : raw?.estates || raw?.items || raw?.results || raw?.data || [];
-      return items.slice(0, limit).map(mapVitecPropertyToOptiPrompt);
+      return items.slice(0, limit).map(mapVitecPropertyToMaklartexter);
     } catch (estateErr) {
       if (estateErr instanceof VitecAuthError) throw estateErr;
       // Fallback: use Fetcher/All which returns all objects
@@ -246,7 +246,7 @@ export class VitecClient {
         const items: any[] = Array.isArray(raw)
           ? raw
           : raw?.items || raw?.results || raw?.data || [];
-        return items.slice(0, limit).map(mapVitecPropertyToOptiPrompt);
+        return items.slice(0, limit).map(mapVitecPropertyToMaklartexter);
       } catch (err) {
         if (err instanceof VitecAuthError) throw err;
         Sentry.captureException(err, { tags: { integration: "vitec", action: "listActiveProperties" } });

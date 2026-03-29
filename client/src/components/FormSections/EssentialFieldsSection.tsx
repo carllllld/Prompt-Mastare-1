@@ -109,14 +109,16 @@ export function EssentialFieldsSection({
         <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>Grundläggande uppgifter</span>
       </div>
 
-      {/* Import section - enklare design */}
-      <div className="flex flex-wrap gap-2 mb-3 p-2.5 rounded-lg border" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
-        <div className="w-full flex items-center gap-1.5 mb-0.5">
-          <span className="text-xs font-medium" style={{ color: "#1D2939" }}>Importera objektdata</span>
-          <span className="text-xs" style={{ color: "#9CA3AF" }}>— slipper fylla i formuläret manuellt</span>
+      {/* Import section - endast Vitec för Pro/Premium */}
+      {isPro && importButtons && (
+        <div className="flex flex-wrap gap-2 mb-3 p-2.5 rounded-lg border" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
+          <div className="w-full flex items-center gap-1.5 mb-0.5">
+            <span className="text-xs font-medium" style={{ color: "#1D2939" }}>Importera från Vitec</span>
+            <span className="text-xs" style={{ color: "#9CA3AF" }}>— hämta objektdata från ditt CRM</span>
+          </div>
+          {importButtons}
         </div>
-        {importButtons}
-      </div>
+      )}
 
       {/* Address + Area */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">

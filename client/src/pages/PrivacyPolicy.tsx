@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#1D2939" }}>1. Personuppgiftsansvarig</h2>
-            <p>OptiPrompt ("vi", "oss", "vår") ansvarar för behandlingen av dina personuppgifter i enlighet med EU:s dataskyddsförordning (GDPR) och svensk dataskyddslagstiftning.</p>
+            <p>Mäklartexter ("vi", "oss", "vår") ansvarar för behandlingen av dina personuppgifter i enlighet med EU:s dataskyddsförordning (GDPR) och svensk dataskyddslagstiftning.</p>
             <p>Kontakt: <a href="mailto:support@optiprompt.se" className="underline" style={{ color: "#2D6A4F" }}>support@optiprompt.se</a></p>
           </section>
 

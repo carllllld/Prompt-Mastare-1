@@ -43,10 +43,10 @@ describe('Landing Page - DemoTabs Component', () => {
     expect(errorBadge).toBeTruthy();
     expect(errorBadge?.textContent).toContain('Typisk chatt-AI');
     
-    // Check for success variant (after - OptiPrompt)
+    // Check for success variant (after - Mäklartexter)
     const successBadge = container.querySelector('.bg-success-bg.text-success');
     expect(successBadge).toBeTruthy();
-    expect(successBadge?.textContent).toContain('OptiPrompt');
+    expect(successBadge?.textContent).toContain('Mäklartexter');
   });
 
   it('uses minimum font size of text-xs', () => {

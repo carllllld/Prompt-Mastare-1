@@ -153,7 +153,7 @@ export default function Home() {
               <FileText className="w-4 h-4 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold text-foreground">
-              OptiPrompt
+              Mäklartexter
             </span>
           </Link>
 
@@ -586,7 +586,7 @@ export default function Home() {
       {/* ── FOOTER ── */}
       <footer className="border-t mt-4 py-4 hidden xl:block" style={{ borderColor: "#E8E5DE" }}>
         <div className="max-w-[2200px] mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "#9CA3AF" }}>
-          <span>© {new Date().getFullYear()} OptiPrompt</span>
+          <span>© {new Date().getFullYear()} Mäklartexter</span>
           <div className="flex gap-4">
             <Link href="/history" className="hover:underline" style={{ color: "#9CA3AF" }}>Historik</Link>
             <Link href="/teams" className="hover:underline" style={{ color: "#9CA3AF" }}>Team</Link>

@@ -2,7 +2,7 @@
  * Vitec Export Functionality
  * 
  * Allows exporting AI-generated text and property data back to Vitec mäklarsystem.
- * This completes the integration loop: Import from Vitec → Generate in OptiPrompt → Export back to Vitec
+ * This completes the integration loop: Import from Vitec → Generate in Mäklartexter → Export back to Vitec
  * 
  * API Documentation: https://vitecexpress.bovision.se/
  * 
@@ -42,7 +42,7 @@ export interface VitecExportData {
   price?: number;
   
   // Metadata
-  generatedBy: "OptiPrompt";
+  generatedBy: "Mäklartexter";
   generatedAt: string;  // ISO timestamp
   qualityScore?: number;  // Broker quality score (0-1)
 }
@@ -63,7 +63,7 @@ export interface VitecExportConfig {
 }
 
 /**
- * Maps OptiPrompt property type to Vitec property type codes
+ * Maps Mäklartexter property type to Vitec property type codes
  */
 function mapPropertyTypeToVitec(type: string): string {
   switch (type) {
@@ -84,7 +84,7 @@ function mapLandOwnershipToVitec(ownership?: string): string | undefined {
 }
 
 /**
- * Builds the Vitec API payload from OptiPrompt export data
+ * Builds the Vitec API payload from Mäklartexter export data
  */
 function buildVitecPayload(data: VitecExportData): Record<string, any> {
   const payload: Record<string, any> = {
@@ -147,14 +147,14 @@ function buildVitecPayload(data: VitecExportData): Record<string, any> {
     ...(data.monthlyFee && { monthlyFee: data.monthlyFee, avgift: data.monthlyFee }),
     ...(data.price && { askingPrice: data.price, utgangspris: data.price, pris: data.price }),
     
-    // OptiPrompt metadata
+    // Mäklartexter metadata
     generatedBy: data.generatedBy,
     generatedAt: data.generatedAt,
-    ...(data.qualityScore && { optiPromptQualityScore: data.qualityScore }),
+    ...(data.qualityScore && { maklartexterQualityScore: data.qualityScore }),
     
     // Timestamp
     lastUpdated: new Date().toISOString(),
-    updatedBy: "OptiPrompt",
+    updatedBy: "Mäklartexter",
   };
   
   return payload;

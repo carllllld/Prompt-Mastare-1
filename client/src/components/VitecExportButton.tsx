@@ -186,7 +186,7 @@ export function VitecExportButton({
                     <li>Objektbeskrivningen uppdateras i Vitec</li>
                     <li>Metadata sparas för framtida referens</li>
                     <li>Du kan publicera från Vitec till Hemnet</li>
-                    <li>Alla ändringar loggas med "OptiPrompt" som källa</li>
+                    <li>Alla ändringar loggas med "Mäklartexter" som källa</li>
                   </ul>
                 </div>
               </div>
