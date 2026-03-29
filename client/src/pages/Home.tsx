@@ -17,7 +17,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock, FileCheck,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock, Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
