@@ -117,7 +117,7 @@ export function VitecExportButton({
               Exportera till Vitec
             </DialogTitle>
             <DialogDescription>
-              Uppdatera objektet i Vitec med den AI-genererade texten. Du kan sedan publicera från Vitec till Hemnet, Booli eller andra plattformar.
+              Uppdatera objektet i Vitec med den AI-genererade texten. Du kan sedan publicera från Vitec till Hemnet eller andra plattformar.
             </DialogDescription>
           </DialogHeader>
 
@@ -185,7 +185,7 @@ export function VitecExportButton({
                   <ul className="space-y-1 list-disc list-inside">
                     <li>Objektbeskrivningen uppdateras i Vitec</li>
                     <li>Metadata sparas för framtida referens</li>
-                    <li>Du kan publicera från Vitec till Hemnet/Booli</li>
+                    <li>Du kan publicera från Vitec till Hemnet</li>
                     <li>Alla ändringar loggas med "OptiPrompt" som källa</li>
                   </ul>
                 </div>

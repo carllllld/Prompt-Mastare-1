@@ -560,7 +560,7 @@ export default function Home() {
             <div className="p-5 bg-white space-y-2.5">
               {[
                 "5 textformat per generering",
-                "Hemnet + Booli-anpassad huvudtext",
+                "Hemnet-anpassad huvudtext",
                 "Importera från Hemnet",
                 "Stilmedvetet klyschfilter",
                 "Inget kreditkort krävs",

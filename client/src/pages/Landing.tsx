@@ -389,7 +389,7 @@ export default function Landing() {
             {[
               { step: "1", title: "Fyll i fastighetsdata", desc: "Adress, yta, rum, skick, balkong, renovering — allt i ett strukturerat formulär." },
               { step: "2", title: "AI bygger och skriver", desc: "Disposition + skrivplan → textgenerering → klyschfilter. Pro/Premium får även kvalitetskontroll och förbättringsfeedback vid behov." },
-              { step: "3", title: "Kopiera & publicera", desc: "Texterna är redo för Hemnet, Booli, Instagram och visningsinbjudan. Redigera om du vill." },
+              { step: "3", title: "Kopiera & publicera", desc: "Texterna är redo för Hemnet, Instagram och visningsinbjudan. Redigera om du vill." },
             ].map((s) => (
               <div key={s.step} className="text-center">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold mx-auto mb-4" style={{ background: "#2D6A4F", color: "#fff" }}>

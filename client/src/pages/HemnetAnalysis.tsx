@@ -285,7 +285,7 @@ export default function HemnetAnalysis() {
                 Analysera befintlig mäklartext
               </h1>
               <p className="text-sm text-muted-foreground">
-                Importera från Hemnet/Booli eller klistra in din egen text för AI-drivna förbättringsförslag
+                Importera från Hemnet eller klistra in din egen text för AI-drivna förbättringsförslag
               </p>
             </div>
 
@@ -321,7 +321,7 @@ export default function HemnetAnalysis() {
                         Importera från URL
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Klistra in länken till en Hemnet- eller Booli-annons för att analysera texten
+                        Klistra in länken till en Hemnet-annons för att analysera texten
                       </p>
                     </div>
                   </div>
@@ -329,7 +329,7 @@ export default function HemnetAnalysis() {
                   <div className="space-y-3">
                     <Input
                       type="url"
-                      placeholder="https://www.hemnet.se/bostader/... eller https://www.booli.se/..."
+                      placeholder="https://www.hemnet.se/bostader/..."
                       value={hemnetUrl}
                       onChange={(e) => setHemnetUrl(e.target.value)}
                       onKeyDown={(e) => {
@@ -364,7 +364,7 @@ export default function HemnetAnalysis() {
                     <div className="text-xs text-info">
                       <p className="font-medium mb-1">Automatisk import</p>
                       <p>
-                        Vi hämtar automatiskt texten och bilderna från Hemnet eller Booli och analyserar 
+                        Vi hämtar automatiskt texten och bilderna från Hemnet och analyserar 
                         med AI-experter (mäklare + jurist) för att hitta förbättringsmöjligheter.
                       </p>
                     </div>
