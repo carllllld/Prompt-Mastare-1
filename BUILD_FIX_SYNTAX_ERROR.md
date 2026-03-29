@@ -1,55 +1,75 @@
-# Build Fix - Syntax Error Resolved
+# Build Fix: Syntax Error in PromptFormProfessional.tsx
 
-## Error
-```
-[vite:esbuild] Transform failed with 1 error:
-/opt/render/project/src/client/src/components/PromptFormProfessional.tsx:1470:13: ERROR: Expected identifier but found "/"
+**Date:** March 29, 2026  
+**Status:** ✅ FIXED
 
-1468 |            {/* Render mode: rest-only - show everything except objekttyp and essential fields */}
-1469 |            {renderMode === 'rest-only' && (
-1470 |              </>
-     |               ^
-1471 |            )}
+---
+
+## Issue
+
+Build failed with syntax error:
 ```
+ERROR: Expected ">" but found "<"
+client/src/components/PromptFormProfessional.tsx:1477:18
+```
+
+---
 
 ## Root Cause
-During the refactoring to add render modes, a leftover closing fragment `</>` was left without a corresponding opening fragment `<>`. This created invalid JSX syntax.
+
+Extra closing fragment `</>` in the JSX structure at line 1477. The code had:
+
+```tsx
+importButtons={
+  isPro ? (
+    <VitecImportPicker ... />
+  ) : (
+    <LockedFeature ...>
+      <Button ...>
+        ...
+        </Button>  // Wrong indentation
+      </LockedFeature>
+    )}
+  </>  // ❌ Extra closing fragment
+}
+```
+
+---
 
 ## Fix Applied
-Removed the duplicate/leftover fragment block:
+
+Removed the extra `</>` and fixed Button closing tag indentation:
 
 ```tsx
-// REMOVED THIS:
-{renderMode === 'rest-only' && (
-  </>
-)}
+importButtons={
+  isPro ? (
+    <VitecImportPicker ... />
+  ) : (
+    <LockedFeature ...>
+      <Button ...>
+        ...
+      </Button>  // ✅ Correct indentation
+    </LockedFeature>
+  )  // ✅ No extra fragment
+}
 ```
 
-The correct structure is now:
-
-```tsx
-{/* Render mode: essential-only */}
-{renderMode === 'essential-only' && (
-  <>
-    {/* Info box, Objekttyp, EssentialFieldsSection */}
-  </>
-)}
-
-{/* Render mode: rest-only or full */}
-{(renderMode === 'rest-only' || renderMode === 'full') && (
-  <>
-    {/* ImageSection and all subsequent sections */}
-  </>
-)}
-```
+---
 
 ## Verification
-- TypeScript diagnostics: ✅ No errors
-- Syntax: ✅ Valid JSX structure
-- Build: Should now compile successfully
 
-## Files Modified
-- `client/src/components/PromptFormProfessional.tsx` - Removed invalid fragment
+- ✅ TypeScript diagnostics: No errors
+- ✅ JSX structure: Valid
+- ✅ Build should now succeed
 
-## Next Steps
-The build should now succeed. The layout restructure is complete and functional.
+---
+
+## Context
+
+This error was introduced during the Hemnet import removal from the form (Task 7). The ternary operator for `importButtons` prop had incorrect JSX structure.
+
+---
+
+## Status
+
+**FIXED** - Build should now complete successfully.

@@ -1471,10 +1471,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                       >
                         <Lock className="w-3 h-3 mr-1.5" />
                         Vitec-import
-                        </Button>
-                      </LockedFeature>
-                    )}
-                  </>
+                      </Button>
+                    </LockedFeature>
+                  )
                 }
               />
             </>
