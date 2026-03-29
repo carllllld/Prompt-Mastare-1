@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
   FileText, ExternalLink, Loader2, ArrowLeft, AlertCircle, 
-  Sparkles, Copy, Check, Download, Info 
+  Copy, Check, Download, Info, FileCheck 
 } from "lucide-react";
 
 export default function HemnetAnalysis() {
@@ -351,7 +351,7 @@ export default function HemnetAnalysis() {
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <FileCheck className="w-4 h-4 mr-2" />
                           Analysera text
                         </>
                       )}
@@ -405,7 +405,7 @@ export default function HemnetAnalysis() {
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <FileCheck className="w-4 h-4 mr-2" />
                           Analysera text
                         </>
                       )}
@@ -614,7 +614,7 @@ export default function HemnetAnalysis() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4 mr-2" />
+                        <FileCheck className="w-4 h-4 mr-2" />
                         Skriv om text
                       </>
                     )}
@@ -656,8 +656,9 @@ export default function HemnetAnalysis() {
                         </p>
                       </div>
 
-                      <div className="text-xs text-muted-foreground">
-                        💡 Jämför med originalet ovan och välj vilken version du föredrar
+                      <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5" />
+                        Jämför med originalet ovan och välj vilken version du föredrar
                       </div>
                     </div>
                   )}

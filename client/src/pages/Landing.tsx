@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  Crown, Check, ArrowRight, Zap, Shield, FileText,
-  Sparkles, BarChart3, Pen, Menu, X, Image, Building2,
+  Crown, Check, ArrowRight, FileCheck, Shield, FileText,
+  UserCheck, BarChart3, Pen, Menu, X, Image, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
@@ -113,7 +113,7 @@ function DemoTabs() {
 // ─── FEATURES ───
 const FEATURES = [
   {
-    icon: Zap,
+    icon: FileCheck,
     title: "5 texter i ett flöde",
     desc: "Objektbeskrivning, rubrik, socialt inlägg, visningsinbjudan och kortannons — oftast klart på under en minut.",
   },
@@ -143,7 +143,7 @@ const FEATURES = [
     desc: "Klistra in en Hemnet-länk — formuläret fylls i automatiskt med objektdata och bilder. Fungerar för alla användare.",
   },
   {
-    icon: Sparkles,
+    icon: UserCheck,
     title: "Personlig skrivstil",
     desc: "Ladda upp dina bästa texter — AI:n lär sig din ton och skriver som du, fast snabbare. (Pro/Premium)",
   },
@@ -180,7 +180,7 @@ const PLANS = [
     features: [
       "10 genereringar / månad",
       "40 AI-textredigeringar / månad",
-      "✨ Vitec-integration — importera & exportera direkt",
+      "Vitec-integration — importera & exportera direkt",
       "Importera från Hemnet (klistra in länk)",
       "Adressuppslag (läge, kollektivtrafik, närområde)",
       "Bildanalys (valfritt)",
@@ -201,7 +201,7 @@ const PLANS = [
     features: [
       "25 genereringar / månad",
       "120 AI-textredigeringar / månad",
-      "✨ Vitec-integration — importera & exportera direkt",
+      "Vitec-integration — importera & exportera direkt",
       "Importera från Hemnet (klistra in länk)",
       "Adressuppslag (läge, kollektivtrafik, närområde)",
       "Bildanalys (valfritt)",

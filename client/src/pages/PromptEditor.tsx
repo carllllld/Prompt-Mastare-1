@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Lock, Unlock, Sparkles, Send, Users, Copy, Check } from "lucide-react";
+import { ArrowLeft, Lock, Unlock, FileCheck, Send, Users, Copy, Check } from "lucide-react";
 
 const AVATAR_COLORS = [
   "#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6",
@@ -354,7 +354,7 @@ export default function PromptEditor() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
+                    <FileCheck className="h-4 w-4 text-primary" />
                     Förbättrad prompt
                   </CardTitle>
                   <div className="flex items-center gap-2">

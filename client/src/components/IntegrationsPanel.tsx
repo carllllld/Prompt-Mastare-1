@@ -53,7 +53,7 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
     },
     onSuccess: () => {
       toast({ 
-        title: "🎉 Vitec ansluten!", 
+        title: "Vitec ansluten!", 
         description: "Du kan nu importera objekt direkt från Vitec och exportera AI-genererade texter tillbaka. Spara 30+ minuter per objekt." 
       });
       setApiKey("");
@@ -102,7 +102,10 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
               <CheckCircle2 className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-semibold text-foreground mb-1">Vitec är anslutet! 🎉</h4>
+              <h4 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success" />
+                Vitec är anslutet!
+              </h4>
               <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                 Du kan nu importera objekt direkt från Vitec och exportera AI-genererade texter tillbaka. 
                 Detta sparar dig 30+ minuter per objekt.

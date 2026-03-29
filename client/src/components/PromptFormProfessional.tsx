@@ -1858,7 +1858,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                     <Select value="450" disabled>
                       <SelectTrigger className="h-8 w-24 text-xs bg-white"><SelectValue /></SelectTrigger>
                     </Select>
-                    <span className="text-xs text-gray-400 ml-2">🔒 Fast för gratis-plan</span>
+                    <span className="text-xs text-gray-400 ml-2 flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Fast för gratis-plan
+                    </span>
                   </div>
                 </div>
               </LockedFeature>

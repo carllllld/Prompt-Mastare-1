@@ -145,7 +145,7 @@ export function EssentialFieldsSection({
                   <>
                     <MapPin className="w-3.5 h-3.5 mr-1" />
                     Sök läge
-                    {!isPro && <span className="ml-1 text-[10px]">🔒</span>}
+                    {!isPro && <Lock className="w-3 h-3 ml-1" />}
                   </>
                 )}
               </Button>
