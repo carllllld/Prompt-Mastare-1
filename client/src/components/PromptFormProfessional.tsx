@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ChevronDown, ChevronUp, Sparkles, Plus, X, Lock, MapPin, Minus, Info, CheckCircle2 } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, FileCheck, Plus, X, Lock, MapPin, Minus, Info, CheckCircle2 } from "lucide-react";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1891,7 +1891,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <FileCheck className="w-4 h-4 mr-2" />
                     Generera textpaket
                     <span className="hidden sm:inline text-xs ml-2 opacity-60">(⌘↵)</span>
                   </>

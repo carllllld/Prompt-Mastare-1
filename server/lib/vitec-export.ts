@@ -241,7 +241,7 @@ export async function exportToVitec(
         if (response.status === 401 || response.status === 403) {
           return {
             success: false,
-            message: "Ogiltig Vitec API-nyckel. Kontrollera dina inställningar under Integrationer.",
+            message: "Ogiltig Vitec API-nyckel. Kontrollera dina inställningar under Integrationer.\n\nTips: Verifiera att API-nyckeln är korrekt kopierad och att den har rätt behörigheter i Vitec.",
           };
         }
         
@@ -328,7 +328,7 @@ export async function exportToVitec(
   // If we get here, all attempts failed
   return {
     success: false,
-    message: "Kunde inte exportera till Vitec. Alla endpoints och metoder misslyckades. Kontakta Vitec support för att verifiera API-åtkomst.",
+    message: "Kunde inte exportera till Vitec. Detta kan bero på:\n\n1. Objektet finns inte i Vitec med detta ID\n2. API-nyckeln saknar behörighet för export\n3. Vitec-servern är tillfälligt otillgänglig\n\nKontakta support@maklartexter.se om problemet kvarstår. Vi hjälper dig gärna!",
   };
 }
 

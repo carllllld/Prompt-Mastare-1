@@ -17,7 +17,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock, Sparkles,
+  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock, FileCheck,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -179,7 +179,7 @@ export default function Home() {
 
                 {/* Hemnet Analysis - plain link */}
                 <Link href="/hemnet-analysis" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  <Sparkles className="w-4 h-4" />
+                  <FileCheck className="w-4 h-4" />
                   <span>Textanalys</span>
                 </Link>
 

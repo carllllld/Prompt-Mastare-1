@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Wand2, Minus, Plus, RotateCcw, Loader2, PenLine, Sparkles, AlertTriangle } from "lucide-react";
+import { Wand2, Minus, Plus, RotateCcw, Loader2, PenLine, TrendingUp, AlertTriangle, Edit3 } from "lucide-react";
 
 // CRITICAL: Use textContent (not innerText) to preserve \n\n paragraph breaks.
 // innerText normalizes whitespace and strips paragraph breaks.
@@ -14,7 +14,7 @@ const QUICK_ACTIONS = [
   { label: "Skriv om", instruction: "Skriv om texten med andra ord men behåll ALLA fakta. Matcha stilen i resten av objektbeskrivningen.", icon: Wand2, gradient: ["#2563EB", "#3B82F6"] },
   { label: "Lyft fakta", instruction: "Lyft fram de starkaste fakta tydligare: renoveringsår, material, mått, märken, avstånd. Hitta inte på nya uppgifter.", icon: Plus, gradient: ["#16A34A", "#22C55E"] },
   { label: "Kondensera", instruction: "Korta ner texten. Behåll konkreta fakta (mått, årtal, material). Ta bort utfyllnad och upprepningar.", icon: Minus, gradient: ["#EA580C", "#F97316"] },
-  { label: "Mer säljande", instruction: "Lyft de starkaste säljargumenten (läge, skick, storlek, utsikt) genom att placera dem först. Sälj med FAKTA, inte adjektiv.", icon: Sparkles, gradient: ["#7C3AED", "#8B5CF6"] },
+  { label: "Mer säljande", instruction: "Lyft de starkaste säljargumenten (läge, skick, storlek, utsikt) genom att placera dem först. Sälj med FAKTA, inte adjektiv.", icon: TrendingUp, gradient: ["#7C3AED", "#8B5CF6"] },
   { label: "Bättre flöde", instruction: "Förbättra textflödet: variera meningslängd, bind ihop hackiga meningar. Texten ska läsas som en vandring genom bostaden.", icon: PenLine, gradient: ["#4B5563", "#6B7280"] },
   { label: "Fixa klyschor", instruction: "Ersätt AI-klyschor med konkreta fakta. 'Generöst kök' → 'Kök om 15 kvm'. 'Ljust och luftigt' → 'Fönster i söder och väster'. Stryk meningar utan fakta.", icon: AlertTriangle, gradient: ["#DC2626", "#EF4444"] },
 ];
@@ -205,7 +205,7 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
       {/* Editor label */}
       <div className="flex items-center justify-between mb-2 gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5" style={{ color: "#2D6A4F" }} />
+          <Edit3 className="w-3.5 h-3.5" style={{ color: "#2D6A4F" }} />
           <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>
             Markera text för AI-redigering
           </span>

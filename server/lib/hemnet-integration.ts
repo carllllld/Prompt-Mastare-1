@@ -295,6 +295,10 @@ export async function fetchHemnetProperty(
   maxRetries = 3,
   baseDelay = 1000
 ): Promise<HemnetProperty> {
+  if (!isHemnetUrl(url)) {
+    throw new HemnetError("Ogiltig Hemnet-URL. Kontrollera att:\n\n1. Länken är en giltig Hemnet-URL (hemnet.se/bostader/...)\n2. Du kopierade hela länken\n3. Annonsen fortfarande är aktiv på Hemnet");
+  }
+
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -324,7 +328,7 @@ export async function fetchHemnetProperty(
 
 async function fetchHemnetPropertyInternal(url: string): Promise<HemnetProperty> {
   if (!isHemnetUrl(url)) {
-    throw new HemnetError("Ogiltig Hemnet-URL. URL:en måste vara en hemnet.se/bostader/-länk.");
+    throw new HemnetError("Ogiltig Hemnet-URL. Kontrollera att:\n\n1. Länken är en giltig Hemnet-URL (hemnet.se/bostader/...)\n2. Du kopierade hela länken\n3. Annonsen fortfarande är aktiv på Hemnet");
   }
 
   let html: string;
@@ -341,10 +345,10 @@ async function fetchHemnetPropertyInternal(url: string): Promise<HemnetProperty>
     });
 
     if (res.status === 404) {
-      throw new HemnetNotFoundError("Hemnet-annonsen hittades inte. Den kan ha tagits bort.");
+      throw new HemnetNotFoundError("Hemnet-annonsen hittades inte. Annonsen kan ha tagits bort eller länken är felaktig.\n\nTips: Kontrollera att annonsen fortfarande är aktiv på Hemnet.");
     }
     if (res.status === 403 || res.status === 429) {
-      throw new HemnetRateLimitError("Hemnet blockerade förfrågan. Försök igen om en stund.");
+      throw new HemnetRateLimitError("Hemnet blockerade förfrågan. Vänta en stund och försök igen.\n\nDetta händer ibland när många förfrågningar görs samtidigt.");
     }
     if (!res.ok) {
       throw new HemnetError(`Hemnet svarade med statuskod ${res.status}`);

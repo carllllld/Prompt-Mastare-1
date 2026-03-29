@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2, Sparkles, Edit3, Info } from "lucide-react";
+import { Check, Copy, FileText, Share2, RefreshCw, AlertTriangle, AlertCircle, Lightbulb, ShieldCheck, ShieldAlert, Star, BarChart3, Type, Instagram, Mail, Megaphone, Loader2, CheckCircle2, Edit3, Info } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { type OptimizeResponse } from "@shared/schema";
 import { TextEditor } from "./TextEditor";
@@ -288,7 +288,7 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           {wordCount} ord
         </Badge>
         <Badge variant="success" size="sm" className="gap-1.5">
-          <Sparkles className="w-3 h-3" />
+          <CheckCircle2 className="w-3 h-3" />
           GPT-5.2
         </Badge>
         {qualityScore != null && (

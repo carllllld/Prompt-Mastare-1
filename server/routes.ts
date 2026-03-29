@@ -3629,6 +3629,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           return res.status(400).json({ message: "Texten är för lång (max 10000 tecken)" });
         }
 
+        // Load personal style for post-processing
+        let personalStyle: any = null;
+        try {
+          personalStyle = await storage.getPersonalStyle(user.id);
+        } catch (e) {
+          // Ignore - personal style is optional
+        }
+
+        const style: WritingStyle = (req.body.writingStyle === "factual" || req.body.writingStyle === "selling") ? req.body.writingStyle : "balanced";
+        const platform = req.body.platform || "hemnet";
+
         // Build rewrite prompt
         let rewritePrompt = `Du är en expert på svenska mäklartexter och ska skriva om följande objektbeskrivning.
 
@@ -3646,35 +3657,57 @@ UPPGIFT:
 Skriv om texten så att den:
 1. Åtgärdar alla problem i feedbacken
 2. Följer mäklarens extra instruktioner (om några)
-3. Behåller all viktig faktainformation
-4. Låter naturlig och professionell
-5. Undviker AI-klyschéer som "välkommen", "charmig", "drömmen"
+3. Behåller all viktig faktainformation (adress, kvm, rum, renoveringsår, material)
+4. Låter naturlig och professionell — som en erfaren mäklare med 15 års erfarenhet
+5. Har korrekt styckeindelning (tomrad mellan stycken)
+6. Börjar med bostadens starkaste USP, inte "Välkommen till"
+
+FÖRBJUDNA FRASER (använd ALDRIG dessa):
+- "välkommen till", "välkommen hem"
+- "erbjuder", "bjuder på", "kan erbjuda"
+- "i hjärtat av", "för den som"
+- "generös planlösning", "fantastisk", "underbar"
+- "andas lugn/charm/historia", "utstrålar", "präglas av"
+- "drömhem", "drömboende", "unik möjlighet"
+- "skapar en känsla av", "ger en känsla av"
+
+Istället för "erbjuder" → använd "har", "finns", "rymmer"
+Istället för "bjuder på utsikt" → "utsikt mot [vad]"
+Istället för "generöst kök" → "kök om [X] kvm" eller "kök med [konkret detalj]"
 
 Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
 
-        // Call OpenAI
-        const openai = getOpenAIClient();
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
+        // Call OpenAI with GPT-5.2 and reasoning for best quality
+        const completion = await openai.responses.create({
+          model: "gpt-5.2",
+          reasoning: { effort: "medium" },
+          input: [
             {
-              role: "system",
-              content: "Du är en expert på svenska mäklartexter som skriver professionella, faktabaserade objektbeskrivningar utan klyschéer."
+              role: "developer",
+              content: "Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver professionella, faktabaserade objektbeskrivningar utan AI-klyschor. Du vet exakt hur Hemnet-texter ska låta — konkreta, sakliga och köparrelevanta. Du använder ALDRIG fraser som 'välkommen till', 'erbjuder', 'bjuder på', 'i hjärtat av', 'för den som', 'generös planlösning'. Du börjar alltid med bostadens starkaste USP."
             },
             {
               role: "user",
               content: rewritePrompt
             }
           ],
-          temperature: 0.7,
-          max_tokens: 2000,
+          max_output_tokens: 2000,
         });
 
-        const rewrittenText = completion.choices[0]?.message?.content?.trim() || '';
+        let rewrittenText = completion.output_text?.trim() || '';
 
         if (!rewrittenText) {
           return res.status(500).json({ message: "Kunde inte generera omskriven text" });
         }
+
+        // Run through sanitization to catch any remaining forbidden phrases
+        rewrittenText = sanitizeGeneratedMarketingField(
+          rewrittenText, 
+          personalStyle?.styleProfile, 
+          style, 
+          { allowParagraphs: true },
+          platform
+        ) || rewrittenText;
 
         // Return rewritten text
         res.json({

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Building2, X, ArrowRight, Sparkles, Zap } from "lucide-react";
+import { Building2, X, ArrowRight, FileCheck, Zap } from "lucide-react";
 
 interface IntegrationSettings {
   vitecEnabled: boolean;
@@ -81,7 +81,7 @@ export function VitecOnboardingBanner({ isPro }: { isPro: boolean }) {
               <span className="text-xs font-medium">Snabb import</span>
             </div>
             <div className="flex items-center gap-2 text-white/90">
-              <Sparkles className="w-4 h-4 text-yellow-400" />
+              <FileCheck className="w-4 h-4 text-yellow-400" />
               <span className="text-xs font-medium">AI-optimering</span>
             </div>
             <div className="flex items-center gap-2 text-white/90">

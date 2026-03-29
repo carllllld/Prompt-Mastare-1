@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Sparkles, Trash2, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, UserCheck, Trash2, Save, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -217,7 +217,7 @@ export function PersonalStyle() {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
+            <UserCheck className="h-4 w-4" />
             Personlig skrivstil
           </h3>
           <p className="text-xs text-gray-600 mt-0.5">
