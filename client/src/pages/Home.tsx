@@ -149,10 +149,7 @@ export default function Home() {
         <div className="max-w-[2200px] mx-auto flex items-center justify-between px-4 sm:px-6 xl:px-10 2xl:px-14 h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
-              <FileText className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold text-foreground">
+            <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
               Mäklartexter
             </span>
           </Link>

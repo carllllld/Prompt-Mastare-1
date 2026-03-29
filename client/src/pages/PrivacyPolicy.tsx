@@ -15,9 +15,6 @@ export default function PrivacyPolicy() {
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
-            <FileText className="w-5 h-5 text-white" />
-          </div>
           <h1 className="text-3xl font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
             Integritetspolicy
           </h1>

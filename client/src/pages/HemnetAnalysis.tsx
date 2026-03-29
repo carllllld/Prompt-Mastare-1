@@ -260,10 +260,7 @@ export default function HemnetAnalysis() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary">
-                <FileText className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-semibold text-foreground">
+              <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
                 Textanalys
               </span>
               <Badge variant="outline" size="sm">

@@ -78,9 +78,6 @@ export default function HistoryPage() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
-                <History className="w-3.5 h-3.5 text-white" />
-              </div>
               <span className="font-semibold text-lg" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>Historik</span>
             </div>
           </div>

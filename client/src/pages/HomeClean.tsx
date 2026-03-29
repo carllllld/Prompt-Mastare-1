@@ -140,10 +140,7 @@ export default function HomeClean() {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 flex items-center justify-center bg-primary">
-              <FileText className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-semibold text-foreground">Mäklartexter</span>
+            <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>Mäklartexter</span>
           </Link>
 
           <div className="flex items-center gap-6">

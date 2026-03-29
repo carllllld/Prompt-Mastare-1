@@ -236,9 +236,6 @@ export default function Settings() {
       <header className="sticky top-0 z-50 border-b" style={{ background: "#FAFAF7", borderColor: "#E8E5DE" }}>
         <div className="max-w-3xl mx-auto flex items-center justify-between px-6 h-16">
           <Link href="/app" className="flex items-center gap-2.5 no-underline">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
-              <FileText className="w-4 h-4 text-white" />
-            </div>
             <span className="text-lg font-semibold" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
               Mäklartexter
             </span>

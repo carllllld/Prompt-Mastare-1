@@ -164,9 +164,6 @@ export function AuthModal({ open, onOpenChange, initialMode = "login" }: AuthMod
       <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#2D6A4F" }}>
-              <FileText className="w-4 h-4 text-white" />
-            </div>
             <span className="font-semibold text-base" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>Mäklartexter</span>
           </div>
           <DialogTitle data-testid="text-auth-title" className="text-lg">
