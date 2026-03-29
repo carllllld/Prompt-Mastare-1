@@ -32,6 +32,7 @@ const PrivacyPolicy = lazy(() => import("@/pages/PrivacyPolicy"));
 const Terms = lazy(() => import("@/pages/Terms"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const HemnetAnalysis = lazy(() => import("@/pages/HemnetAnalysis"));
+const IntegrationsSettings = lazy(() => import("@/pages/IntegrationsSettings"));
 
 function Router() {
   return (
@@ -82,6 +83,11 @@ function Router() {
       <Route path="/settings">
         <Suspense fallback={<PageSpinner />}>
           <Settings />
+        </Suspense>
+      </Route>
+      <Route path="/integrations">
+        <Suspense fallback={<PageSpinner />}>
+          <IntegrationsSettings />
         </Suspense>
       </Route>
       <Route component={NotFound} />

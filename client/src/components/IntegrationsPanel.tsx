@@ -52,7 +52,10 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Vitec ansluten", description: "API-nyckeln är sparad och verifierad." });
+      toast({ 
+        title: "🎉 Vitec ansluten!", 
+        description: "Du kan nu importera objekt direkt från Vitec och exportera AI-genererade texter tillbaka. Spara 30+ minuter per objekt." 
+      });
       setApiKey("");
       setShowKeyInput(false);
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/settings"] });
@@ -91,6 +94,38 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
 
   return (
     <div className="space-y-4">
+      {/* Success celebration when configured */}
+      {settings?.vitecEnabled && settings.vitecApiKeySet && (
+        <div className="p-4 rounded-lg border-2 border-primary bg-success-bg/30">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-primary flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-foreground mb-1">Vitec är anslutet! 🎉</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed mb-2">
+                Du kan nu importera objekt direkt från Vitec och exportera AI-genererade texter tillbaka. 
+                Detta sparar dig 30+ minuter per objekt.
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <div className="flex items-center gap-1.5 text-success">
+                  <Check className="w-3 h-3" />
+                  <span>Snabb import</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-success">
+                  <Check className="w-3 h-3" />
+                  <span>AI-optimering</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-success">
+                  <Check className="w-3 h-3" />
+                  <span>Direkt export</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Building2 className="w-4 h-4" style={{ color: "#2D6A4F" }} />
@@ -126,7 +161,8 @@ export function VitecSettingsSection({ isPro }: { isPro: boolean }) {
       </div>
 
       <p className="text-xs text-gray-500 leading-relaxed">
-        Importera objektdata direkt från Vitec. Du hittar din API-nyckel i Vitec under Inställningar → API-åtkomst.
+        <strong>Spara 30+ minuter per objekt:</strong> Importera objektdata direkt från Vitec och exportera AI-genererade texter tillbaka med ett klick. 
+        Du hittar din API-nyckel i Vitec under Inställningar → API-åtkomst.
       </p>
 
       {showKeyInput && !settings?.vitecApiKeySet && (
@@ -335,16 +371,22 @@ export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
 
   if (!open) {
     return (
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="text-xs gap-1.5 border-dashed"
-        onClick={() => setOpen(true)}
-      >
-        <Building2 className="w-3 h-3" />
-        Importera från Vitec
-      </Button>
+      <div className="relative inline-block">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="text-xs gap-1.5 border-dashed"
+          onClick={() => setOpen(true)}
+        >
+          <Building2 className="w-3 h-3" />
+          Importera från Vitec
+        </Button>
+        {/* New badge */}
+        <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-yellow-400 text-yellow-900 shadow-sm">
+          NY!
+        </span>
+      </div>
     );
   }
 

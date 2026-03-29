@@ -3723,17 +3723,18 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
           });
         }
 
-        // Get Vitec credentials from user settings
+        // Get user's Vitec credentials
         const settings = await storage.getIntegrationSettings(user.id);
-        if (!settings?.vitecApiKey || !settings?.vitecCustomerId) {
+        
+        if (!settings?.vitecEnabled || !settings?.vitecApiKey || !settings?.vitecCustomerId) {
           return res.status(400).json({
-            message: "Vitec-integration är inte konfigurerad. Gå till Integrationer för att konfigurera.",
+            message: "Vitec-integration är inte konfigurerad. Gå till Inställningar → Integrationer för att konfigurera ditt Vitec-konto.",
             code: "VITEC_NOT_CONFIGURED"
           });
         }
 
         // Build export data
-        const { VitecExportData, validateExportData, exportToVitec } = await import('./lib/vitec-export');
+        const { validateExportData, exportToVitec } = await import('./lib/vitec-export');
         
         const exportData: any = {
           objectId,
@@ -3760,11 +3761,12 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
           });
         }
 
-        // Export to Vitec
+        // Export to Vitec using user's credentials
         const result = await exportToVitec(
           {
             apiKey: settings.vitecApiKey,
             customerId: settings.vitecCustomerId,
+            baseUrl: settings.vitecBaseUrl || undefined,
           },
           exportData
         );
@@ -3777,6 +3779,100 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
           message: "Ett oväntat fel uppstod vid export till Vitec",
           code: "EXPORT_ERROR"
         });
+      }
+    });
+
+    // GET /api/integrations/settings — get user's integration settings
+    app.get("/api/integrations/settings", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const settings = await storage.getIntegrationSettings(user.id);
+        
+        // Return settings without exposing API key
+        res.json({
+          vitecEnabled: settings?.vitecEnabled || false,
+          vitecApiKeySet: !!settings?.vitecApiKey,
+          vitecCustomerId: settings?.vitecCustomerId || null,
+          vitecBaseUrl: settings?.vitecBaseUrl || null,
+        });
+      } catch (err) {
+        console.error("Get integration settings error:", err);
+        res.status(500).json({ message: "Kunde inte hämta integrationsinställningar" });
+      }
+    });
+
+    // PUT /api/integrations/settings — update user's integration settings
+    app.put("/api/integrations/settings", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { vitecApiKey, vitecCustomerId, vitecBaseUrl, vitecEnabled } = req.body;
+
+        // Validate if trying to enable without credentials
+        if (vitecEnabled && (!vitecApiKey || !vitecCustomerId)) {
+          return res.status(400).json({
+            message: "API-nyckel och Kund-ID krävs för att aktivera Vitec-integration"
+          });
+        }
+
+        // If API key provided, validate it
+        if (vitecApiKey && vitecCustomerId) {
+          try {
+            const { VitecClient } = await import('./lib/vitec-integration');
+            const client = new VitecClient({
+              apiKey: vitecApiKey,
+              customerId: vitecCustomerId,
+              baseUrl: vitecBaseUrl,
+            });
+            
+            const isValid = await client.validateApiKey();
+            if (!isValid) {
+              return res.status(400).json({
+                message: "Ogiltig Vitec API-nyckel eller Kund-ID. Kontrollera dina uppgifter.",
+                code: "INVALID_CREDENTIALS"
+              });
+            }
+          } catch (err) {
+            console.error("Vitec validation error:", err);
+            return res.status(400).json({
+              message: "Kunde inte validera Vitec-uppgifter. Kontrollera att API-nyckeln och Kund-ID är korrekta.",
+              code: "VALIDATION_FAILED"
+            });
+          }
+        }
+
+        // Update settings
+        const updated = await storage.updateIntegrationSettings(user.id, {
+          vitecApiKey: vitecApiKey || undefined,
+          vitecCustomerId: vitecCustomerId || undefined,
+          vitecBaseUrl: vitecBaseUrl || undefined,
+          vitecEnabled: vitecEnabled !== undefined ? vitecEnabled : false,
+        });
+
+        // Return without exposing API key
+        res.json({
+          vitecEnabled: updated.vitecEnabled,
+          vitecApiKeySet: !!updated.vitecApiKey,
+          vitecCustomerId: updated.vitecCustomerId,
+          vitecBaseUrl: updated.vitecBaseUrl,
+          message: "Integrationsinställningar uppdaterade"
+        });
+      } catch (err) {
+        console.error("Update integration settings error:", err);
+        Sentry.captureException(err, { tags: { integration: "settings", action: "update" } });
+        res.status(500).json({ message: "Kunde inte uppdatera integrationsinställningar" });
+      }
+    });
+
+    // DELETE /api/integrations/settings — delete user's integration settings
+    app.delete("/api/integrations/settings", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        await storage.deleteIntegrationSettings(user.id);
+        
+        res.json({ message: "Integrationsinställningar raderade" });
+      } catch (err) {
+        console.error("Delete integration settings error:", err);
+        res.status(500).json({ message: "Kunde inte radera integrationsinställningar" });
       }
     });
   }

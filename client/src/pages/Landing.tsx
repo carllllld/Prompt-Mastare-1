@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Crown, Check, ArrowRight, Zap, Shield, FileText,
-  Sparkles, BarChart3, Pen, Menu, X, Image,
+  Sparkles, BarChart3, Pen, Menu, X, Image, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AuthModal } from "@/components/AuthModal";
@@ -133,9 +133,14 @@ const FEATURES = [
     desc: "Fyller i kollektivtrafik och närområde från adressen för snabbare, mer relevant lägesdel. (Pro/Premium)",
   },
   {
+    icon: Building2,
+    title: "Vitec-integration — importera & exportera",
+    desc: "Anslut ditt Vitec-konto och importera objekt direkt från ditt CRM. Exportera AI-genererade texter tillbaka med ett klick. Spara 30+ minuter per objekt. (Pro/Premium)",
+  },
+  {
     icon: Image,
-    title: "Importera från Vitec & Hemnet",
-    desc: "Koppla ditt Vitec-konto och hämta objektdata direkt. Eller klistra in en Hemnet-länk — formuläret fylls i automatiskt. (Pro/Premium för Vitec)",
+    title: "Importera från Hemnet",
+    desc: "Klistra in en Hemnet-länk — formuläret fylls i automatiskt med objektdata och bilder. Fungerar för alla användare.",
   },
   {
     icon: Sparkles,
@@ -175,7 +180,7 @@ const PLANS = [
     features: [
       "10 genereringar / månad",
       "40 AI-textredigeringar / månad",
-      "Vitec-integration — importera direkt från ditt CRM",
+      "✨ Vitec-integration — importera & exportera direkt",
       "Importera från Hemnet (klistra in länk)",
       "Adressuppslag (läge, kollektivtrafik, närområde)",
       "Bildanalys (valfritt)",
@@ -196,7 +201,7 @@ const PLANS = [
     features: [
       "25 genereringar / månad",
       "120 AI-textredigeringar / månad",
-      "Vitec-integration — importera direkt från ditt CRM",
+      "✨ Vitec-integration — importera & exportera direkt",
       "Importera från Hemnet (klistra in länk)",
       "Adressuppslag (läge, kollektivtrafik, närområde)",
       "Bildanalys (valfritt)",
@@ -317,13 +322,57 @@ export default function Landing() {
               { value: "Under 1 min", label: "per generering" },
               { value: "5 texter", label: "på en gång" },
               { value: "Stilmedvetet", label: "klyschfilter" },
-              { value: "Formatmallar", label: "Hemnet & Booli" },
+              { value: "Vitec-integration", label: "importera & exportera" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-xl sm:text-2xl font-bold text-primary">{stat.value}</div>
                 <div className="text-xs mt-0.5 text-muted-foreground">{stat.label}</div>
               </div>
             ))}
+          </div>
+
+          {/* Vitec highlight banner */}
+          <div className="mt-12 max-w-3xl mx-auto">
+            <div className="relative overflow-hidden rounded-xl border-2 p-6" style={{ 
+              background: "linear-gradient(135deg, #2D6A4F 0%, #1B4332 100%)",
+              borderColor: "#2D6A4F"
+            }}>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 backdrop-blur-sm flex-shrink-0">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-white">
+                      Vitec-integration
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-400 text-yellow-900">
+                      Nytt!
+                    </span>
+                  </div>
+                  <p className="text-sm text-white/90 mb-3 leading-relaxed">
+                    Anslut ditt Vitec-konto och importera objekt direkt från ditt CRM. 
+                    Exportera AI-genererade texter tillbaka med ett klick. Spara 30+ minuter per objekt.
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-xs text-white/90">
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-yellow-400" />
+                      <span>Snabb import från Vitec</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-yellow-400" />
+                      <span>AI-optimering</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-yellow-400" />
+                      <span>Direkt export tillbaka</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12" />
+            </div>
           </div>
         </div>
       </section>

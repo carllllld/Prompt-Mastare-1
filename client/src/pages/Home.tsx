@@ -10,6 +10,7 @@ import { CompactUsageWidget, CompactHistoryWidget, CompactUpgradeWidget } from "
 import { AuthModal } from "@/components/AuthModal";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
+import { VitecOnboardingBanner } from "@/components/VitecOnboardingBanner";
 import { useOptimize } from "@/hooks/use-optimize";
 import { useUserStatus } from "@/hooks/use-user-status";
 import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
@@ -321,6 +322,11 @@ export default function Home() {
 
       {/* ── MAIN ── */}
       <main className="max-w-[2200px] w-full mx-auto px-4 sm:px-6 xl:px-10 2xl:px-14 py-2">
+
+        {/* Vitec Onboarding Banner - show for Pro/Premium users who haven't configured Vitec */}
+        {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
+          <VitecOnboardingBanner isPro={true} />
+        )}
 
         {/* Kompakt widget-rad - endast när inloggad och inget resultat */}
         {isAuthenticated && !result && (

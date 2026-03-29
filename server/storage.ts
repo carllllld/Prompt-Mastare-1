@@ -10,6 +10,7 @@
   emailRateLimits, type EmailRateLimit,
   personalStyles, type PersonalStyle, type InsertPersonalStyle,
   usageTracking, type UsageTracking, type InsertUsageTracking,
+  integrationSettings, type IntegrationSettings, type InsertIntegrationSettings,
   pipelineMetrics
 } from "@shared/schema";
 import { db } from "./db";
@@ -97,8 +98,13 @@ export interface IStorage {
 
   // Usage tracking methods
   getMonthlyUsage(userId: string, user?: User): Promise<UsageTracking | null>;
-  incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses'): Promise<UsageTracking>;
+  incrementUsage(userId: string, type: 'texts' | 'areaSearches' | 'textEdits' | 'personalStyleAnalyses' | 'hemnetAnalyses'): Promise<UsageTracking>;
   resetMonthlyUsage(userId: string): Promise<void>;
+
+  // Integration settings methods
+  getIntegrationSettings(userId: string): Promise<IntegrationSettings | null>;
+  updateIntegrationSettings(userId: string, settings: Partial<InsertIntegrationSettings>): Promise<IntegrationSettings>;
+  deleteIntegrationSettings(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -696,6 +702,58 @@ export class DatabaseStorage implements IStorage {
   async resetMonthlyUsage(userId: string): Promise<void> {
     await db.delete(usageTracking)
       .where(eq(usageTracking.userId, userId));
+  }
+
+  // ==========================================
+  // Integration Settings
+  // ==========================================
+
+  async getIntegrationSettings(userId: string): Promise<IntegrationSettings | null> {
+    const result = await db
+      .select()
+      .from(integrationSettings)
+      .where(eq(integrationSettings.userId, userId))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  async updateIntegrationSettings(
+    userId: string,
+    settings: Partial<InsertIntegrationSettings>
+  ): Promise<IntegrationSettings> {
+    const existing = await this.getIntegrationSettings(userId);
+    
+    if (existing) {
+      // Update existing settings
+      const updated = await db
+        .update(integrationSettings)
+        .set({
+          ...settings,
+          updatedAt: new Date(),
+        })
+        .where(eq(integrationSettings.userId, userId))
+        .returning();
+      
+      return updated[0];
+    } else {
+      // Create new settings
+      const created = await db
+        .insert(integrationSettings)
+        .values({
+          userId,
+          ...settings,
+        })
+        .returning();
+      
+      return created[0];
+    }
+  }
+
+  async deleteIntegrationSettings(userId: string): Promise<void> {
+    await db
+      .delete(integrationSettings)
+      .where(eq(integrationSettings.userId, userId));
   }
 
   // ==========================================

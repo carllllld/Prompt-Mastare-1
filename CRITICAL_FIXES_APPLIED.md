@@ -72,7 +72,7 @@ content: "Du är en expert på svenska mäklartexter som skriver..."
 **Fixed:**
 Added complete endpoint with:
 - Authentication check
-- Vitec credentials validation
+- Environment variable configuration (VITEC_API_KEY, VITEC_CUSTOMER_ID)
 - Export data validation
 - Error handling
 - Sentry logging
@@ -80,6 +80,7 @@ Added complete endpoint with:
 ```typescript
 app.post("/api/vitec/export", requireAuth, async (req, res) => {
   // Full implementation with validation and error handling
+  // Uses environment variables instead of database storage
 });
 ```
 
@@ -87,6 +88,30 @@ app.post("/api/vitec/export", requireAuth, async (req, res) => {
 - Vitec export feature was completely non-functional
 - Would cause 404 errors for all users
 - Critical business feature broken
+
+**Status:** ✅ FIXED
+
+**Note:** Uses environment variables for Vitec credentials. To enable:
+```bash
+VITEC_API_KEY=your_key
+VITEC_CUSTOMER_ID=your_id
+```
+
+---
+
+## ✅ Fix #3.1: Database Error Fix (CRITICAL)
+
+**Files:** `server/routes.ts`, `client/src/components/VitecExportButton.tsx`
+
+**Issue:**
+- Initial implementation tried to use `storage.getIntegrationSettings()`
+- This method doesn't exist in the database
+- Error: `relation "integration_settings" does not exist`
+
+**Fixed:**
+- Changed to use environment variables instead
+- Simplified frontend settings check
+- No database changes required
 
 **Status:** ✅ FIXED
 
