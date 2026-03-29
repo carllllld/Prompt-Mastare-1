@@ -3,7 +3,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, Lock } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
 
 // PropertyFormData type - must match the form component
@@ -188,9 +188,11 @@ export function EssentialFieldsSection({
         )} />
         <FormField control={form.control} name="monthlyFee" render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-xs text-gray-500">Avgift (kr/mån)</FormLabel>
+            <FormLabel className="text-xs text-gray-500">
+              {isApartmentType ? "Avgift (kr/mån)" : "Driftkostnad (kr/mån)"}
+            </FormLabel>
             <FormControl>
-              <Input type="number" placeholder="Ex: 3 842" {...field} className={exampleInputClass} />
+              <Input type="number" placeholder={isApartmentType ? "Ex: 3 842" : "Ex: 4 500"} {...field} className={exampleInputClass} />
             </FormControl>
           </FormItem>
         )} />
@@ -199,7 +201,7 @@ export function EssentialFieldsSection({
       {/* Rooms + Condition */}
       <div className="grid grid-cols-4 gap-2.5 mb-3">
         <FormItem>
-          <FormLabel className="text-xs text-gray-500">Rum *</FormLabel>
+          <FormLabel className="text-xs text-gray-500">Rum (totalt) *</FormLabel>
           <div className="flex items-center gap-2 h-10">
             <Button type="button" variant="outline" size="sm" onClick={() => setRooms(Math.max(1, rooms - 1))} className="h-10 w-10 p-0">
               −
@@ -211,7 +213,7 @@ export function EssentialFieldsSection({
           </div>
         </FormItem>
         <FormItem>
-          <FormLabel className="text-xs text-gray-500">Sovrum *</FormLabel>
+          <FormLabel className="text-xs text-gray-500">Sovrum</FormLabel>
           <div className="flex items-center gap-2 h-10">
             <Button type="button" variant="outline" size="sm" onClick={() => setBedrooms(Math.max(0, bedrooms - 1))} className="h-10 w-10 p-0">
               −
@@ -223,9 +225,9 @@ export function EssentialFieldsSection({
           </div>
         </FormItem>
         <FormItem>
-          <FormLabel className="text-xs text-gray-500">Badrum *</FormLabel>
+          <FormLabel className="text-xs text-gray-500" title="Antal badrum och WC (räkna alla våtutrymmen)">Badrum / WC</FormLabel>
           <div className="flex items-center gap-2 h-10">
-            <Button type="button" variant="outline" size="sm" onClick={() => setBathrooms(Math.max(1, bathrooms - 1))} className="h-10 w-10 p-0">
+            <Button type="button" variant="outline" size="sm" onClick={() => setBathrooms(Math.max(0, bathrooms - 1))} className="h-10 w-10 p-0">
               −
             </Button>
             <span className="text-sm font-semibold flex-1 text-center">{bathrooms}</span>
@@ -236,7 +238,7 @@ export function EssentialFieldsSection({
         </FormItem>
         <FormField control={form.control} name="condition" render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-xs text-gray-500">Skick *</FormLabel>
+            <FormLabel className="text-xs text-gray-500" title="Bostadens allmänna skick — påverkar hur AI:n beskriver objektet">Allmänt skick</FormLabel>
             <Select onValueChange={field.onChange} defaultValue={field.value}>
               <FormControl>
                 <SelectTrigger className="h-10 bg-white">
@@ -394,6 +396,18 @@ export function EssentialFieldsSection({
             )} />
           </div>
           
+          {/* Biarea for houses */}
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
+            <FormField control={form.control} name="biarea" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm text-gray-600" title="Yta utanför boarea, t.ex. källare, garage, förråd">Biarea (kvm)</FormLabel>
+                <FormControl>
+                  <Input type="number" placeholder="Ex: 45" {...field} className={exampleInputClass} />
+                </FormControl>
+              </FormItem>
+            )} />
+          </div>
+
           {/* Land Ownership - Phase 2 Addition (CRITICAL for Swedish houses) */}
           <FormField control={form.control} name="landOwnership" render={({ field }) => (
             <FormItem className="mb-3">
@@ -417,6 +431,35 @@ export function EssentialFieldsSection({
           )} />
         </>
       )}
+
+      {/* Balkong / Uteplats */}
+      <div className="grid grid-cols-2 gap-2.5 mb-3">
+        <FormField control={form.control} name="balconyArea" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs text-gray-500">{isHouseOrTownhouseType ? "Uteplats (kvm)" : "Balkong (kvm)"}</FormLabel>
+            <FormControl>
+              <Input type="number" placeholder={isHouseOrTownhouseType ? "Ex: 25" : "Ex: 7"} {...field} className={exampleInputClass} />
+            </FormControl>
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="balconyDirection" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs text-gray-500">{isHouseOrTownhouseType ? "Väderstreck uteplats" : "Väderstreck balkong"}</FormLabel>
+            <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+                <SelectTrigger className="h-10 bg-white">
+                  <SelectValue placeholder="Välj..." />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent className="bg-white border border-input shadow-lg">
+                {BALCONY_DIRECTIONS.map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )} />
+      </div>
 
       {/* Tillträdesdag */}
       <FormField control={form.control} name="tilltradesdag" render={({ field }) => (

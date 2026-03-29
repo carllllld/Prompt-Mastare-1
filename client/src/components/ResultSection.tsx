@@ -718,11 +718,17 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
 
       {/* ── ACTION BUTTONS ── */}
       <div className="flex gap-3 pt-2 border-t border-border flex-wrap">
-        {vitecObjectId && propertyData && (
+        {propertyData && (
           <VitecExportButton
             propertyData={propertyData}
             generatedText={editedText}
+            headline={liveResult.headline}
+            socialCopy={liveResult.socialCopy}
+            shortAd={liveResult.shortAd}
+            showingInvitation={liveResult.showingInvitation}
+            instagramCaption={liveResult.instagramCaption}
             vitecObjectId={vitecObjectId}
+            isPro={isPro}
           />
         )}
         {onRegenerate && (

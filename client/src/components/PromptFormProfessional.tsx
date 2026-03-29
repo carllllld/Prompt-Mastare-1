@@ -72,7 +72,7 @@ const KITCHEN_CHIPS = [
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
   "Badkar", "Tvättmaskin", "Torktumlare", "Golvvärme i badrum",
-  "Dubbla handfat",
+  "Dubbla handfat", "Separat WC", "Gäst-WC",
 ];
 const FLOORING_CHIPS = [
   "Ekparkett", "Originalparkett", "Björkparkett",
@@ -80,7 +80,8 @@ const FLOORING_CHIPS = [
 ];
 const HEATING_CHIPS = [
   "Fjärrvärme", "Bergvärme", "Luft-vattenvärmepump", "Luft-luftvärmepump",
-  "Golvvärme", "Frånluftsvärmepump", "Vattenburen värme",
+  "Golvvärme (hela huset)", "Golvvärme (badrum)", "Golvvärme (kök)",
+  "Frånluftsvärmepump", "Vattenburen värme", "Direktverkande el",
 ];
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
@@ -132,8 +133,12 @@ const HEATING_TOOLTIPS: Record<string, string> = {
   "Bergvärme": "Värmepump som hämtar energi från berg",
   "Luft-vattenvärmepump": "Värmepump som värmer vatten via utomhusluft",
   "Luft-luftvärmepump": "Värmepump som värmer inomhusluften direkt",
+  "Golvvärme (hela huset)": "Vattenburet eller elektriskt uppvärmt golv i hela bostaden",
+  "Golvvärme (badrum)": "Uppvärmt golv enbart i badrum/våtutrymmen",
+  "Golvvärme (kök)": "Uppvärmt golv i köket",
   "Frånluftsvärmepump": "Värmepump som återvinner värme från ventilationsluft",
   "Vattenburen värme": "Radiatorsystem med varmvatten",
+  "Direktverkande el": "Elradiatorer utan vattenburet system",
 };
 
 const SPECIAL_TOOLTIPS: Record<string, string> = {
@@ -859,7 +864,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const priorityItems: PriorityItem[] = [
     { label: "Adress", completed: Boolean(addressValue?.trim()), fieldName: "address", priority: "critical" },
     { label: "Boarea", completed: Boolean(livingAreaValue?.trim()), fieldName: "livingArea", priority: "critical" },
-    { label: "Rum & badrum", completed: Boolean((rooms || 0) > 0 && (bathrooms || 0) > 0), fieldName: "totalRooms", priority: "critical" },
+    { label: "Rum & badrum", completed: Boolean((rooms || 0) > 0), fieldName: "totalRooms", priority: "critical" },
     
     // Platform-specific mandatory fields
     ...(selectedPlatform === "hemnet" ? [
@@ -1505,22 +1510,22 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 <CollapsibleChipSelector chips={KITCHEN_CHIPS} selected={kitchenChips} onToggle={(c) => toggleChip(kitchenChips, setKitchenChips, c)} tooltips={KITCHEN_TOOLTIPS} maxInitialChips={4} />
                 <FormField control={form.control} name="kitchenDescription" render={({ field }) => (
                   <FormItem className="mt-2">
-                    <p className="text-[10px] text-gray-400 mb-1">Komplettera bara chipsen med sådant som ger bättre text, till exempel material, fabrikat eller årtal.</p>
+                    <p className="text-[10px] text-gray-400 mb-1">Renoveringsår, material, fabrikat — det som gör köket unikt.</p>
                     <FormControl>
-                      <Input placeholder="Ex: Marbodalkök från 2019, bänkskiva i kvartskomposit och full maskinell utrustning från Siemens" {...field} className={exampleCompactInputClass} />
+                      <Input placeholder="Ex: Renoverat 2019, Marbodal, kvartskomposit, Siemens-vitvaror" {...field} className={exampleCompactInputClass} />
                     </FormControl>
                   </FormItem>
                 )} />
               </div>
               {/* Bathroom chips */}
               <div>
-                <span className="text-xs text-gray-500 font-medium block mb-2" id="bathroom-label">Badrum — välj det som stämmer</span>
+                <span className="text-xs text-gray-500 font-medium block mb-2" id="bathroom-label">Badrum — välj det som stämmer {bathrooms > 1 && <span className="text-gray-400">(beskriv alla {bathrooms} badrum/WC)</span>}</span>
                 <CollapsibleChipSelector chips={BATHROOM_CHIPS} selected={bathroomChips} onToggle={(c) => toggleChip(bathroomChips, setBathroomChips, c)} tooltips={BATHROOM_TOOLTIPS} maxInitialChips={4} />
                 <FormField control={form.control} name="bathroomDescription" render={({ field }) => (
                   <FormItem className="mt-2">
-                    <p className="text-[10px] text-gray-400 mb-1">Lägg bara till fakta som inte redan täcks av chipsen, till exempel årtal, tvättdel eller materialval.</p>
+                    <p className="text-[10px] text-gray-400 mb-1">Renoveringsår, antal badrum vs WC, tvättdel, materialval.</p>
                     <FormControl>
-                      <Input placeholder="Ex: Badrum renoverat 2020 med golvvärme, duschvägg i glas och kombimaskin under arbetsbänk" {...field} className={exampleCompactInputClass} />
+                      <Input placeholder={bathrooms > 1 ? "Ex: Badrum 1: renoverat 2020, helkaklat, golvvärme. WC: separat gäst-WC i hall" : "Ex: Renoverat 2020, helkaklat, golvvärme, kombimaskin"} {...field} className={exampleCompactInputClass} />
                     </FormControl>
                   </FormItem>
                 )} />
@@ -1536,7 +1541,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             <p className="text-[10px] text-gray-400 mb-3">
               Det här påverkar textens styrka mest. Välj och/eller beskriv med egna ord. Ju mer specifik desto bättre text.
             </p>
-            <CollapsibleChipSelector chips={USP_CHIPS} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} tooltips={USP_TOOLTIPS} maxInitialChips={4} />
+            <CollapsibleChipSelector chips={USP_CHIPS.filter(c => {
+              // Filtrera bort BRF-specifika chips för hus/villa
+              if (isHouseType && (c === "Låg avgift" || c === "Stabil BRF")) return false;
+              // Filtrera bort hus-specifika chips för lägenhet
+              if (isApartmentType && c === "Stor tomt") return false;
+              return true;
+            })} selected={uspChips} onToggle={(c) => toggleChip(uspChips, setUspChips, c)} tooltips={USP_TOOLTIPS} maxInitialChips={4} />
             <FormField control={form.control} name="uniqueSellingPoints" render={({ field }) => (
               <FormItem className="mt-2">
                 <FormControl>
