@@ -35,85 +35,72 @@ interface IntegrationSettings {
 function buildStructuredExport(props: VitecExportButtonProps): string {
   const { propertyData, generatedText, headline, socialCopy, shortAd, showingInvitation, instagramCaption } = props;
   const parts: string[] = [];
+  const isApt = propertyData.propertyType === "apartment" || propertyData.propertyType === "townhouse";
+  const typeMap: Record<string, string> = { apartment: "Lägenhet", house: "Villa", townhouse: "Radhus", villa: "Villa" };
 
-  // Object data header
-  parts.push("═══════════════════════════════════");
-  parts.push("OBJEKTDATA");
-  parts.push("═══════════════════════════════════");
+  // ── SECTION 1: Structured facts (goes into dedicated fields in Vitec/Hemnet) ──
+  parts.push("══ FAKTA (klistra in i respektive fält) ══");
+  parts.push("");
   
   if (propertyData.address) parts.push(`Adress: ${propertyData.address}`);
   if (propertyData.area) parts.push(`Område: ${propertyData.area}`);
-  
-  const typeMap: Record<string, string> = { apartment: "Lägenhet", house: "Villa", townhouse: "Radhus", villa: "Villa" };
   if (propertyData.propertyType) parts.push(`Typ: ${typeMap[propertyData.propertyType] || propertyData.propertyType}`);
   if (propertyData.livingArea) parts.push(`Boarea: ${propertyData.livingArea} kvm`);
   if (propertyData.biarea) parts.push(`Biarea: ${propertyData.biarea} kvm`);
-  if (propertyData.lotArea) parts.push(`Tomtarea: ${propertyData.lotArea} kvm`);
   if (propertyData.totalRooms) parts.push(`Rum: ${propertyData.totalRooms}`);
-  if (propertyData.bedrooms) parts.push(`Sovrum: ${propertyData.bedrooms}`);
-  if (propertyData.bathrooms) parts.push(`Badrum: ${propertyData.bathrooms}`);
-  if (propertyData.floor) parts.push(`Våning: ${propertyData.floor}`);
+  if (isApt && propertyData.floor) parts.push(`Våning: ${propertyData.floor}`);
   if (propertyData.buildYear) parts.push(`Byggår: ${propertyData.buildYear}`);
-  if (propertyData.monthlyFee) {
-    const isApt = propertyData.propertyType === "apartment" || propertyData.propertyType === "townhouse";
-    parts.push(`${isApt ? "Avgift" : "Driftkostnad"}: ${propertyData.monthlyFee} kr/mån`);
-  }
+  if (propertyData.monthlyFee) parts.push(`${isApt ? "Avgift" : "Driftkostnad"}: ${propertyData.monthlyFee} kr/mån`);
   if (propertyData.energyClass) parts.push(`Energiklass: ${propertyData.energyClass}`);
-  if (propertyData.brfName) parts.push(`BRF: ${propertyData.brfName}`);
+  if (!isApt && propertyData.lotArea) parts.push(`Tomtarea: ${propertyData.lotArea} kvm`);
+  if (isApt && propertyData.brfName) parts.push(`Förening: ${propertyData.brfName}`);
   if (propertyData.balconyArea) {
-    const isHouse = propertyData.propertyType === "house" || propertyData.propertyType === "villa";
-    parts.push(`${isHouse ? "Uteplats" : "Balkong"}: ${propertyData.balconyArea} kvm${propertyData.balconyDirection ? ` (${propertyData.balconyDirection})` : ""}`);
+    const label = isApt ? "Balkong" : "Uteplats";
+    parts.push(`${label}: ${propertyData.balconyArea} kvm${propertyData.balconyDirection ? `, ${propertyData.balconyDirection}` : ""}`);
   }
+  if (isApt && propertyData.elevator !== undefined) parts.push(`Hiss: ${propertyData.elevator ? "Ja" : "Nej"}`);
   if (propertyData.parking) parts.push(`Parkering: ${propertyData.parking}`);
-  if (propertyData.heating) parts.push(`Uppvärmning: ${propertyData.heating}`);
-  if (propertyData.condition) parts.push(`Skick: ${propertyData.condition}`);
-  if (propertyData.flooring) parts.push(`Golv: ${propertyData.flooring}`);
-  if (propertyData.storage) parts.push(`Förråd: ${propertyData.storage}`);
-  if (propertyData.tilltradesdag) parts.push(`Tillträde: ${propertyData.tilltradesdag}`);
 
-  // Texts
+  // ── SECTION 2: Texts (goes into text fields) ──
   parts.push("");
-  parts.push("═══════════════════════════════════");
-  parts.push("TEXTER");
-  parts.push("═══════════════════════════════════");
+  parts.push("══ TEXTER ══");
 
   if (headline) {
     parts.push("");
-    parts.push("── RUBRIK ──");
+    parts.push("── Rubrik ──");
     parts.push(headline);
   }
 
   parts.push("");
-  parts.push("── OBJEKTBESKRIVNING ──");
+  parts.push("── Objektbeskrivning ──");
   parts.push(generatedText);
 
   if (shortAd) {
     parts.push("");
-    parts.push("── KORTANNONS ──");
+    parts.push("── Kortannons ──");
     parts.push(shortAd);
-  }
-
-  if (socialCopy) {
-    parts.push("");
-    parts.push("── SOCIAL MEDIA ──");
-    parts.push(socialCopy);
   }
 
   if (showingInvitation) {
     parts.push("");
-    parts.push("── VISNINGSINBJUDAN ──");
+    parts.push("── Visningsinbjudan ──");
     parts.push(showingInvitation);
+  }
+
+  if (socialCopy) {
+    parts.push("");
+    parts.push("── Social media ──");
+    parts.push(socialCopy);
   }
 
   if (instagramCaption) {
     parts.push("");
-    parts.push("── INSTAGRAM ──");
+    parts.push("── Instagram ──");
     parts.push(instagramCaption);
   }
 
   parts.push("");
-  parts.push("═══════════════════════════════════");
-  parts.push(`Genererat av Mäklartexter — ${new Date().toLocaleDateString("sv-SE")}`);
+  parts.push(`— Mäklartexter ${new Date().toLocaleDateString("sv-SE")}`);
 
   return parts.join("\n");
 }
@@ -283,9 +270,9 @@ export function VitecExportButton(props: VitecExportButtonProps) {
             <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
               <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">Tips för mäklarsystem</p>
-                <p>I Vitec: Klistra in objektbeskrivningen i fältet "Objektbeskrivning" under fliken "Texter".</p>
-                <p>Rubrik, kortannons och visningsinbjudan har egna fält — kopiera dem separat från resultatsidan.</p>
+                <p className="font-medium text-foreground">Så här använder du exporten</p>
+                <p>Fakta-delen (adress, boarea, rum etc.) klistras in i respektive fält i ditt mäklarsystem — dessa visas som strukturerad data på Hemnet/Booli.</p>
+                <p>Objektbeskrivningen klistras in i textfältet — det är den löptext som köpare läser.</p>
               </div>
             </div>
           </div>

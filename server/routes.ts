@@ -3684,7 +3684,7 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
           input: [
             {
               role: "developer",
-              content: "Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver professionella, faktabaserade objektbeskrivningar utan AI-klyschor. Du vet exakt hur Hemnet-texter ska låta — konkreta, sakliga och köparrelevanta. Du använder ALDRIG fraser som 'välkommen till', 'erbjuder', 'bjuder på', 'i hjärtat av', 'för den som', 'generös planlösning'. Du börjar alltid med bostadens starkaste USP."
+              content: "Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver professionella, faktabaserade objektbeskrivningar utan AI-klyschor. Du vet exakt hur Hemnet-texter ska låta — konkreta, sakliga och köparrelevanta. Du använder ALDRIG fraser som 'välkommen till', 'erbjuder', 'bjuder på', 'i hjärtat av', 'för den som', 'generös planlösning'. Du börjar alltid med bostadens starkaste USP. VIKTIGT: På Hemnet visas pris, avgift, boarea, rum, våning, byggår, energiklass och BRF-namn som egna fält — upprepa dem INTE i löptexten. Objektbeskrivningen ska beskriva det som INTE framgår av siffrorna: planlösning, material, renoveringar, utsikt, läge, utemiljö."
             },
             {
               role: "user",
@@ -5436,6 +5436,8 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
           {
             role: "developer",
             content: `Du är en erfaren svensk fastighetsmäklare som redigerar objektbeskrivningar. Du vet hur Hemnet- och Booli-texter ska låta.
+
+VIKTIGT: På Hemnet visas pris, avgift, boarea, rum, våning, byggår, energiklass och BRF-namn som egna fält bredvid texten. Upprepa dem INTE i löptexten. Objektbeskrivningen ska beskriva det som INTE framgår av siffrorna: planlösning, material, renoveringar, utsikt, läge, utemiljö.
 
 TEXTSTIL: ${style === "factual" ? "Faktabaserad och återhållsam" : style === "selling" ? "Säljande men klyschfri" : "Balanserad, naturlig och professionell"}
 

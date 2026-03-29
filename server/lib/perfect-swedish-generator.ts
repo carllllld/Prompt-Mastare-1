@@ -113,7 +113,7 @@ export class SmartGenerationEngine {
 - INGEN punkt eller utropstecken i slutet
 - INGA emojis
 - NÄMN INTE pris, avgift eller energiklass
-- Fokusera på bostadens starkaste USP
+- Fokusera på bostadens starkaste USP — det som INTE framgår av siffrorna
 - MÅSTE inkludera bostadstyp (lägenhet, villa, hus, radhus)
 - Förtydliga renoveringar: "kök renoverat 2023" istället för bara "kök 2023"
 - Exempel: "Villa med södervänd uteplats och kök renoverat 2023"
@@ -223,9 +223,36 @@ export class SmartGenerationEngine {
     const platformStructureRules = normalizedPlatform === 'hemnet' ? `
 ## HEMNET: REGLER OCH STYCKESTRUKTUR
 
+### Vad som VISAS SOM EGNA FÄLT på Hemnet (NÄMN INTE i objektbeskrivningen)
+Följande information visas redan i separata fält bredvid objektbeskrivningen på Hemnet. 
+UPPREPA DEM INTE i löptexten — köparen ser dem redan:
+- Utgångspris
+- Avgift/månad (BRF) eller driftkostnad (villa)
+- Boarea och biarea (kvm)
+- Antal rum
+- Våning och antal våningar i huset
+- Byggår
+- BRF-namn och antal lägenheter i föreningen
+- Energiklass/energiprestanda
+- Tomtarea (villa/hus)
+- Balkong/uteplats (ja/nej)
+- Hiss (ja/nej)
+
+### Vad som SKA vara i objektbeskrivningen (löptexten)
+Objektbeskrivningen ska beskriva det som INTE framgår av siffrorna:
+- Hur rummen hänger ihop (planlösning, flöde)
+- Material och kvalitet (kök: märke, bänkskiva, vitvaror; badrum: kakel, golvvärme)
+- Renoveringar med årtal (kök renoverat 2022, badrum 2020)
+- Utsikt, ljusförhållanden, väderstreck
+- Uppvärmning och tekniska system
+- Läge och kommunikationer (avstånd i minuter)
+- Utemiljö (balkong/uteplats/trädgård med detaljer)
+- Det som gör bostaden unik (USP)
+
 ### Plattformsregler
 - NÄMN INTE energiklass eller energiprestanda — det visas separat i annonsen
 - NÄMN ALDRIG pris, utgångspris, avgift eller driftkostnad — det visas i separata fält på Hemnet
+- NÄMN INTE boarea som "XX kvm" i första meningen — det visas redan som eget fält. Nämn det bara om det behövs för kontext (t.ex. "trea om 76 kvm" i öppningen)
 - Avsluta ALDRIG med emotionella fraser som "välkommen hem", "skapa minnen", "allt du behöver"
 - Texten ska vara faktadriven och köparrelevant — ingen AI-känsla
 
@@ -253,9 +280,18 @@ VIKTIGT: NÄMN INTE pris, avgift eller driftkostnad — det visas i separata fä
     normalizedPlatform === 'booli' ? `
 ## BOOLI: REGLER OCH STYCKESTRUKTUR
 
+### Vad som VISAS SOM EGNA FÄLT på Booli (behöver inte upprepas)
+Booli visar liknande strukturerade fält som Hemnet:
+- Pris, avgift, boarea, rum, våning, byggår, energiklass
+- Dessa behöver inte upprepas i löptexten, men avgift KAN nämnas om det är ett säljargument (t.ex. låg avgift)
+
+### Vad som SKA vara i objektbeskrivningen
+Samma som Hemnet: planlösning, material, renoveringar, utsikt, läge, utemiljö, det unika.
+
 ### Plattformsregler
 - Något mer berättande ton tillåten men fakta måste förbli konkreta och verifierbara
 - Energiklass kan nämnas om det är ett säljargument (t.ex. energiklass A eller B)
+- Avgift/driftkostnad KAN nämnas i löptext om det är relevant (till skillnad från Hemnet)
 - Personlig röst tillåten men undvik klichéer
 
 ### Obligatorisk styckestruktur (4–5 stycken, tomrad mellan varje)
