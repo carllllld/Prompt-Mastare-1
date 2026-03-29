@@ -26,7 +26,7 @@ export default function PrivacyPolicy() {
           <section>
             <h2 className="text-lg font-semibold mb-2" style={{ color: "#1D2939" }}>1. Personuppgiftsansvarig</h2>
             <p>Mäklartexter ("vi", "oss", "vår") ansvarar för behandlingen av dina personuppgifter i enlighet med EU:s dataskyddsförordning (GDPR) och svensk dataskyddslagstiftning.</p>
-            <p>Kontakt: <a href="mailto:support@optiprompt.se" className="underline" style={{ color: "#2D6A4F" }}>support@optiprompt.se</a></p>
+            <p>Kontakt: <a href="mailto:support@maklartexter.se" className="underline" style={{ color: "#2D6A4F" }}>support@maklartexter.se</a></p>
           </section>
 
           <section>
@@ -81,7 +81,7 @@ export default function PrivacyPolicy() {
               <li><strong>Dataportabilitet</strong> — få ut dina data i maskinläsbart format</li>
               <li><strong>Invända</strong> mot behandling baserad på berättigat intresse</li>
             </ul>
-            <p>Kontakta <a href="mailto:support@optiprompt.se" className="underline" style={{ color: "#2D6A4F" }}>support@optiprompt.se</a> för att utöva dina rättigheter.</p>
+            <p>Kontakta <a href="mailto:support@maklartexter.se" className="underline" style={{ color: "#2D6A4F" }}>support@maklartexter.se</a> för att utöva dina rättigheter.</p>
           </section>
 
           <section>

@@ -19,14 +19,14 @@ const DEMO = [
     before:
       "Välkommen till denna fantastiska lägenhet med generösa ytor och en härlig balkong. Här bor du i ett attraktivt läge med närhet till allt du kan önska. Köket är perfekt för matlagning och hemmet bjuder på en underbar känsla. Missa inte denna unika möjlighet!",
     after:
-      "Karlavägen 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett och utgång till balkong med plats för utemöbler. Köket renoverades 2022 med induktionshäll, stenbänkskiva och matplats vid fönster.\n\nTvå sovrum ligger avskilt mot gården. Badrummet är helkaklat och uppdaterat 2020 med golvvärme. Avgift 3 900 kr/mån i välskött BRF.\n\nT-bana Östermalmstorg 4 min till fots. Visning: [TID].",
+      "Karlavägen 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett och utgång till balkong med plats för utemöbler. Köket renoverades 2022 med induktionshäll, stenbänkskiva och matplats vid fönster.\n\nTvå sovrum ligger avskilt mot gården. Badrummet är helkaklat och uppdaterat 2020 med golvvärme.\n\nT-bana Östermalmstorg 4 min till fots. Visning: [TID].",
   },
   {
     label: "Social text",
     before:
       "Nu finns en fin lägenhet till salu! Ljus, fräsch och perfekt för dig som vill bo centralt. Hör av dig för mer information! #bostad #lägenhet",
     after:
-      "Karlavägen 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nAvgift 3 900 kr/mån. Lugnt gårdsläge, 4 min till T-bana.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #östermalm #balkong",
+      "Karlavägen 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nLugnt gårdsläge, 4 min till T-bana Östermalmstorg.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #östermalm #balkong",
   },
   {
     label: "Visningsinbjudan",
@@ -39,7 +39,7 @@ const DEMO = [
     label: "Kortannons",
     before: "Fin trea i bra område. Balkong. Måste ses!",
     after:
-      "Karlavägen 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022, helkaklat badrum 2020. Avgift 3 900 kr/mån. T-bana 4 min. Visning: [TID].",
+      "Karlavägen 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022, helkaklat badrum 2020. T-bana 4 min. Visning: [TID].",
   },
 ];
 
@@ -129,8 +129,8 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: "Adressuppslag: läge på 1 klick",
-    desc: "Fyller i kollektivtrafik och närområde från adressen för snabbare, mer relevant lägesdel. (Pro/Premium)",
+    title: "Adressuppslag (beta)",
+    desc: "Försöker fylla i kollektivtrafik och närområde från adressen. Träffsäkerheten varierar — granska alltid resultatet. (Pro/Premium)",
   },
   {
     icon: Building2,
@@ -139,8 +139,8 @@ const FEATURES = [
   },
   {
     icon: Image,
-    title: "Importera från Hemnet",
-    desc: "Klistra in en Hemnet-länk — formuläret fylls i automatiskt med objektdata och bilder. Fungerar för alla användare.",
+    title: "Textanalys med Hemnet-länk",
+    desc: "Klistra in en Hemnet-länk — få AI-driven analys av befintlig annonstext med förbättringsförslag och omskrivning.",
   },
   {
     icon: UserCheck,
@@ -150,7 +150,7 @@ const FEATURES = [
   {
     icon: Crown,
     title: "Team-samarbete",
-    desc: "Bjud in kollegor, dela prompter och jobba tillsammans i samma flöde. (Pro/Premium)",
+    desc: "Bjud in kollegor, dela prompter och jobba tillsammans i samma flöde. (Premium)",
   },
 ];
 
@@ -165,8 +165,8 @@ const PLANS = [
       "2 genereringar / månad",
       "5 textformat per generering",
       "Klyschfilter för svensk mäklarprosa",
-      "300–450 ord per text",
-      "Importera från Hemnet (klistra in länk)",
+      "200–300 ord per objektbeskrivning",
+      "1 textanalys / månad (Hemnet-länk)",
     ],
     cta: "Kom igång gratis",
     tier: null as null | "pro" | "premium",
@@ -180,12 +180,11 @@ const PLANS = [
     features: [
       "10 genereringar / månad",
       "40 AI-textredigeringar / månad",
+      "5 textanalyser / månad (Hemnet-länk)",
       "Vitec-integration — importera & exportera direkt",
-      "Importera från Hemnet (klistra in länk)",
-      "Adressuppslag (läge, kollektivtrafik, närområde)",
+      "Adressuppslag — beta, granska resultatet",
       "Bildanalys (valfritt)",
       "Personlig skrivstil",
-      "Team-samarbete",
       "Kvalitetskontroll & förbättringsförslag (vid behov)",
       "Valfri textlängd (200–600 ord)",
     ],
@@ -199,16 +198,11 @@ const PLANS = [
     desc: "För dig med många objekt",
     color: "#8B5CF6",
     features: [
+      "Allt i Pro, plus:",
       "25 genereringar / månad",
       "120 AI-textredigeringar / månad",
-      "Vitec-integration — importera & exportera direkt",
-      "Importera från Hemnet (klistra in länk)",
-      "Adressuppslag (läge, kollektivtrafik, närområde)",
-      "Bildanalys (valfritt)",
-      "Personlig skrivstil",
+      "15 textanalyser / månad (Hemnet-länk)",
       "Team-samarbete",
-      "Kvalitetskontroll & förbättringsförslag (vid behov)",
-      "Valfri textlängd (200–600 ord)",
     ],
     cta: "Välj Premium",
     tier: "premium" as "premium",
@@ -506,7 +500,7 @@ export default function Landing() {
             ))}
           </div>
           <p className="text-xs text-center mt-6 text-muted-foreground">
-            Team-samarbete ingår i Pro och Premium.
+            Team-samarbete ingår i Premium. Vitec-integration ingår i Pro och Premium.
           </p>
         </div>
       </section>
@@ -548,7 +542,7 @@ export default function Landing() {
           <div className="flex items-center gap-6 text-xs" style={{ color: "#9CA3AF" }}>
             <Link href="/privacy" className="hover:text-white transition-colors">Integritetspolicy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Villkor</Link>
-            <a href="mailto:support@optiprompt.se" className="hover:text-white transition-colors">support@optiprompt.se</a>
+            <a href="mailto:support@maklartexter.se" className="hover:text-white transition-colors">support@maklartexter.se</a>
           </div>
           <p className="text-xs" style={{ color: "#6B7280" }}>
             © {new Date().getFullYear()} Mäklartexter

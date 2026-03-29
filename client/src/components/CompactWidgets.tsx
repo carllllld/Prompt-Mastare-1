@@ -145,7 +145,7 @@ export function CompactUpgradeWidget({ plan, onUpgrade, isLoading }: CompactUpgr
               </li>
               <li className="flex items-start gap-2 text-xs text-foreground">
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                <span>Bildanalys & adressuppslag</span>
+                <span>Bildanalys & adressuppslag (beta)</span>
               </li>
               <li className="flex items-start gap-2 text-xs text-foreground">
                 <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />

@@ -151,7 +151,7 @@ export function EssentialFieldsSection({
               </Button>
             </div>
             {addressLookupResult && (
-              <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{addressLookupResult} — kollektivtrafik och närområde ifyllt</p>
+              <p className="text-xs mt-1" style={{ color: "#6B7280" }}>{addressLookupResult} — kollektivtrafik och närområde ifyllt (beta, granska resultatet)</p>
             )}
             <FormMessage />
           </FormItem>

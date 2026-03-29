@@ -299,7 +299,7 @@ export const FEATURE_ACCESS = {
 
 // Ordgränser för objektbeskrivningar
 export const WORD_LIMITS = {
-  free: { min: 300, max: 450 },
+  free: { min: 200, max: 300 },
   pro: { min: 200, max: 600, default: { min: 350, max: 450 } },
   premium: { min: 200, max: 600, default: { min: 400, max: 600 } },
 } as const;

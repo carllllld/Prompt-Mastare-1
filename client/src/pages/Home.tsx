@@ -363,7 +363,7 @@ export default function Home() {
                 <p className="text-sm font-semibold text-warning">Månadskvoten är slut</p>
                 <p className="text-xs mt-0.5 text-warning">
                   {plan === "free"
-                    ? "Pro ger 10 genereringar, 40 AI-redigeringar, adressuppslag, bildanalys, personlig skrivstil och team-samarbete."
+                    ? "Pro ger 10 genereringar, 40 AI-redigeringar, adressuppslag (beta), bildanalys, personlig skrivstil och Vitec-integration."
                     : `Återställs ${userStatus?.resetTime ? new Date(userStatus.resetTime).toLocaleDateString("sv-SE", { day: "numeric", month: "long" }) : "nästa månad"}`}
                 </p>
               </div>
@@ -558,7 +558,7 @@ export default function Home() {
               {[
                 "5 textformat per generering",
                 "Hemnet-anpassad huvudtext",
-                "Importera från Hemnet",
+                "1 textanalys / månad",
                 "Stilmedvetet klyschfilter",
                 "Inget kreditkort krävs",
               ].map((f) => (

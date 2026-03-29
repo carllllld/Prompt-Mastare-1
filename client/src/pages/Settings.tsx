@@ -206,27 +206,24 @@ export default function Settings() {
     free: [
       "2 genereringar per månad (5 texter per generering)",
       "Klyschfilter för svensk mäklarprosa",
-      "Textlängd 300–450 ord",
+      "200–300 ord per objektbeskrivning",
+      "1 textanalys per månad",
     ],
     pro: [
       "10 genereringar per månad (5 texter per generering)",
       "40 AI-textredigeringar per månad",
-      "Adressuppslag (läge, kollektivtrafik, närområde)",
+      "Adressuppslag — beta, granska resultatet",
       "Bildanalys (valfritt)",
       "Personlig skrivstil",
-      "Team-samarbete",
       "Kvalitetskontroll och förbättringsförslag (vid behov)",
       "Textlängd 200–600 ord",
     ],
     premium: [
-      "25 genereringar per månad (5 texter per generering)",
+      "Allt i Pro, plus:",
+      "25 genereringar per månad",
       "120 AI-textredigeringar per månad",
-      "Adressuppslag (läge, kollektivtrafik, närområde)",
-      "Bildanalys (valfritt)",
-      "Personlig skrivstil",
+      "15 textanalyser per månad",
       "Team-samarbete",
-      "Kvalitetskontroll och förbättringsförslag (vid behov)",
-      "Textlängd 200–600 ord",
     ],
   };
 
