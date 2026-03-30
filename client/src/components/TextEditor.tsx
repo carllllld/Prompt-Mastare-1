@@ -223,7 +223,12 @@ export function TextEditor({ text, onTextChange }: TextEditorProps) {
       </div>
 
       <div className="mb-3 rounded-lg border px-3.5 py-3 text-xs" style={{ background: "#FAFAF7", borderColor: "#E8E5DE", color: "#6B7280" }}>
-        Skriv direkt i texten eller markera en mening, ett stycke eller ett rumsparti för att förbättra just den delen med AI.
+        <p className="font-medium mb-1" style={{ color: "#1D2939" }}>Så här redigerar du</p>
+        <ul className="space-y-0.5 list-disc list-inside">
+          <li>Skriv direkt i texten för manuella ändringar</li>
+          <li>Markera en mening eller ett stycke → välj AI-åtgärd (skriv om, kondensera, lyft fakta etc.)</li>
+          <li>Klicka på färgade markeringar för att se expertförslag</li>
+        </ul>
       </div>
 
       {/* Editable text area */}

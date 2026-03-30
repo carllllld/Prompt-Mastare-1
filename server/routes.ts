@@ -3529,7 +3529,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     app.post("/api/text/analyze", requireAuth, async (req, res) => {
       try {
         const user = (req as any).user as User;
-        const { text } = req.body;
+        const { text, context } = req.body;
 
         // Validate input
         if (!text || typeof text !== 'string') {
@@ -3582,6 +3582,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           instagramCaption: '',
           showingInvitation: '',
           shortAd: '',
+          userContext: typeof context === 'string' ? context.trim() : undefined,
         });
 
         // Track usage (same quota as Hemnet analysis)

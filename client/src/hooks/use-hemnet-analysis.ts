@@ -101,9 +101,9 @@ export function useHemnetAnalysis() {
 export function useTextAnalysis() {
   const queryClient = useQueryClient();
 
-  return useMutation<Omit<HemnetAnalysisResult, 'property'>, Error, string>({
-    mutationFn: async (text: string) => {
-      const res = await apiRequest('POST', '/api/text/analyze', { text });
+  return useMutation<Omit<HemnetAnalysisResult, 'property'>, Error, { text: string; context?: string }>({
+    mutationFn: async ({ text, context }) => {
+      const res = await apiRequest('POST', '/api/text/analyze', { text, context });
       
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: 'Okänt fel' }));
@@ -113,7 +113,6 @@ export function useTextAnalysis() {
       return res.json();
     },
     onSuccess: () => {
-      // Invalidate user status to update quota
       queryClient.invalidateQueries({ queryKey: ['/api/user/status'] });
     },
   });

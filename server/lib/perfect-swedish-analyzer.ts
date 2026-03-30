@@ -10,9 +10,10 @@ export interface AnalysisRequest {
   instagramCaption: string;
   showingInvitation: string;
   shortAd: string;
-  disposition: any;
-  style: WritingStyle;
-  platform: string;
+  disposition?: any;
+  style?: WritingStyle;
+  platform?: string;
+  userContext?: string;
 }
 
 export interface ExpertAnalysis {
@@ -211,7 +212,10 @@ export class ExpertAIAnalyzer {
       instagramCaption,
       showingInvitation,
       shortAd,
-      style, 
+      style,
+      platform,
+      userContext,
+    } = request;
       platform 
     } = request;
     const exemptPhrases = getExemptPhrases(style);
@@ -289,8 +293,8 @@ ${showingInvitation}
 Kort annons:
 ${shortAd}
 
-Stil: ${style} | Plattform: ${platform}
-
+Stil: ${style || 'balanced'} | Plattform: ${platform || 'hemnet'}
+${userContext ? `\n## EXTRA INSTRUKTIONER FRÅN ANVÄNDAREN\n${userContext}\n\nFölj dessa instruktioner och fokusera analysen på det användaren efterfrågar.\n` : ''}
 ## ANALYSERA ALLA FÄLT - KRITISKT!
 
 För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, kort annons):

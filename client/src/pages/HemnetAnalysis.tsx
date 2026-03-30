@@ -32,6 +32,7 @@ export default function HemnetAnalysis() {
   const [inputMode, setInputMode] = useState<"url" | "manual">("url");
   const [hemnetUrl, setHemnetUrl] = useState("");
   const [manualText, setManualText] = useState("");
+  const [analysisContext, setAnalysisContext] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [editedText, setEditedText] = useState("");
   const [rewriteContext, setRewriteContext] = useState("");
@@ -108,7 +109,7 @@ export default function HemnetAnalysis() {
         return;
       }
 
-      textMutation.mutate(manualText, {
+      textMutation.mutate({ text: manualText, context: analysisContext.trim() || undefined }, {
         onSuccess: (data) => {
           // Create a result object with mock property data
           setAnalysisResult({
@@ -335,6 +336,16 @@ export default function HemnetAnalysis() {
                       className="text-sm"
                       disabled={hemnetMutation.isPending}
                     />
+                    <p className="text-[11px] text-muted-foreground">Fungerar med hemnet.se/bostader/-länkar. Booli och andra sajter stöds inte.</p>
+
+                    <Input
+                      type="text"
+                      placeholder="Valfritt: Egna instruktioner, t.ex. 'Fokusera på juridik' eller 'Kolla om läget beskrivs korrekt'"
+                      value={analysisContext}
+                      onChange={(e) => setAnalysisContext(e.target.value)}
+                      className="text-sm"
+                      disabled={hemnetMutation.isPending}
+                    />
 
                     <Button
                       onClick={handleAnalyze}
@@ -383,10 +394,19 @@ export default function HemnetAnalysis() {
 
                   <div className="space-y-3">
                     <textarea
-                      placeholder="Välkommen till denna charmiga 3:a i hjärtat av Södermalm..."
+                      placeholder="Klistra in din befintliga mäklartext här..."
                       value={manualText}
                       onChange={(e) => setManualText(e.target.value)}
                       className="w-full min-h-[200px] p-3 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+                      disabled={textMutation.isPending}
+                    />
+
+                    <Input
+                      type="text"
+                      placeholder="Valfritt: Egna instruktioner, t.ex. 'Fokusera på juridik' eller 'Kolla om läget beskrivs korrekt'"
+                      value={analysisContext}
+                      onChange={(e) => setAnalysisContext(e.target.value)}
+                      className="text-sm"
                       disabled={textMutation.isPending}
                     />
 
