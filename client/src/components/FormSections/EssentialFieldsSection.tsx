@@ -122,7 +122,7 @@ export function EssentialFieldsSection({
 
       {/* Address + Area */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
-        <FormField control={form.control} name="address" rules={{ required: "Ange adress" }} render={({ field }) => (
+        <FormField control={form.control} name="address" render={({ field }) => (
           <FormItem className="sm:col-span-2">
             <FormLabel className="text-xs font-medium" style={{ color: "#4B5563" }}>Adress *</FormLabel>
             <div className="flex gap-2">
@@ -156,9 +156,9 @@ export function EssentialFieldsSection({
             <FormMessage />
           </FormItem>
         )} />
-        <FormField control={form.control} name="area" rules={{ required: "Ange område" }} render={({ field }) => (
+        <FormField control={form.control} name="area" render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-xs font-medium" style={{ color: "#4B5563" }}>Stadsdel / Område *</FormLabel>
+            <FormLabel className="text-xs font-medium" style={{ color: "#4B5563" }}>Stadsdel / Område</FormLabel>
             <FormControl>
               <Input placeholder="Ex: Vasastan, Linnéstaden" {...field} className={exampleInputClass} />
             </FormControl>
@@ -169,7 +169,7 @@ export function EssentialFieldsSection({
 
       {/* Size + Price + Fee */}
       <div className="grid grid-cols-3 gap-2.5 mb-3">
-        <FormField control={form.control} name="livingArea" rules={{ required: "Ange boarea" }} render={({ field }) => (
+        <FormField control={form.control} name="livingArea" render={({ field }) => (
           <FormItem>
             <FormLabel className="text-xs text-gray-500">Boarea (kvm) *</FormLabel>
             <FormControl>
