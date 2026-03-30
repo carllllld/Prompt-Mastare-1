@@ -53,6 +53,13 @@ export const FORBIDDEN_PHRASES = [
   "sammanfattningsvis",
   "detta gör bostaden till",
   "detta gör villan till",
+
+  // === MJUKA AI-KLYSCHOR (låter bra men säger inget) ===
+  "förlänger säsongen",
+  "självklar plats",
+  "ovanligt praktiskt",
+  "ger en stark helhet",
+  "på ett naturligt sätt",
 ];
 
 // === HEMNET-SPECIFIKA REGLER ===

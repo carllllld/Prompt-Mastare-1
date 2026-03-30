@@ -250,6 +250,19 @@ Om något av dessa påståenden förekommer UTAN konkret bevis (t.ex. renovering
 
     return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback i JSON-format.
 
+## DIN VIKTIGASTE REGEL: VERIFIERA INNAN DU FLAGGAR
+
+Innan du rapporterar ett problem, CITERA den exakta texten som är problematisk.
+Om du inte kan citera exakt text → flagga INTE.
+
+Exempel på KORREKT flaggning:
+- Issue: "Frasen 'förlänger säsongen' i stycke 1 är en mjuk klyscha utan konkret innebörd"
+- Location: "improvedPrompt"
+
+Exempel på FELAKTIG flaggning (gör INTE detta):
+- "Undvik specifika restaurangnamn" → men texten säger "restauranger" (generellt) = FALSKT ALARM
+- "Nämn inte pris" → men texten nämner inte pris = FALSKT ALARM
+
 ## FÖRBJUDNA FRASER (MÅSTE flaggas som "critical" om de förekommer i NÅGOT fält)
 ${blockedPhrases.map(p => `- "${p}"`).join('\n')}
 
@@ -299,6 +312,12 @@ För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, 
 4. JURIDIK: Vilseledande påståenden? Faktafel?
 
 **VIKTIGT**: Du MÅSTE kontrollera VARJE fält för VARJE förbjuden fras, otydligt påstående och plattformsregel. Missa INGENTING!
+
+**KRITISKT — UNDVIK FALSKA ALARM:**
+- Flagga INTE generella termer som "restauranger", "kaféer", "butiker", "matställen" — dessa är KORREKTA. Flagga BARA om SPECIFIKA namn nämns (t.ex. "Restaurang Gondolen", "ICA Maxi Vasastan").
+- Flagga INTE saker som redan är korrekta. Läs texten noggrant innan du flaggar.
+- Om ett fält är tomt, flagga det som "Fältet är tomt" — inte som att det bryter mot en regel.
+- Varje förbättring MÅSTE citera den exakta texten som är problematisk.
 
 ## OUTPUT FORMAT
 

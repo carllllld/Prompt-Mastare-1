@@ -361,6 +361,14 @@ ${auxiliaryFieldRules}
 
 ${platformStructureRules}
 
+## GRUNDPRINCIP: VARJE MENING MÅSTE TILLFÖRA FAKTA
+
+Innan du skriver en mening, fråga: "Kan en köpare verifiera detta vid en visning?"
+- JA → Behåll. Exempel: "Köket renoverades 2020 med köksö och kompositbänk."
+- NEJ → Stryk eller skriv om med fakta. Exempel: "förlänger säsongen" → stryk. "självklar plats" → stryk. "ovanligt praktiskt" → "tre badrum underlättar vid större hushåll".
+
+En mening som inte innehåller minst ETT konkret faktum (årtal, material, mått, avstånd, antal) ska inte vara med.
+
 ## FÖRBJUDNA FRASER (använd ALDRIG dessa)
 
 Följande fraser är AI-klyschor som aldrig förekommer i riktig mäklartext. Använd dem INTE:
@@ -729,7 +737,7 @@ KRITISKT:
     
     // Headline: max 9 words, no trailing punctuation
     const headlineWords = result.headline.split(/\s+/).filter(w => w.length > 0).length;
-    if (headlineWords > 10) {
+    if (headlineWords > 9) {
       violations.push(`headline has ${headlineWords} words (should be max 9)`);
     }
 
@@ -758,11 +766,17 @@ KRITISKT:
       violations.push(`instagramCaption has ${result.instagramCaption.length} characters (max 2200)`);
     }
 
-    // Critical violations only (malformed, missing required words, forbidden phrases)
+    // Short ad: must not be empty
+    if (!result.shortAd || result.shortAd.trim().length < 10) {
+      violations.push(`shortAd is empty or too short (must contain bostadstyp + boarea)`);
+    }
+
+    // Critical violations only (malformed, missing required words, forbidden phrases, empty required fields)
     const criticalViolations = violations.filter(v => 
       v.includes('malformed') || 
       v.includes('missing word') ||
-      v.includes('forbidden phrase')
+      v.includes('forbidden phrase') ||
+      v.includes('shortAd is empty')
     );
 
     if (criticalViolations.length > 0) {
