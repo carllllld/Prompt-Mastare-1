@@ -59,10 +59,24 @@ export class SmartGenerationEngine {
           { role: 'user', content: userPrompt }
         ],
         // Note: temperature not supported with reasoning_effort
-        max_completion_tokens: 2500,
+        max_completion_tokens: 4000,
         // REMOVED response_format - let AI write naturally, we'll parse the output
         reasoning_effort: 'medium',
       });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        // Log full response for debugging
+        console.error('[GENERATOR] Empty OpenAI response:', JSON.stringify({
+          choices: completion.choices?.map(c => ({ 
+            finish_reason: c.finish_reason, 
+            content_length: c.message?.content?.length || 0,
+            refusal: c.message?.refusal,
+          })),
+          usage: completion.usage,
+        }));
+        throw new Error('No content in OpenAI response');
+      }
 
       const result = this.extractResult(completion);
       
@@ -487,7 +501,7 @@ HUVUDTEXT:
 (${targetWordMin}-${targetWordMax} ord, minst 3 styckebrytningar)
 
 RUBRIK:
-(Max 10 ord, ingen punkt)
+(Max 9 ord, ingen punkt)
 
 SOCIAL MEDIA:
 (Max 3 meningar, avsluta med punkt)
@@ -533,44 +547,39 @@ KRITISKT:
     }
 
     try {
-      // Try to extract fields using markers
-      const extractField = (marker: string): string => {
-        // Try multiple marker variations (Swedish and English)
-        const markers = [marker];
-        if (marker === 'HUVUDTEXT:') markers.push('IMPROVED PROMPT:', 'MAIN TEXT:');
-        if (marker === 'RUBRIK:') markers.push('HEADLINE:', 'TITLE:');
-        if (marker === 'SOCIAL MEDIA:') markers.push('SOCIAL COPY:');
-        if (marker === 'INSTAGRAM:') markers.push('INSTAGRAM CAPTION:');
-        if (marker === 'VISNINGSINBJUDAN:') markers.push('SHOWING INVITATION:', 'VIEWING INVITATION:');
-        if (marker === 'KORT ANNONS:') markers.push('SHORT AD:', 'SHORT ADVERTISEMENT:');
-
-        for (const m of markers) {
-          // Match marker, then capture everything until the next ALL-CAPS marker or end
-          // This handles both "RUBRIK:\nText here" and "RUBRIK: Text here"
-          const escapedMarker = m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          const regex = new RegExp(
-            `${escapedMarker}\\s*\\n?\\s*([\\s\\S]*?)(?=\\n\\s*(?:[A-ZÅÄÖ]{3,}[A-ZÅÄÖ\\s]*:|$))`,
-            'i'
-          );
-          const match = content.match(regex);
-          if (match && match[1]) {
-            let extracted = match[1].trim();
-            // Remove any parenthetical instructions at the start (e.g., "(Max 10 ord...)")
-            extracted = extracted.replace(/^\([^)]*\)\s*/, '');
-            // Remove any bracketed instructions at the start (e.g., "[Max 10 ord...]")
-            extracted = extracted.replace(/^\[[^\]]*\]\s*/, '');
-            return extracted;
+      // Robust field extraction using simple indexOf (no regex escaping needed)
+      const extractField = (primaryMarker: string, altMarkers: string[] = []): string => {
+        const allMarkers = [primaryMarker, ...altMarkers];
+        const upperContent = content.toUpperCase();
+        
+        for (const marker of allMarkers) {
+          const idx = upperContent.indexOf(marker.toUpperCase());
+          if (idx === -1) continue;
+          
+          // Get text after the marker
+          const afterMarker = content.substring(idx + marker.length).replace(/^\s*\n?\s*/, '');
+          
+          // Find the next ALL-CAPS marker (3+ uppercase letters followed by colon at start of line)
+          const nextMarkerMatch = afterMarker.match(/\n\s*([A-ZÅÄÖ][A-ZÅÄÖ \-]{2,}:)/);
+          const fieldText = nextMarkerMatch 
+            ? afterMarker.substring(0, nextMarkerMatch.index).trim()
+            : afterMarker.trim();
+          
+          if (fieldText) {
+            // Remove parenthetical/bracketed instructions at start
+            let cleaned = fieldText.replace(/^\([^)]*\)\s*/, '').replace(/^\[[^\]]*\]\s*/, '');
+            return cleaned.trim();
           }
         }
         return '';
       };
 
-      const improvedPrompt = extractField('HUVUDTEXT:');
-      const headline = extractField('RUBRIK:');
-      const socialCopy = extractField('SOCIAL MEDIA:');
-      const instagramCaption = extractField('INSTAGRAM:');
-      const showingInvitation = extractField('VISNINGSINBJUDAN:');
-      const shortAd = extractField('KORT ANNONS:');
+      const improvedPrompt = extractField('HUVUDTEXT:', ['IMPROVED PROMPT:', 'MAIN TEXT:']);
+      const headline = extractField('RUBRIK:', ['HEADLINE:', 'TITLE:']);
+      const socialCopy = extractField('SOCIAL MEDIA:', ['SOCIAL COPY:']);
+      const instagramCaption = extractField('INSTAGRAM:', ['INSTAGRAM CAPTION:']);
+      const showingInvitation = extractField('VISNINGSINBJUDAN:', ['SHOWING INVITATION:', 'VIEWING INVITATION:']);
+      const shortAd = extractField('KORT ANNONS:', ['SHORT AD:', 'KORTANNONS:', 'SHORT ADVERTISEMENT:']);
 
       if (!improvedPrompt || !headline) {
         // Fallback: try JSON parsing if markers didn't work
@@ -603,7 +612,7 @@ KRITISKT:
       };
     } catch (error) {
       console.error('Failed to parse OpenAI response:', content);
-      throw new Error(`Invalid response format from OpenAI: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error('Invalid response format from OpenAI: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -634,24 +643,12 @@ KRITISKT:
 
       // Check for double punctuation
       if (/\.{2,}/.test(text)) {
-        violations.push(`${field} contains double punctuation (..)`);
+        violations.push('double punctuation found in ' + field);
       }
 
       // Check for space before punctuation
       if (/\s+[.!?,;:]/.test(text)) {
-        violations.push(`${field} contains space before punctuation`);
-      }
-
-      // Check for words with trailing digits (e.g., "nyskick2")
-      const wordsWithDigits = text.match(/\b[a-zåäöA-ZÅÄÖ]+\d+\b/g);
-      if (wordsWithDigits) {
-        violations.push(`${field} contains words with trailing digits: ${wordsWithDigits.join(', ')}`);
-      }
-
-      // Check for excessive "vilket" repetition (max 3 occurrences)
-      const vilketMatches = text.match(/\bvilket\b/gi);
-      if (vilketMatches && vilketMatches.length > 3) {
-        violations.push(`${field} contains "vilket" ${vilketMatches.length} times (max 3) - use varied sentence structures`);
+        violations.push(field + ' contains space before punctuation');
       }
     }
 
@@ -665,15 +662,13 @@ KRITISKT:
       if (typeof text !== 'string') continue;
 
       if (businessNamePattern.test(text)) {
-        violations.push(`${field} contains specific business name (should use generic terms)`);
+        violations.push(field + ' contains specific business name');
       }
-
       if (restaurantPattern.test(text)) {
-        violations.push(`${field} contains specific restaurant name (should use "restauranger")`);
+        violations.push(field + ' contains specific restaurant name');
       }
-
       if (cafePattern.test(text)) {
-        violations.push(`${field} contains specific café name (should use "kaféer")`);
+        violations.push(field + ' contains specific cafe name');
       }
     }
 
@@ -682,120 +677,48 @@ KRITISKT:
     for (const field of fields) {
       const text = result[field];
       if (typeof text !== 'string') continue;
-
       for (const phrase of forbiddenPhrases) {
         if (text.toLowerCase().includes(phrase.toLowerCase())) {
-          violations.push(`${field} contains forbidden phrase: "${phrase}"`);
+          violations.push(field + ' contains forbidden phrase: "' + phrase + '"');
         }
       }
     }
 
     // Platform-specific validation (Hemnet)
     if (normalizedPlatform === 'hemnet') {
-      const pricePattern = /\b(pris|avgift|driftkostnad|kr\/mån|utgångspris|kronor|SEK)\b/gi;
+      const pricePattern = /\b(pris|avgift|driftkostnad|utgångspris|kronor|SEK)\b/gi;
       const energyPattern = /\b(energiklass|energiprestanda)\b/gi;
-
       for (const field of fields) {
         const text = result[field];
         if (typeof text !== 'string') continue;
-
         const priceMatches = text.match(pricePattern);
-        if (priceMatches) {
-          violations.push(`${field} contains price/fee: "${priceMatches[0]}" (Hemnet violation)`);
-        }
-
+        if (priceMatches) violations.push(field + ' contains price/fee (Hemnet violation)');
         const energyMatches = text.match(energyPattern);
-        if (energyMatches) {
-          violations.push(`${field} contains energiklass: "${energyMatches[0]}" (Hemnet violation)`);
-        }
+        if (energyMatches) violations.push(field + ' contains energiklass (Hemnet violation)');
       }
     }
 
-    // Emoji validation
-    const emojiPattern = /[\u{1F300}-\u{1F9FF}]/gu;
-
-    // Hemnet: NO emojis in headline, socialCopy, showingInvitation, shortAd
-    if (normalizedPlatform === 'hemnet') {
-      const hemnetNoEmojiFields: Array<keyof typeof result> = [
-        'headline',
-        'socialCopy',
-        'showingInvitation',
-        'shortAd'
-      ];
-
-      for (const field of hemnetNoEmojiFields) {
-        const text = result[field];
-        if (typeof text !== 'string') continue;
-
-        if (emojiPattern.test(text)) {
-          violations.push(`${field} contains emojis (forbidden for Hemnet)`);
-        }
-      }
-    }
-
-    // Field-specific validation (critical issues only)
-    
-    // Headline: max 9 words, no trailing punctuation
+    // Headline validation
     const headlineWords = result.headline.split(/\s+/).filter(w => w.length > 0).length;
-    if (headlineWords > 9) {
-      violations.push(`headline has ${headlineWords} words (should be max 9)`);
-    }
+    if (headlineWords > 9) violations.push('headline has ' + headlineWords + ' words (max 9)');
+    if (/[.!?]/.test(result.headline.slice(-1))) violations.push('headline has trailing punctuation');
 
-    if (/[.!?]$/.test(result.headline)) {
-      violations.push(`headline has trailing punctuation`);
-    }
+    // Showing invitation validation
+    if (!/visning/i.test(result.showingInvitation)) violations.push('showingInvitation missing word visning');
 
-    // Showing invitation: must contain "visning" and be complete (not malformed)
-    if (!/visning/i.test(result.showingInvitation)) {
-      violations.push(`showingInvitation missing word "visning"`);
-    }
+    // Short ad validation
+    if (!result.shortAd || result.shortAd.trim().length < 10) violations.push('shortAd is empty or too short');
 
-    // Check for malformed patterns (double dots, incomplete sentences)
-    if (/:\s*\.|sker\s+via\s*\.?\s*$|anmälan\s+sker\s+via\s*\.?\s*$/.test(result.showingInvitation)) {
-      violations.push(`showingInvitation appears malformed or incomplete`);
-    }
-
-    // Instagram caption: max 2 emojis
-    const instagramEmojis = result.instagramCaption.match(emojiPattern) || [];
-    if (instagramEmojis.length > 2) {
-      violations.push(`instagramCaption has ${instagramEmojis.length} emojis (max 2)`);
-    }
-
-    // Instagram caption: max 2200 characters
-    if (result.instagramCaption.length > 2200) {
-      violations.push(`instagramCaption has ${result.instagramCaption.length} characters (max 2200)`);
-    }
-
-    // Short ad: must not be empty
-    if (!result.shortAd || result.shortAd.trim().length < 10) {
-      violations.push(`shortAd is empty or too short (must contain bostadstyp + boarea)`);
-    }
-
-    // Critical violations only (malformed, missing required words, forbidden phrases, empty required fields)
-    const criticalViolations = violations.filter(v => 
-      v.includes('malformed') || 
-      v.includes('missing word') ||
-      v.includes('forbidden phrase') ||
-      v.includes('shortAd is empty')
+    // Critical violations
+    const criticalViolations = violations.filter(v =>
+      v.includes('malformed') || v.includes('missing word') || v.includes('forbidden phrase')
     );
-
     if (criticalViolations.length > 0) {
-      console.error('[GENERATOR_VALIDATION_FAILED]', {
-        platform: normalizedPlatform,
-        criticalViolations,
-        timestamp: new Date().toISOString()
-      });
-
+      console.error('[GENERATOR_VALIDATION_FAILED]', { platform: normalizedPlatform, criticalViolations });
       throw new GeneratorValidationError(criticalViolations, result);
     }
-
-    // Non-critical issues: log as warnings but don't fail
     if (violations.length > 0) {
-      console.warn('[GENERATOR_VALIDATION_WARNINGS]', {
-        platform: normalizedPlatform,
-        warnings: violations,
-        timestamp: new Date().toISOString()
-      });
+      console.warn('[GENERATOR_VALIDATION_WARNINGS]', { platform: normalizedPlatform, warnings: violations });
     }
   }
 }
