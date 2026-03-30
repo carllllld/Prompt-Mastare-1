@@ -216,8 +216,6 @@ export class ExpertAIAnalyzer {
       platform,
       userContext,
     } = request;
-      platform 
-    } = request;
     const exemptPhrases = getExemptPhrases(style);
     const blockedPhrases = FORBIDDEN_PHRASES.filter(p => !exemptPhrases.has(p));
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
