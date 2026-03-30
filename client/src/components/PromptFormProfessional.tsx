@@ -67,7 +67,7 @@ interface PropertyFormData {
 const KITCHEN_CHIPS = [
   "Renoverat kök", "Köksö", "Stenbänk", "Kompositbänk",
   "Integrerade vitvaror", "Platsbyggt kök", "Matplats i kök",
-  "Öppen planlösning", "Moderna vitvaror", "Fönster vid matplats",
+  "Öppen planlösning",
 ];
 const BATHROOM_CHIPS = [
   "Helkaklat", "Renoverat badrum", "Duschvägg i glas",
@@ -80,23 +80,25 @@ const FLOORING_CHIPS = [
 ];
 const HEATING_CHIPS = [
   "Fjärrvärme", "Bergvärme", "Luft-vattenvärmepump", "Luft-luftvärmepump",
-  "Golvvärme (hela huset)", "Golvvärme (badrum)", "Golvvärme (kök)",
-  "Frånluftsvärmepump", "Vattenburen värme", "Direktverkande el",
+  "Golvvärme", "Frånluftsvärmepump", "Vattenburen värme", "Direktverkande el",
 ];
 const SPECIAL_CHIPS = [
   "Stambyte genomfört", "Nya fönster", "Nytt tak",
   "Dränering utförd", "Solceller", "Fiber indraget",
-  "Braskamin", "Säkerhetsdörr", "Varmvattenberedare",
+  "Braskamin", "Kakelugn", "Öppen spis",
+  "Säkerhetsdörr", "Takhöjd över 2,7m",
 ];
 const GARDEN_CHIPS = [
-  "Välskött trädgård", "Uteplats i söder", "Altan", "Trädäck",
+  "Uteplats i söder", "Altan", "Trädäck",
   "Fruktträd", "Förråd", "Bod", "Pergola",
+  "Innergård", "Växthus",
 ];
 const USP_CHIPS = [
   "Söderläge", "Fri utsikt", "Ingen insyn", "Lugn gårdssida",
   "Genomgående planlösning", "Låg avgift", "Stabil BRF",
   "Nära pendling", "Flera badrum",
   "Hög standard", "Nyproduktion", "Balkong i söder",
+  "Klädkammare", "Walk-in closet",
 ];
 const PARKING_CHIPS = [
   "Garage", "Dubbelgarage", "Carport", "P-plats",
@@ -116,7 +118,6 @@ const KITCHEN_TOOLTIPS: Record<string, string> = {
   "Kompositbänk": "Bänkskiva i kvartskomposit eller liknande",
   "Integrerade vitvaror": "Vitvaror inbyggda i köksinredningen",
   "Platsbyggt kök": "Skräddarsytt kök anpassat efter rummet",
-  "Moderna vitvaror": "Nyare vitvaror i gott skick",
   "Matplats i kök": "Plats för matbord med 4–6 sittplatser i köket",
   "Köksö": "Fristående arbetsyta mitt i köket",
 };
@@ -133,9 +134,7 @@ const HEATING_TOOLTIPS: Record<string, string> = {
   "Bergvärme": "Värmepump som hämtar energi från berg",
   "Luft-vattenvärmepump": "Värmepump som värmer vatten via utomhusluft",
   "Luft-luftvärmepump": "Värmepump som värmer inomhusluften direkt",
-  "Golvvärme (hela huset)": "Vattenburet eller elektriskt uppvärmt golv i hela bostaden",
-  "Golvvärme (badrum)": "Uppvärmt golv enbart i badrum/våtutrymmen",
-  "Golvvärme (kök)": "Uppvärmt golv i köket",
+  "Golvvärme": "Uppvärmt golv — ange var i fritextfältet (badrum, hall, hela huset etc.)",
   "Frånluftsvärmepump": "Värmepump som återvinner värme från ventilationsluft",
   "Vattenburen värme": "Radiatorsystem med varmvatten",
   "Direktverkande el": "Elradiatorer utan vattenburet system",
@@ -146,26 +145,27 @@ const SPECIAL_TOOLTIPS: Record<string, string> = {
   "Dränering utförd": "System för bortledning av grundvatten",
   "Fiber indraget": "Fiberoptisk bredbandsanslutning",
   "Säkerhetsdörr": "Säkerhetsklassad ytterdörr med extra inbrottsskydd",
-  "Hiss": "Hiss installerad i fastigheten",
-  "Varmvattenberedare": "Egen varmvattenberedare (vanligt i villor)",
-  "Originaldetaljer": "Bevarade historiska detaljer från byggnadsåret",
+  "Kakelugn": "Bevarad kakelugn (vanligt i sekelskifteslägenheter)",
+  "Öppen spis": "Fungerande eller dekorativ öppen spis",
+  "Takhöjd över 2,7m": "Högre takhöjd än standard (2,4m) — vanligt i äldre hus",
 };
 
 const GARDEN_TOOLTIPS: Record<string, string> = {
-  "Insynsskyddat": "Skyddat från insyn via häck, staket eller läge",
   "Förråd": "Större förvaringsbyggnad i trädgården",
   "Bod": "Mindre förvaringsbyggnad i trädgården",
   "Pergola": "Öppen spaljékonstruktion för klätterväxter",
+  "Innergård": "Gemensam gård i BRF eller kvarter",
   "Växthus": "Inglasad odlingsyta i trädgården",
 };
 
 const USP_TOOLTIPS: Record<string, string> = {
   "Genomgående planlösning": "Fönster på flera väderstreck ger genomljusning",
   "Stabil BRF": "Bostadsrättsförening med god ekonomi",
-  "Laddbox för elbil": "Installerad laddstation för elfordon",
   "Hög standard": "Genomgående hög materialkvalitet och finish",
   "Nyproduktion": "Nybyggd bostad eller färdigställd senaste åren",
   "Balkong i söder": "Balkong med söderläge för maximalt solljus",
+  "Klädkammare": "Separat rum för klädförvaring",
+  "Walk-in closet": "Stor garderob man kan gå in i",
 };
 
 const PARKING_TOOLTIPS: Record<string, string> = {
@@ -1543,7 +1543,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             </p>
             <CollapsibleChipSelector chips={USP_CHIPS.filter(c => {
               // Filtrera bort BRF-specifika chips för hus/villa
-              if (isHouseType && (c === "Låg avgift" || c === "Stabil BRF")) return false;
+              if (isHouseType && (c === "Låg avgift" || c === "Stabil BRF" || c === "Lugn gårdssida")) return false;
               // Filtrera bort hus-specifika chips för lägenhet
               if (isApartmentType && c === "Stor tomt") return false;
               return true;
@@ -1632,7 +1632,16 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           >
             <div className="space-y-3">
               <p className="text-[10px] text-gray-400">Välj den primära uppvärmningskällan. Kombinationer som fjärrvärme + golvvärme är vanliga.</p>
-              <CollapsibleChipSelector chips={HEATING_CHIPS} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} tooltips={HEATING_TOOLTIPS} maxInitialChips={4} />
+              <CollapsibleChipSelector chips={HEATING_CHIPS.filter(c => {
+                // Bergvärme och luft-vatten är nästan bara villa
+                if (isApartmentType && (c === "Bergvärme" || c === "Luft-vattenvärmepump" || c === "Luft-luftvärmepump" || c === "Direktverkande el")) return false;
+                return true;
+              })} selected={heatingChips} onToggle={(c) => toggleChip(heatingChips, setHeatingChips, c)} tooltips={HEATING_TOOLTIPS} maxInitialChips={4} />
+              <FormField control={form.control} name="heating" render={({ field }) => (
+                <FormItem>
+                  <FormControl><Input placeholder="Ex: Golvvärme i badrum och hall, bergvärme installerad 2019" {...field} className={exampleCompactInputClass} /></FormControl>
+                </FormItem>
+              )} />
             </div>
           </DetailsSection>
 
@@ -1644,7 +1653,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           >
             <div className="space-y-3">
               <p className="text-[10px] text-gray-400">Välj sådant som inte redan täcks av kök, badrum, parkering eller trädgård. Inkludera även renoveringar och tekniska uppgraderingar här.</p>
-              <CollapsibleChipSelector chips={SPECIAL_CHIPS} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} tooltips={SPECIAL_TOOLTIPS} maxInitialChips={4} />
+              <CollapsibleChipSelector chips={SPECIAL_CHIPS.filter(c => {
+                // Villa/hus-specifika
+                if (isApartmentType && (c === "Dränering utförd" || c === "Nytt tak" || c === "Solceller")) return false;
+                // Lägenhet-specifika
+                if (isHouseType && (c === "Takhöjd över 2,7m")) return false;
+                return true;
+              })} selected={specialChips} onToggle={(c) => toggleChip(specialChips, setSpecialChips, c)} tooltips={SPECIAL_TOOLTIPS} maxInitialChips={4} />
               <FormField control={form.control} name="specialFeatures" render={({ field }) => (
                 <FormItem>
                   <FormControl><Input placeholder="Ex: Stambyte 2017, nya 3-glasfönster 2021, kakelugn, platsbyggd förvaring" {...field} className={exampleCompactInputClass} /></FormControl>
@@ -1710,7 +1725,13 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           >
             <div className="space-y-3">
               <p className="text-[10px] text-gray-400">Laddbox och garageinfo ska ligga här för att undvika dubbla formuleringar i texten.</p>
-              <CollapsibleChipSelector chips={PARKING_CHIPS} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} tooltips={PARKING_TOOLTIPS} maxInitialChips={4} />
+              <CollapsibleChipSelector chips={PARKING_CHIPS.filter(c => {
+                // Villa-specifika
+                if (isApartmentType && (c === "Dubbelgarage" || c === "Carport")) return false;
+                // Lägenhet-specifika
+                if (isHouseType && (c === "Boendeparkering" || c === "Garageplats")) return false;
+                return true;
+              })} selected={parkingChips} onToggle={(c) => toggleChip(parkingChips, setParkingChips, c)} tooltips={PARKING_TOOLTIPS} maxInitialChips={4} />
               <FormField control={form.control} name="parking" render={({ field }) => (
                 <FormItem>
                   <FormControl><Input placeholder="Ex: Isolerat garage med laddbox samt uppfart med plats för två bilar" {...field} className={exampleCompactInputClass} /></FormControl>
@@ -1729,6 +1750,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               >
                 <div className="space-y-3">
                   <CollapsibleChipSelector chips={MATERIAL_CHIPS} selected={materialChips} onToggle={(c) => toggleChip(materialChips, setMaterialChips, c)} tooltips={MATERIAL_TOOLTIPS} maxInitialChips={4} />
+                  <FormField control={form.control} name="konstruktionMaterial" render={({ field }) => (
+                    <FormItem>
+                      <FormControl><Input placeholder="Ex: Tegelfasad med tilläggsisolering 2018" {...field} className={exampleCompactInputClass} /></FormControl>
+                    </FormItem>
+                  )} />
                 </div>
               </DetailsSection>
 
@@ -1739,6 +1765,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               >
                 <div className="space-y-3">
                   <CollapsibleChipSelector chips={ROOF_CHIPS} selected={roofChips} onToggle={(c) => toggleChip(roofChips, setRoofChips, c)} maxInitialChips={4} />
+                  <FormField control={form.control} name="taktyp" render={({ field }) => (
+                    <FormItem>
+                      <FormControl><Input placeholder="Ex: Nylagt tak 2020, betongpannor" {...field} className={exampleCompactInputClass} /></FormControl>
+                    </FormItem>
+                  )} />
                 </div>
               </DetailsSection>
             </>
