@@ -10,29 +10,23 @@ export type Platform = "hemnet" | "booli" | "general";
 
 /**
  * Hemnet mandatory fields based on Hemnet API requirements.
- * These fields are required for publishing listings on Hemnet.
+ * Only truly mandatory fields — things the listing cannot exist without.
  */
 const HEMNET_REQUIRED_FIELDS = [
   'propertyType',
   'address',
   'livingArea',
   'totalRooms',
-  'price',
-  'monthlyFee', // for apartments/townhouses
-  'buildYear',
-  'energyClass',
 ] as const;
 
 /**
  * Booli mandatory fields based on Booli API requirements.
- * These fields are required for publishing listings on Booli.
  */
 const BOOLI_REQUIRED_FIELDS = [
   'propertyType',
   'address',
   'livingArea',
   'totalRooms',
-  'price',
 ] as const;
 
 /**
@@ -61,17 +55,13 @@ function mapPlatformFieldToFormField(platformField: string): string {
  * - lotArea, floors
  */
 export function getPropertyTypeRequiredFields(propertyType: PropertyType): string[] {
-  const isApartmentType = propertyType === "apartment" || propertyType === "townhouse";
   const isHouseType = propertyType === "house" || propertyType === "villa";
   
   const required: string[] = [];
   
-  if (isApartmentType) {
-    required.push('monthlyFee', 'floor', 'elevator');
-  }
-  
+  // Houses need lot area to make sense
   if (isHouseType) {
-    required.push('lotArea', 'floors');
+    required.push('lotArea');
   }
   
   return required;
@@ -84,17 +74,8 @@ export function getPropertyTypeRequiredFields(propertyType: PropertyType): strin
  * Booli requires: propertyType, address, livingArea, totalRooms, price
  */
 export function getPlatformRequiredFields(platform: Platform, propertyType: PropertyType): string[] {
-  const isApartmentType = propertyType === "apartment" || propertyType === "townhouse";
-  
   if (platform === "hemnet") {
-    const hemnetFields = [...HEMNET_REQUIRED_FIELDS].map(mapPlatformFieldToFormField);
-    
-    // monthlyFee is only required for apartments/townhouses on Hemnet
-    if (!isApartmentType) {
-      return hemnetFields.filter(field => field !== 'monthlyFee');
-    }
-    
-    return hemnetFields;
+    return [...HEMNET_REQUIRED_FIELDS].map(mapPlatformFieldToFormField);
   }
   
   if (platform === "booli") {
