@@ -430,22 +430,23 @@ export default function Home() {
         {/* Pro/Premium: Formulär med PersonalStyle */}
         {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
           <div className="space-y-2">
-            {/* Formulär + Personlig stil */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-start">
-              {/* Formulär (2/3) */}
-              <div className="lg:col-span-2">
+            {/* Grundläggande uppgifter + Personlig stil i 2-kolumner */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-stretch">
+              {/* Grundläggande uppgifter (2/3) */}
+              <div className="lg:col-span-2 flex">
                 <div className="pro-card pro-card-premium p-3 w-full">
                   <PromptFormProfessional
                     onSubmit={handleSubmit}
                     isPending={isPending}
                     disabled={remaining === 0}
                     isPro={true}
+                    renderMode="essential-only"
                   />
                 </div>
               </div>
               
-              {/* Personlig stil (1/3) - sticky */}
-              <div className="flex flex-col gap-2 lg:sticky lg:top-16">
+              {/* Personlig stil (1/3) */}
+              <div className="flex flex-col gap-2">
                 <div className="pro-card pro-card-premium p-3 flex flex-col">
                   <div className="mb-2">
                     <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
@@ -469,6 +470,17 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Resten av formuläret i full bredd */}
+            <div className="pro-card pro-card-premium p-3">
+              <PromptFormProfessional
+                onSubmit={handleSubmit}
+                isPending={isPending}
+                disabled={remaining === 0}
+                isPro={true}
+                renderMode="rest-only"
+              />
             </div>
           </div>
         )}

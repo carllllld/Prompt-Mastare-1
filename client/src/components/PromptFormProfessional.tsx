@@ -967,40 +967,44 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
   const onLocalSubmit = (values: PropertyFormData) => {
-    // Validate required fields based on property type and platform
-    const validationResult = validateRequiredFields(
-      {
-        ...values,
-        totalRooms: String(rooms),
-        bedrooms: String(bedrooms),
-        bathrooms: String(bathrooms),
-      },
-      values.propertyType as PropertyType,
-      values.platform as Platform
-    );
-    
-    if (!validationResult.valid) {
-      const missingFieldLabels = validationResult.missingFields.map(getFieldLabel);
-      toast({
-        title: "Obligatoriska fält saknas",
-        description: `Följande fält måste fyllas i: ${missingFieldLabels.join(', ')}`,
-        variant: "destructive",
-      });
+    // In rest-only mode, skip validation — the essential-only instance handles required fields
+    // and this instance doesn't have access to those field values
+    if (renderMode !== 'rest-only') {
+      // Validate required fields based on property type and platform
+      const validationResult = validateRequiredFields(
+        {
+          ...values,
+          totalRooms: String(rooms),
+          bedrooms: String(bedrooms),
+          bathrooms: String(bathrooms),
+        },
+        values.propertyType as PropertyType,
+        values.platform as Platform
+      );
       
-      // Scroll to first missing field
-      if (validationResult.missingFields.length > 0) {
-        const firstMissingField = validationResult.missingFields[0];
-        handleScrollToField(firstMissingField);
+      if (!validationResult.valid) {
+        const missingFieldLabels = validationResult.missingFields.map(getFieldLabel);
+        toast({
+          title: "Obligatoriska fält saknas",
+          description: `Följande fält måste fyllas i: ${missingFieldLabels.join(', ')}`,
+          variant: "destructive",
+        });
+        
+        // Scroll to first missing field
+        if (validationResult.missingFields.length > 0) {
+          const firstMissingField = validationResult.missingFields[0];
+          handleScrollToField(firstMissingField);
+        }
+        
+        return;
       }
       
-      return;
-    }
-    
-    // Check if priority fields are incomplete (less than 4 completed)
-    if (priorityCompleted < 4) {
-      setPendingFormData(values);
-      setShowIncompleteDialog(true);
-      return;
+      // Check if priority fields are incomplete (less than 4 completed)
+      if (priorityCompleted < 4) {
+        setPendingFormData(values);
+        setShowIncompleteDialog(true);
+        return;
+      }
     }
     
     // Proceed with submission
