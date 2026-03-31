@@ -529,32 +529,22 @@ export class DeterministicPostProcessor {
   ): PostProcessRequest {
     const result = { ...request };
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
-    const emojiRegex = /[\u{1F300}-\u{1F9FF}]/gu;
+    // Comprehensive emoji regex covering all common emoji ranges
+    const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{1F0A0}-\u{1F0FF}\u{200D}\u{20E3}\u{FE0F}\u{E0020}-\u{E007F}]/gu;
 
-    // Hemnet: Remove ALL emojis from specific fields
-    if (normalizedPlatform === 'hemnet') {
-      const hemnetNoEmojiFields: Array<keyof PostProcessRequest> = [
-        'headline',
-        'socialCopy',
-        'showingInvitation',
-        'shortAd'
-      ];
-
-      for (const field of hemnetNoEmojiFields) {
-        const text = result[field];
-        if (typeof text !== 'string') continue;
-
-        const emojis = text.match(emojiRegex) || [];
-        if (emojis.length > 0) {
-          // These fields don't have paragraph breaks, safe to normalize
-          result[field] = text.replace(emojiRegex, '').replace(/\s{2,}/g, ' ').trim();
-          transformations.push({
-            type: 'formatting',
-            field,
-            before: `${emojis.length} emoji(s) in Hemnet field`,
-            after: 'Removed all emojis (Hemnet rule)'
-          });
-        }
+    // Remove ALL emojis from ALL fields — no emojis in professional broker text
+    for (const field of ['improvedPrompt', 'headline', 'socialCopy', 'instagramCaption', 'showingInvitation', 'shortAd'] as const) {
+      const text = result[field];
+      if (typeof text !== 'string') continue;
+      const emojis = text.match(emojiRegex) || [];
+      if (emojis.length > 0) {
+        result[field] = text.replace(emojiRegex, '').replace(/\s{2,}/g, ' ').trim();
+        transformations.push({
+          type: 'formatting',
+          field,
+          before: `${emojis.length} emoji(s) found`,
+          after: 'Removed all emojis'
+        });
       }
     }
 
@@ -569,25 +559,7 @@ export class DeterministicPostProcessor {
       });
     }
 
-    // Instagram Caption: limit emojis to 2
-    const emojis = result.instagramCaption.match(emojiRegex) || [];
-    if (emojis.length > 2) {
-      // Remove excess emojis (keep first 2)
-      let count = 0;
-      result.instagramCaption = result.instagramCaption.replace(
-        emojiRegex,
-        (match) => {
-          count++;
-          return count <= 2 ? match : '';
-        }
-      );
-      // Instagram captions don't have paragraph breaks, safe to normalize
-      result.instagramCaption = result.instagramCaption.replace(/\s{2,}/g, ' ').trim();
-      transformations.push({
-        type: 'formatting',
-        field: 'instagramCaption',
-        before: `${emojis.length} emojis`,
-        after: '2 emojis (removed excess)'
+    // Headline: remove trailing punctuation
       });
     }
 
@@ -774,11 +746,15 @@ export class DeterministicPostProcessor {
     const platform = request.platform?.toLowerCase() || 'hemnet';
 
     try {
-      const energiklassValue = disposition?.energiklass || disposition?.property?.energiklass;
+      const energiklassValue = disposition?.energy_class || disposition?.energiklass || disposition?.property?.energiklass;
       // Hemnet forbids energiklass in main text — it's shown separately in the listing
+      // For Booli: only add if it's a strong selling point (A or B)
       if (energiklassValue && !/energiklass/i.test(text) && platform !== 'hemnet') {
-        text = this.insertBeforeLastSentence(text, `Bostaden har energiklass ${energiklassValue}.`);
-        transformations.push({ type: 'missing_facts', field: 'improvedPrompt', before: 'Missing energiklass', after: `Added energiklass ${energiklassValue}` });
+        const isStrongEnergyClass = ['A', 'B'].includes(String(energiklassValue).toUpperCase());
+        if (isStrongEnergyClass) {
+          text = this.insertBeforeLastSentence(text, `Bostaden har energiklass ${energiklassValue}.`);
+          transformations.push({ type: 'missing_facts', field: 'improvedPrompt', before: 'Missing energiklass', after: `Added energiklass ${energiklassValue}` });
+        }
       }
 
       const värmesystemValue: string | undefined = disposition?.värmesystem || disposition?.property?.värmesystem || disposition?.heating;

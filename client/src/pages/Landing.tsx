@@ -12,34 +12,34 @@ const DEMO = [
   {
     label: "Rubrik",
     before: "Drömboende i toppskick!",
-    after: "Trea med söderbalkong och renoverat kök — Karlavägen 12",
+    after: "Helrenoverad trea med köksö och balkong i söder",
   },
   {
     label: "Objektbeskrivning",
     before:
       "Välkommen till denna fantastiska lägenhet med generösa ytor och en härlig balkong. Här bor du i ett attraktivt läge med närhet till allt du kan önska. Köket är perfekt för matlagning och hemmet bjuder på en underbar känsla. Missa inte denna unika möjlighet!",
     after:
-      "Karlavägen 12, 3 tr — trea om 76 kvm med balkong i söderläge och lugnt gårdsläge.\n\nVardagsrummet har ekparkett och utgång till balkong med plats för utemöbler. Köket renoverades 2022 med induktionshäll, stenbänkskiva och matplats vid fönster.\n\nTvå sovrum ligger avskilt mot gården. Badrummet är helkaklat och uppdaterat 2020 med golvvärme.\n\nT-bana Östermalmstorg 4 min till fots. Visning: [TID].",
+      "Balkong i söder och kök renoverat 2022 med köksö i kvartskomposit. Lägenheten ligger på tredje våningen med fritt läge mot innergården.\n\nKöket har luckor från Ballingslöv, integrerade Siemens-vitvaror och matplats vid fönster mot gården. Vardagsrummet har ekparkett och utgång till balkongen.\n\nTvå sovrum mot gårdssidan. Badrummet är helkaklat och renoverat 2020 med golvvärme och kombimaskin.\n\nTunnelbana Östermalmstorg fyra minuter till fots. Nytorget med kaféer och matbutiker ligger ett kvarter bort.",
   },
   {
     label: "Social text",
     before:
       "Nu finns en fin lägenhet till salu! Ljus, fräsch och perfekt för dig som vill bo centralt. Hör av dig för mer information! #bostad #lägenhet",
     after:
-      "Karlavägen 12 — trea om 76 kvm med söderbalkong och kök renoverat 2022.\nLugnt gårdsläge, 4 min till T-bana Östermalmstorg.\n\nBoka visning: [KONTAKT]\n#tillsalu #lägenhet #östermalm #balkong",
+      "Trea om 76 kvm med balkong i söder och kök renoverat 2022.\nLugnt gårdsläge, tunnelbana fyra minuter till fots.\n\nBoka visning via mäklaren.",
   },
   {
     label: "Visningsinbjudan",
     before:
       "Varmt välkommen på visning av denna fantastiska lägenhet! Ett hem med härlig känsla och smart planlösning.\n\nTid: [TID]\nPlats: Karlavägen 12\nAnmälan: [KONTAKT]",
     after:
-      "Visning — Karlavägen 12, 3 tr.\nTrea om 76 kvm med söderbalkong och kök renoverat 2022.\n\nTid: [TID]\nPlats: Karlavägen 12, 3 tr (port B)\nAnmälan: [KONTAKT]",
+      "Visning — Karlavägen 12, 3 tr.\nTrea med balkong i söder och kök renoverat 2022.\n\nTid: [TID]\nPlats: Karlavägen 12, 3 tr (port B)\nAnmälan via mäklaren.",
   },
   {
     label: "Kortannons",
     before: "Fin trea i bra område. Balkong. Måste ses!",
     after:
-      "Karlavägen 12, 3 tr — trea om 76 kvm. Söderbalkong, renoverat kök 2022, helkaklat badrum 2020. T-bana 4 min. Visning: [TID].",
+      "Trea om 76 kvm med balkong i söder och kök renoverat 2022. Helkaklat badrum 2020 med golvvärme. Tunnelbana fyra minuter.",
   },
 ];
 

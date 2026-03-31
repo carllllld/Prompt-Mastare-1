@@ -60,8 +60,7 @@ export class SmartGenerationEngine {
         ],
         // Note: temperature not supported with reasoning_effort
         max_completion_tokens: 4000,
-        // REMOVED response_format - let AI write naturally, we'll parse the output
-        reasoning_effort: 'medium',
+        reasoning_effort: 'high',
       });
 
       const content = completion.choices[0]?.message?.content;
@@ -127,27 +126,32 @@ export class SmartGenerationEngine {
 - INGEN punkt eller utropstecken i slutet
 - INGA emojis
 - NÄMN INTE pris, avgift eller energiklass
-- Fokusera på bostadens starkaste USP — det som INTE framgår av siffrorna
-- MÅSTE inkludera bostadstyp (lägenhet, villa, hus, radhus)
-- Förtydliga renoveringar: "kök renoverat 2023" istället för bara "kök 2023"
-- Exempel: "Villa med södervänd uteplats och kök renoverat 2023"
+- Rubriken ska FÅNGA UPPMÄRKSAMHET — inte bara lista fakta
+- Lyft det mest unika: renovering, speciellt läge, ovanlig detalj, utsikt
+- UNDVIK generiska rubriker som "Villa med söderläge" eller "Lägenhet i bra läge"
+- BRA: "Helrenoverad trea med köksö och balkong i söder"
+- BRA: "Sekelskiftesetta med kakelugn och takhöjd 3,2 meter"
+- BRA: "Villa med nylagt tak, bergvärme och Ballingslöv-kök"
+- DÅLIGT: "Villa med söderläge och tre badrum" (generiskt, kunde vara vilken villa som helst)
+- DÅLIGT: "Fin lägenhet i bra område" (tomt, inga fakta)
 
 ### Social Copy
 - 1-3 meningar
 - Avsluta med punkt
 - NÄMN INTE pris, avgift eller energiklass
+- INGA EMOJIS — emojis är BARA tillåtna i Instagram Caption
 - Säljande men saklig ton
 - Kan avsluta med "Läs mer i annonsen."
 - ANVÄND ALDRIG "erbjuder" eller liknande förbjudna fraser
-- Exempel: "Platsbyggt kök renoverat 2023 och södervända uteplatsen ger denna villa ett tydligt övertag. Läs mer i annonsen."
+- Exempel: "Ballingslöv-kök renoverat 2023 med köksö och kvartskomposit. Södervända uteplatsen och bergvärme gör villan redo för åretruntboende. Läs mer i annonsen."
 
 ### Instagram Caption
-- 1-2 relevanta emojis (INTE fler)
+- INGA emojis
 - Max 2200 tecken
 - NÄMN INTE pris, avgift eller energiklass
 - Varm och mänsklig ton
 - Avsluta med korrekt sluttecken (. ! ?)
-- Exempel: "Helrenoverat kök med köksö och södervända balkongen 🌞 Trea om 76 kvm med ekparkett och lugnt gårdsläge på Södermalm."
+- Exempel: "Helrenoverat kök med köksö och södervända balkongen. Trea om 76 kvm med ekparkett och lugnt gårdsläge på Södermalm."
 
 ### Showing Invitation (visningsinbjudan)
 - MÅSTE innehålla ordet "visning"
@@ -184,7 +188,7 @@ export class SmartGenerationEngine {
 - Kan avsluta med "Läs mer i annonsen."
 
 ### Instagram Caption
-- 1-2 relevanta emojis (INTE fler)
+- INGA emojis
 - Max 2200 tecken
 - Pris/avgift KAN nämnas om relevant
 - Varm och mänsklig ton
@@ -217,7 +221,7 @@ export class SmartGenerationEngine {
 - Säljande men saklig ton
 
 ### Instagram Caption
-- 1-2 relevanta emojis (INTE fler)
+- INGA emojis
 - Max 2200 tecken
 - Varm och mänsklig ton
 - Avsluta med korrekt sluttecken (. ! ?)
@@ -351,15 +355,9 @@ Läge, kommunikationer, avgift/driftkostnad.`;
 **ALDRIG mellanslag före punkt/komma/utropstecken**: Skriv "visning." INTE "visning ."
 **Varje mening måste ha korrekt interpunktion mellan satser**: Skriv "Nya fönster och tjärpappstak är två tydliga plus som prioriterar långsiktigt underhåll." INTE "Nya fönster och tjärpappstak är två tydliga plus prioriterar långsiktigt underhåll."
 
-## EMOJI-REGLER
+## EMOJIS
 
-**Hemnet-plattformen**:
-- INGA emojis i headline, socialCopy, showingInvitation, shortAd
-- Emojis är FÖRBJUDNA i alla Hemnet-fält utom instagramCaption
-
-**Instagram caption**:
-- MAX 2 emojis i instagramCaption
-- Välj relevanta emojis: 🏠🌞🛁🌿✨
+INGA emojis i NÅGON text. Aldrig. Inte i rubrik, inte i social media, inte i Instagram, inte i visningsinbjudan, inte i kortannons, inte i huvudtext. Emojis hör inte hemma i professionell mäklartext.
 
 ## FÖRETAGSNAMN OCH GENERALISERING
 
@@ -383,6 +381,10 @@ Innan du skriver en mening, fråga: "Kan en köpare verifiera detta vid en visni
 - NEJ → Stryk eller skriv om med fakta. Exempel: "förlänger säsongen" → stryk. "självklar plats" → stryk. "ovanligt praktiskt" → "tre badrum underlättar vid större hushåll".
 
 En mening som inte innehåller minst ETT konkret faktum (årtal, material, mått, avstånd, antal) ska inte vara med.
+
+## OBJEKTTYP
+
+Olika bostadstyper skrivs olika. En villa handlar om tomt, trädgård och konstruktion. En lägenhet handlar om planlösning, ljus och balkong. Ett radhus är en mix. Du ser objekttypen i dispositionen — anpassa ton, fokus och struktur efter vad köparen för just den typen bryr sig om. Mäklaren har redan fyllt i de viktigaste säljpunkterna i formuläret — lyft dem.
 
 ## FÖRBJUDNA FRASER (använd ALDRIG dessa)
 
@@ -435,6 +437,7 @@ KRITISKA REGLER:
 
 1. STAVNING
    - Sammansatta ord skrivs ihop: "köksö", "kompositbänk", "Siemens-vitvaror"
+   - ALDRIG dubbla sammansättningar: "kök" + "köksö" = "köksö" (INTE "kököksö"). Om ett ord redan är sammansatt, lägg INTE till prefix.
    - Korrekt tempus: "renoverades 2023" (inte "renoverat 2023")
    - Korrekt genus och bestämd form: "södervända uteplatsen" (inte "södervänd")
 
@@ -460,18 +463,26 @@ Innan du svarar, kontrollera:
 
 ## EXEMPEL PÅ PERFEKT SVENSKA
 
-✓ RÄTT:
-"Köket renoverades 2023 med köksö, kompositbänk och integrerade Siemens-vitvaror. Planlösningen samlar kök och vardagsrum i vinkel, med skjutdörrar ut mot den södervända uteplatsen."
+✓ RÄTT (öppning):
+"Balkong i söder och kök renoverat 2022 med köksö i kvartskomposit. Lägenheten ligger på fjärde våningen med fritt läge mot innergården."
 
-✓ RÄTT adresshantering:
-"Villa i ett plan om 146 kvm på Ekorrvägen 10 i Mörtnäs."
+✓ RÄTT (kök):
+"Köket renoverades 2022 med luckor från Ballingslöv, bänkskiva i kvartskomposit och integrerade vitvaror från Siemens. Matplats vid fönster mot gården."
 
-✗ FEL (brutna meningar):
-"Villa i ett plan om 146 kvm på. Ekorrvägen 10 i. Mörtnäs."
-"Integrerade. Siemens-vitvaror och en matplats."
+✓ RÄTT (badrum):
+"Badrummet är helkaklat och renoverat 2020 med golvvärme, duschvägg i glas och kombimaskin bakom skjutdörr."
+
+✓ RÄTT (läge):
+"Tunnelbana Medborgarplatsen nås på fyra minuters promenad. Nytorget med kaféer och matbutiker ligger ett kvarter bort."
 
 ✗ FEL (AI-klyschor):
-"Välkommen till detta fantastiska hem som erbjuder en unik möjlighet. Köket bjuder på en känsla av lyx."`;
+"Välkommen till detta fantastiska hem som erbjuder en unik möjlighet. Köket bjuder på en känsla av lyx."
+
+✗ FEL (trasig sammansättning):
+"Marbodal-kököksö" — ska vara "köksö från Marbodal" eller "Marbodal-kök med köksö"
+
+✗ FEL (generisk rubrik):
+"Villa med söderläge och tre badrum" — säger inget unikt`;
   }
 
   /** Public method for testing — returns the combined prompt string */
@@ -505,10 +516,10 @@ RUBRIK:
 (Max 9 ord, ingen punkt)
 
 SOCIAL MEDIA:
-(Max 3 meningar, avsluta med punkt)
+(Max 3 meningar, avsluta med punkt, INGA emojis)
 
 INSTAGRAM:
-(Max 2200 tecken, max 2 emojis)
+(Max 2200 tecken, INGA emojis, avsluta med punkt)
 
 VISNINGSINBJUDAN:
 (1-2 meningar, måste innehålla ordet "visning", måste vara FULLSTÄNDIG mening utan avbrytningar)
@@ -527,9 +538,9 @@ KORT ANNONS:
 (Max 2 meningar, MÅSTE innehålla bostadstyp + boarea, alltid fylld - ALDRIG tom)
 
 EXEMPEL PÅ BRA KORT ANNONS:
-- "Villa om 146 kvm med södervänd uteplats och inbyggd jacuzzi. Kök renoverat 2023 och två badrum renoverade 2021."
-- "3:a om 72 kvm med helrenoverat kök 2022 och södervändbalkongen. 5 min promenad till tunnelbanan."
-- "Radhus om 105 kvm med två sovrum och modernt kök. Fint läge nära park och skola."
+- "Villa om 146 kvm med Ballingslöv-kök renoverat 2023 och bergvärme. Tre sovrum, två badrum och uteplats i söder."
+- "Trea om 72 kvm med helrenoverat kök 2022 och balkong mot lugn innergård. Tunnelbana fyra minuter till fots."
+- "Radhus om 105 kvm med nylagt tak 2021 och golvvärme i badrum. Nära skola och pendeltåg."
 
 KRITISKT:
 - ALLA 6 fält är obligatoriska

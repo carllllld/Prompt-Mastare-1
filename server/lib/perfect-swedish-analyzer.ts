@@ -73,11 +73,9 @@ export class ExpertAIAnalyzer {
       const completionPromise = this.openai.chat.completions.create({
         model: 'gpt-5.2',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3, // Low temperature for consistent, focused analysis
-        max_completion_tokens: 2500,
+        max_completion_tokens: 3000,
         response_format: { type: 'json_object' },
-        // Note: No reasoning_effort here - this is simpler validation/analysis
-        // that benefits from temperature control for consistency
+        reasoning_effort: 'medium',
       });
 
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -257,6 +255,14 @@ Om något av dessa påståenden förekommer UTAN konkret bevis (t.ex. renovering
 Du har sett tusentals objektbeskrivningar. Du vet vad som får en köpare att boka visning och vad som får dem att scrolla vidare. Din feedback ska vara konkret, actionable och baserad på vad som faktiskt fungerar i den svenska bostadsmarknaden.
 
 Tänk: "Om jag var köpare och läste detta — skulle jag vilja se bostaden?"
+
+DU FÅR ALDRIG SVARA MED NOLL FÖRBÄTTRINGAR. Det finns ALLTID något att förbättra. Även en bra text kan bli bättre. Om du inte hittar kritiska problem, ge stilförslag och förbättringar av ordval, meningsbyggnad eller struktur.
+
+Kontrollera ALLTID:
+- Stavfel och trasiga sammansättningar (t.ex. "kököksö" istället för "köksö")
+- Emojis i fel fält (emojis är BARA tillåtna i Instagram Caption, ALDRIG i socialCopy, headline, showingInvitation, shortAd)
+- Generiska/tråkiga rubriker som inte fångar uppmärksamhet
+- Meningar som inte tillför konkreta fakta
 
 ## DIN VIKTIGASTE REGEL: VERIFIERA INNAN DU FLAGGAR
 

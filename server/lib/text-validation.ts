@@ -93,6 +93,11 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     [/\bsödterass\b/gi, 'Felstavat ord: "södterass"'],
     [/\bvälsköför att\b/gi, 'Trasigt ord: "välsköför att"'],
     [/\banvändningssäför att\b/gi, 'Trasigt ord: "användningssäför att"'],
+    // Dubbla sammansättningar (AI skapar ibland "kök" + "köksö" = "kököksö")
+    [/\bkököksö\b/gi, 'Trasigt sammansatt ord: "kököksö" ska vara "köksö"'],
+    [/\bkökök\b/gi, 'Trasigt sammansatt ord: dubblerat "kök"'],
+    [/\bbadbadrumm?\b/gi, 'Trasigt sammansatt ord: dubblerat "bad"'],
+    [/\b(\w{3,})\1\b/gi, 'Möjligt dubblerat ord eller ordled'],
   ];
   for (const [pattern, message] of corruptedPatterns) {
     if (pattern.test(text)) {
