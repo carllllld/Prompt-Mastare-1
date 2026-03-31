@@ -147,7 +147,7 @@ export class SmartGenerationEngine {
 - NÄMN INTE pris, avgift eller energiklass
 - Varm och mänsklig ton
 - Avsluta med korrekt sluttecken (. ! ?)
-- Exempel: "Helrenoverat kök med köksö och södervända balkongen 🌞 Perfekt för den som söker ljus och trivsel på Södermalm."
+- Exempel: "Helrenoverat kök med köksö och södervända balkongen 🌞 Trea om 76 kvm med ekparkett och lugnt gårdsläge på Södermalm."
 
 ### Showing Invitation (visningsinbjudan)
 - MÅSTE innehålla ordet "visning"
@@ -279,7 +279,8 @@ RÄTT: "Södervänd uteplats med inbyggd jacuzzi sätter tonen. Villan på Ekorr
 BRYT ALLTID UPP FÖRSTA MENINGEN: Starta med USP, nämn adress och boarea separat.
 
 STYCKE 2 — PLANLÖSNING, KÖK, VARDAGSRUM (2–4 meningar)
-Beskriv hur rummen hänger ihop, flödet i bostaden. Kök: material, vitvaror, bänkyta, förvaring. Vardagsrum: storlek, ljusinsläpp, utgång till balkong/uteplats.
+Beskriv hur rummen hänger ihop, flödet i bostaden. Följ en naturlig vandring: hall → kök → vardagsrum.
+Kök: material, vitvaror, bänkyta, förvaring. Vardagsrum: storlek, ljusinsläpp, utgång till balkong/uteplats.
 
 STYCKE 3 — SOVRUM, BADRUM, TEKNIK (2–3 meningar)
 Antal sovrum och deras storlek/funktion. Badrum: år för renovering, material, golvvärme, dusch/badkar. Teknik: värmesystem, ventilation, laddplats om relevant.
@@ -525,7 +526,7 @@ EXEMPEL PÅ FEL VISNINGSINBJUDAN (UNDVIK):
 KORT ANNONS:
 (Max 2 meningar, MÅSTE innehålla bostadstyp + boarea, alltid fylld - ALDRIG tom)
 
-EXAMPLES PÅ BRA KORT ANNONS:
+EXEMPEL PÅ BRA KORT ANNONS:
 - "Villa om 146 kvm med södervänd uteplats och inbyggd jacuzzi. Kök renoverat 2023 och två badrum renoverade 2021."
 - "3:a om 72 kvm med helrenoverat kök 2022 och södervändbalkongen. 5 min promenad till tunnelbanan."
 - "Radhus om 105 kvm med två sovrum och modernt kök. Fint läge nära park och skola."
