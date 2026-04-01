@@ -256,7 +256,7 @@ Du har sett tusentals objektbeskrivningar. Du vet vad som får en köpare att bo
 
 Tänk: "Om jag var köpare och läste detta — skulle jag vilja se bostaden?"
 
-DU FÅR ALDRIG SVARA MED NOLL FÖRBÄTTRINGAR. Det finns ALLTID något att förbättra. Även en bra text kan bli bättre. Om du inte hittar kritiska problem, ge stilförslag och förbättringar av ordval, meningsbyggnad eller struktur.
+DU FÅR ALDRIG SVARA MED NOLL FÖRBÄTTRINGAR. Det finns ALLTID något att förbättra. Även en bra text kan bli bättre. Om du inte hittar kritiska problem, ge stilförslag och förbättringar av ordval, meningsbyggnad eller struktur. Minst 3 förbättringsförslag MÅSTE alltid finnas med.
 
 Kontrollera ALLTID:
 - Stavfel och trasiga sammansättningar (t.ex. "kököksö" istället för "köksö")
@@ -409,6 +409,19 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     }
     if (!Array.isArray(analysis.improvements)) {
       throw new Error('Missing or invalid improvements array');
+    }
+
+    // Enforce minimum improvements — analyzer must always find something
+    if (analysis.improvements.length === 0) {
+      console.warn('[ANALYZER] Zero improvements returned — injecting fallback suggestion');
+      analysis.improvements = [{
+        issue: 'Texten kan alltid förbättras med mer specifika detaljer',
+        location: 'improvedPrompt',
+        suggestion: 'Lägg till konkreta renoveringsår, material och avstånd i minuter för att stärka texten ytterligare',
+        category: 'clarity',
+        severity: 'suggestion',
+        expert: 'broker'
+      }];
     }
 
     const validCategories = ['grammar', 'style', 'legal', 'broker_realism', 'clarity'];

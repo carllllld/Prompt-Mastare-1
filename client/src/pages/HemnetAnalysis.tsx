@@ -42,6 +42,19 @@ export default function HemnetAnalysis() {
   const [dismissedFixes, setDismissedFixes] = useState<string[]>([]);
   const [copiedText, setCopiedText] = useState(false);
 
+  // Pick up pre-filled text from Vitec import (stored in sessionStorage)
+  useEffect(() => {
+    const vitecText = sessionStorage.getItem("vitec-analyze-text");
+    const vitecAddress = sessionStorage.getItem("vitec-analyze-address");
+    if (vitecText) {
+      setInputMode("manual");
+      setManualText(vitecText);
+      if (vitecAddress) setAnalysisContext(`Objektet: ${vitecAddress}`);
+      sessionStorage.removeItem("vitec-analyze-text");
+      sessionStorage.removeItem("vitec-analyze-address");
+    }
+  }, []);
+
   // Mutations
   const hemnetMutation = useHemnetAnalysis();
   const textMutation = useTextAnalysis();

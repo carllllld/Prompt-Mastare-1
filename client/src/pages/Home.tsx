@@ -429,58 +429,42 @@ export default function Home() {
 
         {/* Pro/Premium: Formulär med PersonalStyle */}
         {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
-          <div className="space-y-2">
-            {/* Grundläggande uppgifter + Personlig stil i 2-kolumner */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-stretch">
-              {/* Grundläggande uppgifter (2/3) */}
-              <div className="lg:col-span-2 flex">
-                <div className="pro-card pro-card-premium p-3 w-full">
-                  <PromptFormProfessional
-                    onSubmit={handleSubmit}
-                    isPending={isPending}
-                    disabled={remaining === 0}
-                    isPro={true}
-                    renderMode="essential-only"
-                  />
-                </div>
-              </div>
-              
-              {/* Personlig stil (1/3) */}
-              <div className="flex flex-col gap-2">
-                <div className="pro-card pro-card-premium p-3 flex flex-col">
-                  <div className="mb-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
-                    <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                      Kalibrera tonalitet
-                    </p>
-                  </div>
-                  <div className="flex-1">
-                    <PersonalStyle />
-                  </div>
-                </div>
-                
-                {/* Uppgradera widget under PersonalStyle */}
-                {plan !== "premium" && (
-                  <div className="pro-card pro-card-premium p-3">
-                    <CompactUpgradeWidget
-                      plan={plan}
-                      onUpgrade={() => startCheckout(plan === "free" ? "pro" : "premium")}
-                      isLoading={isCheckoutPending}
-                    />
-                  </div>
-                )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-start">
+            {/* Formulär (2/3) — en enda instans */}
+            <div className="lg:col-span-2">
+              <div className="pro-card pro-card-premium p-3">
+                <PromptFormProfessional
+                  onSubmit={handleSubmit}
+                  isPending={isPending}
+                  disabled={remaining === 0}
+                  isPro={true}
+                />
               </div>
             </div>
 
-            {/* Resten av formuläret i full bredd */}
-            <div className="pro-card pro-card-premium p-3">
-              <PromptFormProfessional
-                onSubmit={handleSubmit}
-                isPending={isPending}
-                disabled={remaining === 0}
-                isPro={true}
-                renderMode="rest-only"
-              />
+            {/* Personlig stil (1/3) — sticky sidebar */}
+            <div className="flex flex-col gap-2 lg:sticky lg:top-16">
+              <div className="pro-card pro-card-premium p-3 flex flex-col">
+                <div className="mb-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
+                  <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
+                    Kalibrera tonalitet
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <PersonalStyle />
+                </div>
+              </div>
+              
+              {plan !== "premium" && (
+                <div className="pro-card pro-card-premium p-3">
+                  <CompactUpgradeWidget
+                    plan={plan}
+                    onUpgrade={() => startCheckout(plan === "free" ? "pro" : "premium")}
+                    isLoading={isCheckoutPending}
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

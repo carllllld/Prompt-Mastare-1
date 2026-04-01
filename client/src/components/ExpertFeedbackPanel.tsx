@@ -188,14 +188,14 @@ export function ExpertFeedbackPanel({
   if (totalCount === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-success-bg flex items-center justify-center mb-4">
-          <Lightbulb className="w-8 h-8 text-success" />
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+          <Lightbulb className="w-8 h-8 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">
-          Inga förbättringsförslag
+        <h3 className="text-base font-semibold text-foreground mb-2">
+          Analysen returnerade inga förslag
         </h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          Texten ser bra ut! Våra AI-experter hittade inga problem som behöver åtgärdas.
+          Det finns alltid utrymme att förbättra en text. Prova att regenerera med mer specifik information i formuläret.
         </p>
       </div>
     );

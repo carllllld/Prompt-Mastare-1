@@ -3332,7 +3332,59 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           return res.status(400).json({ message: "Vitec är inte konfigurerat. Lägg till din API-nyckel i inställningarna." });
         }
         const property = await client.getProperty(parse.data.objectId);
-        res.json({ property, propertyData: property });
+
+        // Map VitecProperty to the form's propertyData shape
+        // This must match what handleExternalImport() in PromptFormProfessional expects
+        const propertyData: Record<string, any> = {
+          propertyType: property.propertyType,
+          address: property.address,
+          area: property.district || "",
+          livingArea: property.livingArea,
+          biarea: property.biArea,
+          biArea: property.biArea,
+          lotArea: property.lotArea,
+          totalRooms: property.rooms,
+          rooms: property.rooms,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          floor: property.floor != null ? String(property.floor) : undefined,
+          floors: property.totalFloors != null ? String(property.totalFloors) : undefined,
+          totalFloors: property.totalFloors,
+          elevator: property.hasElevator,
+          buildYear: property.yearBuilt,
+          yearBuilt: property.yearBuilt,
+          constructionYear: property.yearBuilt,
+          energyClass: property.energyClass,
+          monthlyFee: property.monthlyFee,
+          price: property.askingPrice,
+          askingPrice: property.askingPrice,
+          // Texts from Vitec (mäklaren may have already written these)
+          description: property.description,       // existing objektbeskrivning
+          otherInfo: property.description,          // also put in otherInfo as context
+          layoutDescription: property.layoutDescription,
+          // Location
+          transport: property.transport,
+          neighborhood: property.neighborhood,
+          parking: property.parking,
+          // Broker
+          maklarnamn: property.brokerName,
+          brokerName: property.brokerName,
+          maklartelefon: property.brokerPhone,
+          brokerPhone: property.brokerPhone,
+          // Showing
+          visningstid: property.showingDate,
+          showingDate: property.showingDate,
+          tilltradesdag: property.accessDate,
+          accessDate: property.accessDate,
+          // Images
+          imageUrls: property.imageUrls,
+          // Source metadata
+          _source: "vitec",
+          _sourceId: property.id,
+          _vitecObjectId: property.id,
+        };
+
+        res.json({ property, propertyData });
       } catch (err) {
         if (err instanceof VitecAuthError) return res.status(401).json({ message: err.message });
         if (err instanceof VitecNotFoundError) return res.status(404).json({ message: err.message });

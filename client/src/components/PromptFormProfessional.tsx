@@ -668,6 +668,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   const [rooms, setRooms] = useState(3);
   const [bedrooms, setBedrooms] = useState(2);
   const [bathrooms, setBathrooms] = useState(1);
+  const [importedFromVitec, setImportedFromVitec] = useState<string | null>(null); // address of imported object
   const [hasBalcony, setHasBalcony] = useState(false);
 
   const handleWordCountMin = (val: number) => {
@@ -761,6 +762,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
         form.setValue(field, String(value), { shouldDirty: true });
       }
     };
+
+    // Track which object was imported
+    if (propertyData.address) {
+      setImportedFromVitec(propertyData.address);
+    }
 
     // Property type — must be set first as it affects which fields are shown
     if (propertyData.propertyType) {
@@ -967,44 +973,37 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
 
   // Merge chips + freetext into pipeline-compatible field values, then submit
   const onLocalSubmit = (values: PropertyFormData) => {
-    // In rest-only mode, skip validation — the essential-only instance handles required fields
-    // and this instance doesn't have access to those field values
-    if (renderMode !== 'rest-only') {
-      // Validate required fields based on property type and platform
-      const validationResult = validateRequiredFields(
-        {
-          ...values,
-          totalRooms: String(rooms),
-          bedrooms: String(bedrooms),
-          bathrooms: String(bathrooms),
-        },
-        values.propertyType as PropertyType,
-        values.platform as Platform
-      );
+    // Validate required fields based on property type and platform
+    const validationResult = validateRequiredFields(
+      {
+        ...values,
+        totalRooms: String(rooms),
+        bedrooms: String(bedrooms),
+        bathrooms: String(bathrooms),
+      },
+      values.propertyType as PropertyType,
+      values.platform as Platform
+    );
+    
+    if (!validationResult.valid) {
+      const missingFieldLabels = validationResult.missingFields.map(getFieldLabel);
+      toast({
+        title: "Obligatoriska fält saknas",
+        description: `Följande fält måste fyllas i: ${missingFieldLabels.join(', ')}`,
+        variant: "destructive",
+      });
       
-      if (!validationResult.valid) {
-        const missingFieldLabels = validationResult.missingFields.map(getFieldLabel);
-        toast({
-          title: "Obligatoriska fält saknas",
-          description: `Följande fält måste fyllas i: ${missingFieldLabels.join(', ')}`,
-          variant: "destructive",
-        });
-        
-        // Scroll to first missing field
-        if (validationResult.missingFields.length > 0) {
-          const firstMissingField = validationResult.missingFields[0];
-          handleScrollToField(firstMissingField);
-        }
-        
-        return;
+      if (validationResult.missingFields.length > 0) {
+        handleScrollToField(validationResult.missingFields[0]);
       }
-      
-      // Check if priority fields are incomplete (less than 4 completed)
-      if (priorityCompleted < 4) {
-        setPendingFormData(values);
-        setShowIncompleteDialog(true);
-        return;
-      }
+      return;
+    }
+    
+    // Check if priority fields are incomplete (less than 4 completed)
+    if (priorityCompleted < 4) {
+      setPendingFormData(values);
+      setShowIncompleteDialog(true);
+      return;
     }
     
     // Proceed with submission
@@ -1403,89 +1402,78 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
 
-          {/* Render mode: essential-only - only show objekttyp and essential fields */}
-          {renderMode === 'essential-only' && (
-            <>
-              {/* Så används dina fält - viktig info */}
-              <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
-                <p className="text-sm font-semibold mb-3" style={{ color: "#1D2939" }}>Så används dina fält</p>
-                <div className="space-y-2 text-xs">
-                  <div className="rounded-lg px-3 py-2" style={{ background: "#DCFCE7", color: "#166534" }}>
-                    <span className="font-semibold">Direkt i huvudtexten:</span>
-                    <span> adress, boarea, rum, kök/badrum, kommunikationer och tydliga säljpunkter.</span>
-                  </div>
-                  <div className="rounded-lg px-3 py-2" style={{ background: "#F3F4F6", color: "#4B5563" }}>
-                    <span className="font-semibold" style={{ color: "#1D2939" }}>Kontext till AI:n:</span>
-                    <span> energi, material, förråd, taktyp och övrigt vägs in men skrivs bara ut när de stärker köparnyttan.</span>
-                  </div>
-                </div>
+          {/* ── SECTION 1: OBJEKTTYP (always shown) ── */}
+          {(renderMode === 'full' || renderMode === 'essential-only') && (
+            <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
+                  Objekttyp
+                </label>
+                {importedFromVitec && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#DCFCE7", color: "#166534" }}>
+                    Vitec: {importedFromVitec}
+                  </span>
+                )}
               </div>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { value: "apartment" as const, label: "Lägenhet" },
+                  { value: "house" as const, label: "Hus" },
+                  { value: "townhouse" as const, label: "Radhus" },
+                  { value: "villa" as const, label: "Villa" },
+                ]).map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => form.setValue("propertyType", t.value)}
+                    className={`px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
+                      selectedType === t.value 
+                        ? 'text-white border-transparent' 
+                        : 'bg-white border-input hover:bg-accent'
+                    }`}
+                    style={selectedType === t.value ? { background: "#2D6A4F" } : {}}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-              {/* ── SECTION 1: OBJEKTTYP ── */}
-              <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
-                    Objekttyp
-                  </label>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {([
-                    { value: "apartment" as const, label: "Lägenhet" },
-                    { value: "house" as const, label: "Hus" },
-                    { value: "townhouse" as const, label: "Radhus" },
-                    { value: "villa" as const, label: "Villa" },
-                  ]).map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => form.setValue("propertyType", t.value)}
-                      className={`px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
-                        selectedType === t.value 
-                          ? 'text-white border-transparent' 
-                          : 'bg-white border-input hover:bg-accent'
-                      }`}
-                      style={selectedType === t.value ? { background: "#2D6A4F" } : {}}
+          {/* ── SECTION 2: ESSENTIELL INFORMATION ── */}
+          {(renderMode === 'full' || renderMode === 'essential-only') && (
+            <EssentialFieldsSection
+              form={form}
+              isApartmentType={isApartmentType}
+              isHouseOrTownhouseType={isHouseOrTownhouseType}
+              rooms={rooms}
+              bedrooms={bedrooms}
+              bathrooms={bathrooms}
+              setRooms={setRooms}
+              setBedrooms={setBedrooms}
+              setBathrooms={setBathrooms}
+              addressLookupLoading={addressLookupLoading}
+              addressLookupResult={addressLookupResult}
+              onAddressLookup={handleAddressLookup}
+              isPro={isPro}
+              importButtons={
+                isPro ? (
+                  <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
+                ) : (
+                  <LockedFeature requiredPlan="pro" featureName="Vitec-import" currentPlan="free" showOverlay={false}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="h-9 text-xs font-medium"
                     >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── SECTION 2: ESSENTIELL INFORMATION (NEW COMPONENT) ── */}
-              <EssentialFieldsSection
-                form={form}
-                isApartmentType={isApartmentType}
-                isHouseOrTownhouseType={isHouseOrTownhouseType}
-                rooms={rooms}
-                bedrooms={bedrooms}
-                bathrooms={bathrooms}
-                setRooms={setRooms}
-                setBedrooms={setBedrooms}
-                setBathrooms={setBathrooms}
-                addressLookupLoading={addressLookupLoading}
-                addressLookupResult={addressLookupResult}
-                onAddressLookup={handleAddressLookup}
-                isPro={isPro}
-                importButtons={
-                  isPro ? (
-                    <VitecImportPicker onImport={handleExternalImport} isPro={isPro} />
-                  ) : (
-                    <LockedFeature requiredPlan="pro" featureName="Vitec-import" currentPlan="free" showOverlay={false}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled
-                        className="h-9 text-xs font-medium"
-                      >
-                        <Lock className="w-3 h-3 mr-1.5" />
-                        Vitec-import
-                      </Button>
-                    </LockedFeature>
-                  )
-                }
-              />
-            </>
+                      <Lock className="w-3 h-3 mr-1.5" />
+                      Vitec-import
+                    </Button>
+                  </LockedFeature>
+                )
+              }
+            />
           )}
 
           {/* Render mode: rest-only - show everything except objekttyp and essential fields */}

@@ -1,27 +1,93 @@
 /**
- * Vitec Mäklarsystem Integration
+ * Vitec Mäklarsystem Integration — Vitec Express API
  *
- * Supports the Vitec Express API used by Swedish real estate brokers.
- * API docs: https://vitecexpress.bovision.se/
+ * API: https://vitecexpress.bovision.se
+ * OpenAPI schema: https://vitecexpress.bovision.se/swagger/v1/swagger.json
  *
- * Authentication: Bearer token (API key) in Authorization header.
- * Requires both an API key AND a customerId (the broker's Vitec account ID).
+ * IMPORTANT FACTS (verified from OpenAPI schema):
  *
- * Key endpoints:
- *   GET /Fetcher/All                                    — all objects for customer
- *   GET /Fetcher/Singelobject/{customerId}/{objectId}   — single object
- *   GET /PublicAdvertising/Estate/{customerId}          — list active estates
- *   GET /PublicAdvertising/Condominium/{customerId}/{id} — bostadsrätt detail
- *   GET /PublicAdvertising/House/{customerId}/{id}       — villa/hus detail
- *   GET /PublicAdvertising/Cottage/{customerId}/{id}     — fritidshus detail
+ * 1. This is a READ-ONLY API. There are no PUT/PATCH endpoints for updating
+ *    property descriptions. Export back to Vitec is NOT possible via API.
+ *    Mäklare must copy text manually into Vitec.
+ *
+ * 2. Authentication: Bearer token in Authorization header.
+ *    The API key is the mäklare's Vitec Express API key.
+ *    customerId is the mäklare's Vitec customer account ID (e.g. "M12345").
+ *
+ * 3. Object types and their detail endpoints (all under /Internal/PublicAdvertising/):
+ *    - HousingCooperative = Bostadsrätt (kooperativ hyresrätt / andelslägenhet)
+ *    - Condominium        = Bostadsrätt (äganderätt)
+ *    - House              = Villa / Hus / Radhus
+ *    - Cottage            = Fritidshus
+ *    - Farm               = Lantbruk
+ *    - Plot               = Tomt
+ *
+ * 4. Estate list: GET /PublicAdvertising/Estate/{customerId}
+ *    Returns a list of active estates. Structure not fully defined in schema.
+ *
+ * 5. Verified field paths (from OpenAPI schema components):
+ *
+ *    COMMON (all types):
+ *      id                              — objekt-ID
+ *      address.streetAddress           — gatuadress
+ *      address.city                    — stad
+ *      address.areaName                — stadsdel/område
+ *      address.zipCode                 — postnummer
+ *      price.swedishCurrency           — utgångspris (SEK)
+ *      energyDeclaration.energyClass   — energiklass (A-G string)
+ *      energyDeclaration.energyPerformance — kWh/m²/år
+ *      texts.saleDescription           — objektbeskrivning (löptext)
+ *      texts.saleHeading               — rubrik
+ *      texts.shortSaleDescription      — kortannons
+ *      texts.salePhrase                — säljfras
+ *      surroundings.communication      — kommunikationer (fritext)
+ *      surroundings.service            — service/butiker (fritext)
+ *      surroundings.generalAboutArea   — allmänt om området (fritext)
+ *      surroundings.parking            — parkering (fritext)
+ *      images[].cdnReferences[].url    — bild-URL:er
+ *      viewings[].startsAt             — visningstid start (ISO datetime)
+ *      viewings[].endsAt               — visningstid slut (ISO datetime)
+ *      primaryAgentId                  — mäklarens ID
+ *      admissionAt                     — tillträdesdag (ISO datetime)
+ *
+ *    APARTMENT (Condominium + HousingCooperative):
+ *      building.livingSpace            — boarea (kvm, double)
+ *      building.grossFloorArea         — biarea (kvm, double)
+ *      building.numberOfRooms          — antal rum (double)
+ *      building.yearBuilt              — byggår (int)
+ *      building.floor                  — våning (double)
+ *      building.numberOfFloors         — antal våningar i huset (double)
+ *      building.elevator               — hiss (ElevatorEnum: 1=Ja, 2=Nej, 3=Okänt)
+ *      building.roomDescription        — rumsbeskrivning (fritext)
+ *      exterior.balcony                — balkong (boolean)
+ *      exterior.patio                  — uteplats (boolean)
+ *      expenses.monthlyFee             — månadsavgift (HousingCooperative only, double)
+ *      expenses.yearlyCommunityFee     — årsavgift (Condominium only, double) → divide by 12
+ *      associationId                   — BRF-ID (HousingCooperative only)
+ *
+ *    HOUSE (House + Cottage):
+ *      building.livingSpace            — boarea (kvm, double)
+ *      building.grossFloorArea         — biarea (kvm, double)
+ *      building.numberOfRooms          — antal rum (double)
+ *      building.yearBuilt              — byggår (int)
+ *      building.roomDescription        — rumsbeskrivning (fritext)
+ *      plotInfo.plotSize               — tomtarea (kvm, double)
+ *      expenses.operatingCost          — driftkostnad (double)
+ *      expenses.isLeasehold            — tomträtt (boolean)
+ *
+ *    AGENT (fetched separately via /PublicAdvertising/Agent/{customerId}/{id}):
+ *      name                            — mäklarens namn
+ *      telephone.cell                  — mobilnummer
+ *      telephone.work                  — arbetstelefon
+ *      emailAddress                    — e-post
  */
 
 import * as Sentry from "@sentry/node";
 
 export interface VitecConfig {
   apiKey: string;
-  customerId: string;   // Broker's Vitec customer account ID — required by Vitec Express API
-  baseUrl?: string;     // defaults to https://vitecexpress.bovision.se
+  customerId: string;
+  baseUrl?: string;
 }
 
 export interface VitecProperty {
@@ -29,144 +95,189 @@ export interface VitecProperty {
   address: string;
   city: string;
   district?: string;
+  zipCode?: string;
   propertyType: string;
   livingArea?: number;
   biArea?: number;
   lotArea?: number;
   rooms?: number;
-  bedrooms?: number;
-  bathrooms?: number;
   floor?: number;
   totalFloors?: number;
   hasElevator?: boolean;
   yearBuilt?: number;
-  condition?: string;
   energyClass?: string;
   monthlyFee?: number;
   askingPrice?: number;
-  brfName?: string;
-  description?: string;
-  kitchenDescription?: string;
-  bathroomDescription?: string;
-  layoutDescription?: string;
-  gardenDescription?: string;
-  balconyArea?: number;
-  balconyDirection?: string;
-  parking?: string;
-  storage?: string;
-  heating?: string;
-  flooring?: string;
-  roofType?: string;
-  constructionMaterial?: string;
-  view?: string;
-  specialFeatures?: string[];
-  gardenFeatures?: string[];
-  transport?: string;
-  neighborhood?: string;
+  isLeasehold?: boolean;
+  // Texts from Vitec (mäklaren may have already written these)
+  description?: string;       // texts.saleDescription
+  headline?: string;          // texts.saleHeading
+  shortAd?: string;           // texts.shortSaleDescription
+  salePhrase?: string;        // texts.salePhrase
+  layoutDescription?: string; // building.roomDescription
+  // Location
+  transport?: string;         // surroundings.communication
+  neighborhood?: string;      // surroundings.generalAboutArea + surroundings.service
+  parking?: string;           // surroundings.parking
+  // Features
+  hasBalcony?: boolean;
+  hasPatio?: boolean;
+  // Showing
   showingDate?: string;
   accessDate?: string;
+  // Broker (fetched separately)
   brokerName?: string;
   brokerPhone?: string;
+  brokerEmail?: string;
+  // Images
   imageUrls?: string[];
+  // Raw data for debugging
   rawData?: Record<string, any>;
 }
 
-// Maps Vitec property type codes to Mäklartexter types
-function mapPropertyType(vitecType: string): string {
-  const t = vitecType?.toLowerCase() || "";
-  if (t.includes("lägenhet") || t.includes("bostadsrätt") || t === "apartment") return "apartment";
-  if (t.includes("villa") || t === "villa") return "villa";
-  if (t.includes("radhus") || t.includes("townhouse")) return "townhouse";
-  if (t.includes("hus") || t === "house") return "house";
-  return "apartment";
-}
-
-// Maps Vitec energy class codes (A-G or numeric) to letter
-function mapEnergyClass(raw: string | number | undefined): string | undefined {
-  if (!raw) return undefined;
-  const s = String(raw).trim().toUpperCase();
-  if (/^[A-G]$/.test(s)) return s;
-  // Vitec sometimes returns numeric: 1=A, 2=B, ...
-  const num = parseInt(s, 10);
-  if (num >= 1 && num <= 7) return String.fromCharCode(64 + num);
+// ElevatorEnum: 1=Ja, 2=Nej, 3=Okänt
+function mapElevator(val: number | undefined): boolean | undefined {
+  if (val === 1) return true;
+  if (val === 2) return false;
   return undefined;
 }
 
-// Normalizes a Vitec API property object into Mäklartexter's propertyData shape
+// Determine property type from Vitec type + marketing flags
+function mapPropertyType(vitecType: string, marketing: Record<string, any>): string {
+  if (vitecType === "Condominium" || vitecType === "HousingCooperative") {
+    if (marketing?.isTerraceHouse || marketing?.isDuplexHouse || marketing?.isLinkedHouse) {
+      return "townhouse";
+    }
+    return "apartment";
+  }
+  if (vitecType === "House") {
+    if (marketing?.isTerraceHouse || marketing?.isDuplexHouse || marketing?.isLinkedHouse) {
+      return "townhouse";
+    }
+    return "house";
+  }
+  if (vitecType === "Cottage") return "house";
+  if (vitecType === "Farm") return "house";
+  return "apartment";
+}
+
+// Extract image URLs from Vitec images array (prefer CDN references)
+function extractImageUrls(images: any[]): string[] {
+  if (!Array.isArray(images)) return [];
+  const urls: string[] = [];
+  for (const img of images) {
+    if (Array.isArray(img.cdnReferences)) {
+      // Prefer the largest/original format
+      const ref = img.cdnReferences.find((r: any) => r.name === "original" || r.name === "large") 
+        || img.cdnReferences[0];
+      if (ref?.url) urls.push(ref.url);
+    }
+  }
+  return urls;
+}
+
+// Format viewing time from Vitec viewings array
+function formatViewingTime(viewings: any[]): string | undefined {
+  if (!Array.isArray(viewings) || viewings.length === 0) return undefined;
+  const upcoming = viewings
+    .filter((v: any) => v.startsAt)
+    .sort((a: any, b: any) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+    .find((v: any) => new Date(v.startsAt) >= new Date());
+  
+  const viewing = upcoming || viewings[0];
+  if (!viewing?.startsAt) return undefined;
+  
+  try {
+    const start = new Date(viewing.startsAt);
+    const end = viewing.endsAt ? new Date(viewing.endsAt) : null;
+    const dateStr = start.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+    const timeStr = start.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+    const endStr = end ? `–${end.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}` : "";
+    return `${dateStr} kl. ${timeStr}${endStr}`;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Maps a Vitec API property object to our VitecProperty shape.
+ * The raw object must have _vitecType set to the endpoint type.
+ */
 export function mapVitecPropertyToMaklartexter(raw: Record<string, any>): VitecProperty {
-  const address = [raw.streetAddress || raw.address, raw.streetNumber]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
+  const address = raw.address || {};
+  const building = raw.building || {};
+  const plotInfo = raw.plotInfo || {};
+  const price = raw.price || {};
+  const expenses = raw.expenses || {};
+  const energyDeclaration = raw.energyDeclaration || {};
+  const texts = raw.texts || {};
+  const surroundings = raw.surroundings || {};
+  const exterior = raw.exterior || {};
+  const vitecType = raw._vitecType || "";
 
-  const specialFeatures: string[] = [];
-  if (raw.newlyRenovated || raw.renovated) specialFeatures.push("Renoverat");
-  if (raw.newProduction || raw.newConstruction) specialFeatures.push("Nyproduktion");
-  if (raw.fireplace) specialFeatures.push("Braskamin");
-  if (raw.solarPanels) specialFeatures.push("Solceller");
-  if (raw.fiberInternet) specialFeatures.push("Fiber indraget");
-  if (raw.securityDoor) specialFeatures.push("Säkerhetsdörr");
-  if (raw.newWindows) specialFeatures.push("Nya fönster");
-  if (raw.newRoof) specialFeatures.push("Nytt tak");
-  if (raw.drainageWork) specialFeatures.push("Dränering utförd");
-  if (raw.pipeReplacement || raw.stambyteCompleted) specialFeatures.push("Stambyte genomfört");
-  if (raw.chargingStation || raw.evCharger) specialFeatures.push("Laddbox för elbil");
-  if (raw.fiberBroadband) specialFeatures.push("Fiber indraget");
+  // Monthly fee calculation
+  let monthlyFee: number | undefined;
+  if (expenses.monthlyFee != null && Number(expenses.monthlyFee) > 0) {
+    monthlyFee = Math.round(Number(expenses.monthlyFee));
+  } else if (expenses.yearlyCommunityFee != null && Number(expenses.yearlyCommunityFee) > 0) {
+    monthlyFee = Math.round(Number(expenses.yearlyCommunityFee) / 12);
+  }
 
-  const gardenFeatures: string[] = [];
-  if (raw.patio || raw.terrace) gardenFeatures.push("Altan");
-  if (raw.deck || raw.woodDeck) gardenFeatures.push("Trädäck");
-  if (raw.pergola) gardenFeatures.push("Pergola");
-  if (raw.fruitTrees) gardenFeatures.push("Fruktträd");
-  if (raw.shed || raw.outbuilding) gardenFeatures.push("Förråd");
-  if (raw.greenhouse) gardenFeatures.push("Växthus");
+  // Combine surroundings into readable strings
+  const transportParts = [surroundings.communication].filter(Boolean);
+  const neighborhoodParts = [surroundings.generalAboutArea, surroundings.service].filter(Boolean);
+
+  // Image URLs
+  const imageUrls = extractImageUrls(raw.images || []);
+
+  // Viewing time (next upcoming or first)
+  const showingDate = formatViewingTime(raw.viewings || []);
+
+  // Access date
+  let accessDate: string | undefined;
+  if (raw.admissionAt) {
+    try {
+      accessDate = new Date(raw.admissionAt).toLocaleDateString("sv-SE");
+    } catch { /* ignore */ }
+  }
 
   return {
-    id: String(raw.id || raw.objectId || raw.estateId || ""),
-    address: address || raw.fullAddress || "",
-    city: raw.city || raw.municipality || "",
-    district: raw.district || raw.cityDistrict || raw.area || undefined,
-    propertyType: mapPropertyType(raw.propertyType || raw.type || raw.objectType || ""),
-    livingArea: Number(raw.livingArea || raw.area || raw.boarea) || undefined,
-    biArea: Number(raw.biArea || raw.supplementaryArea) || undefined,
-    lotArea: Number(raw.lotArea || raw.plotArea || raw.landArea) || undefined,
-    rooms: Number(raw.rooms || raw.numberOfRooms) || undefined,
-    bedrooms: Number(raw.bedrooms || raw.numberOfBedrooms) || undefined,
-    bathrooms: Number(raw.bathrooms || raw.numberOfBathrooms) || undefined,
-    floor: Number(raw.floor || raw.floorNumber) || undefined,
-    totalFloors: Number(raw.totalFloors || raw.numberOfFloors || raw.floors) || undefined,
-    hasElevator: raw.elevator === true || raw.hasElevator === true || raw.elevator === "Ja",
-    yearBuilt: Number(raw.yearBuilt || raw.constructionYear || raw.buildYear) || undefined,
-    condition: raw.condition || raw.propertyCondition || raw.skick || undefined,
-    energyClass: mapEnergyClass(raw.energyClass || raw.energyRating || raw.energiklass),
-    monthlyFee: Number(raw.monthlyFee || raw.fee || raw.avgift) || undefined,
-    askingPrice: Number(raw.askingPrice || raw.price || raw.startingPrice || raw.utgangspris) || undefined,
-    brfName: raw.brfName || raw.associationName || raw.housingAssociation || raw.brf || undefined,
-    description: raw.description || raw.objectDescription || raw.objektbeskrivning || undefined,
-    kitchenDescription: raw.kitchen || raw.kitchenDescription || raw.kok || undefined,
-    bathroomDescription: raw.bathroom || raw.bathroomDescription || raw.badrum || undefined,
-    layoutDescription: raw.layout || raw.floorPlan || raw.layoutDescription || raw.planlösning || undefined,
-    gardenDescription: raw.garden || raw.gardenDescription || raw.tradgard || undefined,
-    balconyArea: Number(raw.balconyArea || raw.balconySize || raw.balkongArea) || undefined,
-    balconyDirection: raw.balconyDirection || raw.balconyOrientation || raw.balkongVaderstreck || undefined,
-    parking: raw.parking || raw.parkingDescription || raw.parkering || undefined,
-    storage: raw.storage || raw.storageDescription || raw.forrad || undefined,
-    heating: raw.heating || raw.heatingSystem || raw.uppvarmning || undefined,
-    flooring: raw.flooring || raw.floorMaterial || raw.golv || undefined,
-    roofType: raw.roofType || raw.roof || raw.tak || undefined,
-    constructionMaterial: raw.constructionMaterial || raw.material || raw.byggnadsmaterial || undefined,
-    view: raw.view || raw.utsikt || undefined,
-    specialFeatures: specialFeatures.length > 0 ? specialFeatures : undefined,
-    gardenFeatures: gardenFeatures.length > 0 ? gardenFeatures : undefined,
-    transport: raw.transport || raw.publicTransport || raw.communications || raw.kommunikationer || undefined,
-    neighborhood: raw.neighborhood || raw.area || raw.district || raw.omrade || undefined,
-    showingDate: raw.showingDate || raw.viewingDate || raw.visningstid || undefined,
-    accessDate: raw.accessDate || raw.tilltradesdag || raw.possessionDate || undefined,
-    brokerName: raw.brokerName || raw.agentName || raw.maklarnamn || undefined,
-    brokerPhone: raw.brokerPhone || raw.agentPhone || raw.maklartelefon || undefined,
-    imageUrls: Array.isArray(raw.images)
-      ? raw.images.map((img: any) => (typeof img === "string" ? img : img?.url || img?.src)).filter(Boolean)
-      : undefined,
+    id: String(raw.id || ""),
+    address: address.streetAddress || "",
+    city: address.city || "",
+    district: address.areaName || undefined,
+    zipCode: address.zipCode || undefined,
+    propertyType: mapPropertyType(vitecType, raw.marketing || {}),
+    livingArea: Number(building.livingSpace) || undefined,
+    biArea: Number(building.grossFloorArea) || undefined,
+    lotArea: Number(plotInfo.plotSize) || undefined,
+    rooms: Number(building.numberOfRooms) || undefined,
+    floor: Number(building.floor) || undefined,
+    totalFloors: Number(building.numberOfFloors) || undefined,
+    hasElevator: mapElevator(building.elevator),
+    yearBuilt: Number(building.yearBuilt) || undefined,
+    energyClass: energyDeclaration.energyClass || undefined,
+    monthlyFee,
+    askingPrice: Number(price.swedishCurrency) || undefined,
+    isLeasehold: expenses.isLeasehold === true,
+    // Texts
+    description: texts.saleDescription || undefined,
+    headline: texts.saleHeading || undefined,
+    shortAd: texts.shortSaleDescription || undefined,
+    salePhrase: texts.salePhrase || undefined,
+    layoutDescription: building.roomDescription || undefined,
+    // Location
+    transport: transportParts.join(" ").trim() || undefined,
+    neighborhood: neighborhoodParts.join(" ").trim() || undefined,
+    parking: surroundings.parking || undefined,
+    // Features
+    hasBalcony: exterior.balcony === true,
+    hasPatio: exterior.patio === true,
+    // Showing
+    showingDate,
+    accessDate,
+    // Images
+    imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
     rawData: raw,
   };
 }
@@ -188,88 +299,193 @@ export class VitecClient {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         Accept: "application/json",
+        "Content-Type": "application/json",
       },
       signal: AbortSignal.timeout(15_000),
     });
 
     if (res.status === 401 || res.status === 403) {
-      throw new VitecAuthError("Ogiltig Vitec API-nyckel. Kontrollera dina inställningar.");
+      throw new VitecAuthError(
+        "Ogiltig Vitec API-nyckel eller saknad behörighet. Kontrollera:\n" +
+        "1. API-nyckeln är korrekt kopierad från Vitec\n" +
+        "2. Kund-ID (customerId) stämmer med ditt Vitec-konto\n" +
+        "3. API-nyckeln har behörighet för PublicAdvertising"
+      );
     }
     if (res.status === 404) {
-      throw new VitecNotFoundError(`Objektet hittades inte i Vitec (${path})`);
+      throw new VitecNotFoundError(`Resursen hittades inte i Vitec (${path})`);
     }
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new VitecApiError(`Vitec API-fel ${res.status}: ${body.slice(0, 200)}`);
     }
 
-    return res.json() as Promise<T>;
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return res.json() as Promise<T>;
+    }
+    // Some endpoints return plain text or empty body
+    const text = await res.text();
+    if (!text.trim()) return {} as T;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      return text as unknown as T;
+    }
   }
 
   /**
-   * Fetch a single property using the generic Fetcher endpoint.
-   * Returns the raw object which we then map based on its type.
+   * Fetch a single property by ID.
+   * Tries each typed endpoint in order of likelihood.
+   * Most Swedish brokers deal primarily with HousingCooperative (bostadsrätt) and House.
    */
   async getProperty(objectId: string): Promise<VitecProperty> {
-    try {
-      const raw = await this.request<Record<string, any>>(
-        `/Fetcher/Singelobject/${encodeURIComponent(this.customerId)}/${encodeURIComponent(objectId)}`
-      );
-      return mapVitecPropertyToMaklartexter(raw);
-    } catch (err) {
-      if (err instanceof VitecAuthError || err instanceof VitecNotFoundError) throw err;
-      Sentry.captureException(err, { tags: { integration: "vitec", action: "getProperty" } });
-      throw new VitecApiError(`Kunde inte hämta objekt från Vitec: ${(err as Error).message}`);
-    }
-  }
+    const cId = encodeURIComponent(this.customerId);
+    const oId = encodeURIComponent(objectId);
 
-  /**
-   * List all active estates for this customer using the Estate list endpoint.
-   * Falls back to Fetcher/All if Estate endpoint fails.
-   */
-  async listActiveProperties(limit = 20): Promise<VitecProperty[]> {
-    try {
-      // Try the PublicAdvertising/Estate list first (returns structured estate list)
-      const raw = await this.request<any>(
-        `/PublicAdvertising/Estate/${encodeURIComponent(this.customerId)}`
-      );
-      // Vitec Express returns { estates: [...] } or an array directly
-      const items: any[] = Array.isArray(raw)
-        ? raw
-        : raw?.estates || raw?.items || raw?.results || raw?.data || [];
-      return items.slice(0, limit).map(mapVitecPropertyToMaklartexter);
-    } catch (estateErr) {
-      if (estateErr instanceof VitecAuthError) throw estateErr;
-      // Fallback: use Fetcher/All which returns all objects
+    // Try typed endpoints in order of frequency in Swedish market:
+    // 1. HousingCooperative (bostadsrätt kooperativ) — most common
+    // 2. Condominium (bostadsrätt äganderätt) — common
+    // 3. House (villa/hus) — common
+    // 4. Cottage (fritidshus) — less common
+    const attempts: Array<{ path: string; type: string }> = [
+      { path: `/Internal/PublicAdvertising/HousingCooperative/${cId}/${oId}`, type: "HousingCooperative" },
+      { path: `/Internal/PublicAdvertising/Condominium/${cId}/${oId}`, type: "Condominium" },
+      { path: `/Internal/PublicAdvertising/House/${cId}/${oId}`, type: "House" },
+      { path: `/Internal/PublicAdvertising/Cottage/${cId}/${oId}`, type: "Cottage" },
+    ];
+
+    const errors: string[] = [];
+
+    for (const { path, type } of attempts) {
       try {
-        const raw = await this.request<any>("/Fetcher/All");
-        const items: any[] = Array.isArray(raw)
-          ? raw
-          : raw?.items || raw?.results || raw?.data || [];
-        return items.slice(0, limit).map(mapVitecPropertyToMaklartexter);
+        const raw = await this.request<Record<string, any>>(path);
+        // Verify we got a real property (not empty object)
+        if (raw && raw.id) {
+          raw._vitecType = type;
+          const property = mapVitecPropertyToMaklartexter(raw);
+          // Fetch broker info if available (non-blocking)
+          if (raw.primaryAgentId) {
+            try {
+              const agent = await this.request<any>(
+                `/PublicAdvertising/Agent/${cId}/${encodeURIComponent(raw.primaryAgentId)}`
+              );
+              if (agent?.name) {
+                property.brokerName = agent.name;
+                property.brokerPhone = agent.telephone?.cell || agent.telephone?.work || undefined;
+                property.brokerEmail = agent.emailAddress || undefined;
+              }
+            } catch {
+              // Agent fetch is optional — don't fail the import
+            }
+          }
+          return property;
+        }
       } catch (err) {
-        if (err instanceof VitecAuthError) throw err;
-        Sentry.captureException(err, { tags: { integration: "vitec", action: "listActiveProperties" } });
-        throw new VitecApiError(`Kunde inte lista objekt från Vitec: ${(err as Error).message}`);
+        if (err instanceof VitecAuthError) throw err; // Auth errors are fatal
+        if (err instanceof VitecNotFoundError) {
+          errors.push(`${type}: not found`);
+          continue; // Try next type
+        }
+        // Other errors: log and try next
+        errors.push(`${type}: ${(err as Error).message}`);
       }
     }
+
+    // All attempts failed
+    throw new VitecNotFoundError(
+      `Objektet "${objectId}" hittades inte i Vitec. ` +
+      `Kontrollera att objekt-ID:t är korrekt och att objektet är aktivt.`
+    );
   }
 
   /**
-   * Search properties by address or reference number.
-   * Vitec Express doesn't have a dedicated search endpoint, so we list all
-   * and filter client-side. For large portfolios this is acceptable since
-   * brokers typically have 10-30 active listings.
+   * List active estates for this customer.
+   * Uses the Estate list endpoint, then fetches details for each.
+   * 
+   * NOTE: The estate list endpoint returns a list of estate IDs/summaries.
+   * We then fetch full details for each using getProperty().
+   */
+  async listActiveProperties(limit = 20): Promise<VitecProperty[]> {
+    const cId = encodeURIComponent(this.customerId);
+
+    try {
+      const estateList = await this.request<any>(
+        `/PublicAdvertising/Estate/${cId}`
+      );
+
+      // Extract estate items from various possible response shapes
+      let items: any[] = [];
+      if (Array.isArray(estateList)) {
+        items = estateList;
+      } else if (estateList && typeof estateList === "object") {
+        // Try common wrapper patterns
+        items = estateList.estates
+          || estateList.items
+          || estateList.results
+          || estateList.data
+          || estateList.properties
+          || [];
+        // If the response itself looks like a single estate
+        if (items.length === 0 && estateList.id) {
+          items = [estateList];
+        }
+      }
+
+      if (items.length === 0) {
+        console.warn("[Vitec] Estate list returned empty or unrecognized format:", typeof estateList);
+        return [];
+      }
+
+      // Fetch details for each estate (up to limit), in parallel with concurrency limit
+      const toFetch = items.slice(0, limit);
+      const CONCURRENCY = 5;
+      const results: VitecProperty[] = [];
+
+      for (let i = 0; i < toFetch.length; i += CONCURRENCY) {
+        const batch = toFetch.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.allSettled(
+          batch.map(async (item: any) => {
+            const id = item.id || item.estateId || item.objectId;
+            if (!id) return null;
+            try {
+              return await this.getProperty(String(id));
+            } catch {
+              return null;
+            }
+          })
+        );
+        for (const r of batchResults) {
+          if (r.status === "fulfilled" && r.value) {
+            results.push(r.value);
+          }
+        }
+      }
+
+      return results;
+    } catch (err) {
+      if (err instanceof VitecAuthError) throw err;
+      Sentry.captureException(err, { tags: { integration: "vitec", action: "listActiveProperties" } });
+      throw new VitecApiError(`Kunde inte lista objekt från Vitec: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Search properties by address or ID.
+   * Lists all and filters client-side.
+   * Brokers typically have 5-30 active listings so this is fine.
    */
   async searchProperties(query: string): Promise<VitecProperty[]> {
     try {
       const all = await this.listActiveProperties(100);
-      const q = query.toLowerCase();
+      const q = query.toLowerCase().trim();
+      if (!q) return all.slice(0, 10);
       return all.filter((p) =>
         p.address?.toLowerCase().includes(q) ||
         p.city?.toLowerCase().includes(q) ||
         p.district?.toLowerCase().includes(q) ||
-        p.id?.toLowerCase().includes(q)
+        p.id?.toLowerCase().includes(q) ||
+        p.zipCode?.includes(q)
       ).slice(0, 10);
     } catch (err) {
       if (err instanceof VitecAuthError) throw err;
@@ -278,22 +494,29 @@ export class VitecClient {
     }
   }
 
-  /** Validate that the API key and customerId work */
+  /**
+   * Validate that the API key and customerId work.
+   * Uses the secure-resource endpoint first, falls back to estate list.
+   */
   async validateApiKey(): Promise<boolean> {
+    // Try the auth validation endpoint
     try {
-      // Use the secure-resource login check endpoint
       await this.request("/api/Login/secure-resource");
       return true;
     } catch (err) {
       if (err instanceof VitecAuthError) return false;
-      // If it's a 404 or other error, the key might still be valid — try listing
-      try {
-        await this.request(`/PublicAdvertising/Estate/${encodeURIComponent(this.customerId)}`);
-        return true;
-      } catch (err2) {
-        if (err2 instanceof VitecAuthError) return false;
-        throw err2;
-      }
+      // 404 means the endpoint doesn't exist but auth might still work
+    }
+
+    // Fallback: try to list estates (this will fail with 401 if key is invalid)
+    try {
+      await this.request(`/PublicAdvertising/Estate/${encodeURIComponent(this.customerId)}`);
+      return true;
+    } catch (err) {
+      if (err instanceof VitecAuthError) return false;
+      // Other errors (404, 500) might mean the key is valid but no estates exist
+      // We consider this a valid key
+      return !(err instanceof VitecAuthError);
     }
   }
 }

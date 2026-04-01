@@ -4,10 +4,11 @@
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Link2, Building2, Search, CheckCircle2, Trash2, ExternalLink, Download, AlertCircle } from "lucide-react";
+import { Loader2, Link2, Building2, Search, CheckCircle2, Trash2, ExternalLink, Download, AlertCircle, FileCheck, FileText, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -324,10 +325,12 @@ interface VitecImportPickerProps {
 
 export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [pendingImport, setPendingImport] = useState<{ propertyData: Record<string, any>; hasExistingText: boolean } | null>(null);
 
-  const { data: settings } = useQuery<IntegrationSettings>({
+  const { data: settings, isLoading: settingsLoading } = useQuery<IntegrationSettings>({
     queryKey: ["/api/integrations/settings"],
     enabled: isPro,
   });
@@ -356,21 +359,104 @@ export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
       return res.json();
     },
     onSuccess: (data) => {
-      onImport(data.propertyData);
-      setOpen(false);
-      toast({ title: "Vitec-objekt importerat", description: `${data.property?.address || "Objektet"} har fyllts i.` });
+      const hasExistingText = Boolean(data.propertyData?.description?.trim());
+      if (hasExistingText) {
+        // Show choice: analyze existing text or generate new
+        setPendingImport({ propertyData: data.propertyData, hasExistingText: true });
+        setOpen(false);
+      } else {
+        // No existing text — just fill the form
+        onImport(data.propertyData);
+        setOpen(false);
+        toast({ title: "Vitec-objekt importerat", description: `${data.propertyData?.address || "Objektet"} har fyllts i.` });
+      }
     },
     onError: (err: any) => {
       toast({ title: "Import misslyckades", description: err.message, variant: "destructive" });
     },
   });
 
-  if (!isPro || !settings?.vitecEnabled) return null;
+  if (!isPro) return null;
+  // While settings are loading, show a disabled button so layout doesn't jump
+  if (settingsLoading) {
+    return (
+      <Button type="button" variant="outline" size="sm" className="text-xs gap-1.5 border-dashed opacity-50" disabled>
+        <Building2 className="w-3 h-3" />
+        Importera från Vitec
+      </Button>
+    );
+  }
+  if (!settings?.vitecEnabled) return null;
 
   const displayProperties = searchQuery.trim().length >= 2
     ? (searchData?.properties || [])
     : (listingsData?.properties || []);
   const isLoading = searchQuery.trim().length >= 2 ? searchLoading : listingsLoading;
+
+  // Show choice dialog when there's an existing text
+  if (pendingImport) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden p-4 space-y-3">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-gray-800">Befintlig text hittades</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Det finns redan en objektbeskrivning i Vitec. Vad vill du göra?
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs justify-start gap-2 h-auto py-2.5 px-3"
+            onClick={() => {
+              // Navigate to text analysis with the existing text pre-filled
+              const text = pendingImport.propertyData.description;
+              // Store in sessionStorage so HemnetAnalysis can pick it up
+              sessionStorage.setItem("vitec-analyze-text", text);
+              sessionStorage.setItem("vitec-analyze-address", pendingImport.propertyData.address || "");
+              setPendingImport(null);
+              setLocation("/hemnet-analysis");
+            }}
+          >
+            <FileCheck className="w-3.5 h-3.5 text-primary" />
+            <div className="text-left">
+              <div className="font-medium">Analysera befintlig text</div>
+              <div className="text-gray-400 font-normal">Granska och förbättra den befintliga objektbeskrivningen</div>
+            </div>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs justify-start gap-2 h-auto py-2.5 px-3"
+            onClick={() => {
+              // Fill form and generate new text (existing text goes to otherInfo as context)
+              onImport(pendingImport.propertyData);
+              setPendingImport(null);
+              toast({ title: "Vitec-objekt importerat", description: "Formuläret är ifyllt. Befintlig text finns i 'Övrig info' som kontext." });
+            }}
+          >
+            <FileText className="w-3.5 h-3.5 text-gray-500" />
+            <div className="text-left">
+              <div className="font-medium">Generera ny text</div>
+              <div className="text-gray-400 font-normal">Fyll i formuläret och låt AI:n skriva en ny text</div>
+            </div>
+          </Button>
+        </div>
+        <button
+          type="button"
+          className="text-xs text-gray-400 hover:text-gray-600 w-full text-center"
+          onClick={() => setPendingImport(null)}
+        >
+          Avbryt
+        </button>
+      </div>
+    );
+  }
 
   if (!open) {
     return (
