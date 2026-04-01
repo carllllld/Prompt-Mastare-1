@@ -279,7 +279,7 @@ export function EssentialFieldsSection({
             )} />
             <FormField control={form.control} name="energyClass" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm text-gray-600" title="Visas som eget fält på Hemnet — nämns inte i löptexten">Energiklass</FormLabel>
+                <FormLabel className="text-sm text-gray-600">Energiklass</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-10 bg-white">
@@ -377,7 +377,7 @@ export function EssentialFieldsSection({
             )} />
             <FormField control={form.control} name="energyClass" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm text-gray-600" title="Visas som eget fält på Hemnet — nämns inte i löptexten">Energiklass</FormLabel>
+                <FormLabel className="text-sm text-gray-600">Energiklass</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger className="h-10 bg-white">

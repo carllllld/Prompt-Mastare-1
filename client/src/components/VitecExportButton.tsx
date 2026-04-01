@@ -38,10 +38,8 @@ function buildStructuredExport(props: VitecExportButtonProps): string {
   const isApt = propertyData.propertyType === "apartment" || propertyData.propertyType === "townhouse";
   const typeMap: Record<string, string> = { apartment: "Lägenhet", house: "Villa", townhouse: "Radhus", villa: "Villa" };
 
-  // ── SECTION 1: Structured facts (goes into dedicated fields in Vitec/Hemnet) ──
-  // These are shown as separate data fields on Hemnet — NOT in the description text
-  parts.push("══ FAKTA (klistra in i respektive fält i Hemnet/Vitec) ══");
-  parts.push("Dessa visas som strukturerade fält på Hemnet — inte i löptexten.");
+  // ── SECTION 1: Structured facts ──
+  parts.push("══ FAKTA ══");
   parts.push("");
   
   if (propertyData.address) parts.push(`Adress: ${propertyData.address}`);
@@ -272,9 +270,8 @@ export function VitecExportButton(props: VitecExportButtonProps) {
             <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
               <AlertCircle className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">Så här fungerar Hemnet-annonsen</p>
-                <p>På Hemnet visas fakta (adress, boarea, rum, avgift, energiklass etc.) automatiskt som strukturerade fält — du behöver bara fylla i dem i Vitec/ditt mäklarsystem.</p>
-                <p>Objektbeskrivningen är den löptext som köpare läser. Den ska INTE upprepa fakta som redan visas i de strukturerade fälten.</p>
+                <p className="font-medium text-foreground">Kopiera och klistra in i ditt mäklarsystem</p>
+                <p>Fakta-fälten klistras in separat. Objektbeskrivningen är löptexten.</p>
               </div>
             </div>
           </div>
