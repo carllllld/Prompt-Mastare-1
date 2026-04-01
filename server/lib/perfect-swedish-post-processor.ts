@@ -560,7 +560,8 @@ export class DeterministicPostProcessor {
     }
 
     // Headline: remove trailing punctuation
-      });
+    if (result.headline && /[.!?]$/.test(result.headline)) {
+      result.headline = result.headline.replace(/[.!?]+$/, '');
     }
 
     return result;
