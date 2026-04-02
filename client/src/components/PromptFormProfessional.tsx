@@ -1545,19 +1545,19 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 />
               )}
 
-          {/* ── SECTION 1: OBJEKTTYP (always shown) ── */}
-          {(renderMode === 'full' || renderMode === 'essential-only') && (
-            <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
-                  Objekttyp
-                </label>
-                {importedFromVitec && (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#DCFCE7", color: "#166534" }}>
-                    Vitec: {importedFromVitec}
-                  </span>
-                )}
-              </div>
+              {/* ── SECTION 1: OBJEKTTYP (always shown) ── */}
+              {(renderMode === 'full' || renderMode === 'essential-only') && (
+                <div className="bg-white border rounded-lg p-4" style={{ borderColor: "#E8E5DE" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold" style={{ color: "#1D2939" }}>
+                      Objekttyp
+                    </label>
+                    {importedFromVitec && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#DCFCE7", color: "#166534" }}>
+                        Vitec: {importedFromVitec}
+                      </span>
+                    )}
+                  </div>
               <div className="flex flex-wrap gap-2">
                 {([
                   { value: "apartment" as const, label: "Lägenhet" },
@@ -2088,7 +2088,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
             </>
           )}
-            </div>
             
             {/* Sidebar: Quality Progress Indicator (Desktop only) */}
             {renderMode === 'full' && (
