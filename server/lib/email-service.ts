@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { emailTemplateEngine, TemplateVariables } from '../templates/email-templates';
-import { emailQueue, EmailJob } from './email-queue';
+// CRITICAL FIX: Use persistent email queue instead of in-memory queue
+import * as persistentQueue from './email-queue-persistent';
 import { checkEmailRateLimit } from './email-rate-limiter';
 
 export interface EmailResult {
@@ -99,13 +100,12 @@ export async function queueEmail(
       };
     }
 
-    // Add to queue
-    const jobId = await emailQueue.addJob({
+    // CRITICAL FIX: Add to persistent queue instead of in-memory queue
+    const jobId = await persistentQueue.addEmailJob({
       type,
       to,
       data,
       maxAttempts: getMaxAttempts(type),
-      nextRetry: new Date()
     });
 
     return {

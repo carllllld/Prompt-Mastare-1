@@ -383,3 +383,36 @@ export const hemnetImportSchema = z.object({
     "URL:en måste vara en hemnet.se/bostader/-länk"
   ),
 });
+
+// ==========================================
+// FORM TEMPLATES: Save & Reuse Form Data
+// ==========================================
+
+export const formTemplates = pgTable("form_templates", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  templateData: jsonb("template_data").$type<Record<string, any>>().notNull(),
+  usedCount: integer("used_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userNameUnique: unique("form_templates_user_name_unique").on(table.userId, table.name),
+}));
+
+export const insertFormTemplateSchema = createInsertSchema(formTemplates).omit({ id: true, createdAt: true, updatedAt: true, usedCount: true });
+export type FormTemplate = typeof formTemplates.$inferSelect;
+export type InsertFormTemplate = z.infer<typeof insertFormTemplateSchema>;
+
+export const formTemplateCreateSchema = z.object({
+  name: z.string().trim().min(1, "Namn krävs").max(100, "Namnet är för långt"),
+  description: z.string().trim().max(500, "Beskrivningen är för lång").optional(),
+  templateData: z.record(z.any()),
+});
+
+export const formTemplateUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Namn krävs").max(100, "Namnet är för långt").optional(),
+  description: z.string().trim().max(500, "Beskrivningen är för lång").optional(),
+  templateData: z.record(z.any()).optional(),
+});

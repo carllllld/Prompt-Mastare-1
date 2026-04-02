@@ -239,14 +239,73 @@ ${HEMNET_FORBIDDEN_PATTERNS.map(p => `- ${p.message}: Mönster som matchar "${p.
 - Fakta ska vara konkreta och verifierbara`;
 
     const unverifiableClaimsSection = `
-## OTYDLIGA PÅSTÅENDEN SOM KRÄVER BEVIS (MÅSTE flaggas som "critical" om bevis saknas)
+## JURIDISK VÄGLEDNING (MÅSTE flaggas med konkreta råd)
+
+Kontrollera dessa JURIDISKA RISKER och ge KONKRET vägledning:
+
+1. **OVERIFIERBARA PÅSTÅENDEN OM SKICK:**
+   - "Nyskick", "toppskick", "perfekt skick" UTAN bevis
+   - Issue: "Juridisk risk: 'nyskick' utan bevis kan leda till reklamation"
+   - Suggestion: "Lägg till bevis: 'Besiktigad 2023 utan anmärkningar' eller 'Totalrenoverad 2022' eller ta bort påståendet"
+
+2. **VAGA AVSTÅNDSANSPRÅK:**
+   - "Nära skola", "nära centrum", "nära kommunikationer" UTAN exakt avstånd
+   - Issue: "Juridisk risk: 'nära skola' är subjektivt - kan uppfattas som vilseledande"
+   - Suggestion: "Ange exakt avstånd: '500 meter till Storgårdsskolan' eller '5 minuters promenad till skolan'"
+
+3. **SUBJEKTIVA LÄGESBESKRIVNINGAR:**
+   - "Lugnt läge" nära motorväg/järnväg
+   - "Centralt läge" långt från centrum
+   - Issue: "Juridisk risk: 'lugnt läge' kan ifrågasättas om det finns trafikbuller"
+   - Suggestion: "Var specifik: 'Ligger på lugn gata med lite trafik' eller undvik subjektiva omdömen"
+
+4. **TIDSLÖSA RENOVERINGSPÅSTÅENDEN:**
+   - "Renoverat" UTAN år (kan vara 2005 eller 2023)
+   - Issue: "Juridisk risk: 'renoverat kök' utan år kan missuppfattas som nyligen"
+   - Suggestion: "Ange år: 'Köket renoverades 2019' för att undvika missförstånd"
+
+5. **GARANTIER UTAN GRUND:**
+   - "Garanterat låg avgift", "Garanterat lugnt"
+   - Issue: "Juridisk risk: Garantier utan grund kan leda till ansvar"
+   - Suggestion: "Undvik garantier. Skriv istället: 'Avgiften är X kr/mån' eller 'Ligger på lugn gata'"
+
+**VIKTIGT:** Varje juridisk varning MÅSTE inkludera:
+- Vad risken är (reklamation, vilseledande, ansvar)
+- Konkret lösning (lägg till bevis, ange exakt avstånd, specificera år)
+- Alternativ formulering om möjligt
 ${UNVERIFIABLE_CLAIMS.map(c => `- "${c.claim}" → Kräver: ${c.requiresEvidence}`).join('\n')}
 
 Om något av dessa påståenden förekommer UTAN konkret bevis (t.ex. renoveringsår, besiktning), MÅSTE du flagga det som:
 - severity: "critical"
 - category: "legal"
 - issue: "Otydligt påstående: '[påstående]' kräver bevis"
-- suggestion: "Specificera bevis (t.ex. renoveringsår, besiktning) eller ta bort påståendet"`;
+- suggestion: "Specificera bevis (t.ex. renoveringsår, besiktning) eller ta bort påståendet"
+
+## SAKNADE KRITISKA DETALJER (MÅSTE flaggas som "critical" om de saknas)
+
+Kontrollera att huvudtexten innehåller dessa OBLIGATORISKA detaljer:
+
+1. **KÖKSBESKRIVNING** (minst 20 ord om köket):
+   - Om texten saknar köksbeskrivning → severity: "critical", category: "clarity"
+   - Issue: "Saknar köksbeskrivning - obligatoriskt för alla annonser"
+   - Suggestion: "Lägg till minst 20 ord om köket: renovering, leverantör, vitvaror, storlek, planlösning"
+
+2. **BADRUMSBESKRIVNING** (minst 15 ord om badrum):
+   - Om texten saknar badrumsbeskrivning → severity: "critical", category: "clarity"
+   - Issue: "Saknar badrumsbeskrivning - obligatoriskt för alla annonser"
+   - Suggestion: "Lägg till minst 15 ord om badrummet: renovering, kakel, golvvärme, storlek"
+
+3. **LÄGESBESKRIVNING** (minst 30 ord om läge/kommunikationer):
+   - Om texten saknar lägesbeskrivning → severity: "important", category: "clarity"
+   - Issue: "Saknar lägesbeskrivning - köpare vill veta om kommunikationer"
+   - Suggestion: "Lägg till minst 30 ord om läget: pendlingstid, kollektivtrafik, service, skolor"
+
+4. **TEXTLÄNGD** (minst 150 ord för huvudtext):
+   - Om texten är kortare än 150 ord → severity: "important", category: "clarity"
+   - Issue: "Texten är för kort (X ord) - minst 150 ord rekommenderas"
+   - Suggestion: "Lägg till mer information om bostaden, läget och föreningen"
+
+**VIKTIGT:** Räkna ord noggrant. Ett ord = minst 2 bokstäver separerat av mellanslag.`;
 
     return `Du är en senior svensk mäklare OCH jurist med 20 års erfarenhet. Analysera dessa mäklartexter och ge konstruktiv feedback i JSON-format.
 
@@ -277,8 +336,16 @@ Exempel på FELAKTIG flaggning (gör INTE detta):
 - "Undvik specifika restaurangnamn" → men texten säger "restauranger" (generellt) = FALSKT ALARM
 - "Nämn inte pris" → men texten nämner inte pris = FALSKT ALARM
 
-## FÖRBJUDNA FRASER (MÅSTE flaggas som "critical" om de förekommer i NÅGOT fält)
-${blockedPhrases.map(p => `- "${p}"`).join('\n')}
+## AI-KLYSCHOR (MÅSTE flaggas som "critical" om de förekommer i NÅGOT fält)
+
+VIKTIGT: Dessa fraser är INTE juridiskt förbjudna. De är AI-KLYSCHOR som gör texten generisk och oprofessionell.
+Riktiga mäklare skriver ALDRIG så här - endast AI gör det.
+
+${blockedPhrases.map(p => `- "${p}" → Gör texten generisk, skriv konkret istället`).join('\n')}
+
+När du hittar en AI-klysch, förklara VARFÖR den är dålig och ge KONKRETA exempel:
+- Issue: "AI-klysch: '[fras]' gör texten generisk"
+- Suggestion: "Skriv konkret istället. Exempel: Istället för 'Köket erbjuder moderna vitvaror' → 'Köket har Siemens-vitvaror från 2022'"
 
 ${unverifiableClaimsSection}
 
@@ -309,23 +376,31 @@ ${userContext ? `\n## EXTRA INSTRUKTIONER FRÅN ANVÄNDAREN\n${userContext}\n\nF
 
 För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, kort annons):
 
-1. STYRKOR: Vad är konkret bra? (3-5 punkter)
-2. FÖRBÄTTRINGAR: Konkreta problem med lösningar
-   - Finns NÅGON förbjuden fras? → MÅSTE flaggas som severity: "critical"
+1. STYRKOR: Vad är konkret bra? (MINST 3 punkter - det finns ALLTID något bra!)
+   - Konkreta detaljer (renoveringsår, leverantörer, mått)
+   - Verifierbar information (stambyte, besiktning)
+   - Specifika beskrivningar (inte generiska)
+   - Exempel: "Konkret renovering: 'Ballingslöv-kök från 2019' ⭐"
+   - Exempel: "Specifika mått: 'Balkong 8 kvm i söderläge' ⭐"
+   
+2. FÖRBÄTTRINGAR: Konkreta problem med lösningar (MINST 3 förbättringar - det finns ALLTID något att förbättra!)
+   - Finns NÅGON AI-klysch? → MÅSTE flaggas som severity: "critical" med förklaring VARFÖR
    - Finns NÅGOT otydligt påstående utan bevis? → MÅSTE flaggas som severity: "critical"
    - Bryter mot plattformsreglerna ovan? → MÅSTE flaggas som severity: "critical"
    - Grammatikfel (t.ex. dubbel punkt "..")? → severity: "critical"  
-   - AI-klyschor som inte är i listan? → severity: "important"
+   - Generiska beskrivningar som kan bli mer specifika? → severity: "important"
    - Stilfrågor? → severity: "suggestion"
+   
 3. FÄLTSPECIFIKA KVALITETSKRAV:
    - Rubrik: max 9 ord, ingen punkt, inga emojis → severity: "important"
    - Social media: 1-3 meningar, punkt i slutet → severity: "suggestion"
    - Instagram: 1-2 emojis, max 2200 tecken → severity: "suggestion"
    - Visningsinbjudan: innehåller "visning" → severity: "important"
    - Kort annons: max 2 meningar, innehåller bostadstyp + boarea → severity: "suggestion"
-4. JURIDIK: Vilseledande påståenden? Faktafel?
+   
+4. JURIDIK: Vilseledande påståenden? Faktafel? Hemnet-regelbrott?
 
-**VIKTIGT**: Du MÅSTE kontrollera VARJE fält för VARJE förbjuden fras, otydligt påstående och plattformsregel. Missa INGENTING!
+**VIKTIGT**: Du MÅSTE kontrollera VARJE fält för VARJE AI-klysch, otydligt påstående och plattformsregel. Missa INGENTING!
 
 **KRITISKT — UNDVIK FALSKA ALARM:**
 - Flagga INTE generella termer som "restauranger", "kaféer", "butiker", "matställen" — dessa är KORREKTA. Flagga BARA om SPECIFIKA namn nämns (t.ex. "Restaurang Gondolen", "ICA Maxi Vasastan").
@@ -333,18 +408,26 @@ För VARJE fält (rubrik, huvudtext, social media, Instagram, visningsinbjudan, 
 - Om ett fält är tomt, flagga det som "Fältet är tomt" — inte som att det bryter mot en regel.
 - Varje förbättring MÅSTE citera den exakta texten som är problematisk.
 
+**FÖRKLARA ALLTID VARFÖR:**
+När du hittar ett problem, förklara VARFÖR det är dåligt och ge KONKRETA exempel på hur det kan förbättras.
+Exempel: "AI-klysch: 'erbjuder' gör texten generisk. Riktiga mäklare skriver konkret. Istället för 'Köket erbjuder moderna vitvaror' → 'Köket har Siemens-vitvaror från 2022'"
+
 ## OUTPUT FORMAT
 
 Svara ENDAST med JSON (json format) i denna exakta struktur:
 
 {
   "overallQuality": 8.5,
-  "strengths": ["Konkret styrka 1", "Konkret styrka 2", "Konkret styrka 3"],
+  "strengths": [
+    "Konkret styrka 1 med exempel från texten",
+    "Konkret styrka 2 med exempel från texten", 
+    "Konkret styrka 3 med exempel från texten"
+  ],
   "improvements": [
     {
-      "issue": "Konkret problem i specifikt fält",
+      "issue": "AI-klysch: '[exakt fras från texten]' gör texten generisk",
       "location": "headline|improvedPrompt|socialCopy|instagramCaption|showingInvitation|shortAd",
-      "suggestion": "Konkret förslag",
+      "suggestion": "Skriv konkret istället. Exempel: Istället för '[dåligt exempel]' → '[bra exempel]'",
       "category": "grammar|style|legal|broker_realism|clarity",
       "severity": "critical|important|suggestion",
       "expert": "broker|lawyer"
@@ -355,7 +438,13 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     "notes": "Eventuella noteringar",
     "issues": []
   }
-}`;
+}
+
+VIKTIGT: 
+- strengths MÅSTE innehålla MINST 3 konkreta styrkor med exempel från texten
+- improvements MÅSTE innehålla MINST 3 förbättringsförslag
+- Varje improvement MÅSTE citera exakt text från något fält
+- Varje improvement MÅSTE förklara VARFÖR det är ett problem och ge KONKRETA exempel på lösning`;
   }
 
   private parseAnalysisResult(completion: OpenAI.ChatCompletion): Omit<ExpertAnalysis, 'duration'> {
@@ -409,6 +498,16 @@ Svara ENDAST med JSON (json format) i denna exakta struktur:
     }
     if (!Array.isArray(analysis.improvements)) {
       throw new Error('Missing or invalid improvements array');
+    }
+
+    // Enforce minimum strengths — there's ALWAYS something good in a text
+    if (analysis.strengths.length === 0) {
+      console.warn('[ANALYZER] Zero strengths returned — injecting fallback strengths');
+      analysis.strengths = [
+        'Texten innehåller konkret information om bostaden',
+        'Strukturen är läsbar och följer en logisk ordning',
+        'Språket är professionellt och anpassat för målgruppen'
+      ];
     }
 
     // Enforce minimum improvements — analyzer must always find something

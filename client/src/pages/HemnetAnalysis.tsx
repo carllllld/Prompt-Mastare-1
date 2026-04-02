@@ -41,6 +41,13 @@ export default function HemnetAnalysis() {
   const [acceptedFixes, setAcceptedFixes] = useState<string[]>([]);
   const [dismissedFixes, setDismissedFixes] = useState<string[]>([]);
   const [copiedText, setCopiedText] = useState(false);
+  const [highlightedFeedbackId, setHighlightedFeedbackId] = useState<string | null>(null);
+  
+  // AI rewrite preservation options
+  const [preserveRenovationYears, setPreserveRenovationYears] = useState(true);
+  const [preserveBrands, setPreserveBrands] = useState(true);
+  const [preserveMeasurements, setPreserveMeasurements] = useState(true);
+  const [preserveSpecificDetails, setPreserveSpecificDetails] = useState(true);
 
   // Pick up pre-filled text from Vitec import (stored in sessionStorage)
   useEffect(() => {
@@ -153,9 +160,15 @@ export default function HemnetAnalysis() {
     }
   }, [inputMode, hemnetUrl, manualText, hemnetMutation, textMutation, toast]);
 
-  // Handle feedback click
+  // Handle feedback click - highlight and scroll to problem
   const handleFeedbackClick = useCallback((feedbackId: string) => {
     console.log('[HemnetAnalysis] Feedback clicked:', feedbackId);
+    setHighlightedFeedbackId(feedbackId);
+    
+    // Clear highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedFeedbackId(null);
+    }, 3000);
   }, []);
 
   // Handle fix click
@@ -168,6 +181,46 @@ export default function HemnetAnalysis() {
       setEditedText(result.newText);
     }
   }, [analysisResult, editedText, applyFix]);
+
+  // Handle fix all click
+  const handleFixAllClick = useCallback((feedbackIds: string[]) => {
+    console.log('[HemnetAnalysis] Fix all clicked:', feedbackIds);
+    
+    let currentText = editedText;
+    let successCount = 0;
+    
+    // Sort feedback by position (end to start) to avoid offset issues
+    const feedbackToFix = analysisResult?.analysis.improvements
+      .filter(f => feedbackIds.includes(f.id))
+      .sort((a, b) => {
+        if (!a.textSpan || !b.textSpan) return 0;
+        return b.textSpan.start - a.textSpan.start;
+      }) || [];
+    
+    // Apply all fixes
+    for (const feedback of feedbackToFix) {
+      const result = applyFix(currentText, feedback, 'improvedPrompt');
+      if (result.success && result.newText) {
+        currentText = result.newText;
+        successCount++;
+      }
+    }
+    
+    if (successCount > 0) {
+      setEditedText(currentText);
+      setAcceptedFixes(prev => [...prev, ...feedbackIds]);
+      toast({
+        title: `${successCount} fixar applicerade`,
+        description: "Alla instanser har uppdaterats automatiskt",
+      });
+    } else {
+      toast({
+        title: "Kunde inte applicera fixar",
+        description: "Texten har ändrats sedan feedbacken genererades",
+        variant: "destructive",
+      });
+    }
+  }, [analysisResult, editedText, applyFix, toast]);
 
   // Handle dismiss click
   const handleDismissClick = useCallback((feedbackId: string) => {
@@ -212,10 +265,26 @@ export default function HemnetAnalysis() {
       return;
     }
 
+    // Build preservation instructions
+    const preservationInstructions = [];
+    if (preserveRenovationYears) preservationInstructions.push("Bevara ALLA renoveringsår exakt som de är (t.ex. '2019', '2022')");
+    if (preserveBrands) preservationInstructions.push("Bevara ALLA varumärken och leverantörer exakt (t.ex. 'Ballingslöv', 'Siemens', 'Bosch')");
+    if (preserveMeasurements) preservationInstructions.push("Bevara ALLA mått och ytor exakt (t.ex. '8 kvm', '3,2 meter', '76 kvm')");
+    if (preserveSpecificDetails) preservationInstructions.push("Bevara ALLA specifika detaljer som gör texten unik (t.ex. 'söderläge', 'originaldetaljer', 'kakelugn')");
+
+    const fullContext = [
+      rewriteContext.trim(),
+      "",
+      "VIKTIGT - BEVARA DESSA DETALJER:",
+      ...preservationInstructions,
+      "",
+      "Skriv om texten för att fixa AI-klyschor och förbättra formuleringar, men BEVARA alla konkreta detaljer ovan."
+    ].filter(Boolean).join("\n");
+
     rewriteMutation.mutate({
       originalText: editedText,
       improvements: analysisResult?.analysis.improvements || [],
-      context: rewriteContext.trim() || undefined,
+      context: fullContext,
     }, {
       onSuccess: (data) => {
         setRewrittenText(data.rewrittenText);
@@ -232,7 +301,7 @@ export default function HemnetAnalysis() {
         });
       },
     });
-  }, [editedText, analysisResult, rewriteContext, rewriteMutation, toast]);
+  }, [editedText, analysisResult, rewriteContext, rewriteMutation, toast, preserveRenovationYears, preserveBrands, preserveMeasurements, preserveSpecificDetails]);
 
   // Handle use rewritten text
   const handleUseRewrittenText = useCallback(() => {
@@ -481,9 +550,16 @@ export default function HemnetAnalysis() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" size="sm">
-                    Kvalitet: {analysisResult.analysis.overallQuality}/10
-                  </Badge>
+                  <div className="flex flex-col items-end">
+                    <Badge variant="outline" size="sm">
+                      Kvalitet: {analysisResult.analysis.overallQuality}/10
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">
+                      {analysisResult.analysis.overallQuality >= 9 ? 'Excellent (toppnivå)' : 
+                       analysisResult.analysis.overallQuality >= 7 ? 'Bra (över genomsnitt)' : 
+                       analysisResult.analysis.overallQuality >= 5 ? 'Okej (genomsnitt 6/10)' : 'Behöver förbättras'}
+                    </span>
+                  </div>
                   <Badge 
                     variant="outline" 
                     size="sm"
@@ -548,6 +624,7 @@ export default function HemnetAnalysis() {
                       field="improvedPrompt"
                       onFixClick={handleFixClick}
                       onTextChange={setEditedText}
+                      highlightedFeedbackId={highlightedFeedbackId}
                     />
                   </div>
 
@@ -568,6 +645,7 @@ export default function HemnetAnalysis() {
                   analysis={analysisResult.analysis}
                   onFeedbackClick={handleFeedbackClick}
                   onFixClick={handleFixClick}
+                  onFixAllClick={handleFixAllClick}
                   onDismissClick={handleDismissClick}
                 />
               </div>
@@ -616,6 +694,54 @@ export default function HemnetAnalysis() {
 
               {showRewriteSection && (
                 <div className="space-y-4 mt-4 pt-4 border-t border-border">
+                  {/* Preserve details checkboxes */}
+                  <div>
+                    <label className="text-xs font-medium text-foreground mb-2 block">
+                      Bevara dessa detaljer (rekommenderat)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={preserveRenovationYears}
+                          onChange={(e) => setPreserveRenovationYears(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <span>Renoveringsår</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={preserveBrands}
+                          onChange={(e) => setPreserveBrands(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <span>Varumärken & leverantörer</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={preserveMeasurements}
+                          onChange={(e) => setPreserveMeasurements(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <span>Mått & ytor</span>
+                      </label>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={preserveSpecificDetails}
+                          onChange={(e) => setPreserveSpecificDetails(e.target.checked)}
+                          className="rounded border-border"
+                        />
+                        <span>Specifika detaljer</span>
+                      </label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      AI:n kommer att bevara dessa konkreta detaljer och endast förbättra formuleringar
+                    </p>
+                  </div>
+
                   <div>
                     <label className="text-xs font-medium text-foreground mb-2 block">
                       Extra instruktioner (valfritt)
@@ -650,12 +776,12 @@ export default function HemnetAnalysis() {
                     )}
                   </Button>
 
-                  {/* Rewritten text result */}
+                  {/* Rewritten text result with comparison */}
                   {rewrittenText && (
-                    <div className="mt-6 space-y-3">
+                    <div className="mt-6 space-y-4">
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-semibold text-foreground">
-                          Omskriven text
+                          Före/Efter-jämförelse
                         </h4>
                         <div className="flex items-center gap-2">
                           <Button
@@ -667,7 +793,7 @@ export default function HemnetAnalysis() {
                             }}
                           >
                             <Copy className="w-3 h-3 mr-1" />
-                            Kopiera
+                            Kopiera ny
                           </Button>
                           <Button
                             size="sm"
@@ -675,20 +801,62 @@ export default function HemnetAnalysis() {
                             className="bg-primary text-primary-foreground"
                           >
                             <Check className="w-3 h-3 mr-1" />
-                            Använd denna text
+                            Använd ny text
                           </Button>
                         </div>
                       </div>
 
-                      <div className="p-4 rounded-lg border border-border bg-muted/30">
-                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                          {rewrittenText}
-                        </p>
+                      {/* Side-by-side comparison */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Original */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-muted-foreground uppercase">Före</span>
+                            <Badge variant="outline" size="sm" className="text-xs">
+                              {editedText.split(/\s+/).length} ord
+                            </Badge>
+                          </div>
+                          <div className="p-4 rounded-lg border border-border bg-muted/30 max-h-[400px] overflow-y-auto">
+                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                              {editedText}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Rewritten */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-primary uppercase">Efter</span>
+                            <Badge variant="outline" size="sm" className="text-xs bg-primary/10">
+                              {rewrittenText.split(/\s+/).length} ord
+                            </Badge>
+                          </div>
+                          <div className="p-4 rounded-lg border-2 border-primary bg-primary/5 max-h-[400px] overflow-y-auto">
+                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                              {rewrittenText}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Change summary */}
+                      <div className="rounded-lg border border-info bg-info-bg px-3 py-2">
+                        <div className="flex items-start gap-2">
+                          <Info className="w-4 h-4 text-info mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-info">
+                            <p className="font-medium mb-1">Ändringar</p>
+                            <ul className="space-y-1">
+                              <li>• Ordantal: {editedText.split(/\s+/).length} → {rewrittenText.split(/\s+/).length} ({rewrittenText.split(/\s+/).length - editedText.split(/\s+/).length > 0 ? '+' : ''}{rewrittenText.split(/\s+/).length - editedText.split(/\s+/).length} ord)</li>
+                              <li>• AI-klyschor borttagna: {visibleFeedback.filter(f => f.category === 'style').length} st</li>
+                              <li>• Bevarade detaljer: {[preserveRenovationYears && 'Renoveringsår', preserveBrands && 'Varumärken', preserveMeasurements && 'Mått', preserveSpecificDetails && 'Specifika detaljer'].filter(Boolean).join(', ') || 'Inga'}</li>
+                            </ul>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                         <Info className="w-3.5 h-3.5" />
-                        Jämför med originalet ovan och välj vilken version du föredrar
+                        Jämför texterna och välj vilken version du föredrar. Du kan alltid ångra med Ctrl+Z.
                       </div>
                     </div>
                   )}

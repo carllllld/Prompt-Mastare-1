@@ -16,6 +16,10 @@ import { EssentialFieldsSection } from "@/components/FormSections/EssentialField
 import { ImageSection } from "@/components/FormSections/ImageSection";
 import { DetailsSection } from "@/components/FormSections/DetailsSection";
 import { CollapsibleChipSelector } from "@/components/FormSections/CollapsibleChipSelector";
+import { FormModeSelector, type FormMode } from "@/components/FormModeSelector";
+import { QualityProgressIndicator } from "@/components/QualityProgressIndicator";
+import { HemnetQuickImport } from "@/components/HemnetQuickImport";
+import { TemplateManager } from "@/components/TemplateManager";
 
 // Field names must match buildDispositionFromStructuredData() in server/routes.ts
 interface PropertyFormData {
@@ -657,6 +661,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   // UI state
   const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
+  const [formMode, setFormMode] = useState<FormMode>('quick'); // Progressive disclosure mode
+  const [showHemnetImport, setShowHemnetImport] = useState(true); // Show Hemnet import in Snabbstart mode
 
   const modelLimits = { min: 200, max: 600, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
@@ -900,6 +906,105 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   
   const priorityChecklist = priorityItems.map(item => item.completed);
   const priorityCompleted = priorityChecklist.filter(Boolean).length;
+
+  // Calculate quality score (1-10) based on completed fields
+  const calculateQualityScore = (): number => {
+    let score = 4; // Base score
+    
+    // Critical fields (+1 each)
+    if (addressValue?.trim()) score += 1;
+    if (livingAreaValue?.trim()) score += 1;
+    if (rooms > 0) score += 1;
+    
+    // Important fields (+0.5 each, max +2)
+    if (hasKitchenBathroomFacts) score += 0.5;
+    if (hasLocationFacts) score += 0.5;
+    if (hasStrongDifferentiator) score += 1;
+    if (layoutValue?.trim()) score += 0.5;
+    
+    // Platform-specific fields (+0.5 each)
+    if (selectedPlatform === "hemnet") {
+      if (buildYearValue?.trim()) score += 0.5;
+      if (energyClassValue?.trim()) score += 0.5;
+    }
+    
+    return Math.min(10, Math.round(score * 10) / 10);
+  };
+  
+  const qualityScore = calculateQualityScore();
+  
+  // Generate improvement suggestions
+  const generateMissingSuggestions = () => {
+    const suggestions: Array<{ label: string; impact: string }> = [];
+    
+    if (!hasKitchenBathroomFacts) {
+      suggestions.push({ label: "Köksbeskrivning", impact: "+1 poäng" });
+    }
+    if (!hasLocationFacts) {
+      suggestions.push({ label: "Lägesbeskrivning", impact: "+1 poäng" });
+    }
+    if (!hasStrongDifferentiator) {
+      suggestions.push({ label: "Försäljningsargument", impact: "+1 poäng" });
+    }
+    if (!layoutValue?.trim()) {
+      suggestions.push({ label: "Planlösning", impact: "+0.5 poäng" });
+    }
+    if (selectedPlatform === "hemnet") {
+      if (!buildYearValue?.trim()) {
+        suggestions.push({ label: "Byggår", impact: "+0.5 poäng" });
+      }
+      if (!energyClassValue?.trim()) {
+        suggestions.push({ label: "Energiklass", impact: "+0.5 poäng" });
+      }
+    }
+    
+    return suggestions;
+  };
+  
+  const missingSuggestions = generateMissingSuggestions();
+  
+  // Calculate completion percentage for progress bar
+  const completionPercentage = Math.round((priorityCompleted / priorityItems.length) * 100);
+    
+    // Platform-specific mandatory fields (+0.5 each)
+    if (selectedPlatform === "hemnet") {
+      if (buildYearValue?.trim()) score += 0.5;
+      if (energyClassValue?.trim()) score += 0.5;
+    }
+    
+    return Math.min(10, Math.round(score));
+  };
+  
+  const qualityScore = calculateQualityScore();
+  
+  // Generate improvement suggestions based on missing fields
+  const generateSuggestions = () => {
+    const suggestions: Array<{ label: string; impact: string }> = [];
+    
+    if (!hasKitchenBathroomFacts) {
+      suggestions.push({ label: "Köksbeskrivning", impact: "+1 poäng" });
+    }
+    if (!hasLocationFacts) {
+      suggestions.push({ label: "Läge & kommunikationer", impact: "+1 poäng" });
+    }
+    if (!hasStrongDifferentiator) {
+      suggestions.push({ label: "Försäljningsargument", impact: "+1 poäng" });
+    }
+    if (!layoutValue?.trim()) {
+      suggestions.push({ label: "Planlösning", impact: "+0.5 poäng" });
+    }
+    if (selectedPlatform === "hemnet" && !buildYearValue?.trim()) {
+      suggestions.push({ label: "Byggår", impact: "+0.5 poäng" });
+    }
+    if (selectedPlatform === "hemnet" && !energyClassValue?.trim()) {
+      suggestions.push({ label: "Energiklass", impact: "+0.5 poäng" });
+    }
+    
+    return suggestions;
+  };
+  
+  const missingSuggestions = generateSuggestions();
+  const completionPercentage = Math.round((priorityCompleted / priorityItems.length) * 100);
 
   // Keep type-specific UI + chips aligned when property type changes
   useEffect(() => {
@@ -1400,7 +1505,45 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   return (
     <TooltipProvider>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onLocalSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onLocalSubmit)}>
+          
+          {/* Desktop layout: Sidebar with quality indicator */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            {/* Main form content */}
+            <div className="lg:col-span-3 space-y-4">
+              
+              {/* Form Mode Selector - Progressive Disclosure */}
+              {renderMode === 'full' && (
+                <FormModeSelector 
+                  mode={formMode} 
+                  onModeChange={setFormMode}
+                  completionPercentage={completionPercentage}
+                />
+              )}
+
+              {/* Template Manager - Save/Load Templates */}
+              {renderMode === 'full' && (
+                <TemplateManager
+                  currentFormData={form.getValues()}
+                  onLoadTemplate={(data) => {
+                    // Load template data into form
+                    Object.entries(data).forEach(([key, value]) => {
+                      if (form.getValues()[key] !== undefined) {
+                        form.setValue(key as any, value);
+                      }
+                    });
+                  }}
+                />
+              )}
+
+              {/* Hemnet Quick Import - Only in Snabbstart mode */}
+              {renderMode === 'full' && formMode === 'quick' && showHemnetImport && (
+                <HemnetQuickImport
+                  onImport={handleExternalImport}
+                  onSkip={() => setShowHemnetImport(false)}
+                />
+              )}
 
           {/* ── SECTION 1: OBJEKTTYP (always shown) ── */}
           {(renderMode === 'full' || renderMode === 'essential-only') && (
@@ -1490,6 +1633,9 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 }}
               />
 
+          {/* ── IMPROVE MODE: KÖK & BADRUM, LÄGE, USP ── */}
+          {(formMode === 'improve' || formMode === 'expert') && (
+            <>
           {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
           <div className="pro-section-card">
             <label className="text-xs font-semibold uppercase tracking-wider block mb-3 text-muted-foreground">
@@ -1553,23 +1699,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
             )} />
           </div>
 
-          {/* ── SECTION 5: PLANLÖSNING (optional freetext) ── */}
-          <div className="pro-section-card">
-            <FormField control={form.control} name="layoutDescription" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs text-gray-500">Planlösning & rumsbeskrivning (valfritt)</FormLabel>
-                <p className="text-[10px] text-gray-400 mb-1">Beskriv flödet mellan rummen och bara sådant som hjälper mäklartexten framåt. Upprepa inte rena fakta som redan finns ovan.</p>
-                <FormControl>
-                  <Textarea
-                    placeholder="Ex: Hall med avhängning och garderober. Kök och vardagsrum i öppen planlösning med naturlig plats för matbord intill fönster. Sovrum mot gård med garderobsvägg och ytterligare rum som passar bra som barnrum eller kontor."
-                    {...field}
-                    className={exampleTextareaClass}
-                  />
-                </FormControl>
-              </FormItem>
-            )} />
-          </div>
-
           {/* ── SECTION 5b: LÄGE & KOMMUNIKATIONER ── */}
           <div className="pro-section-card">
             <label className="text-xs font-semibold uppercase tracking-wider block mb-3 text-muted-foreground">
@@ -1595,6 +1724,28 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 </FormItem>
               )} />
             </div>
+          </div>
+            </>
+          )}
+          
+          {/* ── EXPERT MODE: ALL REMAINING SECTIONS ── */}
+          {formMode === 'expert' && (
+            <>
+          {/* ── SECTION 5: PLANLÖSNING (optional freetext) ── */}
+          <div className="pro-section-card">
+            <FormField control={form.control} name="layoutDescription" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs text-gray-500">Planlösning & rumsbeskrivning (valfritt)</FormLabel>
+                <p className="text-[10px] text-gray-400 mb-1">Beskriv flödet mellan rummen och bara sådant som hjälper mäklartexten framåt. Upprepa inte rena fakta som redan finns ovan.</p>
+                <FormControl>
+                  <Textarea
+                    placeholder="Ex: Hall med avhängning och garderober. Kök och vardagsrum i öppen planlösning med naturlig plats för matbord intill fönster. Sovrum mot gård med garderobsvägg och ytterligare rum som passar bra som barnrum eller kontor."
+                    {...field}
+                    className={exampleTextareaClass}
+                  />
+                </FormControl>
+              </FormItem>
+            )} />
           </div>
           
           {/* Flooring section */}
@@ -1796,8 +1947,10 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               )} />
             </div>
           </div>
+            </>
+          )}
 
-          {/* ── SECTION 8: PLATTFORM, STIL & SUBMIT ── */}
+          {/* ── SECTION 8: PLATTFORM, STIL & SUBMIT (always shown) ── */}
           <div className="pro-section-card space-y-4">
 
             {/* Platform + Writing style — compact */}
@@ -1935,6 +2088,27 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
             </>
           )}
+            </div>
+            
+            {/* Sidebar: Quality Progress Indicator (Desktop only) */}
+            {renderMode === 'full' && (
+              <div className="hidden lg:block lg:col-span-1">
+                <QualityProgressIndicator
+                  completedFields={priorityCompleted}
+                  totalFields={priorityItems.length}
+                  qualityScore={qualityScore}
+                  missingSuggestions={missingSuggestions}
+                  onFieldClick={handleScrollToField}
+                  onSubmit={form.handleSubmit(onLocalSubmit)}
+                  onImprove={() => {
+                    if (formMode === 'quick') setFormMode('improve');
+                    else if (formMode === 'improve') setFormMode('expert');
+                  }}
+                />
+              </div>
+            )}
+            
+          </div>
         </form>
       </Form>
       

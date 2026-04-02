@@ -236,12 +236,17 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
   const [open, setOpen] = useState(false);
   const [imageProgress, setImageProgress] = useState<{ current: number; total: number } | null>(null);
 
+  const [errorDetails, setErrorDetails] = useState<{ type: string; message: string } | null>(null);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+
   const importMutation = useMutation({
     mutationFn: async (hemnetUrl: string) => {
       const res = await apiRequest("POST", "/api/integrations/hemnet/import", { url: hemnetUrl });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Okänt fel" }));
-        throw new Error(err.message || "Kunde inte hämta data från Hemnet");
+        const err = await res.json().catch(() => ({ message: "Okänt fel", type: "unknown" }));
+        const error: any = new Error(err.message || "Kunde inte hämta data från Hemnet");
+        error.type = err.type || "unknown";
+        throw error;
       }
       return res.json();
     },
@@ -250,6 +255,7 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
       setUrl("");
       setOpen(false);
       setImageProgress(null);
+      setErrorDetails(null);
       const imageCount = data.property?.imageUrls?.length || 0;
       toast({
         title: "Hemnet-data importerad",
@@ -258,9 +264,32 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
     },
     onError: (err: any) => {
       setImageProgress(null);
-      toast({ title: "Import misslyckades", description: err.message, variant: "destructive" });
+      setErrorDetails({ type: err.type || "unknown", message: err.message });
     },
   });
+
+  const handleRetryAfterDelay = () => {
+    setRetryCountdown(30);
+    const interval = setInterval(() => {
+      setRetryCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          importMutation.mutate(url.trim());
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleManualFallback = () => {
+    setOpen(false);
+    setErrorDetails(null);
+    toast({
+      title: "Fyll i manuellt",
+      description: "Formuläret är redo för manuell ifyllning",
+    });
+  };
 
   if (!open) {
     return (
@@ -274,6 +303,117 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
         <ExternalLink className="w-3 h-3" />
         Importera från Hemnet
       </Button>
+    );
+  }
+
+  // Show detailed error message with solutions
+  if (errorDetails) {
+    if (errorDetails.type === "HemnetNotFoundError") {
+      return (
+        <div className="p-4 border border-red-200 bg-red-50 space-y-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-900">Annonsen hittades inte</p>
+              <p className="text-xs text-red-700 mt-1">
+                Hemnet-annonsen kunde inte hittas. Detta kan bero på:
+              </p>
+              <ul className="list-disc list-inside text-xs text-red-700 mt-2 space-y-1 ml-2">
+                <li>Annonsen har tagits bort från Hemnet</li>
+                <li>Länken är felaktig eller ofullständig</li>
+                <li>Annonsen är inte längre aktiv</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={() => {
+                setErrorDetails(null);
+                setUrl("");
+              }}
+            >
+              Försök med annan länk
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs bg-primary hover:bg-primary-hover"
+              onClick={handleManualFallback}
+            >
+              Fyll i manuellt istället
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    if (errorDetails.type === "HemnetRateLimitError") {
+      return (
+        <div className="p-4 border border-amber-200 bg-amber-50 space-y-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900">Hemnet blockerade förfrågan</p>
+              <p className="text-xs text-amber-700 mt-1">
+                Hemnet begränsar antalet förfrågningar per minut. Detta händer ibland när många förfrågningar görs samtidigt.
+              </p>
+              <p className="text-xs text-amber-700 mt-2 font-medium">
+                Vänta 30 sekunder och försök igen.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="text-xs bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={handleRetryAfterDelay}
+              disabled={retryCountdown !== null}
+            >
+              {retryCountdown !== null ? `Försöker igen om ${retryCountdown}s...` : "Försök igen om 30 sek"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={handleManualFallback}
+            >
+              Fyll i manuellt istället
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Generic error
+    return (
+      <div className="p-4 border border-red-200 bg-red-50 space-y-3">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-900">Import misslyckades</p>
+            <p className="text-xs text-red-700 mt-1">{errorDetails.message}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            onClick={() => importMutation.mutate(url.trim())}
+          >
+            Försök igen
+          </Button>
+          <Button
+            size="sm"
+            className="text-xs bg-primary hover:bg-primary-hover"
+            onClick={handleManualFallback}
+          >
+            Fyll i manuellt istället
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -309,7 +449,10 @@ export function HemnetImportButton({ onImport }: HemnetImportProps) {
       >
         {importMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
       </Button>
-      <Button type="button" variant="ghost" size="sm" className="text-xs h-8 shrink-0 px-2" onClick={() => setOpen(false)} disabled={importMutation.isPending}>
+      <Button type="button" variant="ghost" size="sm" className="text-xs h-8 shrink-0 px-2" onClick={() => {
+        setOpen(false);
+        setErrorDetails(null);
+      }} disabled={importMutation.isPending}>
         ✕
       </Button>
     </div>
@@ -329,6 +472,7 @@ export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [pendingImport, setPendingImport] = useState<{ propertyData: Record<string, any>; hasExistingText: boolean } | null>(null);
+  const [errorDetails, setErrorDetails] = useState<{ type: string; message: string } | null>(null);
 
   const { data: settings, isLoading: settingsLoading } = useQuery<IntegrationSettings>({
     queryKey: ["/api/integrations/settings"],
@@ -353,8 +497,10 @@ export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
     mutationFn: async (objectId: string) => {
       const res = await apiRequest("POST", "/api/integrations/vitec/import", { objectId });
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Okänt fel" }));
-        throw new Error(err.message);
+        const err = await res.json().catch(() => ({ message: "Okänt fel", type: "unknown" }));
+        const error: any = new Error(err.message);
+        error.type = err.type || "unknown";
+        throw error;
       }
       return res.json();
     },
@@ -364,15 +510,17 @@ export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
         // Show choice: analyze existing text or generate new
         setPendingImport({ propertyData: data.propertyData, hasExistingText: true });
         setOpen(false);
+        setErrorDetails(null);
       } else {
         // No existing text — just fill the form
         onImport(data.propertyData);
         setOpen(false);
+        setErrorDetails(null);
         toast({ title: "Vitec-objekt importerat", description: `${data.propertyData?.address || "Objektet"} har fyllts i.` });
       }
     },
     onError: (err: any) => {
-      toast({ title: "Import misslyckades", description: err.message, variant: "destructive" });
+      setErrorDetails({ type: err.type || "unknown", message: err.message });
     },
   });
 
@@ -497,6 +645,79 @@ export function VitecImportPicker({ onImport, isPro }: VitecImportPickerProps) {
           ✕
         </Button>
       </div>
+
+      {/* Show detailed error message with solutions */}
+      {errorDetails && (
+        <div className="p-4 border-b border-gray-100">
+          {errorDetails.type === "VitecAuthError" ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-900">Ogiltig Vitec API-nyckel</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Din Vitec API-nyckel fungerar inte. Kontrollera att:
+                  </p>
+                  <ul className="list-disc list-inside text-xs text-red-700 mt-2 space-y-1 ml-2">
+                    <li>API-nyckeln är korrekt kopierad från Vitec</li>
+                    <li>Kund-ID stämmer med ditt Vitec-konto</li>
+                    <li>API-nyckeln har behörighet för PublicAdvertising</li>
+                  </ul>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="text-xs bg-primary hover:bg-primary-hover w-full"
+                onClick={() => {
+                  setOpen(false);
+                  setErrorDetails(null);
+                  setLocation("/settings/integrations");
+                }}
+              >
+                Uppdatera Vitec-inställningar
+              </Button>
+            </div>
+          ) : errorDetails.type === "VitecNotFoundError" ? (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900">Objektet hittades inte</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Objektet kunde inte hittas i Vitec. Kontrollera att objekt-ID:t är korrekt och att objektet är aktivt.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs w-full"
+                onClick={() => setErrorDetails(null)}
+              >
+                Försök med annat objekt
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-900">Import misslyckades</p>
+                  <p className="text-xs text-red-700 mt-1">{errorDetails.message}</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs w-full"
+                onClick={() => setErrorDetails(null)}
+              >
+                Försök igen
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="max-h-64 overflow-y-auto">
         {isLoading && (

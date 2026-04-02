@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { AlertCircle, AlertTriangle, Lightbulb, Scale, FileText, User, Briefcase, Wand2 } from "lucide-react";
 
 // FeedbackItem interface matching backend
@@ -21,6 +21,7 @@ interface InlineHighlightsProps {
   field?: string; // Which field this text represents (e.g., 'improvedPrompt', 'headline')
   onFixClick?: (feedbackId: string) => void;
   onTextChange?: (newText: string) => void;
+  highlightedFeedbackId?: string | null; // Feedback to highlight and scroll to
 }
 
 // Severity color mapping
@@ -70,9 +71,11 @@ interface TextSegment {
   end: number;
 }
 
-export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onFixClick, onTextChange }: InlineHighlightsProps) {
+export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onFixClick, onTextChange, highlightedFeedbackId }: InlineHighlightsProps) {
   const [hoveredFeedbackId, setHoveredFeedbackId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null);
+  const highlightedSpanRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Debug logging
   useEffect(() => {
@@ -81,6 +84,21 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
     console.log('[InlineHighlights] field:', field);
     console.log('[InlineHighlights] feedback:', feedback);
   }, [text, feedback, field]);
+
+  // Scroll to highlighted feedback when it changes
+  useEffect(() => {
+    if (highlightedFeedbackId && highlightedSpanRef.current) {
+      // Smooth scroll to the highlighted span
+      highlightedSpanRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+
+      // Flash animation
+      highlightedSpanRef.current.style.animation = 'pulse 0.5s ease-in-out 2';
+    }
+  }, [highlightedFeedbackId]);
 
   // Filter feedback for this specific field
   const relevantFeedback = useMemo(() => {
@@ -231,7 +249,13 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+      `}</style>
       {/* Render text segments with highlights */}
       {segments.map((segment, index) => {
         if (segment.feedback.length === 0) {
@@ -252,16 +276,19 @@ export function InlineHighlights({ text, feedback, field = 'improvedPrompt', onF
         }
 
         const colors = SEVERITY_COLORS[mostSevere.severity];
+        const isHighlighted = segment.feedback.some(f => f.id === highlightedFeedbackId);
 
         return (
           <span
             key={index}
+            ref={isHighlighted ? highlightedSpanRef : undefined}
             className="relative cursor-help transition-all duration-150 whitespace-pre-wrap"
             style={{
-              backgroundColor: colors.bg,
-              borderBottom: `2px solid ${colors.border}`,
+              backgroundColor: isHighlighted ? '#FEF08A' : colors.bg,
+              borderBottom: `2px solid ${isHighlighted ? '#EAB308' : colors.border}`,
               borderRadius: '2px',
               padding: '1px 2px',
+              boxShadow: isHighlighted ? '0 0 0 3px rgba(234, 179, 8, 0.2)' : 'none',
             }}
             onMouseEnter={(e) => handleMouseEnter(e, segment.feedback)}
             onMouseLeave={handleMouseLeave}

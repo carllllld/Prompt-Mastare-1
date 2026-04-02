@@ -89,16 +89,53 @@ export class SmartGenerationEngine {
         duration,
         tokensUsed: completion.usage?.total_tokens || 0
       };
-    } catch (error) {
+    } catch (error: any) {
       const duration = Date.now() - startTime;
+      
+      // CRITICAL FIX: Detect OpenAI quota errors and throw specific error type
+      const isQuotaError = this.isOpenAIQuotaError(error);
+      
       console.error('Smart Generation failed:', {
         error: error instanceof Error ? error.message : String(error),
         duration,
         style: request.style,
-        platform: request.platform
+        platform: request.platform,
+        isQuotaError,
+        errorCode: error?.code,
+        errorType: error?.type,
+        statusCode: error?.status || error?.statusCode
       });
+      
+      // If quota error, throw specific error that orchestrator can handle
+      if (isQuotaError) {
+        const quotaError = new Error('OpenAI quota exceeded - fallback will be activated') as any;
+        quotaError.code = 'OPENAI_QUOTA_EXCEEDED';
+        quotaError.isQuotaError = true;
+        quotaError.originalError = error;
+        throw quotaError;
+      }
+      
       throw error;
     }
+  }
+
+  private isOpenAIQuotaError(error: any): boolean {
+    if (!error) return false;
+    
+    const code = String(error?.error?.code || error?.code || '').toLowerCase();
+    const type = String(error?.error?.type || error?.type || '').toLowerCase();
+    const message = String(error?.error?.message || error?.message || '').toLowerCase();
+    const status = error?.status || error?.statusCode;
+    
+    return (
+      code.includes('insufficient_quota') ||
+      code.includes('quota_exceeded') ||
+      message.includes('insufficient_quota') ||
+      message.includes('quota exceeded') ||
+      message.includes('billing') ||
+      (type.includes('insufficient_quota')) ||
+      (status === 429 && (message.includes('quota') || message.includes('billing')))
+    );
   }
 
   private async getSystemPrompt(style: WritingStyle, platform: string): Promise<string> {

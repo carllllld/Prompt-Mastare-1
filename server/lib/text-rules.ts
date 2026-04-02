@@ -3,6 +3,7 @@ export type TargetPlatform = "hemnet" | "booli" | "general";
 
 // RACIONALISERAD: 32 phrases. Endast verkliga AI-klyschor som en erfaren mäklare ALDRIG skulle skriva.
 // Legitim mäklarvokabulär är TILLÅTEN (t.ex. "smidig pendling", "populärt område", "ljust").
+// VIKTIGT: Dessa är INTE juridiskt förbjudna - de är AI-KLYSCHOR som gör texten generisk och oprofessionell.
 export const FORBIDDEN_PHRASES = [
   // === KRITISKA AI-ÖPPNINGAR (endast AI använder dessa) ===
   "välkommen till",

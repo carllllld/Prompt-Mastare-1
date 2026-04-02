@@ -70,6 +70,43 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
   const lastSentence = sentences[sentences.length - 1]?.trim() || "";
   const wordCount = text.split(/\s+/).filter(Boolean).length;
 
+  // Check for missing critical details
+  const kitchenWords = ['kök', 'köket', 'köksinredning', 'vitvaror', 'spis', 'ugn', 'kyl', 'diskmaskin', 'matplats'];
+  const kitchenMentions = kitchenWords.filter(word => lowerText.includes(word)).length;
+  const kitchenWordCount = text.split(/\s+/).filter(word => 
+    kitchenWords.some(kw => word.toLowerCase().includes(kw))
+  ).length;
+  
+  if (kitchenMentions === 0) {
+    violations.push('Saknar köksbeskrivning - obligatoriskt för alla annonser');
+  } else if (kitchenWordCount < 15) {
+    violations.push(`Köksbeskrivning för kort (${kitchenWordCount} ord) - minst 15 ord rekommenderas`);
+  }
+
+  const bathroomWords = ['badrum', 'badrummet', 'dusch', 'badkar', 'kakel', 'golvvärme', 'tvättmaskin'];
+  const bathroomMentions = bathroomWords.filter(word => lowerText.includes(word)).length;
+  const bathroomWordCount = text.split(/\s+/).filter(word => 
+    bathroomWords.some(bw => word.toLowerCase().includes(bw))
+  ).length;
+  
+  if (bathroomMentions === 0) {
+    violations.push('Saknar badrumsbeskrivning - obligatoriskt för alla annonser');
+  } else if (bathroomWordCount < 10) {
+    violations.push(`Badrumsbeskrivning för kort (${bathroomWordCount} ord) - minst 10 ord rekommenderas`);
+  }
+
+  const locationWords = ['läge', 'ligger', 'kommunikation', 'pendel', 'buss', 'tunnelbana', 'tåg', 'promenad', 'cykel', 'service', 'affär', 'skola', 'förskola', 'centrum'];
+  const locationMentions = locationWords.filter(word => lowerText.includes(word)).length;
+  const locationWordCount = text.split(/\s+/).filter(word => 
+    locationWords.some(lw => word.toLowerCase().includes(lw))
+  ).length;
+  
+  if (locationMentions === 0) {
+    violations.push('Saknar lägesbeskrivning - köpare vill veta om kommunikationer och service');
+  } else if (locationWordCount < 20) {
+    violations.push(`Lägesbeskrivning för kort (${locationWordCount} ord) - minst 20 ord rekommenderas`);
+  }
+
   if (wordCount >= 120 && !/\n\s*\n/.test(text)) {
     violations.push("Saknar tydlig styckeindelning i huvudtexten.");
   }
@@ -185,7 +222,7 @@ export function findRuleViolations(text: string, platform: string = "hemnet", st
     if (style !== "factual" && isSingleWordPhrase && !criticalSingleWordPhrases.has(normalizedPhrase.toLowerCase())) continue;
     if (!shouldBlockPhraseForStyle(normalizedPhrase, style, platform)) continue;
     if (lowerText.includes(phrase.toLowerCase())) {
-      violations.push(`Förbjuden fras: "${phrase}"`);
+      violations.push(`AI-klysch: "${phrase}" — Skriv konkret istället för generiskt`);
     }
   }
 

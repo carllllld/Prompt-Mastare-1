@@ -292,8 +292,8 @@ export function mapHemnetPropertyToMaklartexter(prop: HemnetProperty): Record<st
 
 export async function fetchHemnetProperty(
   url: string,
-  maxRetries = 3,
-  baseDelay = 1000
+  maxRetries = 5, // CRITICAL FIX: Increased from 3 to 5 retries
+  baseDelay = 2000 // CRITICAL FIX: Increased from 1s to 2s base delay
 ): Promise<HemnetProperty> {
   if (!isHemnetUrl(url)) {
     throw new HemnetError("Ogiltig Hemnet-URL. Kontrollera att:\n\n1. Länken är en giltig Hemnet-URL (hemnet.se/bostader/...)\n2. Du kopierade hela länken\n3. Annonsen fortfarande är aktiv på Hemnet");
@@ -309,11 +309,16 @@ export async function fetchHemnetProperty(
 
       // Check if it's a rate limit error
       if (err instanceof HemnetRateLimitError && attempt < maxRetries) {
-        // Exponential backoff: 1s, 2s, 4s, 8s
-        const delay = baseDelay * Math.pow(2, attempt);
+        // CRITICAL FIX: Exponential backoff with jitter: 2s, 4s, 8s, 16s, 32s
+        // Add random jitter to prevent thundering herd
+        const jitter = Math.random() * 1000; // 0-1s random jitter
+        const delay = baseDelay * Math.pow(2, attempt) + jitter;
+        const delaySeconds = Math.round(delay / 1000);
+        
         console.log(
-          `[Hemnet] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`
+          `[Hemnet] Rate limited, retrying in ${delaySeconds}s (attempt ${attempt + 1}/${maxRetries + 1})`
         );
+        
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }

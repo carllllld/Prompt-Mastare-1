@@ -9,6 +9,8 @@ import { InlineHighlights } from "./InlineHighlights";
 import { ExpertFeedbackPanel } from "./ExpertFeedbackPanel";
 import { VitecExportButton } from "./VitecExportButton";
 import { LockedFeature } from "./LockedFeature";
+import { PreviewPanel } from "./PreviewPanel";
+import { CompetitorAnalysis } from "./CompetitorAnalysis";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
 import { useToast } from "@/hooks/use-toast";
 
@@ -710,6 +712,36 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
           </div>
         )}
       </div>
+
+      {/* ── PREVIEW PANEL ── */}
+      {propertyData && (
+        <div className="animate-slide-up animate-delay-300">
+          <PreviewPanel
+            text={editedText}
+            headline={liveResult.headline}
+            address={propertyData.address}
+            price={propertyData.price}
+            livingArea={propertyData.livingArea}
+            rooms={propertyData.rooms}
+            images={propertyData.imageUrls || []}
+          />
+        </div>
+      )}
+
+      {/* ── COMPETITOR ANALYSIS ── */}
+      {propertyData && propertyData.address && propertyData.price && propertyData.livingArea && (
+        <div className="animate-slide-up animate-delay-320">
+          <CompetitorAnalysis
+            propertyData={{
+              address: propertyData.address,
+              price: propertyData.price,
+              livingArea: propertyData.livingArea,
+              rooms: propertyData.rooms || 0,
+              propertyType: propertyData.propertyType || "apartment",
+            }}
+          />
+        </div>
+      )}
 
       {/* ── DISCLAIMER ── */}
       <p className="text-xs text-center text-muted-foreground">

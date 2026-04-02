@@ -431,6 +431,12 @@ export class PerfectSwedishOrchestrator {
       ?? (typeof error?.message === 'string' ? error.message : null)
       ?? String(error);
 
+    // CRITICAL FIX: OpenAI quota errors should NOT be retried - activate fallback immediately
+    if (error?.code === 'OPENAI_QUOTA_EXCEEDED' || error?.isQuotaError) {
+      console.log('[Orchestrator] OpenAI quota error detected - will activate fallback');
+      return false; // Don't retry, go straight to fallback
+    }
+
     // Network errors
     if (errorMessage.includes('ECONNREFUSED') || 
         errorMessage.includes('ETIMEDOUT') ||
@@ -438,7 +444,7 @@ export class PerfectSwedishOrchestrator {
       return true;
     }
 
-    // OpenAI rate limits
+    // OpenAI rate limits (temporary, should retry)
     if (errorMessage.includes('rate_limit_exceeded') ||
         errorMessage.includes('429')) {
       return true;

@@ -97,14 +97,42 @@ async function ensureStripeWebhookTable(): Promise<void> {
 
 async function acquireStripeWebhookEventLock(eventId: string): Promise<boolean> {
   await ensureStripeWebhookTable();
-  const result = await pool.query(
-    `INSERT INTO stripe_webhook_events (event_id, status)
-     VALUES ($1, 'processing')
-     ON CONFLICT (event_id) DO NOTHING
-     RETURNING event_id`,
-    [eventId]
-  );
-  return (result.rowCount ?? 0) > 0;
+  // CRITICAL FIX: Use SELECT FOR UPDATE to ensure atomic lock acquisition
+  // This prevents race conditions when two identical webhooks arrive simultaneously
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Try to insert new event
+    const insertResult = await client.query(
+      `INSERT INTO stripe_webhook_events (event_id, status)
+       VALUES ($1, 'processing')
+       ON CONFLICT (event_id) DO NOTHING
+       RETURNING event_id`,
+      [eventId]
+    );
+    
+    if ((insertResult.rowCount ?? 0) > 0) {
+      await client.query('COMMIT');
+      return true;
+    }
+    
+    // Event already exists - check if it's already processed
+    const checkResult = await client.query(
+      `SELECT status FROM stripe_webhook_events WHERE event_id = $1 FOR UPDATE`,
+      [eventId]
+    );
+    
+    await client.query('COMMIT');
+    
+    // If already processed or processing, reject
+    return false;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function finalizeStripeWebhookEvent(eventId: string): Promise<void> {
@@ -3093,9 +3121,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         }
       }
 
-
-      // Analysera skrivstilen med AI
-      const styleProfile = await analyzeWritingStyle(referenceTexts);
+      // CRITICAL FIX: Add 30-second timeout to prevent hanging
+      const styleProfile = await Promise.race([
+        analyzeWritingStyle(referenceTexts),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Stilanalys tog för lång tid (timeout efter 30 sekunder)')),
+            30_000
+          )
+        )
+      ]);
 
       // Spara till databasen
       const personalStyleData: InsertPersonalStyle = {
@@ -3115,7 +3150,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (err) {
       console.error("Create personal style error:", err);
-      res.status(500).json({ message: "Kunde inte spara personlig stil" });
+      
+      // Better error message for timeout
+      const errorMessage = err instanceof Error && err.message.includes('timeout')
+        ? 'Stilanalys tog för lång tid. Försök igen med kortare exempeltexter.'
+        : 'Kunde inte spara personlig stil';
+      
+      res.status(500).json({ message: errorMessage });
     }
   });
 
@@ -3574,6 +3615,166 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         if (err instanceof HemnetError) return res.status(502).json({ message: err.message });
         console.error("Hemnet analysis error:", err);
         res.status(500).json({ message: "Kunde inte analysera Hemnet-texten" });
+      }
+    });
+
+    // POST /api/hemnet-import-form — Quick import for form (Snabbstart mode)
+    app.post("/api/hemnet-import-form", requireAuth, async (req, res) => {
+      try {
+        const parse = hemnetImportSchema.safeParse(req.body);
+        if (!parse.success) {
+          return res.status(400).json({ message: parse.error.issues[0]?.message || "Ogiltig URL" });
+        }
+
+        if (!isHemnetUrl(parse.data.url)) {
+          return res.status(400).json({ message: "URL:en måste vara en hemnet.se/bostader/-länk." });
+        }
+
+        // Fetch property data from Hemnet
+        const property = await fetchHemnetProperty(parse.data.url);
+        
+        // Map to form-compatible format
+        const formData = mapHemnetPropertyToOptiPrompt(property);
+        
+        // Return simplified response for form import
+        res.json({
+          success: true,
+          address: property.address,
+          ...formData,
+        });
+      } catch (err) {
+        if (err instanceof HemnetNotFoundError) {
+          return res.status(404).json({ message: "Kunde inte hitta annonsen på Hemnet" });
+        }
+        if (err instanceof HemnetRateLimitError) {
+          return res.status(429).json({ message: "För många förfrågningar. Försök igen om en stund." });
+        }
+        if (err instanceof HemnetError) {
+          return res.status(502).json({ message: "Kunde inte hämta data från Hemnet" });
+        }
+        console.error("Hemnet form import error:", err);
+        res.status(500).json({ message: "Kunde inte importera från Hemnet" });
+      }
+    });
+
+    // POST /api/templates — create a new form template
+    app.post("/api/templates", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { createTemplate } = await import("./lib/form-templates");
+        const { formTemplateCreateSchema } = await import("@shared/schema");
+
+        const parse = formTemplateCreateSchema.safeParse(req.body);
+        if (!parse.success) {
+          return res.status(400).json({ message: "Ogiltig data", errors: parse.error.errors });
+        }
+
+        const template = await createTemplate(user.id, parse.data);
+        res.json(template);
+      } catch (err: any) {
+        console.error("Template creation error:", err);
+        res.status(500).json({ message: err.message || "Kunde inte skapa mall" });
+      }
+    });
+
+    // GET /api/templates — get all user templates
+    app.get("/api/templates", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { getUserTemplates } = await import("./lib/form-templates");
+
+        const templates = await getUserTemplates(user.id);
+        res.json(templates);
+      } catch (err: any) {
+        console.error("Template fetch error:", err);
+        res.status(500).json({ message: "Kunde inte hämta mallar" });
+      }
+    });
+
+    // PATCH /api/templates/:id — update a template
+    app.patch("/api/templates/:id", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const templateId = parseInt(req.params.id);
+        const { updateTemplate } = await import("./lib/form-templates");
+        const { formTemplateUpdateSchema } = await import("@shared/schema");
+
+        const parse = formTemplateUpdateSchema.safeParse(req.body);
+        if (!parse.success) {
+          return res.status(400).json({ message: "Ogiltig data", errors: parse.error.errors });
+        }
+
+        const template = await updateTemplate(user.id, templateId, parse.data);
+        if (!template) {
+          return res.status(404).json({ message: "Mall hittades inte" });
+        }
+
+        res.json(template);
+      } catch (err: any) {
+        console.error("Template update error:", err);
+        res.status(500).json({ message: "Kunde inte uppdatera mall" });
+      }
+    });
+
+    // DELETE /api/templates/:id — delete a template
+    app.delete("/api/templates/:id", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const templateId = parseInt(req.params.id);
+        const { deleteTemplate } = await import("./lib/form-templates");
+
+        const success = await deleteTemplate(user.id, templateId);
+        if (!success) {
+          return res.status(404).json({ message: "Mall hittades inte" });
+        }
+
+        res.json({ success: true });
+      } catch (err: any) {
+        console.error("Template deletion error:", err);
+        res.status(500).json({ message: "Kunde inte ta bort mall" });
+      }
+    });
+
+    // POST /api/templates/:id/use — increment template usage count
+    app.post("/api/templates/:id/use", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const templateId = parseInt(req.params.id);
+        const { incrementTemplateUsage } = await import("./lib/form-templates");
+
+        await incrementTemplateUsage(user.id, templateId);
+        res.json({ success: true });
+      } catch (err: any) {
+        console.error("Template usage increment error:", err);
+        res.status(500).json({ message: "Kunde inte uppdatera användning" });
+      }
+    });
+
+    // POST /api/competitor-analysis — analyze competitors in the area
+    app.post("/api/competitor-analysis", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const { analyzeCompetitors } = await import("./lib/competitor-analysis");
+
+        const { address, price, livingArea, rooms, propertyType, location } = req.body;
+
+        if (!address || !price || !livingArea) {
+          return res.status(400).json({ message: "Adress, pris och boarea krävs" });
+        }
+
+        const analysis = await analyzeCompetitors({
+          address,
+          price,
+          livingArea,
+          rooms: rooms || 0,
+          propertyType: propertyType || "apartment",
+          location,
+        });
+
+        res.json(analysis);
+      } catch (err: any) {
+        console.error("Competitor analysis error:", err);
+        res.status(500).json({ message: "Kunde inte analysera konkurrenter" });
       }
     });
 

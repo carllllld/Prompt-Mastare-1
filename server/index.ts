@@ -399,6 +399,38 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     log("info", "server_listen", { port: PORT });
   });
 
+  // CRITICAL FIX: Initialize and start persistent email queue processor
+  try {
+    const { createEmailQueueTable, startEmailQueueProcessor } = await import('./lib/email-queue-persistent');
+    await createEmailQueueTable();
+    const queueInterval = startEmailQueueProcessor();
+    log("info", "email_queue_started", { interval: "10s" });
+    
+    // Store interval for cleanup on shutdown
+    (global as any).__emailQueueInterval = queueInterval;
+  } catch (err) {
+    log("error", "email_queue_init_failed", { error: err instanceof Error ? err.message : String(err) });
+  }
+
+  // CRITICAL FIX: Start session cleanup cron (runs daily at 3 AM)
+  const sessionCleanupInterval = setInterval(async () => {
+    try {
+      const result = await pool.query(`
+        DELETE FROM session 
+        WHERE expire < NOW()
+        RETURNING sid
+      `);
+      const deletedCount = result.rowCount || 0;
+      if (deletedCount > 0) {
+        log("info", "session_cleanup", { deleted: deletedCount });
+      }
+    } catch (err) {
+      log("error", "session_cleanup_failed", { error: err instanceof Error ? err.message : String(err) });
+    }
+  }, 24 * 60 * 60 * 1000); // Run every 24 hours
+  
+  (global as any).__sessionCleanupInterval = sessionCleanupInterval;
+
   // ─── GRACEFUL SHUTDOWN ───
   const shutdown = (signal: string) => {
     log("info", "shutdown_start", { signal });
