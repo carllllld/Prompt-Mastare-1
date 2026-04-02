@@ -1949,8 +1949,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
             </>
           )}
-          </>
-          )}
 
           {/* ── SECTION 8: PLATTFORM, STIL & SUBMIT (always shown) ── */}
           <div className="pro-section-card space-y-4">
@@ -2088,8 +2086,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </Button>
             </div>
           </div>
-          </div>
-          {/* End of lg:col-span-3 main form content */}
 
           {/* Sidebar: Quality Progress Indicator (Desktop only) */}
           {renderMode === 'full' && (
