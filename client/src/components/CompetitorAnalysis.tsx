@@ -100,6 +100,19 @@ export function CompetitorAnalysis({ propertyData }: CompetitorAnalysisProps) {
 
   return (
     <div className="space-y-4">
+      {/* BETA Disclaimer */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <div className="flex items-start gap-2">
+          <Lightbulb className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-amber-800">
+            <span className="font-semibold">BETA - Demo data</span>
+            <p className="mt-1">
+              Denna funktion använder för närvarande demo-data. Integration med Hemnet API kommer snart.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

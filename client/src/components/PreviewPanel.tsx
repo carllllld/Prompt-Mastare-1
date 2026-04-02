@@ -68,6 +68,19 @@ export function PreviewPanel({
 
   return (
     <div className="space-y-4">
+      {/* Disclaimer */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-start gap-2">
+          <Eye className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="text-xs text-blue-800">
+            <span className="font-semibold">Förhandsvisning (approximation)</span>
+            <p className="mt-1">
+              Detta är en ungefärlig representation av hur texten kan se ut på Hemnet/Booli. Faktisk layout kan variera.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Controls */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-2">
