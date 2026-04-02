@@ -2086,9 +2086,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </Button>
             </div>
           </div>
-            </>
-          )}
-            
+
           </div>
           {/* End of lg:col-span-3 main form content */}
             
