@@ -1949,7 +1949,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           </div>
             </>
           )}
-            </>
+          </>
           )}
 
           {/* ── SECTION 8: PLATTFORM, STIL & SUBMIT (always shown) ── */}
