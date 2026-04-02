@@ -965,46 +965,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   
   // Calculate completion percentage for progress bar
   const completionPercentage = Math.round((priorityCompleted / priorityItems.length) * 100);
-    
-    // Platform-specific mandatory fields (+0.5 each)
-    if (selectedPlatform === "hemnet") {
-      if (buildYearValue?.trim()) score += 0.5;
-      if (energyClassValue?.trim()) score += 0.5;
-    }
-    
-    return Math.min(10, Math.round(score));
-  };
-  
-  const qualityScore = calculateQualityScore();
-  
-  // Generate improvement suggestions based on missing fields
-  const generateSuggestions = () => {
-    const suggestions: Array<{ label: string; impact: string }> = [];
-    
-    if (!hasKitchenBathroomFacts) {
-      suggestions.push({ label: "Köksbeskrivning", impact: "+1 poäng" });
-    }
-    if (!hasLocationFacts) {
-      suggestions.push({ label: "Läge & kommunikationer", impact: "+1 poäng" });
-    }
-    if (!hasStrongDifferentiator) {
-      suggestions.push({ label: "Försäljningsargument", impact: "+1 poäng" });
-    }
-    if (!layoutValue?.trim()) {
-      suggestions.push({ label: "Planlösning", impact: "+0.5 poäng" });
-    }
-    if (selectedPlatform === "hemnet" && !buildYearValue?.trim()) {
-      suggestions.push({ label: "Byggår", impact: "+0.5 poäng" });
-    }
-    if (selectedPlatform === "hemnet" && !energyClassValue?.trim()) {
-      suggestions.push({ label: "Energiklass", impact: "+0.5 poäng" });
-    }
-    
-    return suggestions;
-  };
-  
-  const missingSuggestions = generateSuggestions();
-  const completionPercentage = Math.round((priorityCompleted / priorityItems.length) * 100);
 
   // Keep type-specific UI + chips aligned when property type changes
   useEffect(() => {
