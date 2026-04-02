@@ -2086,8 +2086,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               </Button>
             </div>
           </div>
-          {/* End of lg:col-span-3 main form content */}
-            
+
           {/* Sidebar: Quality Progress Indicator (Desktop only) */}
           {renderMode === 'full' && (
             <div className="hidden lg:block lg:col-span-1">
@@ -2105,6 +2104,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               />
             </div>
           )}
+          </div>
+          {/* End of lg:col-span-3 main form content */}
             
         </div>
         {/* End of grid container */}
