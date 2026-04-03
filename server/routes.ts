@@ -768,6 +768,9 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["har allt", ""],
   ["lämnar inget att önska", ""],
   ["uppfyller alla önskemål", ""],
+  ["ger en bra bild av vardagsekonomin", ""],
+  ["ger en bra bild av", ""],
+  ["den naturliga platsen för", ""],
   ["snarare än", "istället för"],
   ["värt att notera är", ""],
   ["värt att notera", ""],
@@ -3702,11 +3705,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const user = (req as any).user as User;
         const plan = (user.plan as PlanType) || "free";
 
-        // Premium only
-        if (plan !== "premium") {
+        // Pro and Premium can access sales strategy
+        if (plan === "free") {
           return res.status(403).json({
-            message: "AI Säljstrateg kräver Premium-prenumeration (599 kr/mån)",
-            requiredPlan: "premium",
+            message: "AI Säljstrateg kräver Pro- eller Premium-prenumeration",
+            requiredPlan: "pro",
             currentPlan: plan,
           });
         }

@@ -201,6 +201,7 @@ export function SalesStrategy({ propertyData, generatedText, platform, currentPl
 
   const isPremium = currentPlan === "premium";
   const isPro = currentPlan === "pro";
+  const hasAccess = isPremium || isPro;
 
   const handleGenerate = async () => {
     setExpanded(true);
@@ -226,11 +227,6 @@ export function SalesStrategy({ propertyData, generatedText, platform, currentPl
         <div className="flex items-center gap-2">
           <Target className="w-4 h-4 text-gray-600" />
           <span className="text-sm font-medium text-gray-800">AI Säljstrateg</span>
-          {!isPremium && (
-            <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
-              PREMIUM
-            </span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           {isLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
@@ -250,7 +246,7 @@ export function SalesStrategy({ propertyData, generatedText, platform, currentPl
           {error && (
             <div className="py-4">
               <p className="text-sm text-red-600">{error}</p>
-              {isPremium && (
+              {hasAccess && (
                 <Button variant="outline" size="sm" onClick={handleGenerate} className="mt-2 text-xs">
                   Försök igen
                 </Button>
@@ -258,10 +254,9 @@ export function SalesStrategy({ propertyData, generatedText, platform, currentPl
             </div>
           )}
 
-          {strategy && isPremium && <StrategyContent strategy={strategy} />}
-          {strategy && isPro && <LockedPreview strategy={strategy} />}
+          {strategy && hasAccess && <StrategyContent strategy={strategy} />}
 
-          {!strategy && !isLoading && !error && isPremium && (
+          {!strategy && !isLoading && !error && hasAccess && (
             <div className="py-4 text-center">
               <p className="text-sm text-gray-500 mb-3">Generera en komplett säljstrategi baserad på bostadsdatan.</p>
               <Button variant="outline" size="sm" onClick={handleGenerate} className="text-xs">
@@ -270,8 +265,8 @@ export function SalesStrategy({ propertyData, generatedText, platform, currentPl
             </div>
           )}
 
-          {!strategy && !isLoading && !error && isPro && (
-            <LockedFeature requiredPlan="premium" featureName="AI Säljstrateg" currentPlan="pro">
+          {!strategy && !isLoading && !error && !hasAccess && (
+            <LockedFeature requiredPlan="pro" featureName="AI Säljstrateg" currentPlan={currentPlan}>
               <div className="py-4 text-center">
                 <p className="text-sm text-gray-500">Komplett säljstrategi med målgruppsanalys, visningsstrategi och annonsoptimering.</p>
               </div>

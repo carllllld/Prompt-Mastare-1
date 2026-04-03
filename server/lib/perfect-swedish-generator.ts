@@ -406,13 +406,6 @@ Varje stycke ska ha minst EN vardagsbild som gör att läsaren ser sig själv i 
 
 Vardagsbilden ska vara KONKRET och TROVÄRDIG — inte klyschig. Den ska baseras på faktiska egenskaper i dispositionen.
 
-## TEXTLÄNGD
-
-- Villa med 5+ rum och trädgård: minst 350 ord. Beskriv VARJE rum kort men levande.
-- Trea/fyra: minst 250 ord. Ge köket, sovrummen och balkongen egna meningar.
-- Etta/tvåa: minst 180 ord. Fokusera på det unika.
-- Skynda INTE igenom rummen. Ge varje rum sin rättmätiga plats.
-
 ## OBJEKTTYP
 
 Olika bostadstyper skrivs olika. En villa handlar om tomt, trädgård och konstruktion. En lägenhet handlar om planlösning, ljus och balkong. Ett radhus är en mix. Du ser objekttypen i dispositionen — anpassa ton, fokus och struktur efter vad köparen för just den typen bryr sig om. Mäklaren har redan fyllt i de viktigaste säljpunkterna i formuläret — lyft dem.
@@ -476,7 +469,6 @@ Innan du svarar, kontrollera:
 5. Låter det som en riktig mäklare skrev det?
 6. Har varje stycke minst EN vardagsbild? → Lägg till om det saknas
 7. Avslutar texten med en trovärdig vardagsbild istället för en klyschig summering? → Skriv om om det behövs
-8. Är texten tillräckligt lång? Villa 5+ rum: minst 350 ord. Trea: minst 250 ord.
 
 ## EXEMPEL PÅ BRA MÄKLARTEXT
 
@@ -529,22 +521,14 @@ SÅ SKRIVER EN RIKTIG MÄKLARE:
 - "Buss 200 meter. Lidingö centrum åtta minuter med bil."
 
 SÅ SKRIVER EN AI (UNDVIK):
-- "Entrén tar dig in i en hall med avhängning, bra när hela familjen kliver in med blöta skor."
-- "Arbetsrum som passar bra när Teams-mötena behöver en stängd dörr."
-- "Frukosten kan dukas fram utan att någon behöver flytta på sig."
-- "Här är det lätt att ta en snabb tur till hållplatsen och ändå hinna dricka upp kaffet."
+- Konstruerade vardagsbilder som "frukosten kan dukas fram utan att någon behöver flytta på sig"
+- Rapportspråk som "Genomgången i huset märks även här"
+- Upprepningar — nämn varje fakta exakt en gång
 
 VARDAGSBILDER — MAX EN KORT PER STYCKE:
 - BRA: "Matplats för sex vid fönstret mot trädgården." (kort, konkret)
 - BRA: "Utgång till altanen — här flyttar middagarna ut under sommaren." (en bisats)
-- DÅLIGT: "Frukosten kan dukas fram utan att någon behöver flytta på sig." (för konstruerad)
-- DÅLIGT: "Bra när hela familjen kliver in samtidigt med blöta skor." (för specifik)
-- REGEL: Vardagsbilden ska vara MAX en bisats eller ett kort tillägg. Aldrig en hel mening.
-
-TEXTLÄNGD:
-- Villa 5+ rum: minst 300 ord. Beskriv varje rum.
-- Trea/fyra: minst 250 ord.
-- Etta/tvåa: minst 180 ord.
+- REGEL: Vardagsbilden ska vara MAX en bisats. Aldrig en hel mening.
 
 SOCIALT INLÄGG (Instagram/Facebook):
 - Ska vara PERSONLIGT och ENGAGERANDE — inte en komprimerad huvudtext

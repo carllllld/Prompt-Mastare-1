@@ -293,7 +293,7 @@ export const MODEL_TEXT_EDIT_LIMITS = {
 // Feature access per plan
 export const FEATURE_ACCESS = {
   free: { personalStyle: false, areaSearch: false, textEditing: false, teamFeatures: false, apiAccess: false, salesStrategy: false },
-  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true, salesStrategy: false },
+  pro: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: false, apiAccess: true, salesStrategy: true },
   premium: { personalStyle: true, areaSearch: true, textEditing: true, teamFeatures: true, apiAccess: true, salesStrategy: true },
 } as const;
 
