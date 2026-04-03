@@ -1,18 +1,24 @@
 /**
  * Unified AI Client — supports both OpenAI and Anthropic Claude.
  * 
- * Automatically selects provider based on environment variables:
- * - If ANTHROPIC_API_KEY is set → uses Claude
- * - If OPENAI_API_KEY or AI_INTEGRATIONS_OPENAI_API_KEY is set → uses OpenAI
- * - If both are set → prefers Claude (better writing quality for Swedish text)
+ * Provider selection (based on env vars):
+ * - ANTHROPIC_API_KEY set → Claude (preferred for Swedish text quality)
+ * - OPENAI_API_KEY set → OpenAI GPT
+ * - Both set → Claude preferred
  * 
- * Provides a unified interface so the rest of the codebase doesn't need to know
- * which provider is being used.
+ * Claude model used: claude-sonnet-4-20250514 (Sonnet 4.6)
+ *   - $3/M input, $15/M output
+ *   - Supports adaptive thinking for complex tasks
+ *   - Best writing quality for non-English languages
+ * 
+ * For comparison, GPT-5.2: $1.75/M input, $14/M output
+ * Claude is ~70% more on input, ~7% more on output — worth it for text quality.
+ * 
+ * OpenAI is always kept available for vision (GPT-4o image analysis).
  */
 
 import OpenAI from "openai";
 
-// Provider detection
 export type AIProvider = "claude" | "openai";
 
 export function getActiveProvider(): AIProvider {
@@ -21,13 +27,11 @@ export function getActiveProvider(): AIProvider {
 }
 
 export function getProviderName(): string {
-  return getActiveProvider() === "claude" ? "Claude (Anthropic)" : "OpenAI GPT";
+  return getActiveProvider() === "claude" ? "Claude Sonnet 4.6" : "OpenAI GPT-5.2";
 }
 
-// Lazy-initialized clients
+// Lazy OpenAI client
 let _openai: OpenAI | null = null;
-let _anthropicFetch: typeof fetch | null = null;
-
 function getOpenAI(): OpenAI {
   if (!_openai) {
     _openai = new OpenAI({
@@ -37,16 +41,16 @@ function getOpenAI(): OpenAI {
   return _openai;
 }
 
-// Claude model mapping
-function getClaudeModel(openaiModel: string): string {
-  // Map OpenAI models to Claude equivalents
-  if (openaiModel.startsWith("gpt-5")) return "claude-sonnet-4-20250514";
-  if (openaiModel.startsWith("gpt-4o")) return "claude-sonnet-4-20250514";
-  if (openaiModel === "gpt-4") return "claude-sonnet-4-20250514";
-  return "claude-sonnet-4-20250514";
+/** Get raw OpenAI client (for vision/images that only OpenAI supports) */
+export function getOpenAIClient(): OpenAI {
+  return getOpenAI();
 }
 
-// ─── Unified chat completion interface ───
+export function isAIConfigured(): boolean {
+  return !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
+}
+
+// ─── Unified interface ───
 
 export interface AIChatMessage {
   role: "system" | "user" | "assistant" | "developer";
@@ -59,6 +63,7 @@ export interface AIChatOptions {
   temperature?: number;
   max_tokens?: number;
   response_format?: { type: "json_object" | "text" };
+  /** Maps to OpenAI reasoning_effort and Claude adaptive thinking */
   reasoning_effort?: "low" | "medium" | "high";
 }
 
@@ -70,23 +75,23 @@ export interface AIChatResult {
 }
 
 /**
- * Unified chat completion — works with both OpenAI and Claude.
- * This is the main function to use for all text generation.
+ * Main function — call this for all text generation.
+ * Automatically routes to Claude or OpenAI based on env config.
  */
 export async function chatCompletion(options: AIChatOptions): Promise<AIChatResult> {
   const provider = getActiveProvider();
-
   if (provider === "claude") {
-    return claudeChatCompletion(options);
-  } else {
-    return openaiChatCompletion(options);
+    return claudeChat(options);
   }
+  return openaiChat(options);
 }
 
-async function openaiChatCompletion(options: AIChatOptions): Promise<AIChatResult> {
+// ─── OpenAI implementation ───
+
+async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
   const openai = getOpenAI();
 
-  // If reasoning_effort is set, use responses API
+  // Use Responses API when reasoning is requested
   if (options.reasoning_effort) {
     const input = options.messages.map(m => ({
       role: m.role === "system" ? "developer" as const : m.role as "user" | "assistant" | "developer",
@@ -101,11 +106,7 @@ async function openaiChatCompletion(options: AIChatOptions): Promise<AIChatResul
       ...(options.response_format?.type === "json_object" ? { text: { format: { type: "json_object" } } } : {}),
     });
 
-    return {
-      content: response.output_text || "",
-      model: options.model,
-      provider: "openai",
-    };
+    return { content: response.output_text || "", model: options.model, provider: "openai" };
   }
 
   // Standard chat completion
@@ -119,7 +120,6 @@ async function openaiChatCompletion(options: AIChatOptions): Promise<AIChatResul
     messages,
     temperature: options.temperature,
     max_completion_tokens: options.max_tokens || 4000,
-    ...(options.reasoning_effort ? { reasoning_effort: options.reasoning_effort } : {}),
     ...(options.response_format ? { response_format: options.response_format } : {}),
   });
 
@@ -132,19 +132,23 @@ async function openaiChatCompletion(options: AIChatOptions): Promise<AIChatResul
   };
 }
 
-async function claudeChatCompletion(options: AIChatOptions): Promise<AIChatResult> {
+// ─── Claude implementation ───
+
+// Claude Sonnet 4.6 — best balance of quality and cost for Swedish text
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+
+async function claudeChat(options: AIChatOptions): Promise<AIChatResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
 
-  const model = getClaudeModel(options.model);
-
-  // Convert messages: Claude uses "system" as a top-level param, not in messages
+  // Separate system prompt from messages (Claude API requirement)
   let systemPrompt = "";
   const claudeMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
   for (const msg of options.messages) {
     if (msg.role === "system" || msg.role === "developer") {
-      systemPrompt += (systemPrompt ? "\n\n" : "") + (typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content));
+      const text = typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+      systemPrompt += (systemPrompt ? "\n\n" : "") + text;
     } else if (msg.role === "user" || msg.role === "assistant") {
       claudeMessages.push({
         role: msg.role,
@@ -153,29 +157,32 @@ async function claudeChatCompletion(options: AIChatOptions): Promise<AIChatResul
     }
   }
 
-  // Ensure messages alternate user/assistant and start with user
+  // Claude requires messages to start with "user" role
   if (claudeMessages.length === 0 || claudeMessages[0].role !== "user") {
     claudeMessages.unshift({ role: "user", content: systemPrompt || "Generate the requested content." });
     systemPrompt = "";
   }
 
   const body: any = {
-    model,
+    model: CLAUDE_MODEL,
     max_tokens: options.max_tokens || 4000,
     messages: claudeMessages,
   };
 
-  if (systemPrompt) {
-    body.system = systemPrompt;
-  }
+  if (systemPrompt) body.system = systemPrompt;
+  if (options.temperature !== undefined) body.temperature = options.temperature;
 
-  if (options.temperature !== undefined) {
-    body.temperature = options.temperature;
-  }
-
-  // Claude doesn't have reasoning_effort but we can use extended thinking for high effort
-  if (options.reasoning_effort === "high") {
-    body.thinking = { type: "enabled", budget_tokens: 2000 };
+  // ─── Adaptive thinking (Claude's equivalent of reasoning_effort) ───
+  // Uses adaptive thinking which lets Claude decide how much to think.
+  // "high" → full adaptive thinking (best quality, costs more thinking tokens)
+  // "medium" → adaptive thinking enabled (good balance)
+  // "low" → no thinking (fastest, cheapest)
+  if (options.reasoning_effort === "high" || options.reasoning_effort === "medium") {
+    body.thinking = { type: "adaptive" };
+    // When thinking is enabled, temperature must be 1 (Claude requirement)
+    body.temperature = 1;
+    // Increase max_tokens to account for thinking tokens
+    body.max_tokens = Math.max(body.max_tokens, 8000);
   }
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -195,37 +202,21 @@ async function claudeChatCompletion(options: AIChatOptions): Promise<AIChatResul
 
   const data = await response.json() as any;
 
-  // Extract text from Claude response
+  // Extract text content (skip thinking blocks)
   let content = "";
   if (Array.isArray(data.content)) {
     for (const block of data.content) {
       if (block.type === "text") {
         content += block.text;
       }
+      // thinking blocks are ignored — they're internal reasoning
     }
   }
 
   return {
     content,
-    model,
+    model: CLAUDE_MODEL,
     provider: "claude",
     tokensUsed: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
   };
-}
-
-// ─── OpenAI-only functions (for vision, images, etc.) ───
-
-/**
- * Get the raw OpenAI client for features that only OpenAI supports (vision, images).
- * Falls back to OpenAI even if Claude is the primary provider.
- */
-export function getOpenAIClient(): OpenAI {
-  return getOpenAI();
-}
-
-/**
- * Check if the primary provider is available.
- */
-export function isAIConfigured(): boolean {
-  return !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY);
 }
