@@ -2657,38 +2657,44 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
 
 const GOLDEN_BROKER_EXAMPLES = {
   hemnet: [
-    `EXEMPEL A:
-Villa om 146 kvm i Mörtnäs med södervänd uteplats och inbyggd jacuzzi.
+    `EXEMPEL A (villa):
+Södervänd uteplats med inbyggd jacuzzi och utsikt mot naturmark — det är det första som möter dig på Ekorrvägen 10 i Mörtnäs. Villan om 146 kvm har renoverats stegvis de senaste åren och håller en genomgående hög standard.
 
-Planlösningen är genomgående med öppna sociala ytor mellan kök och vardagsrum, samtidigt som tre sovrum ligger mer avskilt. Köket är renoverat och materialvalen håller en enhetlig nivå med ekparkett i större delen av huset.
+Köket är hjärtat i huset. Luckor från Ballingslöv, bänkskiva i kvartskomposit och Miele-vitvaror ger en arbetsyta som fungerar lika bra för vardagsmiddagar som för helgmiddagar med gäster. Matplatsen sitter vid fönstret mot trädgården, och härifrån ser du rakt ut över gräsmattan och fruktträden.
 
-Fönster är bytta och huset har tilläggsisolerats i samband med renovering. Laddbox för elbil stärker vardagsfunktionen över tid.
+Vardagsrummet ligger i öppen anslutning till köket med ekparkett och takhöjd som ger rummet luft. Utgång till altanen gör att inne och ute flyter ihop under sommarhalvåret.
 
-Mörtnäs ger ett lugnt läge nära service och med smidig pendling mot Slussen.`,
-    `EXEMPEL B:
-Trea om 76 kvm med balkong i västerläge på Storgatan 12, 3 tr, Linköping.
+Tre sovrum på övervåningen, där huvudsovrummet har garderob och fönster åt två håll. Badrummet är helkaklat med golvvärme och badkar — renoverat 2021.
 
-Köket renoverades 2022 med luckor från Ballingslöv och har matplats vid fönstret. Vardagsrummet rymmer både soffgrupp och matbord utan att flödet blir trångt.
+Fönster är bytta till treglas och huset har tilläggsisolerats. Bergvärme håller driftskostnaderna nere. Vid uppfarten finns laddbox för elbil och garage med plats för två bilar.
 
-Sovrummen ligger mot gårdssidan och badrummet är uppdaterat. BRF med stabil ekonomi och avgift som inkluderar värme och vatten.
+Mörtnäs ger ett lugnt villaläge med Lidingö centrum på åtta minuters bilväg. Buss stannar 200 meter från tomten.`,
+    `EXEMPEL B (lägenhet):
+Balkong i söderläge och kök renoverat 2022 — det är de två sakerna som sticker ut direkt på Storgatan 12 i Linköping. Trean om 76 kvm ligger på tredje våningen med fritt läge mot innergården.
 
-Resecentrum nås på några minuter och vardagsservice finns i direkt närområde.`
+Köket har luckor från Ballingslöv, integrerade Siemens-vitvaror och en matplats vid fönstret som rymmer fyra utan att det blir trångt. Vardagsrummet ligger i direkt anslutning med ekparkett och plats för både soffgrupp och arbetshörna.
+
+Två sovrum mot gårdssidan ger tysta nätter. Badrummet är uppdaterat med kakel, golvvärme och kombimaskin.
+
+BRF Kungsparken har stabil ekonomi och avgiften på 4 200 kr/mån inkluderar värme och vatten. Stambyte genomfördes 2019.
+
+Resecentrum nås på fem minuters promenad. Matbutik, apotek och caféer finns i kvarteret.`
   ],
   booli: [
     `EXEMPEL A:
-På Ekorrvägen 10 i Mörtnäs ligger en villa om 146 kvm där söderläget märks direkt på uteplatsen.
+Södervänd uteplats med trädäck och utsikt mot naturmark sätter tonen för villan på Ekorrvägen 10 i Mörtnäs. 146 kvm fördelade på sju rum med genomgående planlösning och material som håller över tid.
 
-Entréplanet samlar kök och vardagsrum i ett öppet men tydligt flöde, vilket gör att både vardagsmiddag och större helgmiddagar fungerar utan att ytorna känns överbelastade. Tre sovrum ger flexibel användning för familj, gäster eller hemmakontor.
+Köket renoverades 2020 med Marbodal-luckor, kompositbänk och Siemens-vitvaror. Matplatsen sitter vid fönstret mot trädgården. Vardagsrummet ligger i öppen anslutning med ekparkett och utgång till altanen.
 
-Renoveringar de senaste åren omfattar bland annat fönsterbyte och tilläggsisolering, vilket bidrar till ett jämnare inomhusklimat. Vid huset finns laddbox för elbil.
+Tre sovrum på övervåningen, ett med walk-in closet. Badrummet helkaklat med golvvärme och badkar, renoverat 2023. Gäst-WC i hallen.
 
-I Mörtnäs bor du lugnt med närhet till service och med pendling som fungerar i praktiken över tid.`,
+Bergvärme, treglasfönster bytta 2021 och laddbox för elbil. Buss 200 meter, pendeltåg vid Lidingö centrum åtta minuter med bil.`,
     `EXEMPEL B:
-Tallstigen 4 i Värmdö är ett radhus om 118 kvm med uteplats i västerläge och tydlig vardagsfunktion.
+Trea om 76 kvm med balkong i söderläge på Storgatan 12, tredje våningen i Linköping. Fritt läge mot innergården och kök renoverat 2022.
 
-Kök och vardagsrum ligger i social anslutning med bra kontakt mot uteplatsen, medan övervåningen rymmer sovrum i mer privat del. Material och standard är valda för att tåla vardagstempo utan att tumma på helhetsintrycket.
+Ballingslöv-kök med Siemens-vitvaror och matplats vid fönstret. Vardagsrummet i direkt anslutning med ekparkett. Två sovrum mot gårdssidan. Badrum med kakel och golvvärme.
 
-Området kombinerar lugn med korta avstånd till service, skola och kommunikationer. Det gör bostaden relevant både för familjeliv och för dig som pendlar regelbundet.`
+BRF Kungsparken, stambyte 2019, avgift 4 200 kr/mån inklusive värme och vatten. Resecentrum fem minuter till fots.`
   ],
 } as const;
 
@@ -2731,15 +2737,15 @@ KRAV:
 - Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
 UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende.
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, tar plats, omfattar.
 
-EXTRA TEXTER (anpassa för varje format):
-- headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
-- instagramCaption: Varm, mänsklig och säljande mäklarprosa i 1-2 meningar. Använd 1-2 relevanta emojis och avsluta alltid med korrekt sluttecken.
-- showingInvitation: Professionell inbjudan med tydlig visningsnytta. Ange praktiska detaljer som finns i dispositionen ([TID], [KONTAKT]) och håll tonen trevlig, trygg och konkret.
-- shortAd: Kort annonsprosa (max 2 meningar) med bostadstyp/boarea och 2 starka styrkor. Säljande men saklig.
-- socialCopy: Säljande social text i mäklarstil med konkret köparnytta. Undvik aggressiva uppmaningar; använd i stället en mjuk avslutning som "Läs mer i annonsen".
-- Terminologi: använd EN huvudterm per sak. Exempel: skriv "laddbox för elbil" och undvik dubbleringar som "laddplats ... laddbox" i samma text.
+EXTRA TEXTER (varje text ska vara unik — INTE en komprimerad version av huvudtexten):
+- headline: Max 8 ord. Bostadens starkaste egenskap först. Ex: "Balkong i söder och kök renoverat 2022"
+- instagramCaption: Skriv som en mäklare som postar på Instagram. Personligt, engagerande, INGA emojis. Max 3-4 meningar. Lyft det mest spännande med bostaden, skapa nyfikenhet. Avsluta med en uppmaning som "Swipa för bilder!" eller "Kontakta mig för visning!" Ex: "Ny på Hemnet! Trea med balkong i söder och nyrenoverat Ballingslöv-kök på Storgatan 12. Perfekt för dig som vill bo centralt med kvällssol på balkongen! Kontakta mig för visning."
+- showingInvitation: BARA om dispositionen innehåller VISNINGSINFORMATION med konkret tid/mäklare. Om visningstid saknas, returnera null. Varm och inbjudande ton. Börja med "Välkommen på visning!" följt av bostadens starkaste egenskap, sedan praktiska detaljer (tid, plats, kontakt). Ex: "Välkommen på visning av denna trea med balkong i söder på Storgatan 12!\n\nTid: Söndag 15 juni kl 13:00–14:00\nPlats: Storgatan 12, 3 tr, port B\nMäklare: Anna Svensson, 070-123 45 67\n\nVarmt välkommen!"
+- shortAd: Max 2 meningar. Bostadstyp + boarea + 2-3 starka egenskaper. Säljande och koncis. Ex: "Trea om 76 kvm med balkong i söder och Ballingslöv-kök renoverat 2022. Fritt läge mot innergård, tunnelbana fem minuter."
+- socialCopy: Facebook-text. Lite längre och mer informativ än Instagram. 3-5 meningar. Personlig ton men professionell. Avsluta med "Läs mer på Hemnet" eller "Hör av dig för mer info!" Ex: "Ny på Hemnet! Trea om 76 kvm med balkong i söder på Storgatan 12 i Linköping. Köket renoverades 2022 med Ballingslöv-luckor och Siemens-vitvaror. Fritt läge mot innergård och tunnelbana fem minuter bort. Hör av dig för visning!"
+- Terminologi: EN term per sak. Undvik dubbleringar.
 
 OUTPUT:
 Svara med JSON och fyll alla fält.
@@ -2789,15 +2795,15 @@ KRAV:
 - Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 
 UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende.
+erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, tar plats, omfattar.
 
-EXTRA TEXTER (anpassa för varje format):
-- headline: Kort, slagkraftig och lockande. Max 7 ord. Ex: "Insynsskyddad trea med balkong i söderläge."
-- instagramCaption: Varm, mänsklig och säljande mäklarprosa i 1-2 meningar. Använd 1-2 relevanta emojis och avsluta alltid med korrekt sluttecken.
-- showingInvitation: Professionell inbjudan med tydlig visningsnytta. Ange praktiska detaljer som finns i dispositionen ([TID], [KONTAKT]) och håll tonen trevlig, trygg och konkret.
-- shortAd: Kort annonsprosa (max 2 meningar) med bostadstyp/boarea och 2 starka styrkor. Säljande men saklig.
-- socialCopy: Säljande social text i mäklarstil med konkret köparnytta. Undvik aggressiva uppmaningar; använd i stället en mjuk avslutning som "Läs mer i annonsen".
-- Terminologi: använd EN huvudterm per sak. Exempel: skriv "laddbox för elbil" och undvik dubbleringar som "laddplats ... laddbox" i samma text.
+EXTRA TEXTER (varje text ska vara unik — INTE en komprimerad version av huvudtexten):
+- headline: Max 8 ord. Bostadens starkaste egenskap först.
+- instagramCaption: Skriv som en mäklare som postar på Instagram. Personligt, engagerande, INGA emojis. Max 3-4 meningar. Skapa nyfikenhet. Avsluta med uppmaning som "Kontakta mig för visning!"
+- showingInvitation: BARA om dispositionen innehåller VISNINGSINFORMATION med konkret tid/mäklare. Om visningstid saknas, returnera null. Varm ton, börja med "Välkommen på visning!" + praktiska detaljer.
+- shortAd: Max 2 meningar. Bostadstyp + boarea + 2-3 starka egenskaper. Säljande och koncis.
+- socialCopy: Facebook-text. 3-5 meningar. Personlig ton men professionell. Avsluta med "Hör av dig för mer info!"
+- Terminologi: EN term per sak. Undvik dubbleringar.
 
 OUTPUT:
 Svara med JSON och fyll alla fält.

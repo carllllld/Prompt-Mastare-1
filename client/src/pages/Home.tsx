@@ -6,7 +6,6 @@ import { ResultSection } from "@/components/ResultSection";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { PersonalStyle } from "@/components/PersonalStyle";
 import { LockedFeature } from "@/components/LockedFeature";
-import { CompactUsageWidget, CompactHistoryWidget, CompactUpgradeWidget } from "@/components/CompactWidgets";
 import { AuthModal } from "@/components/AuthModal";
 import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 import { PromptGenerationSkeleton } from "@/components/LoadingSkeleton";
@@ -17,7 +16,7 @@ import { useStripeCheckout, useStripePortal } from "@/hooks/use-stripe";
 import { useAuth } from "@/hooks/use-auth";
 import { type OptimizeResponse } from "@shared/schema";
 import {
-  Loader2, LogOut, FileText, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock, FileCheck,
+  Loader2, LogOut, Clock, Crown, ChevronRight, ArrowUp, Check, Settings, KeyRound, User, ChevronDown, SlidersHorizontal, AlertTriangle, Users, Lock, FileCheck,
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -325,35 +324,6 @@ export default function Home() {
           <VitecOnboardingBanner isPro={true} />
         )}
 
-        {/* Kompakt widget-rad - endast när inloggad och inget resultat */}
-        {isAuthenticated && !result && (
-          <div className="mb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {/* Hero-text */}
-              <div className="lg:col-span-1">
-                <h1 className="text-sm font-semibold leading-snug mb-0.5" style={{ fontFamily: "'Lora', Georgia, serif", color: "#1D2939" }}>
-                  Fyll i data. Få 5 texter.
-                </h1>
-                <p className="text-xs" style={{ color: "#6B7280" }}>
-                  Börja med grundfakta och säljpunkter.
-                </p>
-              </div>
-              
-              {/* Månadskvot widget */}
-              <CompactUsageWidget
-                remaining={remaining}
-                limit={limit}
-                used={used}
-                plan={plan}
-                resetTime={userStatus?.resetTime}
-              />
-              
-              {/* Historik widget */}
-              <CompactHistoryWidget historyCount={0} />
-            </div>
-          </div>
-        )}
-
         {/* Limit warning */}
         {isAuthenticated && remaining === 0 && !result && (
           <div className="mb-3 border border-warning overflow-hidden">
@@ -427,45 +397,33 @@ export default function Home() {
           </div>
         )}
 
-        {/* Pro/Premium: Formulär med PersonalStyle */}
+        {/* Pro/Premium: Formulär full bredd */}
         {isAuthenticated && !result && (plan === "pro" || plan === "premium") && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 items-start">
-            {/* Formulär (2/3) — en enda instans */}
-            <div className="lg:col-span-2">
-              <div className="pro-card pro-card-premium p-3">
-                <PromptFormProfessional
-                  onSubmit={handleSubmit}
-                  isPending={isPending}
-                  disabled={remaining === 0}
-                  isPro={true}
-                />
-              </div>
+          <div className="space-y-2">
+            <div className="pro-card pro-card-premium p-3">
+              <PromptFormProfessional
+                onSubmit={handleSubmit}
+                isPending={isPending}
+                disabled={remaining === 0}
+                isPro={true}
+              />
             </div>
 
-            {/* Personlig stil (1/3) — sticky sidebar */}
-            <div className="flex flex-col gap-2 lg:sticky lg:top-16">
-              <div className="pro-card pro-card-premium p-3 flex flex-col">
-                <div className="mb-2">
+            {/* Personlig stil — kollapsbar under formuläret */}
+            <details className="pro-card pro-card-premium p-3">
+              <summary className="cursor-pointer select-none flex items-center justify-between">
+                <div>
                   <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
                   <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
                     Kalibrera tonalitet
                   </p>
                 </div>
-                <div className="flex-1">
-                  <PersonalStyle />
-                </div>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              </summary>
+              <div className="mt-3">
+                <PersonalStyle />
               </div>
-              
-              {plan !== "premium" && (
-                <div className="pro-card pro-card-premium p-3">
-                  <CompactUpgradeWidget
-                    plan={plan}
-                    onUpgrade={() => startCheckout(plan === "free" ? "pro" : "premium")}
-                    isLoading={isCheckoutPending}
-                  />
-                </div>
-              )}
-            </div>
+            </details>
           </div>
         )}
 

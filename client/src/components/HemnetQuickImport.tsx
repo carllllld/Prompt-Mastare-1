@@ -44,37 +44,43 @@ export function HemnetQuickImport({ onImport, onSkip }: HemnetQuickImportProps) 
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg px-4 py-3 bg-white">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Link className="w-3.5 h-3.5 text-gray-400" />
-          <span className="text-xs font-medium text-gray-700">Importera från Hemnet-annons</span>
+    <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2">
+            <Link className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-sm font-medium text-gray-800">Har du redan en annons ute?</span>
+          </div>
+          <button type="button" onClick={onSkip} className="text-gray-400 hover:text-gray-600">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <button type="button" onClick={onSkip} className="text-gray-400 hover:text-gray-600">
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <p className="text-xs text-gray-500 mb-3">
+          Klistra in din Hemnet-länk så hämtar vi all objektdata automatiskt. 
+          Du slipper fylla i formuläret manuellt och kan generera en ny, 
+          professionell text direkt — perfekt om du vill förbättra en befintlig annons.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            placeholder="https://hemnet.se/bostader/..."
+            value={hemnetUrl}
+            onChange={(e) => setHemnetUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleImport()}
+            disabled={isImporting}
+            className="h-9 text-sm"
+          />
+          <Button
+            type="button"
+            onClick={handleImport}
+            disabled={isImporting || !hemnetUrl.trim()}
+            size="sm"
+            className="h-9 px-4 flex-shrink-0"
+          >
+            {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Hämta"}
+          </Button>
+        </div>
       </div>
-      <div className="flex gap-2">
-        <Input
-          type="url"
-          placeholder="Klistra in Hemnet-länk..."
-          value={hemnetUrl}
-          onChange={(e) => setHemnetUrl(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleImport()}
-          disabled={isImporting}
-          className="h-9 text-sm"
-        />
-        <Button
-          type="button"
-          onClick={handleImport}
-          disabled={isImporting || !hemnetUrl.trim()}
-          size="sm"
-          className="h-9 px-4 flex-shrink-0"
-        >
-          {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Hämta"}
-        </Button>
-      </div>
-      <p className="text-xs text-gray-400 mt-1.5">Fyller i formuläret med data från annonsen</p>
     </div>
   );
 }
