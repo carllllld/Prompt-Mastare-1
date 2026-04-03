@@ -91,37 +91,23 @@ export async function chatCompletion(options: AIChatOptions): Promise<AIChatResu
 async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
   const openai = getOpenAI();
 
-  // Use Responses API when reasoning is requested
-  if (options.reasoning_effort) {
-    const input = options.messages.map(m => ({
-      role: m.role === "system" ? "developer" as const : m.role as "user" | "assistant" | "developer",
-      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-    }));
-
-    const response = await openai.responses.create({
-      model: options.model,
-      input,
-      reasoning: { effort: options.reasoning_effort },
-      max_output_tokens: options.max_tokens || 4000,
-      ...(options.response_format?.type === "json_object" ? { text: { format: { type: "json_object" } } } : {}),
-    });
-
-    return { content: response.output_text || "", model: options.model, provider: "openai" };
-  }
-
-  // Standard chat completion
+  // Build messages for chat completions API
   const messages = options.messages.map(m => ({
     role: m.role === "developer" ? "system" as const : m.role as "system" | "user" | "assistant",
     content: m.content as any,
   }));
 
-  const response = await openai.chat.completions.create({
+  const params: any = {
     model: options.model,
     messages,
-    temperature: options.temperature,
     max_completion_tokens: options.max_tokens || 4000,
-    ...(options.response_format ? { response_format: options.response_format } : {}),
-  });
+  };
+
+  if (options.temperature !== undefined) params.temperature = options.temperature;
+  if (options.reasoning_effort) params.reasoning_effort = options.reasoning_effort;
+  if (options.response_format) params.response_format = options.response_format;
+
+  const response = await openai.chat.completions.create(params);
 
   const choice = response.choices[0];
   return {
