@@ -748,6 +748,23 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["det ska tilläggas", ""],
   ["värt att nämna är", ""],
   ["värt att nämna", ""],
+
+  // Nya förbjudna fraser (andas, genomsyras, faciliteter, njut av)
+  ["andas lugn", ""],
+  ["andas charm", ""],
+  ["andas historia", ""],
+  ["andas", ""],
+  ["genomsyras av", ""],
+  ["genomsyras", ""],
+  ["faciliteter", "bekvämligheter"],
+  ["njut av", ""],
+  ["sätter fokus", ""],
+  ["sätter ramen", ""],
+  ["tar plats", ""],
+  ["leder vidare", ""],
+  ["i direkt anslutning", "intill"],
+  ["härlig plats", "bra plats"],
+  ["plats för avkoppling", ""],
   ["värt att notera är", ""],
   ["värt att notera", ""],
   ["som en bonus finns", ""],
@@ -2657,44 +2674,78 @@ const EXAMPLE_DATABASE: Record<string, { text: string, metadata: { type: string,
 
 const GOLDEN_BROKER_EXAMPLES = {
   hemnet: [
-    `EXEMPEL A (villa):
-Södervänd uteplats med inbyggd jacuzzi och utsikt mot naturmark — det är det första som möter dig på Ekorrvägen 10 i Mörtnäs. Villan om 146 kvm har renoverats stegvis de senaste åren och håller en genomgående hög standard.
+    `EXEMPEL A (villa, 180 kvm):
+Villa om 180 kvm på Tallvägen 8 i Djursholm med södervänd altan och utsikt över trädgården. Tomten på 920 kvm har plats för lek, odling och sommarkvällar under pergolan.
 
-Köket är hjärtat i huset. Luckor från Ballingslöv, bänkskiva i kvartskomposit och Miele-vitvaror ger en arbetsyta som fungerar lika bra för vardagsmiddagar som för helgmiddagar med gäster. Matplatsen sitter vid fönstret mot trädgården, och härifrån ser du rakt ut över gräsmattan och fruktträden.
+Köket från HTH har granitbänk och induktionshäll. Matplatsen rymmer åtta och sitter vid fönstret mot trädgården — här landar söndagsfrukostarna med morgonsol från öster. Vardagsrummet har eldstad och utgång rakt ut till altanen, så under sommarhalvåret flyttar middagarna ut.
 
-Vardagsrummet ligger i öppen anslutning till köket med ekparkett och takhöjd som ger rummet luft. Utgång till altanen gör att inne och ute flyter ihop under sommarhalvåret.
+Övervåningen har tre sovrum. Huvudsovrummet har garderob och fönster åt två håll, det mindre sovrummet fungerar som barnrum med plats för våningssäng och skrivbord. Badrummet är helkaklat med badkar och golvvärme.
 
-Tre sovrum på övervåningen, där huvudsovrummet har garderob och fönster åt två håll. Badrummet är helkaklat med golvvärme och badkar — renoverat 2021.
+I källaren finns tvättstuga, förråd och ett extra rum som idag används som hemmakontor. Dubbelgarage och uppfart för två bilar.
 
-Fönster är bytta till treglas och huset har tilläggsisolerats. Bergvärme håller driftskostnaderna nere. Vid uppfarten finns laddbox för elbil och garage med plats för två bilar.
+Djursholms samskola ligger 600 meter bort. Mörby centrum med Systembolaget, apotek och restauranger nås på tio minuters promenad.`,
+    `EXEMPEL B (lägenhet, 76 kvm):
+Trea om 76 kvm på Storgatan 12 i Linköping, tredje våningen med fritt läge mot innergården. Balkongen i söderläge fångar kvällssolen från april till september.
 
-Mörtnäs ger ett lugnt villaläge med Lidingö centrum på åtta minuters bilväg. Buss stannar 200 meter från tomten.`,
-    `EXEMPEL B (lägenhet):
-Balkong i söderläge och kök renoverat 2022 — det är de två sakerna som sticker ut direkt på Storgatan 12 i Linköping. Trean om 76 kvm ligger på tredje våningen med fritt läge mot innergården.
+Köket renoverades 2022 med Ballingslöv-luckor och Siemens-vitvaror. Matplatsen vid fönstret rymmer fyra utan att det blir trångt, och härifrån ser du rakt ut mot gårdens björkar. Vardagsrummet har ekparkett och plats för soffgrupp och arbetshörna.
 
-Köket har luckor från Ballingslöv, integrerade Siemens-vitvaror och en matplats vid fönstret som rymmer fyra utan att det blir trångt. Vardagsrummet ligger i direkt anslutning med ekparkett och plats för både soffgrupp och arbetshörna.
-
-Två sovrum mot gårdssidan ger tysta nätter. Badrummet är uppdaterat med kakel, golvvärme och kombimaskin.
+Två sovrum mot gårdssidan ger tysta nätter. Huvudsovrummet rymmer dubbelsäng och garderob, det mindre rummet passar som barnrum eller kontor. Badrummet har kakel, golvvärme och kombimaskin.
 
 BRF Kungsparken har stabil ekonomi och avgiften på 4 200 kr/mån inkluderar värme och vatten. Stambyte genomfördes 2019.
 
-Resecentrum nås på fem minuters promenad. Matbutik, apotek och caféer finns i kvarteret.`
+Resecentrum nås på fem minuters promenad. Matbutik, apotek och caféer finns i kvarteret — vardagen löser sig till fots.`,
+    `EXEMPEL C (villa, 145 kvm):
+Villa om 145 kvm på Björkvägen 14 i Löddeköpinge med stenlagd uteplats i söderläge och garage. Tomten på 750 kvm har gräsmatta och plats för studsmatta och trampolin.
+
+Köket är nytt från 2021 med Bosch-vitvaror och öppen planlösning mot vardagsrummet. Här lagar du middag med uppsikt över barnen i soffan. Vardagsrummet har fönster åt två håll och utgång till uteplatsen.
+
+Övervåningen har fyra sovrum — ett för varje familjemedlem och ett över. Badrummet är helkaklat med dusch och badkar, praktiskt när barnen ska badas på kvällen.
+
+Löddeköpinge skola ligger 400 meter bort. Willys nås på fem minuters promenad och Malmö centrum på femton minuter med bil via E6:an.`,
+    `EXEMPEL D (radhus, 120 kvm):
+Radhus om 120 kvm på Solnavägen 23 i Solna med trädgård i söderläge och carport för två bilar. Fyra rum och kök fördelade på två plan.
+
+Bottenvåningen har kök och vardagsrum i öppen planlösning. Köket från 2021 har Bosch-vitvaror och matplats vid fönstret mot trädgården. Vardagsrummet har utgång rakt ut till gräsmattan — perfekt för grillkvällar.
+
+Tre sovrum på övervåningen. Huvudsovrummet har walk-in-closet och fönster mot morgonsolen. Badrummet är helkaklat med dusch.
+
+Trädgården har gräsmatta, stenlagd uteplats och förråd om 10 kvm. Skola och förskola i promenadavstånd, matbutik 300 meter.`,
+    `EXEMPEL E (lägenhet, 48 kvm):
+Tvåa om 48 kvm på Andra Långgatan 15 i Göteborg, andra våningen med balkong mot gården i västerläge. Ekparkett genomgående och takhöjd på 2,60 meter.
+
+Köket har vita luckor och Electrolux-vitvaror från 2020. Matplats för två vid fönstret. Vardagsrummet har två fönster och plats för soffa och bokhylla.
+
+Sovrummet rymmer dubbelsäng och har garderob. Badrummet är helkaklat med dusch och tvättmaskin.
+
+Avgiften ligger på 3 200 kr/mån. Spårvagn vid Järntorget stannar två minuter bort, och Coop finns på Andra Långgatan.`
   ],
   booli: [
-    `EXEMPEL A:
-Södervänd uteplats med trädäck och utsikt mot naturmark sätter tonen för villan på Ekorrvägen 10 i Mörtnäs. 146 kvm fördelade på sju rum med genomgående planlösning och material som håller över tid.
+    `EXEMPEL A (villa):
+Villa om 180 kvm på Tallvägen 8 i Djursholm. Södervänd altan om 25 kvm med pergola och utsikt över trädgården. Tomt om 920 kvm.
 
-Köket renoverades 2020 med Marbodal-luckor, kompositbänk och Siemens-vitvaror. Matplatsen sitter vid fönstret mot trädgården. Vardagsrummet ligger i öppen anslutning med ekparkett och utgång till altanen.
+HTH-kök med granitbänk och induktionshäll. Matplats för åtta vid fönstret mot trädgården. Vardagsrum med eldstad och utgång till altanen. Ekparkett genomgående.
 
-Tre sovrum på övervåningen, ett med walk-in closet. Badrummet helkaklat med golvvärme och badkar, renoverat 2023. Gäst-WC i hallen.
+Tre sovrum på övervåningen, huvudsovrummet med garderob och fönster åt två håll. Helkaklat badrum med badkar och golvvärme. Källare med tvättstuga, förråd och extra rum. Dubbelgarage.
 
-Bergvärme, treglasfönster bytta 2021 och laddbox för elbil. Buss 200 meter, pendeltåg vid Lidingö centrum åtta minuter med bil.`,
-    `EXEMPEL B:
-Trea om 76 kvm med balkong i söderläge på Storgatan 12, tredje våningen i Linköping. Fritt läge mot innergården och kök renoverat 2022.
+Djursholms samskola 600 meter. Mörby centrum tio minuters promenad.`,
+    `EXEMPEL B (lägenhet):
+Trea om 76 kvm på Storgatan 12 i Linköping, tredje våningen med fritt läge mot innergården. Balkong i söderläge.
 
-Ballingslöv-kök med Siemens-vitvaror och matplats vid fönstret. Vardagsrummet i direkt anslutning med ekparkett. Två sovrum mot gårdssidan. Badrum med kakel och golvvärme.
+Ballingslöv-kök renoverat 2022 med Siemens-vitvaror. Matplats för fyra vid fönstret. Vardagsrum med ekparkett. Två sovrum mot gårdssidan. Badrum med kakel och golvvärme.
 
-BRF Kungsparken, stambyte 2019, avgift 4 200 kr/mån inklusive värme och vatten. Resecentrum fem minuter till fots.`
+BRF Kungsparken, stambyte 2019, avgift 4 200 kr/mån inklusive värme och vatten. Resecentrum fem minuter till fots.`,
+    `EXEMPEL C (radhus):
+Radhus om 120 kvm på Solnavägen 23 i Solna. Fyra rum och kök på två plan. Trädgård i söderläge med carport.
+
+Öppen planlösning med kök och vardagsrum på bottenvåningen. Kök från 2021 med Bosch-vitvaror. Utgång till trädgården. Tre sovrum på övervåningen, huvudsovrummet med walk-in-closet. Helkaklat badrum.
+
+Skola och förskola i promenadavstånd. Matbutik 300 meter.`,
+    `EXEMPEL D (villa, enklare):
+Villa om 125 kvm på Sjövägen 12 i Växjö. Tomt om 680 kvm med gräsmatta och uteplats. Fyra rum och kök.
+
+Kök med Electrolux-vitvaror och laminatbänk. Vardagsrum med parkettgolv. Tre sovrum på övervåningen. Badrum med dusch. Carport och förråd. Fjärrvärme.
+
+Påvelundsskolan 500 meter. Coop fem minuter. Centrum tio minuter med cykel.`
   ],
 } as const;
 
@@ -2704,52 +2755,60 @@ function buildGoldenBrokerExamples(platform: "hemnet" | "booli"): string {
 }
 
 // --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
-const HEMNET_TEXT_PROMPT = `Du är en av Sveriges absolut bästa fastighetsmäklare. Ditt uppdrag är att skriva en Hemnet-text som är så övertygande, professionell och klyschfri att den sätter en ny standard för branschen.
+const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver Hemnet-texter som säljer bostäder. Dina texter låter som en människa — inte som en AI-rapport.
 
-SHOW, DON'T TELL (KRITISKT):
-- Istället för "fint ljusinsläpp", skriv: "Solen flödar in från tre stora fönster i söderläge och speglar sig i den nyslipade parketten."
-- Istället för "bra förvaring", skriv: "En hel garderobsvägg i sovrummet och ett källarförråd på 6 kvm löser alla förvaringsbehov."
-- Omvandla ALLA adjektiv till konkreta, verifierbara observationer.
+GRUNDREGEL: Skriv som om du berättar för en vän om bostaden. Konkret, personligt, med vardagsbilder.
 
-SPRÅKLIGA REGLER (NOLLTOLERANS):
-- INGA PARENTESER för att förklara typ av service. Skriv "ICA Supermarket" istället för "ICA (matbutik)".
-- INGA "FEGA" FORMULERINGAR. Skriv "Läget är tyst" istället för "Läget upplevs tyst". Var självsäker men korrekt.
-- FULLSTÄNDIGA MENINGAR. Kontrollera att varje mening har subjekt, predikat och korrekt punktuering. Inga syftningsfel.
-- UNDVIK UPPREPNING. Om du nämnt jacuzzin i öppningen, fokusera på materialval eller känsla senare, inte bara att den finns.
-- INGA LISTOR. Omvandla alla fakta till naturlig, flytande prosa.
+VARDAGSBILDER (VIKTIGAST):
+- Beskriv hur det KÄNNS att bo där. Morgonkaffet på balkongen. Barnen som leker på gräsmattan. Middagarna vid köksön.
+- Varje stycke ska ha minst EN vardagsbild som gör att läsaren ser sig själv i bostaden.
+- Bra: "Matplatsen vid fönstret rymmer åtta — här landar söndagsfrukostarna med morgonsol från öster."
+- Dåligt: "Matplatsen rymmer åtta personer och har fönster mot öster."
 
-LEVANDE BESKRIVNING:
-- Beskriv bostaden ur perspektivet av någon som bor där. Hur känns det att dricka morgonkaffet på balkongen? Hur är arbetsflödet i köket?
-- Måla upp en bild av vardagslivet.
+KONKRET, INTE ABSTRAKT:
+- Skriv "Ballingslöv-kök med granitbänk och Miele-vitvaror" — inte "kök av hög standard".
+- Skriv "Balkong om 8 kvm i söderläge" — inte "rymlig balkong med fint läge".
+- Skriv "Stambyte genomfört 2019" — inte "föreningen har god ekonomi".
+- Varje påstående ska vara verifierbart. Inga vaga adjektiv.
 
-KRAV:
-- Utgå ALLTID från dispositionen. Hitta aldrig på fakta.
-- Öppningen är A och O. De första två meningarna måste omedelbart fånga en stressad Hemnet-scrollare med den mest unika och attraktiva egenskapen hos bostaden.
-- Prioritera enligt följande: 1. Uteplats/Solläge/Utsikt, 2. Sociala ytor/Planlösning, 3. Kök/Badrum, 4. Läge.
-- Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
-- Undvik mekanisk uppräkning. Energiklass ska aldrig nämnas i huvudtexten för Hemnet då den visas separat. Fiber och parkering får vävas in naturligt om de tillför värde, men aldrig som egna mekaniska meningar.
-- Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
-- Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
-- Huvudtexten ska kännas publicerad: inled helst med [bostadstyp] om [boarea] på [adress] + en stark detalj, t.ex. "Trea om 76 kvm på Storgatan 12 med balkong i söderläge."
-- Om dispositionen innehåller rum, standard eller kommunikationer ska de vävas in naturligt där de bär beslutsvärde.
-- För avgift/driftskostnad: nämn i huvudtext när det är tydligt beslutsdrivande eller särskiljande; annars räcker faktadelen i annonsen. Om kostnad nämns ska enhet alltid anges (t.ex. kr/mån eller kr/år).
-- Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
-- Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
+TEXTLÄNGD OCH DJUP:
+- En villa med 5+ rum och trädgård kräver minst 350 ord. Beskriv VARJE rum kort men levande.
+- En trea kräver minst 250 ord. Ge köket, sovrummen och balkongen egna meningar.
+- Skynda INTE igenom rummen. Ge varje rum sin rättmätiga plats.
+- Avsluta med en trovärdig vardagsbild, inte en klyschig summering.
 
-UNDVIK ALLTID (nolltolerans — om du använder något av dessa ord, skriv om meningen):
-erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom i visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning.
+ÖPPNINGEN (KRITISKT):
+- Första meningen: [Bostadstyp] om [boarea] på [adress] + bostadens starkaste egenskap.
+- Andra meningen: Ytterligare en konkret detalj som fångar en stressad Hemnet-scrollare.
+- Bra: "Trea om 76 kvm på Storgatan 12 med balkong i söderläge och kök renoverat 2022."
+- Dåligt: "Välkommen till denna fina bostad i centralt läge."
 
-EXTRA TEXTER (varje text ska vara unik — INTE en komprimerad version av huvudtexten):
-- headline: Max 8 ord. Bostadens starkaste egenskap först. Ex: "Balkong i söder och kök renoverat 2022"
-- instagramCaption: Skriv som en mäklare som postar på Instagram. Personligt, engagerande, INGA emojis. Max 3-4 meningar. Lyft det mest spännande med bostaden, skapa nyfikenhet. Avsluta med en uppmaning som "Swipa för bilder!" eller "Kontakta mig för visning!" Ex: "Ny på Hemnet! Trea med balkong i söder och nyrenoverat Ballingslöv-kök på Storgatan 12. Perfekt för dig som vill bo centralt med kvällssol på balkongen! Kontakta mig för visning."
-- showingInvitation: BARA om dispositionen innehåller VISNINGSINFORMATION med konkret tid/mäklare. Om visningstid saknas, returnera null. Varm och inbjudande ton. Börja med "Välkommen på visning!" följt av bostadens starkaste egenskap, sedan praktiska detaljer (tid, plats, kontakt). Ex: "Välkommen på visning av denna trea med balkong i söder på Storgatan 12!\n\nTid: Söndag 15 juni kl 13:00–14:00\nPlats: Storgatan 12, 3 tr, port B\nMäklare: Anna Svensson, 070-123 45 67\n\nVarmt välkommen!"
-- shortAd: Max 2 meningar. Bostadstyp + boarea + 2-3 starka egenskaper. Säljande och koncis. Ex: "Trea om 76 kvm med balkong i söder och Ballingslöv-kök renoverat 2022. Fritt läge mot innergård, tunnelbana fem minuter."
-- socialCopy: Facebook-text. Lite längre och mer informativ än Instagram. 3-5 meningar. Personlig ton men professionell. Avsluta med "Läs mer på Hemnet" eller "Hör av dig för mer info!" Ex: "Ny på Hemnet! Trea om 76 kvm med balkong i söder på Storgatan 12 i Linköping. Köket renoverades 2022 med Ballingslöv-luckor och Siemens-vitvaror. Fritt läge mot innergård och tunnelbana fem minuter bort. Hör av dig för visning!"
-- Terminologi: EN term per sak. Undvik dubbleringar.
+STYCKESTRUKTUR:
+1. Öppning: Typ + storlek + adress + starkaste egenskap
+2. Kök och sociala ytor: Märke, material, matplats, vardagsbild
+3. Sovrum och badrum: Antal, storlek, standard, vardagsbild
+4. Uteplats/balkong: Storlek, väderstreck, vad man gör där
+5. Läge: Avstånd till skola, butik, kommunikationer — berätta om vardagen i området
 
-OUTPUT:
-Svara med JSON och fyll alla fält.
-JSON måste innehålla:
+SPRÅKREGLER:
+- INGA parenteser. Skriv "ICA Supermarket" inte "ICA (matbutik)".
+- INGA listor. Allt ska vara flytande prosa.
+- Var självsäker. "Läget är tyst" inte "Läget upplevs tyst".
+- Variera meningsstart. Aldrig två meningar i rad som börjar likadant.
+- Energiklass nämns ALDRIG i Hemnet-text (visas separat).
+- Avgift/kostnad: nämn bara om det stärker köpbeslutet. Alltid med enhet (kr/mån).
+
+FÖRBJUDNA ORD (nolltolerans — skriv om meningen helt):
+erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning, andas, genomsyras, faciliteter, njut av, skapar en känsla, bidrar till, i hjärtat av.
+
+EXTRA TEXTER (varje text ska vara HELT UNIK — aldrig en komprimerad huvudtext):
+- headline: Max 8 ord. Starkaste egenskapen först. Ex: "Balkong i söder och nyrenoverat kök"
+- instagramCaption: Skriv som en mäklare som postar på Instagram. Personligt, nyfikenhetsskapande, INGA emojis. Max 3-4 meningar. Avsluta med "Kontakta mig för visning." Ex: "Ny på Hemnet. Trea med balkong i söder och Ballingslöv-kök på Storgatan 12. Kvällssol på balkongen och fem minuter till Resecentrum. Kontakta mig för visning."
+- showingInvitation: BARA om dispositionen har VISNINGSINFORMATION med tid/mäklare. Annars null. Börja med "Välkommen på visning!" + starkaste egenskap + praktiska detaljer.
+- shortAd: Max 2 meningar. Typ + boarea + 2-3 starka egenskaper. Ex: "Trea om 76 kvm med balkong i söder och Ballingslöv-kök renoverat 2022. Fritt läge mot innergård, Resecentrum fem minuter."
+- socialCopy: Facebook-text. 3-5 meningar. Personlig ton, professionell. Avsluta med "Hör av dig för visning." Ex: "Ny på Hemnet. Trea om 76 kvm med balkong i söder på Storgatan 12 i Linköping. Köket renoverades 2022 med Ballingslöv-luckor och Siemens-vitvaror. Fritt läge mot innergård och Resecentrum fem minuter bort. Hör av dig för visning."
+
+OUTPUT (JSON):
 {
   "improvedPrompt": "...",
   "headline": "...",
@@ -2759,55 +2818,50 @@ JSON måste innehålla:
   "shortAd": "..."
 }
 
-REFERENSEXEMPEL FÖR NIVÅ OCH STIL:
-${buildGoldenBrokerExamples("hemnet")}`;;
+REFERENSEXEMPEL — KOPIERA DENNA NIVÅ OCH TON:
+${buildGoldenBrokerExamples("hemnet")}`;
 
 // --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du är en av Sveriges absolut bästa fastighetsmäklare. Ditt uppdrag är att skriva en objektbeskrivning som är så övertygande, professionell och klyschfri att den sätter en ny standard för branschen.
+const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver objektbeskrivningar för Booli och egna hemsidor. Dina texter låter som en människa — inte som en AI-rapport.
 
-SHOW, DON'T TELL (KRITISKT):
-- Istället för "fint ljusinsläpp", skriv: "Solen flödar in från tre stora fönster i söderläge och speglar sig i den nyslipade parketten."
-- Istället för "bra förvaring", skriv: "En hel garderobsvägg i sovrummet och ett källarförråd på 6 kvm löser alla förvaringsbehov."
-- Omvandla ALLA adjektiv till konkreta, verifierbara observationer.
+GRUNDREGEL: Skriv som om du berättar för en vän om bostaden. Konkret, personligt, med vardagsbilder. Booli-texter får vara lite mer berättande än Hemnet, men ska fortfarande vara faktaburna.
 
-SPRÅKLIGA REGLER (NOLLTOLERANS):
-- INGA PARENTESER för att förklara typ av service. Skriv "ICA Supermarket" istället för "ICA (matbutik)".
-- INGA "FEGA" FORMULERINGAR. Skriv "Läget är tyst" istället för "Läget upplevs tyst". Var självsäker men korrekt.
-- FULLSTÄNDIGA MENINGAR. Kontrollera att varje mening har subjekt, predikat och korrekt punktuering. Inga syftningsfel.
-- UNDVIK UPPREPNING. Om du nämnt jacuzzin i öppningen, fokusera på materialval eller känsla senare, inte bara att den finns.
-- INGA LISTOR. Omvandla alla fakta till naturlig, flytande prosa.
+VARDAGSBILDER (VIKTIGAST):
+- Beskriv hur det KÄNNS att bo där. Morgonkaffet på balkongen. Barnen som leker på gräsmattan.
+- Varje stycke ska ha minst EN vardagsbild.
+- Bra: "Härifrån ser du rakt ut mot gårdens björkar medan kaffet kallnar."
+- Dåligt: "Fönstret vetter mot innergården."
 
-LEVANDE BESKRIVNING:
-- Beskriv bostaden ur perspektivet av någon som bor där. Hur känns det att dricka morgonkaffet på balkongen? Hur är arbetsflödet i köket?
-- Måla upp en bild av vardagslivet.
+KONKRET, INTE ABSTRAKT:
+- Märken, material, mått, årtal. Inga vaga adjektiv.
+- "Ballingslöv-kök med granitbänk" — inte "kök av hög standard".
 
-KRAV:
-- Utgå ALLTID från dispositionen. Hitta aldrig på fakta.
-- Öppningen är A och O. De första två meningarna måste omedelbart fånga en stressad scrollare med den mest unika och attraktiva egenskapen hos bostaden.
-- Prioritera enligt följande: 1. Uteplats/Solläge/Utsikt, 2. Sociala ytor/Planlösning, 3. Kök/Badrum, 4. Läge.
-- Varje mening ska addera nytt, konkret värde. Stryk allt som är fluff.
-- Undvik mekanisk uppräkning. Väv in tekniska detaljer (energiklass, fiber) i en naturlig mening, eller utelämna dem om de stör flödet.
-- Lägesbeskrivningen ska berätta en historia om området, inte bara lista namn på butiker.
-- Skriv som en erfaren svensk mäklare: trygg, konkret och professionell med tydlig köpnytta.
-- Booli/egen sida får vara mer berättande än Hemnet, men ska fortfarande vara faktaburen och relevant för köpbeslut.
-- Låt avslutet bära en trovärdig vardagsbild i stället för klyschig summering.
-- För avgift/driftskostnad: nämn i huvudtext när det stärker köpbeslutet tydligt; annars kan uppgiften ligga i faktadelen.
-- Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
+TEXTLÄNGD:
+- Villa 5+ rum: minst 300 ord. Beskriv varje rum.
+- Trea: minst 220 ord. Ge köket och balkongen egna meningar.
+- Avsluta med en vardagsbild, inte en klyscha.
 
-UNDVIK ALLTID (nolltolerans):
-erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom i visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning.
+ÖPPNINGEN:
+- [Bostadstyp] om [boarea] på [adress] + starkaste egenskap.
+- Bra: "Villa om 180 kvm på Tallvägen 8 i Djursholm med södervänd altan och utsikt över trädgården."
 
-EXTRA TEXTER (varje text ska vara unik — INTE en komprimerad version av huvudtexten):
-- headline: Max 8 ord. Bostadens starkaste egenskap först.
-- instagramCaption: Skriv som en mäklare som postar på Instagram. Personligt, engagerande, INGA emojis. Max 3-4 meningar. Skapa nyfikenhet. Avsluta med uppmaning som "Kontakta mig för visning!"
-- showingInvitation: BARA om dispositionen innehåller VISNINGSINFORMATION med konkret tid/mäklare. Om visningstid saknas, returnera null. Varm ton, börja med "Välkommen på visning!" + praktiska detaljer.
-- shortAd: Max 2 meningar. Bostadstyp + boarea + 2-3 starka egenskaper. Säljande och koncis.
-- socialCopy: Facebook-text. 3-5 meningar. Personlig ton men professionell. Avsluta med "Hör av dig för mer info!"
-- Terminologi: EN term per sak. Undvik dubbleringar.
+SPRÅKREGLER:
+- INGA parenteser, listor eller vaga formuleringar.
+- Var självsäker. Variera meningsstart.
+- Avgift/kostnad: nämn om det stärker köpbeslutet. Alltid med enhet.
+- Avsluta med en trovärdig vardagsbild istället för klyschig summering.
 
-OUTPUT:
-Svara med JSON och fyll alla fält.
-JSON måste innehålla:
+FÖRBJUDNA ORD (nolltolerans):
+erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning, andas, genomsyras, faciliteter, njut av, skapar en känsla, bidrar till, i hjärtat av.
+
+EXTRA TEXTER (varje text HELT UNIK):
+- headline: Max 8 ord. Starkaste egenskapen först.
+- instagramCaption: Personligt, nyfikenhetsskapande, INGA emojis. Max 3-4 meningar. Avsluta med "Kontakta mig för visning."
+- showingInvitation: BARA om dispositionen har visningsinformation. Annars null.
+- shortAd: Max 2 meningar. Typ + boarea + 2-3 starka egenskaper.
+- socialCopy: Facebook-text. 3-5 meningar. Personlig ton. Avsluta med "Hör av dig för visning."
+
+OUTPUT (JSON):
 {
   "improvedPrompt": "...",
   "headline": "...",
@@ -2817,8 +2871,8 @@ JSON måste innehålla:
   "shortAd": "..."
 }
 
-REFERENSEXEMPEL FÖR NIVÅ OCH STIL:
-${buildGoldenBrokerExamples("booli")}`;;
+REFERENSEXEMPEL — KOPIERA DENNA NIVÅ OCH TON:
+${buildGoldenBrokerExamples("booli")}`;
 
 // Faktagranskning med kirurgisk korrigering — fixa BARA felen, bevara allt rätt
 const FACT_CHECK_PROMPT = `
@@ -3781,6 +3835,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       } catch (err: any) {
         console.error("Competitor analysis error:", err);
         res.status(500).json({ message: "Kunde inte analysera konkurrenter" });
+      }
+    });
+
+    // POST /api/sales-strategy — AI Säljstrateg (Premium only)
+    app.post("/api/sales-strategy", requireAuth, async (req, res) => {
+      try {
+        const user = (req as any).user as User;
+        const plan = (user.plan as PlanType) || "free";
+
+        // Premium only
+        if (plan !== "premium") {
+          return res.status(403).json({
+            message: "AI Säljstrateg kräver Premium-prenumeration (599 kr/mån)",
+            requiredPlan: "premium",
+            currentPlan: plan,
+          });
+        }
+
+        const { propertyData, generatedText, platform } = req.body;
+
+        if (!propertyData || typeof propertyData !== "object") {
+          return res.status(400).json({ message: "Bostadsdata krävs" });
+        }
+
+        const { generateSalesStrategy } = await import("./lib/sales-strategy");
+
+        const strategy = await generateSalesStrategy({
+          propertyData,
+          generatedText: typeof generatedText === "string" ? generatedText : undefined,
+          platform: typeof platform === "string" ? platform : undefined,
+        });
+
+        res.json(strategy);
+      } catch (err: any) {
+        console.error("Sales strategy error:", err);
+        res.status(500).json({ message: "Kunde inte generera säljstrategi" });
       }
     });
 

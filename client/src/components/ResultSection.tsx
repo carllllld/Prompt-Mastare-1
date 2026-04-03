@@ -7,8 +7,10 @@ import { PdfExport } from "./PdfExport";
 import { InlineHighlights } from "./InlineHighlights";
 import { VitecExportButton } from "./VitecExportButton";
 import { LockedFeature } from "./LockedFeature";
+import { SalesStrategy } from "./SalesStrategy";
 import { useOneClickFix } from "@/hooks/use-one-click-fix";
 import { useToast } from "@/hooks/use-toast";
+import { type PlanType } from "@shared/schema";
 
 interface ResultSectionProps {
   result: OptimizeResponse;
@@ -18,6 +20,8 @@ interface ResultSectionProps {
   propertyData?: Record<string, any>;
   vitecObjectId?: string;
   isPro?: boolean;
+  currentPlan?: PlanType;
+  platform?: string;
 }
 
 // Quick text review — local analysis without API call
@@ -95,7 +99,7 @@ function TextCard({ title, text }: { title: string; text: string }) {
   );
 }
 
-export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating, propertyData, vitecObjectId, isPro = false }: ResultSectionProps) {
+export function ResultSection({ result, onNewPrompt, onRegenerate, isRegenerating, propertyData, vitecObjectId, isPro = false, currentPlan = "free", platform }: ResultSectionProps) {
   const [copiedMain, setCopiedMain] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
   const [editedText, setEditedText] = useState(result.improvedPrompt);
@@ -273,6 +277,16 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       {result.showingInvitation && <TextCard title="Visningsinbjudan" text={result.showingInvitation} />}
       {result.shortAd && <TextCard title="Kortannons" text={result.shortAd} />}
       {result.socialCopy && !result.instagramCaption && <TextCard title="Social media" text={result.socialCopy} />}
+
+      {/* AI Säljstrateg — Premium feature */}
+      {propertyData && currentPlan !== "free" && (
+        <SalesStrategy
+          propertyData={propertyData}
+          generatedText={editedText}
+          platform={platform}
+          currentPlan={currentPlan}
+        />
+      )}
 
       {/* Snabb textgranskning */}
       <QuickTextReview text={editedText} wordCount={wordCount} />

@@ -483,6 +483,8 @@ export default function Home() {
               propertyData={lastSubmitData?.propertyData}
               vitecObjectId={lastSubmitData?.propertyData?._sourceId}
               isPro={plan === "pro" || plan === "premium"}
+              currentPlan={plan}
+              platform={lastSubmitData?.platform}
             />
           </div>
         )}

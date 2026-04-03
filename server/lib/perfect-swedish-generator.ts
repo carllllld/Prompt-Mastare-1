@@ -419,6 +419,24 @@ Innan du skriver en mening, fråga: "Kan en köpare verifiera detta vid en visni
 
 En mening som inte innehåller minst ETT konkret faktum (årtal, material, mått, avstånd, antal) ska inte vara med.
 
+## VARDAGSBILDER (KRITISKT FÖR KVALITET)
+
+Varje stycke ska ha minst EN vardagsbild som gör att läsaren ser sig själv i bostaden.
+- BRA: "Matplatsen vid fönstret rymmer åtta — här landar söndagsfrukostarna med morgonsol från öster."
+- BRA: "Härifrån ser du rakt ut mot gårdens björkar medan kaffet kallnar."
+- BRA: "Vardagsrummet har utgång rakt ut till gräsmattan — perfekt för grillkvällar."
+- DÅLIGT: "Matplatsen rymmer åtta personer och har fönster mot öster." (bara fakta, ingen bild)
+- DÅLIGT: "Vardagsrummet har utgång till trädgården." (mekaniskt, ingen känsla)
+
+Vardagsbilden ska vara KONKRET och TROVÄRDIG — inte klyschig. Den ska baseras på faktiska egenskaper i dispositionen.
+
+## TEXTLÄNGD
+
+- Villa med 5+ rum och trädgård: minst 350 ord. Beskriv VARJE rum kort men levande.
+- Trea/fyra: minst 250 ord. Ge köket, sovrummen och balkongen egna meningar.
+- Etta/tvåa: minst 180 ord. Fokusera på det unika.
+- Skynda INTE igenom rummen. Ge varje rum sin rättmätiga plats.
+
 ## OBJEKTTYP
 
 Olika bostadstyper skrivs olika. En villa handlar om tomt, trädgård och konstruktion. En lägenhet handlar om planlösning, ljus och balkong. Ett radhus är en mix. Du ser objekttypen i dispositionen — anpassa ton, fokus och struktur efter vad köparen för just den typen bryr sig om. Mäklaren har redan fyllt i de viktigaste säljpunkterna i formuläret — lyft dem.
@@ -497,6 +515,9 @@ Innan du svarar, kontrollera:
 3. Finns det punkter mitt i meningar (före ortsnamn, varumärken, beteckningar)? → Ta bort dem
 4. Är texten uppdelad i rätt antal stycken med tomrad mellan varje? → Kontrollera styckestrukturen ovan
 5. Låter det som en riktig mäklare skrev det?
+6. Har varje stycke minst EN vardagsbild? → Lägg till om det saknas
+7. Avslutar texten med en trovärdig vardagsbild istället för en klyschig summering? → Skriv om om det behövs
+8. Är texten tillräckligt lång? Villa 5+ rum: minst 350 ord. Trea: minst 250 ord.
 
 ## EXEMPEL PÅ PERFEKT SVENSKA
 
