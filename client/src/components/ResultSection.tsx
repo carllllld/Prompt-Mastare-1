@@ -20,6 +20,58 @@ interface ResultSectionProps {
   isPro?: boolean;
 }
 
+// Quick text review — local analysis without API call
+function QuickTextReview({ text, wordCount }: { text: string; wordCount: number }) {
+  const issues: string[] = [];
+  const strengths: string[] = [];
+
+  // Word count check
+  if (wordCount < 250) issues.push("Texten är kort (" + wordCount + " ord). En villa med mycket data bör ha minst 300 ord för att ge köparen en komplett bild.");
+  if (wordCount >= 350) strengths.push("Bra textlängd (" + wordCount + " ord) — ger köparen tillräckligt med information.");
+
+  // AI-word detection
+  const aiWords = ["vilket", "omfattar", "sätter fokus", "sätter ramen", "tar plats", "präglas av", "erbjuder", "bjuder på"];
+  const foundAiWords = aiWords.filter(w => text.toLowerCase().includes(w));
+  if (foundAiWords.length > 0) issues.push("AI-formuleringar hittade: \"" + foundAiWords.join("\", \"") + "\". Byt ut mot naturligare svenska.");
+
+  // Opening check
+  const firstSentence = text.split(/[.!?]/)[0] || "";
+  if (firstSentence.length > 120) issues.push("Öppningsmeningen är lång (" + firstSentence.length + " tecken). Korta ner för att fånga läsaren snabbare.");
+
+  // Paragraph check
+  const paragraphs = text.split(/\n\n+/).filter(p => p.trim());
+  if (paragraphs.length < 3) issues.push("Texten har få stycken (" + paragraphs.length + "). Dela upp i fler stycken för bättre läsbarhet.");
+  if (paragraphs.length >= 4) strengths.push("Bra styckeindelning — texten är lätt att skumma igenom.");
+
+  // Repetition check
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  const starts = sentences.map(s => s.trim().split(/\s+/)[0]?.toLowerCase());
+  const duplicateStarts = starts.filter((s, i) => s && starts[i - 1] === s);
+  if (duplicateStarts.length > 0) issues.push("Flera meningar börjar med samma ord. Variera meningsstarten.");
+
+  if (issues.length === 0 && strengths.length === 0) return null;
+
+  return (
+    <div className="border border-gray-200 bg-white px-4 py-3">
+      <p className="text-xs font-medium text-gray-700 mb-2">Textgranskning</p>
+      {issues.length > 0 && (
+        <div className="space-y-1 mb-2">
+          {issues.map((issue, i) => (
+            <p key={i} className="text-xs text-gray-600">- {issue}</p>
+          ))}
+        </div>
+      )}
+      {strengths.length > 0 && (
+        <div className="space-y-1">
+          {strengths.map((s, i) => (
+            <p key={i} className="text-xs text-gray-500">+ {s}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TextCard({ title, text }: { title: string; text: string }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -221,6 +273,9 @@ export function ResultSection({ result, onNewPrompt, onRegenerate, isRegeneratin
       {result.showingInvitation && <TextCard title="Visningsinbjudan" text={result.showingInvitation} />}
       {result.shortAd && <TextCard title="Kortannons" text={result.shortAd} />}
       {result.socialCopy && !result.instagramCaption && <TextCard title="Social media" text={result.socialCopy} />}
+
+      {/* Snabb textgranskning */}
+      <QuickTextReview text={editedText} wordCount={wordCount} />
 
       {/* Saknad information */}
       {result.improvements && result.improvements.length > 0 && (

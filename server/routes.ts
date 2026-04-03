@@ -2736,8 +2736,8 @@ KRAV:
 - Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 - Använd variation i meningsstart och rytm; undvik två meningar i rad med samma huvudpoäng.
 
-UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, tar plats, omfattar.
+UNDVIK ALLTID (nolltolerans — om du använder något av dessa ord, skriv om meningen):
+erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom i visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning.
 
 EXTRA TEXTER (varje text ska vara unik — INTE en komprimerad version av huvudtexten):
 - headline: Max 8 ord. Bostadens starkaste egenskap först. Ex: "Balkong i söder och kök renoverat 2022"
@@ -2794,8 +2794,8 @@ KRAV:
 - För avgift/driftskostnad: nämn i huvudtext när det stärker köpbeslutet tydligt; annars kan uppgiften ligga i faktadelen.
 - Om dispositionen innehåller boarea, antal rum, kök, badrum eller kommunikationer måste samtliga dessa faktagrupper nämnas tydligt i huvudtexten.
 
-UNDVIK ALLTID:
-erbjuder, bjuder på, generös, vilket, för den som, välkommen, präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, tar plats, omfattar.
+UNDVIK ALLTID (nolltolerans):
+erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom i visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning.
 
 EXTRA TEXTER (varje text ska vara unik — INTE en komprimerad version av huvudtexten):
 - headline: Max 8 ord. Bostadens starkaste egenskap först.
@@ -4095,7 +4095,7 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
     });
 
     // PUT /api/integrations/settings — update user's integration settings
-    app.put("/api/integrations/settings", requireAuth, async (req, res) => {
+    app.put("/api/integrations/settings", requireAuth, requirePro, async (req, res) => {
       try {
         const user = (req as any).user as User;
         const { vitecApiKey, vitecCustomerId, vitecBaseUrl, vitecEnabled } = req.body;
@@ -4133,9 +4133,10 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
           }
         }
 
-        // Update settings
+        // Update settings — encrypt API key before storing
+        const encryptedKey = vitecApiKey ? encryptApiKey(vitecApiKey) : undefined;
         const updated = await storage.updateIntegrationSettings(user.id, {
-          vitecApiKey: vitecApiKey || undefined,
+          vitecApiKey: encryptedKey || undefined,
           vitecCustomerId: vitecCustomerId || undefined,
           vitecBaseUrl: vitecBaseUrl || undefined,
           vitecEnabled: vitecEnabled !== undefined ? vitecEnabled : false,

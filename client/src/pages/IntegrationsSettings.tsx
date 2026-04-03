@@ -42,12 +42,28 @@ export default function IntegrationsSettings() {
       vitecBaseUrl?: string;
       vitecEnabled: boolean;
     }) => {
-      const res = await apiRequest("PUT", "/api/integrations/settings", data);
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Uppdatering misslyckades" }));
-        throw new Error(error.message || "Kunde inte uppdatera inställningar");
+      if (data.vitecEnabled && data.vitecApiKey && data.vitecCustomerId) {
+        // Use the secure endpoint that encrypts the API key
+        const res = await apiRequest("PUT", "/api/integrations/vitec/key", {
+          apiKey: data.vitecApiKey,
+          customerId: data.vitecCustomerId,
+          baseUrl: data.vitecBaseUrl || "",
+        });
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ message: "Uppdatering misslyckades" }));
+          throw new Error(error.message || "Kunde inte spara API-nyckeln");
+        }
+        return res.json();
+      } else if (!data.vitecEnabled) {
+        // Disable integration
+        const res = await apiRequest("DELETE", "/api/integrations/vitec/key");
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ message: "Kunde inte inaktivera" }));
+          throw new Error(error.message);
+        }
+        return res.json();
       }
-      return res.json();
+      throw new Error("API-nyckel och Kund-ID krävs");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/integrations/settings"] });
@@ -69,7 +85,7 @@ export default function IntegrationsSettings() {
   // Delete settings mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("DELETE", "/api/integrations/settings", {});
+      const res = await apiRequest("DELETE", "/api/integrations/vitec/key");
       if (!res.ok) {
         throw new Error("Kunde inte radera inställningar");
       }

@@ -7,13 +7,11 @@
  */
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Check, Copy, AlertCircle, Building2, ClipboardList } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { Check, Copy, AlertCircle, ClipboardList } from "lucide-react";
 
 interface VitecExportButtonProps {
   propertyData: Record<string, any>;
@@ -25,11 +23,6 @@ interface VitecExportButtonProps {
   instagramCaption?: string;
   vitecObjectId?: string;
   isPro?: boolean;
-}
-
-interface IntegrationSettings {
-  vitecEnabled: boolean;
-  vitecApiKeySet: boolean;
 }
 
 function buildStructuredExport(props: VitecExportButtonProps): string {
@@ -112,41 +105,6 @@ export function VitecExportButton(props: VitecExportButtonProps) {
   const [copiedStructured, setCopiedStructured] = useState(false);
   const [copiedDescription, setCopiedDescription] = useState(false);
 
-  // Check if Vitec API is configured (for direct export)
-  const { data: settings } = useQuery<IntegrationSettings>({
-    queryKey: ["/api/integrations/settings"],
-    enabled: !!isPro,
-  });
-
-  const hasVitecApi = settings?.vitecEnabled && settings?.vitecApiKeySet && vitecObjectId;
-
-  // Direct API export mutation
-  const exportMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/vitec/export", {
-        objectId: vitecObjectId,
-        propertyData,
-        generatedText,
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: "Export misslyckades" }));
-        throw new Error(error.message || "Kunde inte exportera till Vitec");
-      }
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      if (data.success) {
-        toast({ title: "Exporterat till Vitec", description: data.message });
-        setShowDialog(false);
-      } else {
-        toast({ title: "Export misslyckades", description: data.message, variant: "destructive" });
-      }
-    },
-    onError: (error: Error) => {
-      toast({ title: "Export misslyckades", description: error.message, variant: "destructive" });
-    },
-  });
-
   const handleCopyStructured = () => {
     const text = buildStructuredExport(props);
     navigator.clipboard.writeText(text);
@@ -227,44 +185,6 @@ export function VitecExportButton(props: VitecExportButtonProps) {
                 {buildStructuredExport(props)}
               </div>
             </div>
-
-            {/* Direct Vitec API export (beta) */}
-            {hasVitecApi && (
-              <div className="rounded-lg border border-border p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4" style={{ color: "#2D6A4F" }} />
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Direkt Vitec-export</p>
-                  <Badge variant="outline" className="text-[10px]">Beta</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Skicka objektbeskrivningen direkt till Vitec via API. Funktionen är i beta — om det inte fungerar, använd kopiera-knapparna ovan.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    Objekt-ID: {vitecObjectId}
-                  </Badge>
-                </div>
-                <Button
-                  onClick={() => exportMutation.mutate()}
-                  disabled={exportMutation.isPending}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  {exportMutation.isPending ? (
-                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Exporterar...</>
-                  ) : (
-                    <><Upload className="w-3.5 h-3.5" /> Skicka till Vitec (beta)</>
-                  )}
-                </Button>
-                {exportMutation.isError && (
-                  <p className="text-xs text-destructive flex items-center gap-1.5">
-                    <AlertCircle className="w-3 h-3" />
-                    {exportMutation.error?.message || "Export misslyckades. Använd kopiera-knapparna istället."}
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Tips */}
             <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-muted/30">
