@@ -109,8 +109,8 @@ export function EssentialFieldsSection({
         <span className="text-sm font-semibold" style={{ color: "#1D2939" }}>Grundläggande uppgifter</span>
       </div>
 
-      {/* Import section - endast Vitec för Pro/Premium */}
-      {isPro && importButtons && (
+      {/* Import section - Vitec för alla (låst för free) */}
+      {importButtons && (
         <div className="flex flex-wrap gap-2 mb-3 p-2.5 rounded-lg border" style={{ borderColor: "#E8E5DE", background: "#FAFAF8" }}>
           <div className="w-full flex items-center gap-1.5 mb-0.5">
             <span className="text-xs font-medium" style={{ color: "#1D2939" }}>Importera från Vitec</span>
