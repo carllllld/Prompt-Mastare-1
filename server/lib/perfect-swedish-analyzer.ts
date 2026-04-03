@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { chatCompletion } from './ai-client';
 import { WritingStyle, FORBIDDEN_PHRASES, getExemptPhrases, UNVERIFIABLE_CLAIMS, HEMNET_FORBIDDEN_PATTERNS } from './text-rules';
 import { findRuleViolations } from './text-validation';
 import { v4 as uuidv4 } from 'uuid';
@@ -49,16 +49,6 @@ interface ValidationResult {
 }
 
 export class ExpertAIAnalyzer {
-  private _openai: OpenAI | null = null;
-
-  private get openai(): OpenAI {
-    if (!this._openai) {
-      this._openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      });
-    }
-    return this._openai;
-  }
 
   async analyze(request: AnalysisRequest): Promise<ExpertAnalysis> {
     const startTime = Date.now();
@@ -70,10 +60,10 @@ export class ExpertAIAnalyzer {
 
       const prompt = this.buildAnalysisPrompt(request);
 
-      const completionPromise = this.openai.chat.completions.create({
+      const completionPromise = chatCompletion({
         model: 'gpt-5.2',
         messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 3000,
+        max_tokens: 3000,
         response_format: { type: 'json_object' },
         reasoning_effort: 'medium',
       });
@@ -82,9 +72,9 @@ export class ExpertAIAnalyzer {
         setTimeout(() => reject(new Error('Analysis timeout')), TIMEOUT_MS)
       );
 
-      const completion = await Promise.race([completionPromise, timeoutPromise]);
+      const result = await Promise.race([completionPromise, timeoutPromise]);
 
-      const analysis = this.parseAnalysisResult(completion);
+      const analysis = this.parseAnalysisResult(result.content);
       
       // Step 2: Merge validation violations with AI improvements
       const mergedAnalysis = this.mergeValidationViolations(analysis, validationResult);
@@ -447,9 +437,7 @@ VIKTIGT:
 - Varje improvement MÅSTE förklara VARFÖR det är ett problem och ge KONKRETA exempel på lösning`;
   }
 
-  private parseAnalysisResult(completion: OpenAI.ChatCompletion): Omit<ExpertAnalysis, 'duration'> {
-    const content = completion.choices[0]?.message?.content;
-
+  private parseAnalysisResult(content: string): Omit<ExpertAnalysis, 'duration'> {
     if (!content) {
       console.error('OpenAI analysis response:', JSON.stringify(completion, null, 2));
       throw new Error('No content in OpenAI analysis response');

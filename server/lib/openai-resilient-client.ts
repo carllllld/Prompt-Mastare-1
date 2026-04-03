@@ -7,11 +7,10 @@ import { openAICircuitBreaker } from "./circuit-breaker";
 import { withRetry, RetryConfigs, resilientAPICall, type RetryResult } from "./retry-utils";
 import { pipelineObservability } from "./listing-pipeline-observability";
 import OpenAI from "openai";
+import { getOpenAIClient } from "./ai-client";
 
-// Global OpenAI instance
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Global OpenAI instance (resilient client always uses OpenAI directly)
+const openai = getOpenAIClient();
 
 export interface OpenAICallOptions {
   operation: string;

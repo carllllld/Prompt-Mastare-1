@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { chatCompletion, getActiveProvider } from './ai-client';
 import { getCachedPromptTemplate, cachePromptTemplate } from './redis-cache';
 import { FORBIDDEN_PHRASES, getExemptPhrases, buildBrokerLanguagePolicyPrompt, WritingStyle } from './text-rules';
 
@@ -34,16 +34,6 @@ export class GeneratorValidationError extends Error {
 
 export class SmartGenerationEngine {
   private readonly PROMPT_VERSION = '2.9.0';
-  private _openai: OpenAI | null = null;
-
-  private get openai(): OpenAI {
-    if (!this._openai) {
-      this._openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY || process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-      });
-    }
-    return this._openai;
-  }
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const startTime = Date.now();
@@ -52,42 +42,33 @@ export class SmartGenerationEngine {
       const systemPrompt = await this.getSystemPrompt(request.style, request.platform);
       const userPrompt = this.buildUserPrompt(request);
 
-      const completion = await this.openai.chat.completions.create({
+      const result = await chatCompletion({
         model: 'gpt-5.2',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        // Note: temperature not supported with reasoning_effort
-        max_completion_tokens: 4000,
+        max_tokens: 4000,
         reasoning_effort: 'high',
       });
 
-      const content = completion.choices[0]?.message?.content;
+      const content = result.content;
       if (!content) {
-        // Log full response for debugging
-        console.error('[GENERATOR] Empty OpenAI response:', JSON.stringify({
-          choices: completion.choices?.map(c => ({ 
-            finish_reason: c.finish_reason, 
-            content_length: c.message?.content?.length || 0,
-            refusal: c.message?.refusal,
-          })),
-          usage: completion.usage,
-        }));
-        throw new Error('No content in OpenAI response');
+        console.error('[GENERATOR] Empty AI response from', result.provider);
+        throw new Error('No content in AI response');
       }
 
-      const result = this.extractResult(completion);
+      const parsed = this.parseGeneratedContent(content);
       
       // Validate generated output before returning
-      this.validateGeneratedOutput(result, request.platform);
+      this.validateGeneratedOutput(parsed, request.platform);
       
       const duration = Date.now() - startTime;
 
       return {
-        ...result,
+        ...parsed,
         duration,
-        tokensUsed: completion.usage?.total_tokens || 0
+        tokensUsed: result.tokensUsed || 0
       };
     } catch (error: any) {
       const duration = Date.now() - startTime;
@@ -607,11 +588,9 @@ KRITISKT:
     return prompt;
   }
 
-  private extractResult(completion: OpenAI.ChatCompletion): Omit<GenerationResult, 'duration' | 'tokensUsed'> {
-    const content = completion.choices[0]?.message?.content;
-
+  private parseGeneratedContent(content: string): Omit<GenerationResult, 'duration' | 'tokensUsed'> {
     if (!content) {
-      throw new Error('No content in OpenAI response');
+      throw new Error('No content in AI response');
     }
 
     try {

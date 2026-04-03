@@ -13,7 +13,7 @@ import { analyzeArchitecturalValue } from "./architectural-intelligence";
 import { optimizeRequestSchema, PLAN_LIMITS, WORD_LIMITS, FEATURE_ACCESS, MODEL_TEXT_EDIT_LIMITS, type PlanType, type User, type PersonalStyle, type InsertPersonalStyle } from "@shared/schema";
 import { requireAuth, requirePro } from "./auth";
 import { sendTeamInviteEmail } from "./email";
-import OpenAI from "openai";
+import { chatCompletion, getOpenAIClient, getActiveProvider } from "./lib/ai-client";
 import { FORBIDDEN_PHRASES, buildBrokerLanguagePolicyPrompt, countEvidenceBackedBlockedPhrases, getBrokerLanguageEvidenceSnapshot, shouldBlockPhraseForStyle, type WritingStyle } from "./lib/text-rules";
 import { findRuleViolations, validateOptimizationResult } from "./lib/text-validation";
 import { PerfectSwedishOrchestrator } from "./lib/perfect-swedish-orchestrator";
@@ -65,10 +65,8 @@ async function checkOptimizeRateLimit(userId: string): Promise<boolean> {
   return true;
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+// AI client is now managed by server/lib/ai-client.ts
+// Supports both OpenAI and Claude based on ANTHROPIC_API_KEY env var
 
 import { extractFirstJsonObject, safeJsonParse, extractGeneratedMarketingText, extractImprovedPromptFromLooseJson } from "./lib/json-guards";
 
@@ -442,16 +440,15 @@ ANALYSERA OCH SVARA ENDAST MED JSON I DETTA FORMAT:
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const response = await chatCompletion({
       model: "gpt-5.2",
       messages: [{ role: "user", content: styleInternalizationPrompt }],
-      temperature: 0.5, // Moderate temperature for style interpretation
-      max_completion_tokens: 1000,
+      temperature: 0.5,
+      max_tokens: 1000,
       response_format: { type: "json_object" },
-      // Note: No reasoning_effort - simple JSON extraction doesn't need deep reasoning
     });
 
-    const styleData = safeJsonParse(response.choices[0]?.message?.content || "{}");
+    const styleData = safeJsonParse(response.content || "{}");
 
     // Validera och normalisera grundläggande fält
     const formality = Math.max(1, Math.min(10, Number(styleData.formality) || 5));
@@ -3895,11 +3892,11 @@ Istället för "generöst kök" → "kök om [X] kvm" eller "kök med [konkret d
 
 Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
 
-        // Call OpenAI with GPT-5.2 and reasoning for best quality
-        const completion = await openai.responses.create({
+        // Call AI with reasoning for best quality
+        const completion = await chatCompletion({
           model: "gpt-5.2",
-          reasoning: { effort: "medium" },
-          input: [
+          reasoning_effort: "medium",
+          messages: [
             {
               role: "developer",
               content: "Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver professionella, faktabaserade objektbeskrivningar utan AI-klyschor. Du vet exakt hur Hemnet-texter ska låta — konkreta, sakliga och köparrelevanta. Du använder ALDRIG fraser som 'välkommen till', 'erbjuder', 'bjuder på', 'i hjärtat av', 'för den som', 'generös planlösning'. Du börjar alltid med bostadens starkaste USP. VIKTIGT: På Hemnet visas pris, avgift, boarea, rum, våning, byggår, energiklass och BRF-namn som egna fält — upprepa dem INTE i löptexten. Objektbeskrivningen ska beskriva det som INTE framgår av siffrorna: planlösning, material, renoveringar, utsikt, läge, utemiljö."
@@ -3909,10 +3906,10 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
               content: rewritePrompt
             }
           ],
-          max_output_tokens: 2000,
+          max_tokens: 2000,
         });
 
-        let rewrittenText = completion.output_text?.trim() || '';
+        let rewrittenText = completion.content?.trim() || '';
 
         if (!rewrittenText) {
           return res.status(500).json({ message: "Kunde inte generera omskriven text" });
@@ -4567,10 +4564,10 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
         console.warn("[Rewrite] Failed to load personal style:", e);
       }
 
-      const rewriteCompletion = await openai.responses.create({
+      const rewriteCompletion = await chatCompletion({
         model: "gpt-5.2",
-        reasoning: { effort: rewritePlan === "premium" ? "high" : "medium" },
-        input: [
+        reasoning_effort: rewritePlan === "premium" ? "high" : "medium",
+        messages: [
           {
             role: "developer",
             content: `Du är en erfaren fastighetsmäklare i Sverige. Du redigerar objektbeskrivningar för Hemnet och Booli. Du vet exakt hur en bra svensk objektbeskrivning ska låta.
@@ -4616,11 +4613,11 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
             content: `HELA TEXTEN (för kontext och stil):\n${fullText}\n\nMARKERAD TEXT ATT SKRIVA OM:\n"${selectedText}"\n\nINSTRUKTION: ${instruction}`
           }
         ],
-        max_output_tokens: computeInlineEditOutputTokenBudget(selectedText, rewritePlan, "rewrite"),
-        text: { format: { type: "json_object" } }
+        max_tokens: computeInlineEditOutputTokenBudget(selectedText, rewritePlan, "rewrite"),
+        response_format: { type: "json_object" },
       });
 
-      const raw = rewriteCompletion.output_text || "{}";
+      const raw = rewriteCompletion.content || "{}";
       let parsed: any;
       try { parsed = safeJsonParse(raw); } catch { parsed = {}; }
 
@@ -4686,10 +4683,10 @@ Svara med JSON: {"rewritten": "den omskrivna texten"}`
         console.warn("[SelectionEdit] Failed to load personal style:", e);
       }
 
-      const selectionCompletion = await openai.responses.create({
+      const selectionCompletion = await chatCompletion({
         model: "gpt-5.2",
-        reasoning: { effort: "low" }, // Fast response for better UX
-        input: [
+        reasoning_effort: "low",
+        messages: [
           {
             role: "developer",
             content: `Du är en erfaren fastighetsmäklare i Sverige. Du ger förbättringsförslag för objektbeskrivningar.
@@ -4716,11 +4713,11 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
             content: `HELA TEXTEN (för kontext):\n${fullContext}\n\nMARKERAD TEXT ATT FÖRBÄTTRA:\n"${selectedText}"\n\nGe 2-3 förbättrade alternativ.`
           }
         ],
-        max_output_tokens: computeInlineEditOutputTokenBudget(selectedText, selectionPlan, "improve"),
-        text: { format: { type: "json_object" } }
+        max_tokens: computeInlineEditOutputTokenBudget(selectedText, selectionPlan, "improve"),
+        response_format: { type: "json_object" },
       });
 
-      const raw = selectionCompletion.output_text || "{}";
+      const raw = selectionCompletion.content || "{}";
       let parsed: any;
       try { parsed = safeJsonParse(raw); } catch { parsed = {}; }
 
@@ -5670,10 +5667,10 @@ Svara med JSON: {"suggestions": ["alternativ 1", "alternativ 2", "alternativ 3"]
 
       const improvementInstruction = improvementPrompts[improvementType] || improvementPrompts.more_descriptive;
 
-      const completion = await openai.responses.create({
+      const completion = await chatCompletion({
         model: "gpt-5.2",
-        reasoning: { effort: plan === "premium" ? "high" : "medium" },
-        input: [
+        reasoning_effort: plan === "premium" ? "high" : "medium",
+        messages: [
           {
             role: "developer",
             content: `Du är en erfaren svensk fastighetsmäklare som redigerar objektbeskrivningar. Du vet hur Hemnet- och Booli-texter ska låta.
@@ -5703,16 +5700,16 @@ Svara med JSON: {"improved": "den förbättrade texten"}`
             content: `HELA TEXTEN (för kontext):\n${originalText}\n\nVALD TEXT ATT FÖRBÄTTRA:\n"${selectedText}"${context ? `\n\nEXTRA KONTEXT: ${context}` : ''}`
           }
         ],
-        max_output_tokens: computeInlineEditOutputTokenBudget(selectedText, plan, "improve"),
-        text: { format: { type: "json_object" } }
+        max_tokens: computeInlineEditOutputTokenBudget(selectedText, plan, "improve"),
+        response_format: { type: "json_object" },
       });
 
       let rawImprovedText = "";
       try {
-        const parsed = safeJsonParse(completion.output_text || "{}");
-        rawImprovedText = parsed.improved || completion.output_text || "";
+        const parsed = safeJsonParse(completion.content || "{}");
+        rawImprovedText = parsed.improved || completion.content || "";
       } catch {
-        rawImprovedText = completion.output_text || "";
+        rawImprovedText = completion.content || "";
       }
       // Strip quotes, markdown code blocks, and leading/trailing whitespace
       rawImprovedText = rawImprovedText.trim();

@@ -10,15 +10,13 @@
  * - Factual and observable (not subjective impressions)
  */
 
-import OpenAI from "openai";
+import { getOpenAIClient } from "./ai-client";
 import * as Sentry from "@sentry/node";
 import * as fs from "fs";
 import * as path from "path";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "",
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+// Vision requires OpenAI (GPT-4o) — Claude doesn't have equivalent vision API
+const openai = getOpenAIClient();
 
 export interface ImageAnalysisResult {
   imageUrl: string;

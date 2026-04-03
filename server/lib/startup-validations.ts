@@ -6,6 +6,7 @@
  */
 
 import OpenAI from "openai";
+import { isAIConfigured, getActiveProvider, getProviderName } from "./ai-client";
 import Stripe from "stripe";
 import * as Sentry from "@sentry/node";
 

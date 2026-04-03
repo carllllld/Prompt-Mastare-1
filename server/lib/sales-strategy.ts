@@ -8,11 +8,7 @@
  * Premium-only feature (599 kr/mån).
  */
 
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-});
+import { chatCompletion } from "./ai-client";
 
 export interface SalesStrategyInput {
   propertyData: Record<string, any>;
@@ -264,7 +260,7 @@ JSON-format:
 export async function generateSalesStrategy(input: SalesStrategyInput): Promise<SalesStrategyResult> {
   const prompt = buildStrategyPrompt(input);
 
-  const response = await openai.chat.completions.create({
+  const response = await chatCompletion({
     model: "gpt-5.2",
     messages: [
       {
@@ -291,7 +287,7 @@ VIKTIGT:
     max_tokens: 3000,
   });
 
-  const content = response.choices[0]?.message?.content;
+  const content = response.content;
   if (!content) {
     throw new Error("Inget svar från AI");
   }
