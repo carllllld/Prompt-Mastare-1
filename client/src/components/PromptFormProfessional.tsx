@@ -16,7 +16,6 @@ import { EssentialFieldsSection } from "@/components/FormSections/EssentialField
 import { ImageSection } from "@/components/FormSections/ImageSection";
 import { DetailsSection } from "@/components/FormSections/DetailsSection";
 import { CollapsibleChipSelector } from "@/components/FormSections/CollapsibleChipSelector";
-import { FormModeSelector, type FormMode } from "@/components/FormModeSelector";
 import { HemnetQuickImport } from "@/components/HemnetQuickImport";
 import { TemplateManager } from "@/components/TemplateManager";
 
@@ -660,8 +659,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
   // UI state
   const [showIncompleteDialog, setShowIncompleteDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<PropertyFormData | null>(null);
-  const [formMode, setFormMode] = useState<FormMode>('quick'); // Progressive disclosure mode
-  const [showHemnetImport, setShowHemnetImport] = useState(true); // Show Hemnet import in Snabbstart mode
+  const [showHemnetImport, setShowHemnetImport] = useState(true);
 
   const modelLimits = { min: 200, max: 600, defaultMin: 350, defaultMax: 450 };
   const [wordCountMin, setWordCountMin] = useState(modelLimits.defaultMin);
@@ -1413,20 +1411,11 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
           {/* Desktop layout */}
           <div className="space-y-4">
               
-              {/* Form Mode Selector - Progressive Disclosure */}
-              {renderMode === 'full' && (
-                <FormModeSelector 
-                  mode={formMode} 
-                  onModeChange={setFormMode}
-                />
-              )}
-
-              {/* Template Manager - Save/Load Templates */}
-              {renderMode === 'full' && (
+              {/* Template Manager - Save/Load Area Templates (Pro+) */}
+              {renderMode === 'full' && isPro && (
                 <TemplateManager
                   currentFormData={form.getValues()}
                   onLoadTemplate={(data) => {
-                    // Load template data into form
                     Object.entries(data).forEach(([key, value]) => {
                       if (form.getValues()[key] !== undefined) {
                         form.setValue(key as any, value);
@@ -1436,8 +1425,8 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 />
               )}
 
-              {/* Hemnet Quick Import - Only in Snabbstart mode */}
-              {renderMode === 'full' && formMode === 'quick' && showHemnetImport && (
+              {/* Hemnet Quick Import */}
+              {renderMode === 'full' && showHemnetImport && (
                 <HemnetQuickImport
                   onImport={handleExternalImport}
                   onSkip={() => setShowHemnetImport(false)}
@@ -1532,9 +1521,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
                 }}
               />
 
-          {/* ── IMPROVE MODE: KÖK & BADRUM, LÄGE, USP ── */}
-          {(formMode === 'improve' || formMode === 'expert') && (
-            <>
           {/* ── SECTION 3: KÖK & BADRUM (chip-based) ── */}
           <div className="pro-section-card">
             <label className="text-xs font-semibold uppercase tracking-wider block mb-3 text-muted-foreground">
@@ -1624,12 +1610,7 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               )} />
             </div>
           </div>
-            </>
-          )}
-          
-          {/* ── EXPERT MODE: ALL REMAINING SECTIONS ── */}
-          {formMode === 'expert' && (
-            <>
+
           {/* ── SECTION 5: PLANLÖSNING (optional freetext) ── */}
           <div className="pro-section-card">
             <FormField control={form.control} name="layoutDescription" render={({ field }) => (
@@ -1846,8 +1827,6 @@ export function PromptFormProfessional({ onSubmit, isPending, disabled, isPro = 
               )} />
             </div>
           </div>
-            </>
-          )}
           </>
           )}
 

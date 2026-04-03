@@ -4410,6 +4410,28 @@ Skriv ENDAST den omskrivna texten, ingen annan kommentar.`;
         sessionId,
       });
 
+      // Don't include showingInvitation if no showing info was provided
+      const hasShowingInfo = prompt && (
+        /visning/i.test(prompt) || 
+        /visningstid/i.test(prompt) || 
+        (req.body.propertyData?.visningstid && req.body.propertyData.visningstid.trim())
+      );
+      if (!hasShowingInfo && result.showingInvitation) {
+        result.showingInvitation = null as any;
+      }
+
+      // Don't include social texts if only basic info was provided (no USP/area/neighborhood)
+      const hasRichContent = prompt && (
+        /FÖRSÄLJNINGSARGUMENT/i.test(prompt) ||
+        /LÄGE & OMGIVNING/i.test(prompt) ||
+        (req.body.propertyData?.uniqueSellingPoints && req.body.propertyData.uniqueSellingPoints.trim()) ||
+        (req.body.propertyData?.neighborhood && req.body.propertyData.neighborhood.trim())
+      );
+      if (!hasRichContent) {
+        if (result.instagramCaption) result.instagramCaption = null as any;
+        if (result.socialCopy) result.socialCopy = null as any;
+      }
+
       // Save to database
       await pool.query(`
         INSERT INTO pipeline_generations (

@@ -14,6 +14,13 @@ import {
 import { useTemplates } from "@/hooks/use-templates";
 import type { FormTemplate } from "@shared/schema";
 
+// Fields that are reusable across objects in the same area/BRF
+const REUSABLE_FIELDS = [
+  "area", "brfName", "neighborhood", "transport",
+  "heating", "konstruktionMaterial", "taktyp",
+  "platform", "writingStyle",
+] as const;
+
 interface TemplateManagerProps {
   currentFormData: Record<string, any>;
   onLoadTemplate: (data: Record<string, any>) => void;
@@ -25,12 +32,24 @@ export function TemplateManager({ currentFormData, onLoadTemplate }: TemplateMan
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   const [templateName, setTemplateName] = useState("");
 
+  // Only save reusable fields (area/BRF data, not object-specific)
+  const extractReusableData = (data: Record<string, any>) => {
+    const reusable: Record<string, any> = {};
+    for (const key of REUSABLE_FIELDS) {
+      if (data[key] && String(data[key]).trim()) {
+        reusable[key] = data[key];
+      }
+    }
+    return reusable;
+  };
+
   const handleSaveTemplate = () => {
     if (!templateName.trim()) return;
+    const reusableData = extractReusableData(currentFormData);
     createTemplate({
       name: templateName.trim(),
       description: undefined,
-      templateData: currentFormData,
+      templateData: reusableData,
     });
     setTemplateName("");
     setShowSaveDialog(false);
@@ -48,38 +67,36 @@ export function TemplateManager({ currentFormData, onLoadTemplate }: TemplateMan
     }
   };
 
-  // Extract summary from template data
   const getTemplateSummary = (data: Record<string, any>) => {
     const parts: string[] = [];
-    if (data.propertyType) {
-      const types: Record<string, string> = { apartment: "Lägenhet", house: "Hus", townhouse: "Radhus", villa: "Villa" };
-      parts.push(types[data.propertyType] || data.propertyType);
-    }
+    if (data.brfName) parts.push(data.brfName);
     if (data.area) parts.push(data.area);
-    if (data.livingArea) parts.push(`${data.livingArea} kvm`);
-    return parts.join(" · ") || "Ingen data";
+    if (data.neighborhood) parts.push("Område");
+    if (data.transport) parts.push("Kommunikationer");
+    return parts.join(" · ") || "Tom mall";
   };
+
+  const hasReusableData = REUSABLE_FIELDS.some(
+    (key) => currentFormData[key] && String(currentFormData[key]).trim()
+  );
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <Building2 className="w-4 h-4 text-gray-400" />
-      <span className="text-xs text-gray-500">Mallar:</span>
+      <Building2 className="w-3.5 h-3.5 text-gray-400" />
 
       <Dialog open={showLoadDialog} onOpenChange={setShowLoadDialog}>
         <DialogTrigger asChild>
-          <button
-            type="button"
-            className="text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2"
-          >
-            Hämta ({templates.length})
+          <button type="button" className="text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2">
+            Områdesmallar{templates.length > 0 ? ` (${templates.length})` : ""}
           </button>
         </DialogTrigger>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Sparade mallar</DialogTitle>
+            <DialogTitle>Områdesmallar</DialogTitle>
             <DialogDescription>
-              Fyll i formuläret snabbt med sparad objektdata — BRF-info, områdesbeskrivningar, 
-              standardvärden du använder ofta.
+              Säljer du flera objekt i samma BRF eller område? Spara gemensam info 
+              (förening, kommunikationer, område) och fyll i formuläret med ett klick. 
+              Objektspecifik data som adress, rum och kök sparas aldrig.
             </DialogDescription>
           </DialogHeader>
 
@@ -89,7 +106,7 @@ export function TemplateManager({ currentFormData, onLoadTemplate }: TemplateMan
             <div className="py-6 text-center">
               <p className="text-sm text-gray-600 mb-1">Inga mallar ännu</p>
               <p className="text-xs text-gray-500">
-                Fyll i formuläret och klicka "Spara" för att skapa en mall
+                Fyll i BRF-namn, område och kommunikationer, sedan klicka "Spara"
               </p>
             </div>
           ) : (
@@ -124,43 +141,43 @@ export function TemplateManager({ currentFormData, onLoadTemplate }: TemplateMan
         </DialogContent>
       </Dialog>
 
-      <span className="text-gray-300">|</span>
-
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogTrigger asChild>
-          <button
-            type="button"
-            className="text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2"
-          >
-            Spara nuvarande
-          </button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Spara som mall</DialogTitle>
-            <DialogDescription>
-              Spara formulärets nuvarande värden. Bra för BRF-info, områdesbeskrivningar 
-              eller standardvärden du återanvänder.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-3">
-            <Input
-              placeholder="T.ex. BRF Storgatan, Villaområde Söder..."
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSaveTemplate()}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>Avbryt</Button>
-            <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>
-              <Save className="w-4 h-4 mr-1.5" />
-              Spara
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {hasReusableData && (
+        <>
+          <span className="text-gray-300">|</span>
+          <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+            <DialogTrigger asChild>
+              <button type="button" className="text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2">
+                Spara område
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Spara områdesmall</DialogTitle>
+                <DialogDescription>
+                  Sparar BRF-namn, område, kommunikationer, uppvärmning och plattformsinställningar. 
+                  Objektspecifik data (adress, rum, kök etc.) sparas inte.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-3">
+                <Input
+                  placeholder="T.ex. BRF Storgatan, Södermalm, Villaområde Enskede..."
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSaveTemplate()}
+                  autoFocus
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowSaveDialog(false)}>Avbryt</Button>
+                <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>
+                  <Save className="w-4 h-4 mr-1.5" />
+                  Spara
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
