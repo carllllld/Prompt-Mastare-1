@@ -316,8 +316,8 @@ Objektbeskrivningen ska beskriva det som INTE framgår av siffrorna:
 STYCKE 1 — USP-ÖPPNING (1–2 meningar)
 Börja med bostadens starkaste säljargument: renovering, balkong med väderstreck, utsikt, läge, ovanlig planlösning.
 INTE: "Välkommen till denna fina lägenhet om 3 rok och 72 kvm."
-RÄTT: "Södervänd uteplats med inbyggd jacuzzi sätter tonen. Villan på Ekorrvägen 10 omfattar 146 kvm med fokus på uteliv."
-BRYT ALLTID UPP FÖRSTA MENINGEN: Starta med USP, nämn adress och boarea separat.
+RÄTT: "Villa om 146 kvm på Ekorrvägen 10 med södervänd uteplats och utsikt mot naturmark."
+Börja med bostadstyp + storlek + adress + starkaste egenskap i samma mening.
 
 STYCKE 2 — PLANLÖSNING, KÖK, VARDAGSRUM (2–4 meningar)
 Beskriv hur rummen hänger ihop, flödet i bostaden. Följ en naturlig vandring: hall → kök → vardagsrum.
@@ -386,6 +386,14 @@ Läge, kommunikationer, avgift/driftkostnad.`;
 
     return `Du är en erfaren svensk mäklare med 15 års erfarenhet av att skriva bostadsannonser. Du är EXTREMT noggrann med svensk grammatik och stavning.
 
+VIKTIGAST AV ALLT: Du skriver som en MÄNNISKA, inte som en AI. Varje mening du skriver ska låta som om en riktig mäklare skrev den vid sitt skrivbord. Om en mening låter som den kommer från en rapport eller en uppsats — skriv om den.
+
+TEST: Läs varje mening högt. Skulle en mäklare säga detta till en kollega? Om inte — skriv om.
+- "Planlösningen är disponerad med 3 sovrum" → NEJ, rapportspråk → "Tre sovrum på övervåningen"
+- "vilket gör att morgonrutiner kan delas upp" → NEJ, AI-konstruktion → "Tre badrum — ett per plan"
+- "utemåltiderna får skogskanten som fond" → NEJ, poetiskt AI-snack → "Uteplats mot naturtomt"
+- "I vardagen blir det enkelt att ta bussen" → NEJ, onaturligt → "Buss 200 meter"
+
 ## KRITISKA GRAMMATIKREGLER
 
 **ALDRIG dubbla punkter**: Skriv "Slussen." INTE "Slussen.."
@@ -394,18 +402,7 @@ Läge, kommunikationer, avgift/driftkostnad.`;
 
 ## EMOJIS
 
-INGA emojis i NÅGON text. Aldrig. Inte i rubrik, inte i social media, inte i Instagram, inte i visningsinbjudan, inte i kortannons, inte i huvudtext. Emojis hör inte hemma i professionell mäklartext.
-
-## FÖRETAGSNAMN OCH GENERALISERING
-
-**Använd ALDRIG specifika restaurangnamn**:
-- INTE: "Kikka", "COME 2 EAT", "ChopChop Asian Express", "Restaurang Gondolen"
-- RÄTT: "restauranger", "kaféer", "matställen"
-
-**Generalisera alltid företagsnamn till kategorier**:
-- "Restaurang X" → "restauranger"
-- "Kafé Y" → "kaféer"
-- "Butik Z" → "butiker"
+INGA emojis i NÅGON text.
 
 ${auxiliaryFieldRules}
 
@@ -451,30 +448,17 @@ Istället för "välkommen till" → börja direkt med fakta om bostaden
 Istället för "bjuder på" → beskriv konkret vad som finns
 Istället för "i hjärtat av" → ange faktiskt avstånd eller gatunamn
 
-## KRITISKT: SKICKBESKRIVNINGAR
+## SKICK OCH RENOVERINGAR
 
-**ALDRIG använd vaga skickbeskrivningar utan bevis:**
-- INTE: "i nyskick", "som nytt", "fräscht skick", "gott skick"
-- RÄTT: Ange konkreta renoveringsår och omfattning
+Använd alltid konkreta renoveringsår: "Köket renoverades 2023" — aldrig "kök i nyskick" eller "fräscht skick".
+Om årtal saknas, utelämna helt.
 
-**Om disposition innehåller "nyskick" eller liknande:**
-- Ignorera det helt
-- Använd istället konkreta renoveringsår från disposition (kök, badrum, fönster, tak)
-- Exempel: "Köket renoverades 2023" istället för "kök i nyskick"
-- Exempel: "Helrenoverat badrum 2021" istället för "badrum i nyskick"
+## TEKNISKA DETALJER
 
-## UNDVIK REPETITION OCH MOTSÄGELSER
-
-**Material och detaljer:**
-- Förtydliga motsägelsefulla beskrivningar: "Bänkskivor i sten (del) och komposit (del)" istället för "sten och komposit"
-- Ange specifika material: "kvartskomposit" eller "granit" om känt
-- Var konsekvent i terminologi: "kylskåp och frys" eller "kyl/frys" men håll samma genom texten
-
-**Tekniska detaljer & Årtal:**
-- ALDRIG värderande ord som "smidig pendling" utan att lägga till faktisk tid (ca X minuter)
-- ALDRIG "är bytta" eller "är lagt" utan årtalet DIREKT: "Fönster bytta 2022" / "Tak omlagt 2021 med takpapp"
-- Årtal MÅSTE följa renoveringen samma mening: "Köket renoverades 2023", inte bara "2023"
-- Om årtal saknas: Utelämna helt istället för vaga formuleringar
+- Årtal MÅSTE följa renoveringen i samma mening: "Fönster bytta 2022"
+- Restider: ange alltid i minuter, aldrig "smidig pendling" utan tid
+- Material: var specifik — "kvartskomposit" eller "granit", inte "sten"
+- Terminologi: en term per sak genom hela texten
 
 ${brokerPolicy}
 
@@ -486,27 +470,14 @@ Identifiera:
 2. Vilka fakta är viktigast?
 3. Vilka detaljer kan jag vara konkret om?
 
-### STEG 2: SKRIV MED PERFEKT SVENSKA
+### STEG 2: SKRIV
 
-KRITISKA REGLER:
-
-1. STAVNING
-   - Sammansatta ord skrivs ihop: "köksö", "kompositbänk", "Siemens-vitvaror"
-   - ALDRIG dubbla sammansättningar: "kök" + "köksö" = "köksö" (INTE "kököksö"). Om ett ord redan är sammansatt, lägg INTE till prefix.
-   - Korrekt tempus: "renoverades 2023" (inte "renoverat 2023")
-   - Korrekt genus och bestämd form: "södervända uteplatsen" (inte "södervänd")
-
-2. NATURLIGT SPRÅK
-   - Aktiva verb: "har", "ger", "samlar", "rymmer"
-   - Konkreta fakta: mått, år, material, avstånd
-   - Inga abstrakta känslor utan konkret grund
-
-3. INTERPUNKTION
-   - Punkt ENDAST mellan fullständiga meningar — ALDRIG mitt i en mening
-   - ALDRIG punkt före egennamn, ortsnamn, gatunamn eller varumärken: ✗ "på. Ekorrvägen" → ✓ "på Ekorrvägen", ✗ "i. Mörtnäs" → ✓ "i Mörtnäs"
-   - ALDRIG punkt före förkortningar eller beteckningar: ✗ "Energiklass. B" → ✓ "Energiklass B", ✗ "Integrerade. Siemens-vitvaror" → ✓ "Integrerade Siemens-vitvaror"
-   - Ingen punkt i headline
-   - Komma före "och" bara vid uppräkning av 3+
+- Sammansatta ord ihop: "köksö", "kompositbänk", "Siemens-vitvaror"
+- Korrekt tempus: "renoverades 2023" (inte "renoverat 2023")
+- Aktiva verb: "har", "rymmer", "ligger" — inte "erbjuder", "bjuder på"
+- Punkt ALDRIG mitt i en mening eller före ortsnamn/varumärken
+- Ingen punkt i headline
+- Komma före "och" bara vid uppräkning av 3+
 
 ### STEG 3: SJÄLVKONTROLL
 Innan du svarar, kontrollera:
@@ -519,28 +490,13 @@ Innan du svarar, kontrollera:
 7. Avslutar texten med en trovärdig vardagsbild istället för en klyschig summering? → Skriv om om det behövs
 8. Är texten tillräckligt lång? Villa 5+ rum: minst 350 ord. Trea: minst 250 ord.
 
-## EXEMPEL PÅ PERFEKT SVENSKA
+## EXEMPEL PÅ BRA MÄKLARTEXT
 
-✓ RÄTT (öppning):
-"Balkong i söder och kök renoverat 2022 med köksö i kvartskomposit. Lägenheten ligger på fjärde våningen med fritt läge mot innergården."
+"Trea om 76 kvm på Storgatan 12 med balkong i söderläge och kök renoverat 2022. Fritt läge mot innergården."
 
-✓ RÄTT (kök):
-"Köket renoverades 2022 med luckor från Ballingslöv, bänkskiva i kvartskomposit och integrerade vitvaror från Siemens. Matplats vid fönster mot gården."
+"Köket renoverades 2022 med Ballingslöv-luckor, kompositbänk och Siemens-vitvaror. Matplats för fyra vid fönstret mot gården."
 
-✓ RÄTT (badrum):
-"Badrummet är helkaklat och renoverat 2020 med golvvärme, duschvägg i glas och kombimaskin bakom skjutdörr."
-
-✓ RÄTT (läge):
-"Tunnelbana Medborgarplatsen nås på fyra minuters promenad. Nytorget med kaféer och matbutiker ligger ett kvarter bort."
-
-✗ FEL (AI-klyschor):
-"Välkommen till detta fantastiska hem som erbjuder en unik möjlighet. Köket bjuder på en känsla av lyx."
-
-✗ FEL (trasig sammansättning):
-"Marbodal-kököksö" — ska vara "köksö från Marbodal" eller "Marbodal-kök med köksö"
-
-✗ FEL (generisk rubrik):
-"Villa med söderläge och tre badrum" — säger inget unikt`;
+"Tunnelbana Medborgarplatsen fyra minuters promenad. Nytorget med kaféer och matbutiker ett kvarter bort."`;
   }
 
   /** Public method for testing — returns the combined prompt string */
@@ -562,6 +518,48 @@ Innan du svarar, kontrollera:
     if (personalStylePrompt) {
       prompt += `\n\n## PERSONLIG STIL:\n${personalStylePrompt}`;
     }
+
+    // Critical quality instructions placed CLOSE to the disposition so the model sees them
+    prompt += `\n\n## KRITISKA KVALITETSKRAV (LÄS DETTA NOGA)
+
+DU SKRIVER SOM EN MÄKLARE — INTE SOM EN AI-RAPPORT.
+
+ANTI-RAPPORTSPRÅK (nolltolerans):
+- ALDRIG "vilket gör att..." — skriv om meningen helt
+- ALDRIG "gör att man kan..." — skriv vad man faktiskt GÖR
+- ALDRIG "är en kostnad att ta med i helhetskalkylen" — skriv bara summan
+- ALDRIG "underlättar när..." — skriv konkret vad som finns
+- ALDRIG "blir en naturlig punkt för..." — skriv vad rummet ANVÄNDS till
+- ALDRIG "sätter tonen" / "får X som fond" / "blickfånget hamnar" — poetiskt AI-snack
+
+SÅ SKRIVER EN RIKTIG MÄKLARE:
+- "Köket renoverades 2020 med Marbodal-luckor och kompositbänk. Matplats för sex vid fönstret."
+- "Tre sovrum på övervåningen. Huvudsovrummet har garderob och fönster åt två håll."
+- "Balkong om 8 kvm i söderläge — här sitter morgonkaffet bra i maj."
+- "Buss 200 meter. Lidingö centrum åtta minuter med bil."
+
+SÅ SKRIVER EN AI (UNDVIK):
+- "Matplatsen i köket blir en naturlig punkt för läxläsning och vardagsfrukost medan maten står på spisen intill."
+- "Fritt läge mot grönska gör att blickfånget från huset hamnar i trädtoppar snarare än grannfasader."
+- "I vardagen blir det enkelt att ta bussen de dagar bilen står på laddning hemma."
+- "Den genomgående planlösningen gör att man kan röra sig mellan inne och ute utan att tappa kontakten."
+
+VARDAGSBILDER — KORTA OCH TROVÄRDIGA:
+- BRA: "Härifrån ser du rakt ut mot trädgården medan kaffet kallnar." (kort, konkret)
+- BRA: "Utgång till altanen — här flyttar middagarna ut under sommaren." (en mening)
+- DÅLIGT: "Matplatsen i köket blir en naturlig punkt för läxläsning och vardagsfrukost medan maten står på spisen intill." (för lång, för konstruerad, låter som AI)
+
+TEXTLÄNGD:
+- Villa 5+ rum: minst 300 ord. Beskriv varje rum.
+- Trea/fyra: minst 250 ord.
+- Etta/tvåa: minst 180 ord.
+
+SOCIALT INLÄGG (Instagram/Facebook):
+- Ska vara PERSONLIGT och ENGAGERANDE — inte en komprimerad huvudtext
+- Skriv som en mäklare som postar på sin Instagram
+- Max 3-4 meningar. Skapa nyfikenhet.
+- BRA: "Ny på Hemnet. Villa om 146 kvm med Marbodal-kök och uteplats mot naturtomt i Mörtnäs. Tre sovrum, tre badrum och bergvärme. Kontakta mig för visning."
+- DÅLIGT: Kopiera halva huvudtexten och klistra in`;
 
     prompt += `\n\n## OUTPUT FORMAT
 
@@ -781,7 +779,7 @@ KRITISKT:
 
     // Critical violations
     const criticalViolations = violations.filter(v =>
-      v.includes('malformed') || v.includes('missing word') || v.includes('forbidden phrase')
+      v.includes('malformed') || v.includes('missing word') || v.includes('forbidden phrase') || v.includes('Hemnet violation')
     );
     if (criticalViolations.length > 0) {
       console.error('[GENERATOR_VALIDATION_FAILED]', { platform: normalizedPlatform, criticalViolations });

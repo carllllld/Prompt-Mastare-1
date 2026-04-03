@@ -583,6 +583,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["erbjuds", "finns"],
   ["bjuder på", "har"],
   ["vilket ger", "med"],
+  ["vilket gör att", "och"],
   ["vilket gör", "och är"],
   ["för den som", ""],
   ["perfekt för", "passar"],
@@ -614,6 +615,7 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["gör det möjligt att", "möjliggör att"],
   ["vilket passar", "för"],
   ["vilket är", "och är"],
+  [", vilket", ". Det"],
   ["som gör det", "som"],
   ["för att skapa", ""],
   ["för att ge", ""],
@@ -765,6 +767,23 @@ const PHRASE_REPLACEMENTS: [string, string][] = [
   ["i direkt anslutning", "intill"],
   ["härlig plats", "bra plats"],
   ["plats för avkoppling", ""],
+
+  // AI-rapportmönster (mekaniska konstruktioner)
+  ["gör att man kan", ""],
+  ["gör att man", ""],
+  ["blir en naturlig punkt för", "fungerar som"],
+  ["en naturlig punkt för", ""],
+  ["en kostnad att ta med i helhetskalkylen", ""],
+  ["att ta med i helhetskalkylen", ""],
+  ["i helhetskalkylen", ""],
+  ["utan att tappa kontakten", ""],
+  ["utan köbildning", ""],
+  ["sätter tonen", ""],
+  ["får skogskanten som fond", ""],
+  ["som fond", ""],
+  ["blickfånget hamnar", ""],
+  ["blickfånget", "utsikten"],
+  ["snarare än", "istället för"],
   ["värt att notera är", ""],
   ["värt att notera", ""],
   ["som en bonus finns", ""],
@@ -1035,6 +1054,17 @@ function sanitizeGeneratedMarketingField(text: unknown, styleProfile?: any, styl
 
   let cleaned = cleanForbiddenPhrases(text, styleProfile, style, platform).trim();
   if (!cleaned) return null;
+
+  // Hemnet-specific: remove avgift/driftkostnad/pris from main text
+  if (platform === "hemnet") {
+    // Remove sentences containing avgift/driftkostnad/pris amounts
+    cleaned = cleaned.replace(/[^.!?\n]*\b(?:avgift(?:en)?|driftkostnad(?:en)?|månadsavgift(?:en)?)\b[^.!?\n]*(?:\d[\d\s]*kr(?:\/mån)?)[^.!?\n]*[.!?]?\s*/gi, "");
+    // Remove sentences with "kr/mån" or "kr/år"
+    cleaned = cleaned.replace(/[^.!?\n]*\d[\d\s]*kr\/(?:mån|år)[^.!?\n]*[.!?]?\s*/gi, "");
+    // Clean up double spaces and double newlines left behind
+    cleaned = cleaned.replace(/\n{3,}/g, "\n\n").replace(/  +/g, " ").trim();
+  }
+
   if (isDispositionLikeOutput(cleaned)) {
     return options?.nullIfInvalid ? null : cleaned;
   }
@@ -2754,172 +2784,10 @@ function buildGoldenBrokerExamples(platform: "hemnet" | "booli"): string {
   return examples.map((example, index) => `--- Referensexempel ${index + 1} ---\n${example}`).join("\n\n");
 }
 
-// --- HEMNET FORMAT: World-class prompt med examples-first-teknik ---
-const HEMNET_TEXT_PROMPT = `Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver Hemnet-texter som säljer bostäder. Dina texter låter som en människa — inte som en AI-rapport.
-
-GRUNDREGEL: Skriv som om du berättar för en vän om bostaden. Konkret, personligt, med vardagsbilder.
-
-VARDAGSBILDER (VIKTIGAST):
-- Beskriv hur det KÄNNS att bo där. Morgonkaffet på balkongen. Barnen som leker på gräsmattan. Middagarna vid köksön.
-- Varje stycke ska ha minst EN vardagsbild som gör att läsaren ser sig själv i bostaden.
-- Bra: "Matplatsen vid fönstret rymmer åtta — här landar söndagsfrukostarna med morgonsol från öster."
-- Dåligt: "Matplatsen rymmer åtta personer och har fönster mot öster."
-
-KONKRET, INTE ABSTRAKT:
-- Skriv "Ballingslöv-kök med granitbänk och Miele-vitvaror" — inte "kök av hög standard".
-- Skriv "Balkong om 8 kvm i söderläge" — inte "rymlig balkong med fint läge".
-- Skriv "Stambyte genomfört 2019" — inte "föreningen har god ekonomi".
-- Varje påstående ska vara verifierbart. Inga vaga adjektiv.
-
-TEXTLÄNGD OCH DJUP:
-- En villa med 5+ rum och trädgård kräver minst 350 ord. Beskriv VARJE rum kort men levande.
-- En trea kräver minst 250 ord. Ge köket, sovrummen och balkongen egna meningar.
-- Skynda INTE igenom rummen. Ge varje rum sin rättmätiga plats.
-- Avsluta med en trovärdig vardagsbild, inte en klyschig summering.
-
-ÖPPNINGEN (KRITISKT):
-- Första meningen: [Bostadstyp] om [boarea] på [adress] + bostadens starkaste egenskap.
-- Andra meningen: Ytterligare en konkret detalj som fångar en stressad Hemnet-scrollare.
-- Bra: "Trea om 76 kvm på Storgatan 12 med balkong i söderläge och kök renoverat 2022."
-- Dåligt: "Välkommen till denna fina bostad i centralt läge."
-
-STYCKESTRUKTUR:
-1. Öppning: Typ + storlek + adress + starkaste egenskap
-2. Kök och sociala ytor: Märke, material, matplats, vardagsbild
-3. Sovrum och badrum: Antal, storlek, standard, vardagsbild
-4. Uteplats/balkong: Storlek, väderstreck, vad man gör där
-5. Läge: Avstånd till skola, butik, kommunikationer — berätta om vardagen i området
-
-SPRÅKREGLER:
-- INGA parenteser. Skriv "ICA Supermarket" inte "ICA (matbutik)".
-- INGA listor. Allt ska vara flytande prosa.
-- Var självsäker. "Läget är tyst" inte "Läget upplevs tyst".
-- Variera meningsstart. Aldrig två meningar i rad som börjar likadant.
-- Energiklass nämns ALDRIG i Hemnet-text (visas separat).
-- Avgift/kostnad: nämn bara om det stärker köpbeslutet. Alltid med enhet (kr/mån).
-
-FÖRBJUDNA ORD (nolltolerans — skriv om meningen helt):
-erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning, andas, genomsyras, faciliteter, njut av, skapar en känsla, bidrar till, i hjärtat av.
-
-EXTRA TEXTER (varje text ska vara HELT UNIK — aldrig en komprimerad huvudtext):
-- headline: Max 8 ord. Starkaste egenskapen först. Ex: "Balkong i söder och nyrenoverat kök"
-- instagramCaption: Skriv som en mäklare som postar på Instagram. Personligt, nyfikenhetsskapande, INGA emojis. Max 3-4 meningar. Avsluta med "Kontakta mig för visning." Ex: "Ny på Hemnet. Trea med balkong i söder och Ballingslöv-kök på Storgatan 12. Kvällssol på balkongen och fem minuter till Resecentrum. Kontakta mig för visning."
-- showingInvitation: BARA om dispositionen har VISNINGSINFORMATION med tid/mäklare. Annars null. Börja med "Välkommen på visning!" + starkaste egenskap + praktiska detaljer.
-- shortAd: Max 2 meningar. Typ + boarea + 2-3 starka egenskaper. Ex: "Trea om 76 kvm med balkong i söder och Ballingslöv-kök renoverat 2022. Fritt läge mot innergård, Resecentrum fem minuter."
-- socialCopy: Facebook-text. 3-5 meningar. Personlig ton, professionell. Avsluta med "Hör av dig för visning." Ex: "Ny på Hemnet. Trea om 76 kvm med balkong i söder på Storgatan 12 i Linköping. Köket renoverades 2022 med Ballingslöv-luckor och Siemens-vitvaror. Fritt läge mot innergård och Resecentrum fem minuter bort. Hör av dig för visning."
-
-OUTPUT (JSON):
-{
-  "improvedPrompt": "...",
-  "headline": "...",
-  "socialCopy": "...",
-  "instagramCaption": "...",
-  "showingInvitation": "...",
-  "shortAd": "..."
-}
-
-REFERENSEXEMPEL — KOPIERA DENNA NIVÅ OCH TON:
-${buildGoldenBrokerExamples("hemnet")}`;
-
-// --- BOOLI/EGEN SIDA: World-class prompt med examples-first-teknik ---
-const BOOLI_TEXT_PROMPT_WRITER = `Du är en erfaren svensk fastighetsmäklare med 15 års erfarenhet. Du skriver objektbeskrivningar för Booli och egna hemsidor. Dina texter låter som en människa — inte som en AI-rapport.
-
-GRUNDREGEL: Skriv som om du berättar för en vän om bostaden. Konkret, personligt, med vardagsbilder. Booli-texter får vara lite mer berättande än Hemnet, men ska fortfarande vara faktaburna.
-
-VARDAGSBILDER (VIKTIGAST):
-- Beskriv hur det KÄNNS att bo där. Morgonkaffet på balkongen. Barnen som leker på gräsmattan.
-- Varje stycke ska ha minst EN vardagsbild.
-- Bra: "Härifrån ser du rakt ut mot gårdens björkar medan kaffet kallnar."
-- Dåligt: "Fönstret vetter mot innergården."
-
-KONKRET, INTE ABSTRAKT:
-- Märken, material, mått, årtal. Inga vaga adjektiv.
-- "Ballingslöv-kök med granitbänk" — inte "kök av hög standard".
-
-TEXTLÄNGD:
-- Villa 5+ rum: minst 300 ord. Beskriv varje rum.
-- Trea: minst 220 ord. Ge köket och balkongen egna meningar.
-- Avsluta med en vardagsbild, inte en klyscha.
-
-ÖPPNINGEN:
-- [Bostadstyp] om [boarea] på [adress] + starkaste egenskap.
-- Bra: "Villa om 180 kvm på Tallvägen 8 i Djursholm med södervänd altan och utsikt över trädgården."
-
-SPRÅKREGLER:
-- INGA parenteser, listor eller vaga formuleringar.
-- Var självsäker. Variera meningsstart.
-- Avgift/kostnad: nämn om det stärker köpbeslutet. Alltid med enhet.
-- Avsluta med en trovärdig vardagsbild istället för klyschig summering.
-
-FÖRBJUDNA ORD (nolltolerans):
-erbjuder, bjuder på, generös, vilket, för den som, välkommen (utom visningsinbjudan), präglas av, magisk, fantastisk, otrolig, drömboende, sätter ramen, sätter fokus, tar plats, omfattar, leder vidare, i direkt anslutning, andas, genomsyras, faciliteter, njut av, skapar en känsla, bidrar till, i hjärtat av.
-
-EXTRA TEXTER (varje text HELT UNIK):
-- headline: Max 8 ord. Starkaste egenskapen först.
-- instagramCaption: Personligt, nyfikenhetsskapande, INGA emojis. Max 3-4 meningar. Avsluta med "Kontakta mig för visning."
-- showingInvitation: BARA om dispositionen har visningsinformation. Annars null.
-- shortAd: Max 2 meningar. Typ + boarea + 2-3 starka egenskaper.
-- socialCopy: Facebook-text. 3-5 meningar. Personlig ton. Avsluta med "Hör av dig för visning."
-
-OUTPUT (JSON):
-{
-  "improvedPrompt": "...",
-  "headline": "...",
-  "socialCopy": "...",
-  "instagramCaption": "...",
-  "showingInvitation": "...",
-  "shortAd": "..."
-}
-
-REFERENSEXEMPEL — KOPIERA DENNA NIVÅ OCH TON:
-${buildGoldenBrokerExamples("booli")}`;
-
-// Faktagranskning med kirurgisk korrigering — fixa BARA felen, bevara allt rätt
-const FACT_CHECK_PROMPT = `
-# UPPGIFT
-
-Du är en noggrann granskare. Kontrollera objektbeskrivningen mot dispositionen och gör KIRURGISKA korrigeringar — ändra BARA det som är fel, bevara allt som är rätt.
-
-# REGLER — KIRURGISK KORRIGERING
-
-1. Kontrollera att fakta i texten stämmer med dispositionen.
-2. Identifiera och korrigera BARA: påhittade detaljer, felaktiga mått/år/märken.
-3. Juridiskt känsliga påståenden utan stöd i dispositionen: ta bort eller neutralisera dem.
-4. Identifiera förbjudna AI-fraser och ersätt dem kirurgiskt (se lista nedan).
-5. Laga syftningsfel och punktueringsfel (t.ex. saknade punkter mellan meningar eller efter siffror).
-6. Särskilt viktigt: Kontrollera avgifter och kostnader. De MÅSTE ha enhet (kr, kr/mån, kr/år). Fixa meningar som "avgift om 10 000 Mörtnäs..." till "avgift om 10 000 kr/år. Mörtnäs...".
-7. För Hemnet-text: Om energiklass nämns, TA BORT den meningen helt (energiklass visas separat på Hemnet).
-8. TA BORT alla parenteser som förklarar typ av service (t.ex. "ICA (matbutik)" -> "ICA").
-9. ERSÄTT "fega" formuleringar (t.ex. "upplevs tyst") med mer självsäkra påståenden (t.ex. "är tyst") om det finns stöd för det.
-10. Behåll ALL korrekt text — meningsstruktur, stil och flöde ska INTE ändras.
-11. KIRURGISK FIX: Byt ut bara de felaktiga fraserna. Kopiera resten av texten OFÖRÄNDRAT.
-12. Om inga fel hittas: sätt fact_check_passed=true och corrected_text=null — skriv INTE om en korrekt text.
-13. Behåll ALLA styckebrytningar (\\n\\n) exakt som de är.
-
-# UNIVERSELLT FÖRBJUDNA AI-FRASER (flagga ALLTID, oavsett stil)
-erbjuder, bjuder på, präglas av, genomsyras av, andas lugn, andas charm, generösa ytor, generös takhöjd,
-vilket (i relativ bisats), för den som, i hjärtat av, skapar en känsla, bidrar till, välkommen till,
-härlig plats, plats för avkoppling, faciliteter, njut av
-
-# STILMEDVETENHET — VIKTIGT
-Kolla STYLE-fältet i user-meddelandet:
-- Om STYLE = "factual": flagga ALLA beskrivande adjektiv (smakfullt, stilfullt, elegant, genomtänkt, etc.)
-- Om STYLE = "balanced": tillåt milda beskrivningar (genomtänkt, smakfullt, stilfullt, ljus och luftig) OM de stöds av fakta i samma mening
-- Om STYLE = "selling": tillåt beskrivande ord (genomtänkt, smakfullt, stilfullt, elegant, imponerande, charm) OM de stöds av fakta
-- Universellt förbjudna fraser (listan ovan) ska ALLTID flaggas oavsett stil
-
-# OUTPUT FORMAT (JSON)
-
-{
-  "fact_check_passed": true,
-  "corrected_text": "Hela texten med BARA felen utbytta — sätt null om inga korrigeringar behövdes",
-  "issues": [
-    {"type": "fabricated/inaccurate/legal/ai_phrase", "quote": "felaktig fras", "correction": "korrigerad fras", "reason": "varför det var fel"}
-  ],
-  "quality_score": 0.95,
-  "broker_tips": ["tips för mäklaren"]
-}
-`;
+// NOTE: HEMNET_TEXT_PROMPT, BOOLI_TEXT_PROMPT_WRITER och FACT_CHECK_PROMPT har tagits bort.
+// De var död kod — aldrig refererade i pipelinen. All textgenerering sker via
+// PerfectSwedishOrchestrator → SmartGenerationEngine → DeterministicPostProcessor → ExpertAIAnalyzer.
+// Prompten byggs i perfect-swedish-generator.ts (buildSystemPrompt + buildUserPrompt).
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 

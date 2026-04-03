@@ -61,6 +61,27 @@ export const FORBIDDEN_PHRASES = [
   "ovanligt praktiskt",
   "ger en stark helhet",
   "på ett naturligt sätt",
+
+  // === AI-RAPPORTMÖNSTER (mekaniska konstruktioner som avslöjar AI) ===
+  "gör att man kan",
+  "gör att man",
+  "blir en naturlig punkt för",
+  "en naturlig punkt för",
+  "en kostnad att ta med",
+  "i helhetskalkylen",
+  "utan att tappa kontakten",
+  "utan köbildning",
+  "sätter tonen",
+  "som fond",
+  "blickfånget hamnar",
+  "snarare än grannfasader",
+  "sätter fokus",
+  "sätter ramen",
+  "tar plats",
+  "leder vidare",
+  "i direkt anslutning",
+  "faciliteter",
+  "njut av",
 ];
 
 // === HEMNET-SPECIFIKA REGLER ===

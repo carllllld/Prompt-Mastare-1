@@ -429,44 +429,45 @@ export class DeterministicPostProcessor {
       return result;
     }
 
-    // Hemnet-forbidden patterns - remove numbers with currency AND the words
-    const priceWithNumberPattern = /\d+\s*(?:\d{3}\s*)*\s*(?:kr|kronor|mkr|miljoner|SEK)\b/gi;
-    const priceWordPattern = /\b(pris|utgångspris|avgift|driftkostnad|månadsavgift|kr\/mån)\b/gi;
-    const energyPattern = /\b(energiklass|energiprestanda|energiklass\s+[A-G])\b/gi;
+    // Hemnet: Remove ENTIRE SENTENCES containing price/fee/energy references
+    // This prevents broken sentences like " är en kostnad att ta med"
+    const sentenceContainsPrice = /[^.!?\n]*\b(?:avgift(?:en)?|driftkostnad(?:en)?|månadsavgift(?:en)?|utgångspris(?:et)?|pris(?:et)?)\b[^.!?\n]*[.!?]?\s*/gi;
+    const sentenceContainsCurrency = /[^.!?\n]*\d[\d\s]*(?:kr(?:\/(?:mån|år))?|kronor|mkr|miljoner|SEK)\b[^.!?\n]*[.!?]?\s*/gi;
+    const energyPattern = /[^.!?\n]*\b(?:energiklass|energiprestanda)\b[^.!?\n]*[.!?]?\s*/gi;
 
     for (const field of TEXT_FIELDS) {
       let text = result[field];
       const originalText = text;
 
-      // Remove price/fee WITH numbers (e.g., "3 500 000 kr", "4 500 kr/mån")
-      const priceNumberMatches = text.match(priceWithNumberPattern);
-      if (priceNumberMatches) {
-        text = text.replace(priceWithNumberPattern, '');
-        priceNumberMatches.forEach(match =>
+      // Remove entire sentences containing price/fee references
+      const priceMatches = text.match(sentenceContainsPrice);
+      if (priceMatches) {
+        text = text.replace(sentenceContainsPrice, '');
+        priceMatches.forEach(match =>
           transformations.push({
             type: 'forbidden_phrase',
             field,
-            before: match,
+            before: match.trim(),
             after: '',
           })
         );
       }
 
-      // Remove price/fee words (e.g., "avgift", "pris")
-      const priceWordMatches = text.match(priceWordPattern);
-      if (priceWordMatches) {
-        text = text.replace(priceWordPattern, '');
-        priceWordMatches.forEach(match =>
+      // Remove entire sentences containing currency amounts
+      const currencyMatches = text.match(sentenceContainsCurrency);
+      if (currencyMatches) {
+        text = text.replace(sentenceContainsCurrency, '');
+        currencyMatches.forEach(match =>
           transformations.push({
             type: 'forbidden_phrase',
             field,
-            before: match,
+            before: match.trim(),
             after: '',
           })
         );
       }
 
-      // Remove energiklass references
+      // Remove entire sentences containing energiklass
       const energyMatches = text.match(energyPattern);
       if (energyMatches) {
         text = text.replace(energyPattern, '');
@@ -474,7 +475,7 @@ export class DeterministicPostProcessor {
           transformations.push({
             type: 'forbidden_phrase',
             field,
-            before: match,
+            before: match.trim(),
             after: '',
           })
         );
