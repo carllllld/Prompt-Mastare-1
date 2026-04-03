@@ -5,7 +5,7 @@ export type TargetPlatform = "hemnet" | "booli" | "general";
 // Legitim mäklarvokabulär är TILLÅTEN (t.ex. "smidig pendling", "populärt område", "ljust").
 // VIKTIGT: Dessa är INTE juridiskt förbjudna - de är AI-KLYSCHOR som gör texten generisk och oprofessionell.
 export const FORBIDDEN_PHRASES = [
-  // === KRITISKA AI-ÖPPNINGAR (endast AI använder dessa) ===
+  // === AI-ÖPPNINGAR (ingen mäklare börjar så) ===
   "välkommen till",
   "välkommen hem",
   "här möts du",
@@ -40,9 +40,8 @@ export const FORBIDDEN_PHRASES = [
   // === POETISK AI-ÖVERDRIFT ===
   "i hjärtat av",
   "hjärtat av",
-  "husets hjärta",
 
-  // === ÖVERDRIVNA ADJEKTIV (endast AI använder dessa i överdrift) ===
+  // === ÖVERDRIVNA AI-ADJEKTIV ===
   "fantastisk bostad",
   "underbar bostad",
   "magisk",
@@ -55,14 +54,12 @@ export const FORBIDDEN_PHRASES = [
   "detta gör bostaden till",
   "detta gör villan till",
 
-  // === MJUKA AI-KLYSCHOR (låter bra men säger inget) ===
+  // === AI-KLYSCHOR (låter bra men säger inget) ===
   "förlänger säsongen",
-  "självklar plats",
-  "ovanligt praktiskt",
   "ger en stark helhet",
   "på ett naturligt sätt",
 
-  // === AI-RAPPORTMÖNSTER (mekaniska konstruktioner som avslöjar AI) ===
+  // === AI-RAPPORTMÖNSTER (mekaniska konstruktioner) ===
   "gör att man kan",
   "gör att man",
   "blir en naturlig punkt för",
@@ -71,17 +68,28 @@ export const FORBIDDEN_PHRASES = [
   "i helhetskalkylen",
   "utan att tappa kontakten",
   "utan köbildning",
-  "sätter tonen",
-  "som fond",
   "blickfånget hamnar",
   "snarare än grannfasader",
-  "sätter fokus",
-  "sätter ramen",
-  "tar plats",
-  "leder vidare",
-  "i direkt anslutning",
   "faciliteter",
-  "njut av",
+
+  // === VANLIGA AI-KLYSCHOR I SVENSKA BOSTADSTEXTER ===
+  "här finns plats för",
+  "allt du behöver",
+  "allt man behöver",
+  "bara ett stenkast",
+  "nära till allt",
+  "med det bästa av",
+  "en oas",
+  "en pärla",
+  "en dold pärla",
+  "ditt nya hem",
+  "ert nya hem",
+  "en bostad som",
+  "ett hem som",
+  "ett hem att",
+  "allt under ett tak",
+  "lämnar inget att önska",
+  "uppfyller alla önskemål",
 ];
 
 // === HEMNET-SPECIFIKA REGLER ===

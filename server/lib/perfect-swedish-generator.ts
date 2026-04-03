@@ -1,6 +1,6 @@
-import { chatCompletion, getActiveProvider } from './ai-client';
+import { chatCompletion } from './ai-client';
 import { getCachedPromptTemplate, cachePromptTemplate } from './redis-cache';
-import { FORBIDDEN_PHRASES, getExemptPhrases, buildBrokerLanguagePolicyPrompt, WritingStyle } from './text-rules';
+import { FORBIDDEN_PHRASES, buildBrokerLanguagePolicyPrompt, WritingStyle } from './text-rules';
 
 export interface GenerationRequest {
   disposition: any;
@@ -130,8 +130,6 @@ export class SmartGenerationEngine {
   }
 
   private buildSystemPrompt(style: WritingStyle, platform: string): string {
-    const exemptPhrases = getExemptPhrases(style);
-    const blockedPhrases = FORBIDDEN_PHRASES.filter(p => !exemptPhrases.has(p));
     const brokerPolicy = buildBrokerLanguagePolicyPrompt(style, platform);
     const normalizedPlatform = platform?.toLowerCase() || 'hemnet';
 
@@ -419,15 +417,24 @@ Vardagsbilden ska vara KONKRET och TROVÄRDIG — inte klyschig. Den ska baseras
 
 Olika bostadstyper skrivs olika. En villa handlar om tomt, trädgård och konstruktion. En lägenhet handlar om planlösning, ljus och balkong. Ett radhus är en mix. Du ser objekttypen i dispositionen — anpassa ton, fokus och struktur efter vad köparen för just den typen bryr sig om. Mäklaren har redan fyllt i de viktigaste säljpunkterna i formuläret — lyft dem.
 
-## FÖRBJUDNA FRASER (använd ALDRIG dessa)
+## FÖRBJUDNA FRASER (de 15 vanligaste AI-klyschorna)
 
-Följande fraser är AI-klyschor som aldrig förekommer i riktig mäklartext. Använd dem INTE:
-${blockedPhrases.map(p => `- "${p}"`).join('\n')}
-
-Istället för "erbjuder" → använd "har", "finns", "rymmer"
-Istället för "välkommen till" → börja direkt med fakta om bostaden
-Istället för "bjuder på" → beskriv konkret vad som finns
-Istället för "i hjärtat av" → ange faktiskt avstånd eller gatunamn
+Dessa fraser avslöjar omedelbart att texten är AI-genererad. Använd dem ALDRIG:
+- "erbjuder" / "kan erbjuda" → skriv "har", "finns", "rymmer"
+- "bjuder på" / "kan bjuda på" → beskriv konkret vad som finns
+- "välkommen till" / "välkommen hem" → börja med fakta
+- "för den som" → stryk helt
+- "i hjärtat av" → ange avstånd eller gatunamn
+- "präglas av" / "genomsyras av" → stryk helt
+- "andas lugn" / "andas charm" → stryk helt
+- "ger en känsla av" / "skapar en känsla av" → stryk helt
+- "perfekt för" → skriv "passar"
+- "allt du behöver" / "nära till allt" → stryk helt
+- "en pärla" / "en oas" → stryk helt
+- "ditt nya hem" → stryk helt
+- "sammanfattningsvis" / "allt sammantaget" → stryk helt
+- "detta gör bostaden till" → stryk helt
+- "drömhem" / "drömboende" → stryk helt
 
 ## SKICK OCH RENOVERINGAR
 
@@ -756,9 +763,10 @@ KRITISKT:
     // Short ad validation
     if (!result.shortAd || result.shortAd.trim().length < 10) violations.push('shortAd is empty or too short');
 
-    // Critical violations
+    // Critical violations — only truly broken output should be rejected
+    // Forbidden phrases are NOT critical — they're handled by the post-processor
     const criticalViolations = violations.filter(v =>
-      v.includes('malformed') || v.includes('missing word') || v.includes('forbidden phrase') || v.includes('Hemnet violation')
+      v.includes('malformed') || v.includes('missing word') || v.includes('Hemnet violation')
     );
     if (criticalViolations.length > 0) {
       console.error('[GENERATOR_VALIDATION_FAILED]', { platform: normalizedPlatform, criticalViolations });
