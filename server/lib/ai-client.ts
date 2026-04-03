@@ -36,6 +36,7 @@ function getOpenAI(): OpenAI {
   if (!_openai) {
     _openai = new OpenAI({
       apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || undefined,
     });
   }
   return _openai;
@@ -91,7 +92,6 @@ export async function chatCompletion(options: AIChatOptions): Promise<AIChatResu
 async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
   const openai = getOpenAI();
 
-  // Build messages for chat completions API
   const messages = options.messages.map(m => ({
     role: m.role === "developer" ? "system" as const : m.role as "system" | "user" | "assistant",
     content: m.content as any,
@@ -103,15 +103,34 @@ async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
     max_completion_tokens: options.max_tokens || 4000,
   };
 
-  if (options.temperature !== undefined) params.temperature = options.temperature;
-  if (options.reasoning_effort) params.reasoning_effort = options.reasoning_effort;
-  if (options.response_format) params.response_format = options.response_format;
+  // reasoning_effort and temperature are mutually exclusive on OpenAI
+  if (options.reasoning_effort) {
+    params.reasoning_effort = options.reasoning_effort;
+    // DO NOT set temperature when reasoning_effort is used
+  } else if (options.temperature !== undefined) {
+    params.temperature = options.temperature;
+  }
+
+  if (options.response_format) {
+    params.response_format = options.response_format;
+  }
 
   const response = await openai.chat.completions.create(params);
 
   const choice = response.choices[0];
+  const content = choice?.message?.content || "";
+
+  if (!content) {
+    console.error("[AI_CLIENT] Empty OpenAI response:", JSON.stringify({
+      finishReason: choice?.finish_reason,
+      refusal: (choice?.message as any)?.refusal,
+      usage: response.usage,
+      model: response.model,
+    }));
+  }
+
   return {
-    content: choice?.message?.content || "",
+    content,
     model: options.model,
     provider: "openai",
     tokensUsed: response.usage?.total_tokens,
