@@ -79,7 +79,7 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   const [loadingMessage, setLoadingMessage] = useState("Förbereder generering...");
-  const LOADING_STEPS_COUNT = 7;
+  const LOADING_STEPS_COUNT = 4;
   const progressStep = Math.min(Math.max(loadingStep + 1, 1), LOADING_STEPS_COUNT);
   const progressPercent = Math.round((progressStep / LOADING_STEPS_COUNT) * 100);
 
@@ -245,6 +245,12 @@ export default function Home() {
                       <Link href="/history" className="flex items-center gap-2 cursor-pointer">
                         <Clock className="w-3.5 h-3.5" />
                         Historik
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/hemnet-analysis" className="flex items-center gap-2 cursor-pointer">
+                        <FileCheck className="w-3.5 h-3.5" />
+                        Textanalys
                       </Link>
                     </DropdownMenuItem>
                     {plan === "premium" ? (
@@ -415,7 +421,10 @@ export default function Home() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
                   <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                    Kalibrera tonalitet
+                    Anpassa AI:n efter din skrivstil
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
+                    Ladda upp 2-3 av dina bästa objektbeskrivningar så lär sig AI:n din ton och stil
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -445,7 +454,10 @@ export default function Home() {
               <div className="mb-2">
                 <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
                 <p className="text-sm font-semibold mt-0.5" style={{ color: "#1D2939", fontFamily: "'Lora', Georgia, serif" }}>
-                  Kalibrera tonalitet
+                  Anpassa AI:n efter din skrivstil
+                </p>
+                <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
+                  Ladda upp dina bästa objektbeskrivningar så lär sig AI:n din ton och stil
                 </p>
               </div>
               <LockedFeature requiredPlan="pro" featureName="Personlig skrivstil" currentPlan={plan}>

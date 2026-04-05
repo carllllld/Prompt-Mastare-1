@@ -33,7 +33,7 @@ export class GeneratorValidationError extends Error {
 }
 
 export class SmartGenerationEngine {
-  private readonly PROMPT_VERSION = '2.9.0';
+  private readonly PROMPT_VERSION = '3.0.0';
 
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const startTime = Date.now();

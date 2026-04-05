@@ -106,6 +106,12 @@ async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
   // reasoning_effort and temperature are mutually exclusive on OpenAI
   if (options.reasoning_effort) {
     params.reasoning_effort = options.reasoning_effort;
+    // Increase token budget for reasoning — reasoning tokens eat from the budget
+    if (options.reasoning_effort === "high") {
+      params.max_completion_tokens = Math.max(params.max_completion_tokens, 8000);
+    } else if (options.reasoning_effort === "medium") {
+      params.max_completion_tokens = Math.max(params.max_completion_tokens, 6000);
+    }
     // DO NOT set temperature when reasoning_effort is used
   } else if (options.temperature !== undefined) {
     params.temperature = options.temperature;
@@ -118,7 +124,7 @@ async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
   const response = await openai.chat.completions.create(params);
 
   const choice = response.choices[0];
-  const content = choice?.message?.content || "";
+  let content = choice?.message?.content || "";
 
   if (!content) {
     console.error("[AI_CLIENT] Empty OpenAI response:", JSON.stringify({
@@ -126,7 +132,22 @@ async function openaiChat(options: AIChatOptions): Promise<AIChatResult> {
       refusal: (choice?.message as any)?.refusal,
       usage: response.usage,
       model: response.model,
+      reasoning_effort: options.reasoning_effort || "none",
     }));
+
+    // Retry without reasoning_effort if it might be causing the empty response
+    if (options.reasoning_effort) {
+      console.warn("[AI_CLIENT] Retrying without reasoning_effort...");
+      const retryParams = { ...params };
+      delete retryParams.reasoning_effort;
+      retryParams.temperature = 0.7;
+      const retryResponse = await openai.chat.completions.create(retryParams);
+      const retryContent = retryResponse.choices[0]?.message?.content || "";
+      if (retryContent) {
+        console.log("[AI_CLIENT] Retry without reasoning_effort succeeded");
+        content = retryContent;
+      }
+    }
   }
 
   return {
