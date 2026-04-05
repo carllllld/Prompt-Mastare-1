@@ -2498,8 +2498,8 @@ function buildDispositionFromStructuredData(propertyData: Record<string, any>, i
       // Villa/radhus har "driftkostnad", BRF/lägenhet har "avgift"
       ...(fee ? (
         propertyType === "villa" || propertyType === "house" || propertyType === "hus"
-          ? { driftkostnad: fee, fee_label: "driftkostnad" }
-          : { avgift: fee, fee_label: "avgift" }
+          ? { driftkostnad: fee, fee_label: "Driftkostnad", fee_unit: "kr/år" }
+          : { avgift: fee, fee_label: "Avgift", fee_unit: "kr/mån" }
       ) : {}),
       price_per_kvm: pricePerKvm,
       association: {

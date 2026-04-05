@@ -79,7 +79,7 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
 
   const [loadingMessage, setLoadingMessage] = useState("Förbereder generering...");
-  const LOADING_STEPS_COUNT = 4;
+  const LOADING_STEPS_COUNT = 3;
   const progressStep = Math.min(Math.max(loadingStep + 1, 1), LOADING_STEPS_COUNT);
   const progressPercent = Math.round((progressStep / LOADING_STEPS_COUNT) * 100);
 
@@ -173,8 +173,8 @@ export default function Home() {
                   <span>Historik</span>
                 </Link>
 
-                {/* Hemnet Analysis - plain link */}
-                <Link href="/hemnet-analysis" className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                {/* Hemnet Analysis - highlighted link */}
+                <Link href="/hemnet-analysis" className="hidden sm:flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
                   <FileCheck className="w-4 h-4" />
                   <span>Textanalys</span>
                 </Link>
@@ -417,6 +417,22 @@ export default function Home() {
 
             {/* Personlig stil — kollapsbar under formuläret */}
             <details className="pro-card pro-card-premium p-3">
+
+            {/* Textanalys CTA */}
+            <Link href="/hemnet-analysis" className="block pro-card pro-card-premium p-3 hover:bg-gray-50 transition-colors no-underline">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileCheck className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Har du redan en text? Analysera den</p>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>Klistra in en befintlig objektbeskrivning och få AI-feedback på språk, juridik och mäklarrealism</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </div>
+            </Link>
+
+            <details className="pro-card pro-card-premium p-3">
               <summary className="cursor-pointer select-none flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#9CA3AF" }}>Personlig stil</p>
@@ -449,6 +465,20 @@ export default function Home() {
               />
             </div>
             
+            {/* Textanalys CTA */}
+            <Link href="/hemnet-analysis" className="block pro-card pro-card-premium p-3 hover:bg-gray-50 transition-colors no-underline">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileCheck className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "#1D2939" }}>Har du redan en text? Analysera den</p>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>Klistra in en befintlig objektbeskrivning och få AI-feedback</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              </div>
+            </Link>
+
             {/* Personlig stil - låst för free users */}
             <div className="pro-card pro-card-premium p-3">
               <div className="mb-2">
@@ -471,7 +501,7 @@ export default function Home() {
         {isPending && (
           <div className="mb-2 pro-card pro-card-premium p-3">
             <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-medium">Generering pågår — steg {progressStep}/{LOADING_STEPS_COUNT}</span>
+              <span className="font-medium">{loadingMessage}</span>
               <span>{progressPercent}%</span>
             </div>
             <div className="w-full h-1.5 overflow-hidden mb-3 bg-border">

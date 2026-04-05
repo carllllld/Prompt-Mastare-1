@@ -189,10 +189,10 @@ export function EssentialFieldsSection({
         <FormField control={form.control} name="monthlyFee" render={({ field }) => (
           <FormItem>
             <FormLabel className="text-xs text-gray-500">
-              {isApartmentType ? "Avgift (kr/mån)" : "Driftkostnad (kr/mån)"}
+              {isApartmentType ? "Avgift (kr/mån)" : "Driftkostnad (kr/år)"}
             </FormLabel>
             <FormControl>
-              <Input type="number" placeholder={isApartmentType ? "Ex: 3 842" : "Ex: 4 500"} {...field} className={exampleInputClass} />
+              <Input type="number" placeholder={isApartmentType ? "Ex: 3 842" : "Ex: 42 000"} {...field} className={exampleInputClass} />
             </FormControl>
           </FormItem>
         )} />

@@ -30,8 +30,8 @@ function QuickTextReview({ text, wordCount }: { text: string; wordCount: number 
   const strengths: string[] = [];
 
   // Word count check
-  if (wordCount < 250) issues.push("Texten är kort (" + wordCount + " ord). En villa med mycket data bör ha minst 300 ord för att ge köparen en komplett bild.");
-  if (wordCount >= 350) strengths.push("Bra textlängd (" + wordCount + " ord) — ger köparen tillräckligt med information.");
+  if (wordCount < 150) issues.push("Texten är kort (" + wordCount + " ord). Fyll i fler detaljer i formuläret för att ge AI:n mer att arbeta med.");
+  if (wordCount >= 300) strengths.push("Bra textlängd (" + wordCount + " ord).");
 
   // AI-word detection
   const aiWords = ["vilket", "omfattar", "sätter fokus", "sätter ramen", "tar plats", "präglas av", "erbjuder", "bjuder på"];

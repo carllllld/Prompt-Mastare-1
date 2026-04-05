@@ -2,7 +2,6 @@ import { SmartGenerationEngine, GenerationResult } from './perfect-swedish-gener
 import { DeterministicPostProcessor, PostProcessResult } from './perfect-swedish-post-processor';
 import { ExpertAIAnalyzer, ExpertAnalysis } from './perfect-swedish-analyzer';
 import { PerfectSwedishFallback, FallbackResult } from './perfect-swedish-fallback';
-import { brokerEdit } from './broker-editor';
 import { WritingStyle } from './text-rules';
 import { findRuleViolations } from './text-validation';
 import pRetry, { AbortError } from 'p-retry';
@@ -292,29 +291,6 @@ export class PerfectSwedishOrchestrator {
       message: 'Text genererad',
       timestamp: new Date()
     });
-
-    // Step 1.5: Broker Editor — reads text as a senior broker and rewrites AI-sounding sentences
-    this.emitProgress(request.sessionId, {
-      type: 'progress',
-      step: 'post_processing',
-      progress: 0,
-      message: 'Mäklarredaktör granskar...',
-      timestamp: new Date()
-    });
-
-    try {
-      const editResult = await brokerEdit({
-        improvedPrompt: generationResult.improvedPrompt,
-        platform: request.platform,
-        style: request.style,
-      });
-      if (editResult.editsApplied > 0) {
-        generationResult = { ...generationResult, improvedPrompt: editResult.improvedPrompt };
-        console.log(`[BrokerEditor] Applied ${editResult.editsApplied} edits in ${editResult.duration}ms`);
-      }
-    } catch (error) {
-      console.warn('[BrokerEditor] Failed, continuing with original text:', error);
-    }
 
     // Step 2: Post-Processing
     this.emitProgress(request.sessionId, {
