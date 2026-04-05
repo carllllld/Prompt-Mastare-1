@@ -415,9 +415,6 @@ export default function Home() {
               />
             </div>
 
-            {/* Personlig stil — kollapsbar under formuläret */}
-            <details className="pro-card pro-card-premium p-3">
-
             {/* Textanalys CTA */}
             <Link href="/hemnet-analysis" className="block pro-card pro-card-premium p-3 hover:bg-gray-50 transition-colors no-underline">
               <div className="flex items-center justify-between">
@@ -432,6 +429,7 @@ export default function Home() {
               </div>
             </Link>
 
+            {/* Personlig stil — kollapsbar under formuläret */}
             <details className="pro-card pro-card-premium p-3">
               <summary className="cursor-pointer select-none flex items-center justify-between">
                 <div>
